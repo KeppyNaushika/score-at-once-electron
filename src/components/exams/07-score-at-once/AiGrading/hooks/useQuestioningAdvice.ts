@@ -1,71 +1,73 @@
 /**
- * 問いかけの助言の欄（docs/vlm-grading-design.md §3-5）の文を持つ。AI 採点の案の問いだけにある。
+ * 問いかけの助言の欄（docs/vlm-grading-design.md §3-5）。AI 採点の案の問いだけにある。
  *
- * 欄の文は画面に持ち（問いを移っても残る）、書くのは `useQuestioningFlow` が答えと一緒に。
- * 書く値は、直していなければ null（確定で、当たる項目の助言か AI の文案のまま）、直していればその文
- * （"" は助言なし）。届いた行が追いつく前に同じ文を2度書かないよう、最後に書いた文を覚える。
- * 問いかけの組（scopeKey）が変わったら捨てる。
+ * **1打鍵ごとに即時に書く**（docs/coding-style.md「ジェスチャは終わったときに1回書く」の表:
+ * テキストは1回ごとに即時。デバウンスも `onBlur` 確定も置かない）。書く先は案ごと・教員ごとの
+ * 助言の行（その場で書き換える）で、答えの行（追記）ではない。答える前に直した文も読み込み直して残る。
+ *
+ * 入力中の文字は `useEditingText` が手元に持つ（取り直しが打鍵の合間に着地して文字が戻るのを防ぐ）。
+ * 欄を抜けたら覚えを捨て、届いた行の文に戻す（書き込みではない）。
+ *
+ * 確定済みの問いの助言を直したら、同じ答えを1回だけ書き直して下書きに戻す（確定し直すと項目の助言に入る）。
  */
 
-import { useRef, useState } from "react"
+import { useRef } from "react"
+
+import { useEditingText } from "@/hooks/useEditingText"
 
 import type {
+  QuestioningDecision,
   QuestioningStep,
   QuestioningStepState,
 } from "../utils/questioningSteps"
 
+/** 入力中の文字の欄の名前（useEditingText の鍵） */
+const ADVICE_FIELD = "advice"
+
 interface UseQuestioningAdviceOptions {
   states: readonly QuestioningStepState[]
-  scopeKey: string
+  /** 助言の欄の文を書く */
+  persistAdviceText: (step: QuestioningStep, adviceText: string) => void
+  /** 確定済みの問いを、同じ答えで書き直して下書きに戻す */
+  reopenDecision: (
+    state: QuestioningStepState,
+    decision: QuestioningDecision
+  ) => void
 }
 
 export function useQuestioningAdvice({
   states,
-  scopeKey,
+  persistAdviceText,
+  reopenDecision,
 }: UseQuestioningAdviceOptions) {
-  const [adviceTexts, setAdviceTexts] = useState<Record<string, string>>({})
+  const { textOf, remember, forgetField } = useEditingText()
   const adviceTextRef = useRef<HTMLTextAreaElement | null>(null)
-  /** 問い → 最後に書いた助言の文 */
-  const sentAdviceRef = useRef(new Map<string, string>())
-  const [adviceScope, setAdviceScope] = useState(scopeKey)
-  if (adviceScope !== scopeKey) {
-    setAdviceScope(scopeKey)
-    setAdviceTexts({})
-  }
+  /** 下書きに戻すために答えを書き直した問い（届いた行が下書きになるまで、2度書かない） */
+  const reopenedStepIdsRef = useRef(new Set<string>())
 
-  /** 助言の欄の文（直していなければ、いま効いている文）。助言の無い問いは "" */
+  /** 助言の欄の文（入力中ならその文字、そうでなければ届いた行で効いている文）。助言の無い問いは "" */
   const adviceTextOf = (stepId: string): string => {
-    const typed = adviceTexts[stepId]
-    if (typed !== undefined) return typed
     const state = states.find((candidate) => candidate.step.id === stepId)
-    return state?.step.advice?.text ?? ""
+    return textOf(stepId, ADVICE_FIELD, state?.step.advice?.text ?? "")
   }
-  const setAdviceText = (stepId: string, text: string) =>
-    setAdviceTexts((prev) => ({ ...prev, [stepId]: text }))
 
-  /** 書く助言（直していなければ null）と、前に書いた文から変わったか */
-  const adviceToSend = (step: QuestioningStep) => {
-    if (!step.advice) return { adviceText: null, changed: false }
-    const text = adviceTextOf(step.id).trim()
-    const sentText = sentAdviceRef.current.get(step.id) ?? step.advice.text
-    return {
-      adviceText: text === step.advice.baseText.trim() ? null : text,
-      changed: text !== sentText.trim(),
+  /** 1打鍵ごと: 手元に覚えて、すぐ書く */
+  const changeAdviceText = (stepId: string, text: string) => {
+    const state = states.find((candidate) => candidate.step.id === stepId)
+    if (!state?.step.advice) return
+    remember(stepId, ADVICE_FIELD, text)
+    persistAdviceText(state.step, text)
+    const reopenedStepIds = reopenedStepIdsRef.current
+    if (!state.isCommitted) {
+      reopenedStepIds.delete(stepId)
+    } else if (state.decision && !reopenedStepIds.has(stepId)) {
+      reopenedStepIds.add(stepId)
+      reopenDecision(state, state.decision)
     }
   }
 
-  /** 書いた助言を覚える */
-  const markAdviceSent = (step: QuestioningStep, adviceText: string | null) => {
-    if (step.advice) {
-      sentAdviceRef.current.set(step.id, adviceText ?? step.advice.baseText)
-    }
-  }
+  /** 欄を抜けた: 入力中の覚えを捨てる（書き込みではない） */
+  const leaveAdviceText = (stepId: string) => forgetField(stepId, ADVICE_FIELD)
 
-  return {
-    adviceTextRef,
-    adviceTextOf,
-    setAdviceText,
-    adviceToSend,
-    markAdviceSent,
-  }
+  return { adviceTextRef, adviceTextOf, changeAdviceText, leaveAdviceText }
 }

@@ -5,7 +5,7 @@
  * - 決まりの中身（項目の数・扱い・一文・採る項目）は検証し、外れたものは書かない
  * - 項目を消すと、その項目を含む決まりも消える（残りの項目が2つ以上でも）
  * - 朱書きの差分の書き込みは、印（isRubricAdvice）の付いた朱書きにしか触らない
- * - 材料は、適用か助言の朱書きのある全採点者の採点行を、助言の朱書きだけ同梱して返す
+ * - 材料は、適用か助言の朱書きのある全採点者の採点行を、文字の注釈（助言の朱書きと手書きの文字）だけ同梱して返す
  */
 
 import * as path from "path"
@@ -256,10 +256,17 @@ describe("助言の朱書き", () => {
       },
     })
 
-  it("材料は、適用か助言の朱書きのある採点行を、助言の朱書きだけ同梱して返す", async () => {
+  it("材料は、適用か助言の朱書きのある採点行を、文字の注釈（助言の朱書きと、避ける手書きの文字）だけ同梱して返す", async () => {
     const { unit } = await createThreeItems()
     const row = await applyItem(unit.id)
     await handWrittenAnnotation(row.id)
+    // 文字でない注釈は置き場所の材料に入れない
+    await testPrisma.drawingAnnotation.create({
+      data: {
+        ...newDrawingAnnotation({ type: "line", x: 0.2, y: 0.2 }),
+        questionScoreId: row.id,
+      },
+    })
     await syncRubricAdviceAnnotations(
       {
         cropRegionId: cropRegionId(),
@@ -289,10 +296,17 @@ describe("助言の朱書き", () => {
     expect(source?.questionScores).toHaveLength(1)
     expect(source?.questionScores[0].rubricApplications).toHaveLength(1)
     expect(
-      source?.questionScores[0].drawingAnnotations.map(
-        (drawingAnnotation) => drawingAnnotation.text
-      )
-    ).toEqual(["単位を書こう"])
+      source?.questionScores[0].drawingAnnotations.map((drawingAnnotation) => ({
+        text: drawingAnnotation.text,
+        isRubricAdvice: drawingAnnotation.isRubricAdvice,
+      }))
+    ).toEqual(
+      expect.arrayContaining([
+        { text: "手で書いた注釈", isRubricAdvice: false },
+        { text: "単位を書こう", isRubricAdvice: true },
+      ])
+    )
+    expect(source?.questionScores[0].drawingAnnotations).toHaveLength(2)
   })
 
   it("作るときは印を立て、もう助言の朱書きがある行には重ねて作らない", async () => {
@@ -343,7 +357,7 @@ describe("助言の朱書き", () => {
     ).toBe(1)
   })
 
-  it("書き換え・消しは印の付いた朱書きだけ。手で書いた注釈の id が来ても触らない", async () => {
+  it("書き換え（文・位置・文字の大きさ）・消しは印の付いた朱書きだけ。手で書いた注釈の id が来ても触らない", async () => {
     const { unit } = await createThreeItems()
     const row = await applyItem(unit.id)
     const handWritten = await handWrittenAnnotation(row.id)
@@ -365,8 +379,20 @@ describe("助言の朱書き", () => {
         cropRegionId: cropRegionId(),
         creates: [],
         updates: [
-          { drawingAnnotationId: advice.id, text: "単位を\n忘れずに" },
-          { drawingAnnotationId: handWritten.id, text: "書き換えてはいけない" },
+          {
+            drawingAnnotationId: advice.id,
+            text: "単位を\n忘れずに",
+            x: 0.45,
+            y: 0.3,
+            fontSize: 3,
+          },
+          {
+            drawingAnnotationId: handWritten.id,
+            text: "書き換えてはいけない",
+            x: 0.1,
+            y: 0.1,
+            fontSize: 3,
+          },
         ],
         deletes: [handWritten.id],
       },
@@ -381,7 +407,7 @@ describe("助言の朱書き", () => {
       await testPrisma.drawingAnnotation.findUniqueOrThrow({
         where: { id: advice.id },
       })
-    ).toMatchObject({ text: "単位を\n忘れずに", x: 0.4, y: 0.25 })
+    ).toMatchObject({ text: "単位を\n忘れずに", x: 0.45, y: 0.3, fontSize: 3 })
     expect(
       await testPrisma.drawingAnnotation.findUniqueOrThrow({
         where: { id: handWritten.id },

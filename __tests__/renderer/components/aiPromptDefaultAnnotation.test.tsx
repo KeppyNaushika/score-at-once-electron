@@ -93,6 +93,7 @@ function renderPanel(options: {
   settings: AiGradingSettings | undefined
   prompts?: ReturnType<typeof makePrompt>[]
   selectedPromptId?: string | null
+  onRunWithPrompt?: (promptId: string, purpose: "grade" | "check") => void
 }) {
   const prompts = options.prompts ?? []
   render(
@@ -105,7 +106,7 @@ function renderPanel(options: {
       }
       selectedPromptId={options.selectedPromptId ?? null}
       onSelectPrompt={vi.fn()}
-      onRunWithPrompt={vi.fn()}
+      onRunWithPrompt={options.onRunWithPrompt ?? vi.fn()}
       settings={options.settings}
     />,
     { wrapper: createQueryWrapper() }
@@ -216,5 +217,25 @@ describe("採点指示の助言の文案の指示の初期値", () => {
     expect(
       within(editor).getByRole("heading", { name: /^指示 1 を編集/ })
     ).toBeInTheDocument()
+  })
+})
+
+describe("採点指示からの実行", () => {
+  it("選んだ採点指示の下に「AI 採点を実行」と「AI チェックを実行」があり、それぞれの目的で開く", async () => {
+    const user = userEvent.setup()
+    installFakeElectronApi()
+    const prompt = makePrompt()
+    const onRunWithPrompt = vi.fn()
+    renderPanel({
+      settings: SETTINGS,
+      prompts: [prompt],
+      selectedPromptId: prompt.id,
+      onRunWithPrompt,
+    })
+
+    await user.click(screen.getByRole("button", { name: "AI 採点を実行" }))
+    expect(onRunWithPrompt).toHaveBeenLastCalledWith(prompt.id, "grade")
+    await user.click(screen.getByRole("button", { name: "AI チェックを実行" }))
+    expect(onRunWithPrompt).toHaveBeenLastCalledWith(prompt.id, "check")
   })
 })

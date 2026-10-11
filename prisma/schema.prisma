@@ -16,34 +16,36 @@ datasource db {
 /// 取り込み側も「同名＝同一」とは決めていない（サフィックスを付けて別物として作る）。
 /// 索引も置かない: 等値検索はシード（起動時に1回）だけで、行数も教員の人数どまり。
 model User {
-  id                     String                   @id @default(uuid())
-  username               String
-  passcode               String?
-  name                   String
-  role                   String                   @default("teacher")
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  passcodeType           String?                  @default("none")
-  questionScores         QuestionScore[]
-  userExams              UserExam[]
-  invitedUserExams       UserExam[]               @relation("InvitedByUser")
-  keyboardShortcuts      UserKeyboardShortcut[]
-  preferences            UserPreference[]
-  answerSheetDefinitions AsbDefinition[]
-  compoundAnswerScores   CompoundAnswerScore[]
-  scoreDecisions         ScoreDecision[]
-  gradeFrozenScores      GradeFrozenScore[]
-  cropRegionAssignments  CropRegionAssignment[]
-  assignedCropRegions    CropRegionAssignment[]   @relation("AssignedByUser")
-  examStudentAssignments ExamStudentAssignment[]
-  assignedExamStudents   ExamStudentAssignment[]  @relation("StudentAssignedByUser")
-  scoringStatusColors    UserScoringStatusColor[]
-  clickScoringActions    UserClickScoringAction[]
-  sidePanelSections      UserSidePanelSection[]
-  returnSnapshots        ReturnSnapshot[]
-  aiPrompts              AiPrompt[]
-  aiGradingRuns          AiGradingRun[]
-  rubricItems            RubricItem[]
+  id                          String                             @id @default(uuid())
+  username                    String
+  passcode                    String?
+  name                        String
+  role                        String                             @default("teacher")
+  createdAt                   DateTime                           @default(now())
+  updatedAt                   DateTime                           @updatedAt
+  passcodeType                String?                            @default("none")
+  questionScores              QuestionScore[]
+  userExams                   UserExam[]
+  invitedUserExams            UserExam[]                         @relation("InvitedByUser")
+  keyboardShortcuts           UserKeyboardShortcut[]
+  preferences                 UserPreference[]
+  answerSheetDefinitions      AsbDefinition[]
+  compoundAnswerScores        CompoundAnswerScore[]
+  scoreDecisions              ScoreDecision[]
+  gradeFrozenScores           GradeFrozenScore[]
+  cropRegionAssignments       CropRegionAssignment[]
+  assignedCropRegions         CropRegionAssignment[]             @relation("AssignedByUser")
+  examStudentAssignments      ExamStudentAssignment[]
+  assignedExamStudents        ExamStudentAssignment[]            @relation("StudentAssignedByUser")
+  scoringStatusColors         UserScoringStatusColor[]
+  clickScoringActions         UserClickScoringAction[]
+  sidePanelSections           UserSidePanelSection[]
+  returnSnapshots             ReturnSnapshot[]
+  aiPrompts                   AiPrompt[]
+  aiGradingRuns               AiGradingRun[]
+  rubricItems                 RubricItem[]
+  aiProposalAdviceDrafts      AiRubricProposalAdviceDraft[]
+  aiProposalInstructionDrafts AiRubricProposalInstructionDraft[]
 }
 
 /// `name` に `@unique` は置かない（2026-08-22 に外した。理由は User.username と同じ）。
@@ -421,7 +423,6 @@ model QuestionScore {
   cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   examStudent        ExamStudent         @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  aiGradingAttempts  AiGradingAttempt[]
 
   @@index([examStudentId])
   /// SQLite は外部キーに索引を自動で作らない。この列が素通しだと、採点行を
@@ -461,35 +462,34 @@ model ScoreDecision {
 /// 持ち主は親 QuestionScore（生徒×設問×採点者で1行）から一意に決まるので、
 /// 自前の userId は持たない。採点者で絞るときは questionScore.userId を辿る。
 model DrawingAnnotation {
-  id                String             @id @default(uuid())
-  questionScoreId   String
-  type              String
-  x                 Float
-  y                 Float
-  color             String             @default("#ef4444")
-  strokeWidth       Float              @default(0.5)
-  width             Float              @default(0.0)
-  height            Float              @default(0.0)
-  endX              Float              @default(0.0)
-  endY              Float              @default(0.0)
-  lineStyle         String             @default("solid")
-  text              String             @default("")
-  fontSize          Float              @default(4.0)
-  textBoxWidth      Float              @default(0.0)
-  textBoxHeight     Float              @default(0.0)
-  horizontalAlign   String             @default("left")
-  verticalAlign     String             @default("top")
-  anchorDirection   String             @default("top-left")
-  displayX          Float              @default(0.0)
-  displayY          Float              @default(0.0)
-  isFavorite        Boolean            @default(false)
+  id              String        @id @default(uuid())
+  questionScoreId String
+  type            String
+  x               Float
+  y               Float
+  color           String        @default("#ef4444")
+  strokeWidth     Float         @default(0.5)
+  width           Float         @default(0.0)
+  height          Float         @default(0.0)
+  endX            Float         @default(0.0)
+  endY            Float         @default(0.0)
+  lineStyle       String        @default("solid")
+  text            String        @default("")
+  fontSize        Float         @default(4.0)
+  textBoxWidth    Float         @default(0.0)
+  textBoxHeight   Float         @default(0.0)
+  horizontalAlign String        @default("left")
+  verticalAlign   String        @default("top")
+  anchorDirection String        @default("top-left")
+  displayX        Float         @default(0.0)
+  displayY        Float         @default(0.0)
+  isFavorite      Boolean       @default(false)
   /// ルーブリック項目の助言から作った朱書き（docs/vlm-grading-design.md §4-7）。
   /// 助言の文が変わったら、この印の付いた朱書きの文だけを書き換える。手で書いた注釈は false
-  isRubricAdvice    Boolean            @default(false)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  questionScore     QuestionScore      @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
-  aiGradingAttempts AiGradingAttempt[]
+  isRubricAdvice  Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
 
   @@index([questionScoreId])
   @@index([type])
@@ -635,9 +635,6 @@ model AiPrompt {
   createdByUserId       String?
   /// 問題文（テキスト）。省略できるので、空文字を「書いていない」とする（QuestionScore.comment と同じ形）
   questionText          String                  @default("")
-  /// 旧：問題用紙の画像（1枚）。もう読み書きしない。値は migration 20261011120000 で
-  /// AiPromptQuestionImage へ移した（列の削除は別の判断待ち）
-  questionImagePath     String?
   modelAnswerText       String                  @default("")
   /// 模範解答画像（模範解答のページから設問枠を切り出したもの）も送るか
   sendModelAnswerImage  Boolean                 @default(false)
@@ -650,10 +647,6 @@ model AiPrompt {
   /// 項目は生きた状態で書き換わるので、送った文面を再現できるようここに写す。
   /// 今の項目と違っていれば、送るときに新しい行を作る（§3-1）
   renderedRubricItems   String                  @default("")
-  /// VLM に改訂させたときの教員の指示文。教員が直接書いた行は ""
-  revisionInstruction   String                  @default("")
-  /// 改訂した VLM から教員への説明。教員が直接書いた行は ""
-  revisionMessage       String                  @default("")
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @default(now()) @updatedAt
   cropRegion            CropRegion              @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
@@ -661,7 +654,6 @@ model AiPrompt {
   childPrompts          AiPrompt[]              @relation("AiPromptRevision")
   createdBy             User?                   @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   gradingRuns           AiGradingRun[]          @relation("AiGradingRunPrompt")
-  revisionResultRuns    AiGradingRun[]          @relation("AiGradingRunResultPrompt")
   questionImages        AiPromptQuestionImage[]
 
   @@index([cropRegionId])
@@ -728,8 +720,6 @@ model AiGradingRun {
   /// 送ったときの配点（CropRegion.points の写し）。配点を後から直しても、この実行の
   /// 文面と検証の上限は送ったときの値で再現する
   points                   Decimal?
-  /// revise のとき、できたプロンプト。grade では null
-  resultPromptId           String?
   /// 2段目（group）が返した、教員への気づいた点。それ以外は ""
   notes                    String             @default("")
   /// 問いかけ（2段目の案）の前に、直接採点の設問で決めた採点方式の下書き（"deduction" | "addition"）。
@@ -746,7 +736,6 @@ model AiGradingRun {
   updatedAt                DateTime           @default(now()) @updatedAt
   user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt                   AiPrompt           @relation("AiGradingRunPrompt", fields: [promptId], references: [id], onDelete: Cascade)
-  resultPrompt             AiPrompt?          @relation("AiGradingRunResultPrompt", fields: [resultPromptId], references: [id], onDelete: SetNull)
   attempts                 AiGradingAttempt[]
   rubricProposals          AiRubricProposal[]
 
@@ -768,47 +757,35 @@ model AiGradingRun {
 /// 新しい run の新しい行。`state` は送信の成否、`status` は採点の判定で、別のもの。
 /// `partialScore` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す。
 model AiGradingAttempt {
-  id                         String                          @id @default(uuid())
-  runId                      String
-  examStudentId              String
+  id                     String                          @id @default(uuid())
+  runId                  String
+  examStudentId          String
   /// pending / succeeded / errored / refused / expired
-  state                      String                          @default("pending")
+  state                  String                          @default("pending")
   /// AI の判定（ScoringStatus）。succeeded 以外は "unscored" のまま
-  status                     String                          @default("unscored")
+  status                 String                          @default("unscored")
   /// partial / pending のときの点。0〜run の points、0.01 単位（検証を通った値だけを書く）
-  partialScore               Decimal?
-  /// 教員向けの配点理由
-  comment                    String                          @default("")
-  /// 生徒向けの朱書き（注釈の文言）。無ければ ""
-  annotationText             String                          @default("")
+  partialScore           Decimal?
   /// 答案から読み取った内容
-  transcription              String                          @default("")
+  transcription          String                          @default("")
   /// 所見（模範解答・採点基準・項目と比べて、どこが同じでどこが違うか）。2段目は画像を見ないので、ここを読む
-  observation                String                          @default("")
+  observation            String                          @default("")
   /// "high" | "medium" | "low"。succeeded 以外は ""
-  confidence                 String                          @default("")
+  confidence             String                          @default("")
   /// errored / refused / expired の理由（検証で外れた理由を含む）
-  errorMessage               String                          @default("")
-  inputTokens                Int                             @default(0)
-  outputTokens               Int                             @default(0)
-  cacheReadTokens            Int                             @default(0)
-  cacheWriteTokens           Int                             @default(0)
-  /// 採用して書いた QuestionScore。採用先が消えたら null（試行の記録は残す）
-  adoptedQuestionScoreId     String?
-  /// 採用して書いた注釈。採用先が消えたら null
-  adoptedDrawingAnnotationId String?
-  /// 採用した日時。採用するのは実行した教員なので、採用者の列は持たない
-  adoptedAt                  DateTime?
-  createdAt                  DateTime                        @default(now())
-  updatedAt                  DateTime                        @default(now()) @updatedAt
-  run                        AiGradingRun                    @relation(fields: [runId], references: [id], onDelete: Cascade)
-  examStudent                ExamStudent                     @relation(fields: [examStudentId], references: [id], onDelete: Cascade)
-  adoptedQuestionScore       QuestionScore?                  @relation(fields: [adoptedQuestionScoreId], references: [id], onDelete: SetNull)
-  adoptedDrawingAnnotation   DrawingAnnotation?              @relation(fields: [adoptedDrawingAnnotationId], references: [id], onDelete: SetNull)
-  rubricMatches              AiAttemptRubricMatch[]
-  proposalMemberships        AiRubricProposalMember[]
-  responses                  AiAttemptResponse[]
-  proposalResponseScores     AiRubricProposalResponseScore[]
+  errorMessage           String                          @default("")
+  inputTokens            Int                             @default(0)
+  outputTokens           Int                             @default(0)
+  cacheReadTokens        Int                             @default(0)
+  cacheWriteTokens       Int                             @default(0)
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @default(now()) @updatedAt
+  run                    AiGradingRun                    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  examStudent            ExamStudent                     @relation(fields: [examStudentId], references: [id], onDelete: Cascade)
+  rubricMatches          AiAttemptRubricMatch[]
+  proposalMemberships    AiRubricProposalMember[]
+  responses              AiAttemptResponse[]
+  proposalResponseScores AiRubricProposalResponseScore[]
 
   @@index([runId])
   @@index([examStudentId])
@@ -831,25 +808,27 @@ model AiAttemptRubricMatch {
 
 /// 2段目が返した項目の案（§3-4・§5-3）。書き換えない
 model AiRubricProposal {
-  id                  String                     @id @default(uuid())
+  id                  String                             @id @default(uuid())
   /// 2段目の実行（purpose: group）
   runId               String
   /// 教員向けの特徴の名前（判断理由）
-  label               String                     @default("")
-  description         String                     @default("")
+  label               String                             @default("")
+  description         String                             @default("")
   /// 生徒向けの助言の文案（一文）。要らない案は ""
-  adviceDraft         String                     @default("")
+  adviceDraft         String                             @default("")
   /// 既存の項目に当たる特徴のとき、その項目。新しい特徴なら null。項目が消えたら null
   matchedRubricItemId String?
   /// 返ってきた順
-  sortOrder           Int                        @default(0)
-  createdAt           DateTime                   @default(now())
-  updatedAt           DateTime                   @default(now()) @updatedAt
-  run                 AiGradingRun               @relation(fields: [runId], references: [id], onDelete: Cascade)
-  matchedRubricItem   RubricItem?                @relation(fields: [matchedRubricItemId], references: [id], onDelete: SetNull)
+  sortOrder           Int                                @default(0)
+  createdAt           DateTime                           @default(now())
+  updatedAt           DateTime                           @default(now()) @updatedAt
+  run                 AiGradingRun                       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  matchedRubricItem   RubricItem?                        @relation(fields: [matchedRubricItemId], references: [id], onDelete: SetNull)
   options             AiRubricProposalOption[]
   members             AiRubricProposalMember[]
   responses           AiRubricProposalResponse[]
+  adviceDrafts        AiRubricProposalAdviceDraft[]
+  instructionDrafts   AiRubricProposalInstructionDraft[]
 
   @@index([runId])
   @@index([matchedRubricItemId])
@@ -904,9 +883,6 @@ model AiRubricProposalResponse {
   optionId           String?
   /// 「その他」に書いた再採点への指示（次の往復の1段目に教員の指示として添える）。それ以外は ""
   freeText           String                          @default("")
-  /// 教員が直した助言の文（確定で項目の助言にする）。null は直していない（既存の項目に当たる案はその項目の助言、
-  /// ほかは AI の文案 `adviceDraft` のまま）。"" は助言なし（朱書きを作らない）
-  adviceText         String?
   /// できた・結び付けた項目（確定したときに書く）。下書き・「その他」・自分で採点なら null。項目が消えたら null
   resultRubricItemId String?
   /// 確定した日時。下書き（まだ教員の層へ書いていない答え）は null
@@ -943,12 +919,51 @@ model AiRubricProposalResponseScore {
   @@index([attemptId])
 }
 
+/// 問いかけで教員が直している助言の文（案ごと・教員ごと）。答える前から1打鍵ごとに書き、
+/// 同じ行をその場で書き換える（答えの行のような追記ではない）。読み込み直しても直した文が残る。
+/// 一意制約は置かない（sqlite-nas-sync）。同じ案・同じ教員の行が2つあれば、updatedAt の新しい方が効く。
+/// 確定では、新しく作る項目はこの文（無ければ AI の文案）、既存の項目は直したときだけこの文を項目の助言にする。
+/// "" は助言なし（朱書きを作らない）
+model AiRubricProposalAdviceDraft {
+  id         String           @id @default(uuid())
+  proposalId String
+  /// 直している教員（案を出した実行の教員）
+  userId     String
+  adviceText String
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @default(now()) @updatedAt
+  proposal   AiRubricProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@index([userId])
+}
+
 /// 案の外の問いかけ（採点チェックの問い・どの案にも入らない答案）への教員の答えを、答案（試行）ごとに。
 /// 答え直しは新しい行（答案ごとに最新が効く）。答えた教員は run の userId。
 ///
 /// 問いは届いた行から画面が毎回組み立てる（列には持たない）。1つの問いの答えは、その問いの答案
 /// すべてに同じ種類の行を書く。確定するまで教員の層へは書かず、確定したら `committedAt` を入れる。
 /// `partialScore` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す
+/// 問いかけの「その他：再採点を指示する」の欄に書いている文（docs/vlm-grading-design.md §3-5）。
+/// 1打鍵ごとに、案ごと・教員ごとの同じ行をその場で書き換える（答えの行は追記なので、打鍵ごとに書くと行が増える）。
+/// 同じ案・同じ教員の行が複数あれば updatedAt の新しい方が効く（一意制約は置かない）。
+/// 確定のときに「その他」を選んでいない案の行は消す（選んだ案の文は答えの freeText に入っている）
+model AiRubricProposalInstructionDraft {
+  id              String           @id @default(uuid())
+  proposalId      String
+  /// 書いている教員（案を出した実行の教員）
+  userId          String
+  instructionText String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+  proposal        AiRubricProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@index([userId])
+}
+
 model AiAttemptResponse {
   id           String           @id @default(uuid())
   attemptId    String

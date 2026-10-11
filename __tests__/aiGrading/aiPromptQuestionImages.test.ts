@@ -147,8 +147,6 @@ describe("問題の画像の行", () => {
       [secondPath, 0],
       [firstPath, 1],
     ])
-    // 旧列は書かない
-    expect(prompt.questionImagePath).toBeNull()
   })
 
   it("取り込み先の外を指すパスは受け付けない", async () => {

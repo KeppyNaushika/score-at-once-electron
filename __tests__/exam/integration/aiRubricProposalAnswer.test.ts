@@ -6,7 +6,9 @@
  * - 選び直し（確定済みの案に答え直して確定）は同じ項目の効き方を変える（項目を2つ作らない）
  * - 既存の項目に当たる案は、その項目を当てるだけで値を変えない
  * - 「その他」は確定で前に当てた項目を外す。確定した指示だけを次の往復に添える
- * - 直した助言は答え（下書き）に持ち、確定で項目の助言にする（新しい項目・既存の項目に当たる案・選び直し）
+ * - 直した助言は案ごと・教員ごとの行に持ち（1打鍵ごとに同じ行を書き換える）、確定で項目の助言にする
+ *   （新しい項目・既存の項目に当たる案・選び直し）。最後の確定より前に直した文は効かない
+ * - 「その他」の欄の文も案ごと・教員ごとの行に持ち（1打鍵ごとに同じ行を書き換える）、捨てるときは自分の行だけを消す
  * - 自分で採点の答えは答案ごとの点を持ち、点を書き終えてから確定済みにする
  * - 案の外の問いかけの答え（答案ごと）と、問いかけで決めた点の書き込み
  * - 答えられるのは実行した教員だけ。案に入っていない答案には当てない
@@ -37,7 +39,12 @@ import {
   listAiRubricProposalRunsByCropRegion,
   listTeacherInstructions,
   recordAiRubricProposalDraft,
+  setAiRubricProposalAdviceDraft,
 } from "@/electron-src/lib/prisma/aiRubricProposal"
+import {
+  discardAiRubricProposalInstructionDrafts,
+  setAiRubricProposalInstructionDraft,
+} from "@/electron-src/lib/prisma/aiRubricProposalInstructionDraft"
 import { createRubricItem } from "@/electron-src/lib/prisma/rubricItem"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
@@ -184,10 +191,15 @@ async function draftAndCommit(
       optionId: input.optionId,
       freeText: input.freeText,
       manualScores: [],
-      adviceText: input.adviceText ?? null,
     },
     actorUserId
   )
+  if (input.adviceText !== undefined && input.adviceText !== null) {
+    await setAiRubricProposalAdviceDraft(
+      { proposalId: input.proposalId, adviceText: input.adviceText },
+      actorUserId
+    )
+  }
   return commitAiRubricProposalResponse(
     { responseId: draft.id, examStudentIds: input.examStudentIds },
     actorUserId
@@ -211,7 +223,6 @@ describe("下書き", () => {
         optionId: proposal.options[0].id,
         freeText: "",
         manualScores: [],
-        adviceText: null,
       },
       ownerId()
     )
@@ -238,7 +249,6 @@ describe("下書き", () => {
           optionId: proposal.options[0].id,
           freeText: "指示",
           manualScores: [],
-          adviceText: null,
         },
         ownerId()
       )
@@ -250,7 +260,6 @@ describe("下書き", () => {
           optionId: null,
           freeText: "",
           manualScores: [{ attemptId, status: "partial", partialScore: 9 }],
-          adviceText: null,
         },
         ownerId()
       )
@@ -373,32 +382,148 @@ describe("選択肢を選んで確定する", () => {
   })
 })
 
-describe("直した助言", () => {
-  it("答え（下書き）に持つだけで、項目には確定まで書かない。直していなければ null", async () => {
+describe("「その他」の欄の文", () => {
+  it("案ごと・教員ごとの1行をその場で書き換え、答えの行は書かない。実行した教員だけが書ける", async () => {
     const proposal = await createProposal()
-    const edited = await recordAiRubricProposalDraft(
-      {
-        proposalId: proposal.id,
-        optionId: proposal.options[0].id,
-        freeText: "",
-        manualScores: [],
-        adviceText: " 単位まで書こう。 ",
-      },
+    await setAiRubricProposalInstructionDraft(
+      { proposalId: proposal.id, instructionText: "途" },
       ownerId()
     )
-    expect(edited.adviceText).toBe("単位まで書こう。")
-    const untouched = await recordAiRubricProposalDraft(
-      {
-        proposalId: proposal.id,
-        optionId: proposal.options[0].id,
-        freeText: "",
-        manualScores: [],
-        adviceText: null,
-      },
+    const updated = await setAiRubricProposalInstructionDraft(
+      { proposalId: proposal.id, instructionText: "途中式があれば部分点 " },
       ownerId()
     )
-    expect(untouched.adviceText).toBeNull()
+    expect(updated.instructionText).toBe("途中式があれば部分点 ")
+    expect(await testPrisma.aiRubricProposalInstructionDraft.count()).toBe(1)
+    expect(await testPrisma.aiRubricProposalResponse.count()).toBe(0)
+    await expect(
+      setAiRubricProposalInstructionDraft(
+        { proposalId: proposal.id, instructionText: "他人" },
+        otherUserId
+      )
+    ).rejects.toThrow("AI 採点を実行した教員だけ")
+
+    // 一覧の案に、自分の書いている文が同梱される
+    const [proposalRun] = await listAiRubricProposalRunsByCropRegion(
+      cropRegionId(),
+      ownerId()
+    )
+    expect(
+      proposalRun.rubricProposals[0].instructionDrafts.map(
+        (instructionDraft) => instructionDraft.instructionText
+      )
+    ).toEqual(["途中式があれば部分点 "])
+  })
+
+  it("捨てると、渡した案の自分の行だけを消す", async () => {
+    const proposal = await createProposal()
+    await setAiRubricProposalInstructionDraft(
+      { proposalId: proposal.id, instructionText: "消える指示" },
+      ownerId()
+    )
+    await testPrisma.aiRubricProposalInstructionDraft.create({
+      data: {
+        proposalId: proposal.id,
+        userId: otherUserId,
+        instructionText: "他人の行",
+      },
+    })
+    const discarded = await discardAiRubricProposalInstructionDrafts(
+      { proposalIds: [proposal.id] },
+      ownerId()
+    )
+    expect(discarded.count).toBe(1)
+    const remaining =
+      await testPrisma.aiRubricProposalInstructionDraft.findMany()
+    expect(remaining.map((row) => row.instructionText)).toEqual(["他人の行"])
+    expect(
+      await discardAiRubricProposalInstructionDrafts(
+        { proposalIds: [] },
+        ownerId()
+      )
+    ).toEqual({ count: 0 })
+  })
+})
+
+describe("直した助言", () => {
+  it("案ごと・教員ごとの1行をその場で書き換え、項目には確定まで書かない。実行した教員だけが書ける", async () => {
+    const proposal = await createProposal()
+    await setAiRubricProposalAdviceDraft(
+      { proposalId: proposal.id, adviceText: "単" },
+      ownerId()
+    )
+    const updated = await setAiRubricProposalAdviceDraft(
+      { proposalId: proposal.id, adviceText: " 単位まで書こう。 " },
+      ownerId()
+    )
+    expect(updated.adviceText).toBe(" 単位まで書こう。 ")
+    expect(await testPrisma.aiRubricProposalAdviceDraft.count()).toBe(1)
+    expect(await testPrisma.aiRubricProposalResponse.count()).toBe(0)
     expect(await testPrisma.rubricItem.count()).toBe(0)
+    await expect(
+      setAiRubricProposalAdviceDraft(
+        { proposalId: proposal.id, adviceText: "他人" },
+        otherUserId
+      )
+    ).rejects.toThrow("AI 採点を実行した教員だけ")
+
+    // 一覧の案に、自分の直した文が同梱される
+    const [proposalRun] = await listAiRubricProposalRunsByCropRegion(
+      cropRegionId(),
+      ownerId()
+    )
+    expect(
+      proposalRun.rubricProposals[0].adviceDrafts.map(
+        (adviceDraft) => adviceDraft.adviceText
+      )
+    ).toEqual([" 単位まで書こう。 "])
+  })
+
+  it("答える前に直した文も、確定で項目の助言になる（前後の空白は落とす）", async () => {
+    const proposal = await createProposal()
+    await setAiRubricProposalAdviceDraft(
+      { proposalId: proposal.id, adviceText: " 単位まで書こう。 " },
+      ownerId()
+    )
+    await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+    })
+    const [item] = await testPrisma.rubricItem.findMany()
+    expect(item.adviceText).toBe("単位まで書こう。")
+  })
+
+  it("最後の確定より前に直した文は効かず、確定のあとで直した項目の助言を上書きしない", async () => {
+    const proposal = await createProposal()
+    await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+      adviceText: "古い文。",
+    })
+    const [item] = await testPrisma.rubricItem.findMany()
+    // 確定のあとに、項目の助言をほかの画面で直した
+    await testPrisma.rubricItem.update({
+      where: { id: item.id },
+      data: { adviceText: "項目で直した文。" },
+    })
+    await testPrisma.aiRubricProposalAdviceDraft.updateMany({
+      data: { updatedAt: new Date(Date.now() - 60_000) },
+    })
+    const reselected = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[1].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+    })
+    expect(reselected.adviceChangedRubricItemId).toBeNull()
+    const after = await testPrisma.rubricItem.findUniqueOrThrow({
+      where: { id: item.id },
+    })
+    expect(after.adviceText).toBe("項目で直した文。")
   })
 
   it("新しく作る項目の助言は、直した文（空なら助言なし）。直していなければ AI の文案", async () => {
@@ -535,7 +660,6 @@ describe("「その他」", () => {
         optionId: null,
         freeText: " 単位が無くても cm が明らかなら減点しない ",
         manualScores: [],
-        adviceText: null,
       },
       ownerId()
     )
@@ -593,7 +717,6 @@ describe("自分で採点する", () => {
         optionId: null,
         freeText: "",
         manualScores: [{ attemptId, status: "partial", partialScore: 2.5 }],
-        adviceText: null,
       },
       ownerId()
     )
@@ -715,7 +838,6 @@ describe("答えられないもの", () => {
       optionId: proposal.options[0].id,
       freeText: "",
       manualScores: [],
-      adviceText: null,
     }
     await expect(
       recordAiRubricProposalDraft(base, otherUserId)

@@ -3,17 +3,22 @@
  *
  * renderer の純粋関数。採点行ごとに、当たっている項目と決まりから朱書きの文を決め
  * （`resolveRubricAdvice`）、その行に今ある**助言の朱書き（`isRubricAdvice`）だけ**と比べる。
- * 手で書いた注釈は材料に入れない（main も印の無い注釈には触らない）。
+ * 手で書いた文字の注釈は、置き場所で避けるためにだけ使い、作る・直す・消すの対象にはしない
+ * （main も印の無い注釈には触らない）。
  *
  * - 文が無い（助言のある項目が無い・朱書きなし・未決定）: 助言の朱書きを消す
- * - 文があり、朱書きが無い: 占有グリッドで空いている場所に作る
- * - 文があり、朱書きがある: 文が違えば文だけを書き換える（位置と文字の大きさは保つ）。
+ * - 文があり、朱書きが無い: 占有グリッドで空いている場所に作る（その行のほかの文字の注釈も避ける）
+ * - 文があり、朱書きがある: 文が違えば書き換える。今の位置・文字の大きさで枠に収まり手書きに重ならなければ
+ *   位置と大きさを保ち、収まらなければ置き直す（`replaceAdviceAnnotationText`）。
  *   同期で2つ以上できていれば、古いものを残して残りを消す
  */
 
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
-import { normalizeAdviceText } from "./adviceAnnotationPlacement"
+import {
+  normalizeAdviceText,
+  type ReplacedAdviceAnnotation,
+} from "./adviceAnnotationPlacement"
 import {
   type AdviceCombinationRule,
   type AdviceRubricItem,
@@ -26,7 +31,10 @@ export interface AdviceSyncRow {
   id: string
   examStudentId: string
   rubricApplications: readonly { rubricItemId: string }[]
-  /** その行の助言の朱書き（古い順）。印の無い注釈は入れない */
+  /**
+   * その行の文字の注釈（古い順）。助言の朱書きと、手で書いた文字の注釈（置き場所で避けるだけ）。
+   * 文字でない注釈は入れなくてよい
+   */
   drawingAnnotations: readonly DrawingAnnotation[]
 }
 
@@ -35,20 +43,27 @@ interface PlanRubricAdviceSyncInput<Row extends AdviceSyncRow> {
   rows: readonly Row[]
   rubricItems: readonly AdviceRubricItem[]
   combinations: readonly AdviceCombinationRule[]
-  /** 朱書きを新しく置く（置けなければ null） */
-  place: (row: Row, adviceText: string) => DrawingAnnotation | null
-  /** 置いてある朱書きの文を書き換えるときの、改行を入れた文 */
-  rewrap: (
+  /**
+   * 朱書きを新しく置く（置けなければ null）。`occupyingAnnotations` はその行のほかの文字の注釈（避ける）
+   */
+  place: (
+    row: Row,
+    adviceText: string,
+    occupyingAnnotations: readonly DrawingAnnotation[]
+  ) => DrawingAnnotation | null
+  /** 置いてある朱書きの文を書き換えるときの、改行を入れた文と位置・文字の大きさ */
+  replace: (
     row: Row,
     annotation: DrawingAnnotation,
-    adviceText: string
-  ) => string
+    adviceText: string,
+    occupyingAnnotations: readonly DrawingAnnotation[]
+  ) => ReplacedAdviceAnnotation
 }
 
 /** 助言の朱書きの差分（main の `syncRubricAdviceAnnotations` に渡す形） */
 export interface RubricAdviceSyncPlan {
   creates: { questionScoreId: string; annotation: DrawingAnnotation }[]
-  updates: { drawingAnnotationId: string; text: string }[]
+  updates: ({ drawingAnnotationId: string } & ReplacedAdviceAnnotation)[]
   deletes: string[]
 }
 
@@ -57,12 +72,17 @@ export function planRubricAdviceSync<Row extends AdviceSyncRow>({
   rubricItems,
   combinations,
   place,
-  rewrap,
+  replace,
 }: PlanRubricAdviceSyncInput<Row>): RubricAdviceSyncPlan {
   const plan: RubricAdviceSyncPlan = { creates: [], updates: [], deletes: [] }
   rows.forEach((row) => {
     const adviceAnnotations = row.drawingAnnotations.filter(
       (drawingAnnotation) => drawingAnnotation.isRubricAdvice
+    )
+    // 助言の朱書きは、置く・書き換えるもの1つ以外は消すので、避けるのは手で書いた文字の注釈だけ
+    const occupyingAnnotations = row.drawingAnnotations.filter(
+      (drawingAnnotation) =>
+        !drawingAnnotation.isRubricAdvice && drawingAnnotation.type === "text"
     )
     const resolution = resolveRubricAdvice(
       row.rubricApplications.map((application) => application.rubricItemId),
@@ -81,7 +101,7 @@ export function planRubricAdviceSync<Row extends AdviceSyncRow>({
       ...extras.map((drawingAnnotation) => drawingAnnotation.id)
     )
     if (!kept) {
-      const annotation = place(row, resolution.text)
+      const annotation = place(row, resolution.text, occupyingAnnotations)
       if (annotation) plan.creates.push({ questionScoreId: row.id, annotation })
       return
     }
@@ -90,7 +110,7 @@ export function planRubricAdviceSync<Row extends AdviceSyncRow>({
     ) {
       plan.updates.push({
         drawingAnnotationId: kept.id,
-        text: rewrap(row, kept, resolution.text),
+        ...replace(row, kept, resolution.text, occupyingAnnotations),
       })
     }
   })

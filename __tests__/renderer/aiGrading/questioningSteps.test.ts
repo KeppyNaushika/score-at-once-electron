@@ -210,6 +210,7 @@ function makeStep(overrides: Partial<QuestioningStep>): QuestioningStep {
     options: [],
     allowsManual: true,
     allowsInstruction: true,
+    instructionDraft: null,
     ...overrides,
   }
 }
@@ -419,7 +420,13 @@ describe("問いの一覧の行", () => {
 
   it("見直しは、下書きで助言を直した問いを数える", () => {
     const withAdvice = (text: string): QuestioningStepState => ({
-      step: makeStep({ advice: { baseText: "単位を書こう。", text } }),
+      step: makeStep({
+        advice: {
+          baseText: "単位を書こう。",
+          rubricItemAdviceText: null,
+          text,
+        },
+      }),
       decision: { kind: "instruction", text: "指示" },
       isCommitted: false,
       draftProposalResponseId: "draft",

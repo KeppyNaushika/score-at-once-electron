@@ -69,7 +69,6 @@ function makeResponse(overrides: Partial<ResponseRow> = {}): ResponseRow {
     proposalId: "proposal-1",
     optionId: "option-1",
     freeText: "",
-    adviceText: null,
     resultRubricItemId: "item-1",
     resultRubricItem: null,
     committedAt: FIXED_DATE,
@@ -109,6 +108,24 @@ function makeProposal(
     options: [makeOption()],
     members: [makeMember("student-a"), makeMember("student-b")],
     responses: [],
+    adviceDrafts: [],
+    instructionDrafts: [],
+    ...overrides,
+  }
+}
+
+type AdviceDraftRow = AiRubricProposalRow["adviceDrafts"][number]
+
+function makeAdviceDraft(
+  overrides: Partial<AdviceDraftRow> = {}
+): AdviceDraftRow {
+  return {
+    id: "advice-draft-1",
+    proposalId: "proposal-1",
+    userId: "user-1",
+    adviceText: "cm まで書こう。",
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
     ...overrides,
   }
 }
@@ -332,6 +349,7 @@ describe("案の助言（助言の欄の文）", () => {
   it("直していなければ AI の文案。当たる既存の項目があればその項目の今の助言", () => {
     expect(proposalAdviceOf(makeProposal())).toEqual({
       baseText: "単位を書こう。",
+      rubricItemAdviceText: null,
       text: "単位を書こう。",
     })
     expect(
@@ -343,6 +361,7 @@ describe("案の助言（助言の欄の文）", () => {
       )
     ).toEqual({
       baseText: "単位に気をつけよう。",
+      rubricItemAdviceText: "単位に気をつけよう。",
       text: "単位に気をつけよう。",
     })
   })
@@ -351,28 +370,54 @@ describe("案の助言（助言の欄の文）", () => {
     const proposal = makeProposal({
       responses: [
         makeResponse({
-          adviceText: "確定した文",
           resultRubricItem: makeRubricItem("項目で直した文"),
         }),
       ],
     })
     expect(proposalAdviceOf(proposal)).toEqual({
       baseText: "項目で直した文",
+      rubricItemAdviceText: "項目で直した文",
       text: "項目で直した文",
     })
   })
 
-  it("最新の答えが下書きで助言を直していれば、その文が効く（空は助言なし）", () => {
-    const draftOf = (adviceText: string | null) =>
-      makeProposal({
-        responses: [
-          makeResponse({ id: "draft", committedAt: null, adviceText }),
-        ],
-      })
-    expect(proposalAdviceOf(draftOf("cm まで書こう。")).text).toBe(
+  it("助言の欄で直した文が効く（空は助言なし。複数あれば updatedAt の新しい方）", () => {
+    const withDrafts = (adviceDrafts: AdviceDraftRow[]) =>
+      makeProposal({ adviceDrafts })
+    expect(proposalAdviceOf(withDrafts([makeAdviceDraft()])).text).toBe(
       "cm まで書こう。"
     )
-    expect(proposalAdviceOf(draftOf("")).text).toBe("")
-    expect(proposalAdviceOf(draftOf(null)).text).toBe("単位を書こう。")
+    expect(
+      proposalAdviceOf(withDrafts([makeAdviceDraft({ adviceText: "" })])).text
+    ).toBe("")
+    expect(
+      proposalAdviceOf(
+        withDrafts([
+          makeAdviceDraft({
+            id: "newer",
+            adviceText: "新しい文",
+            updatedAt: new Date(FIXED_DATE.getTime() + 1000),
+          }),
+          makeAdviceDraft({ id: "older", adviceText: "古い文" }),
+        ])
+      ).text
+    ).toBe("新しい文")
+  })
+
+  it("最後の確定より前に直した文は効かない（今の項目の助言が土台のまま）", () => {
+    const proposal = makeProposal({
+      responses: [
+        makeResponse({
+          committedAt: new Date(FIXED_DATE.getTime() + 1000),
+          resultRubricItem: makeRubricItem("確定した文"),
+        }),
+      ],
+      adviceDrafts: [makeAdviceDraft({ adviceText: "古い文" })],
+    })
+    expect(proposalAdviceOf(proposal)).toEqual({
+      baseText: "確定した文",
+      rubricItemAdviceText: "確定した文",
+      text: "確定した文",
+    })
   })
 })

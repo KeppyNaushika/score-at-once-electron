@@ -174,6 +174,7 @@ export function buildCheckQuestioning({
       options,
       allowsManual: true,
       allowsInstruction: false,
+      instructionDraft: null,
     })
   })
 
@@ -220,6 +221,7 @@ export function buildCheckQuestioning({
         ],
         allowsManual: true,
         allowsInstruction: false,
+        instructionDraft: null,
       })
     })
 

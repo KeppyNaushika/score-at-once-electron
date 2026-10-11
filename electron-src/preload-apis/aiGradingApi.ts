@@ -25,6 +25,13 @@ export function createAiGradingApi() {
       listMyRuns: bind("aiGrading:listMyRuns"),
       listProposals: bind("aiGrading:listProposals"),
       recordProposalDraft: bind("aiGrading:recordProposalDraft"),
+      setProposalAdviceDraft: bind("aiGrading:setProposalAdviceDraft"),
+      setProposalInstructionDraft: bind(
+        "aiGrading:setProposalInstructionDraft"
+      ),
+      discardProposalInstructionDrafts: bind(
+        "aiGrading:discardProposalInstructionDrafts"
+      ),
       recordAttemptResponses: bind("aiGrading:recordAttemptResponses"),
       setQuestioningScoringMethod: bind(
         "aiGrading:setQuestioningScoringMethod"

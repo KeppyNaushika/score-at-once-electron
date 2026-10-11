@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react"
 
+import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
+
 import type { AiGradingAnswer, AiGradingRunRow } from "../types"
 import {
   type AnswerOrder,
@@ -15,6 +17,8 @@ interface UseAiAnswerReviewStateOptions {
   /** 設問の自分の実行（実行の履歴で選んだ実行がまだあるかを見る） */
   runs: readonly AiGradingRunRow[]
   currentUserId: string
+  /** いま開いている AI 採点・AI チェックのタブの目的（採点指示のタブなら null）。選んだ実行はその目的のものだけが効く */
+  purpose: AiGradingStage1Purpose | null
   /** 並べ方（設問をまたいで残すので、AI採点モードの根から受け取る） */
   answerOrder: AnswerOrder
 }
@@ -29,11 +33,17 @@ export function useAiAnswerReviewState({
   points,
   runs,
   currentUserId,
+  purpose,
   answerOrder,
 }: UseAiAnswerReviewStateOptions) {
   const [chosenRunIdState, setChosenRunIdState] = useState<string | null>(null)
-  // 選んだ実行が消えたら最新に戻して見せる（選択は書き戻さない）
-  const chosenRunId = resolveChosenRunId(chosenRunIdState, runs, currentUserId)
+  // 選んだ実行が消えた・いまのタブの目的でなければ最新に戻して見せる（選択は書き戻さない）
+  const chosenRunId = resolveChosenRunId(
+    chosenRunIdState,
+    runs,
+    currentUserId,
+    purpose
+  )
 
   const reviewedAnswers = useMemo(
     () =>

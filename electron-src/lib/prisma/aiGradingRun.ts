@@ -185,12 +185,7 @@ export async function getAiGradingRunForProcessing(runId: string) {
   })
 }
 
-/**
- * 試行に書く結果（送信の成否・1段目の判定・使用量）。
- *
- * 1段目は教員向けのコメントと朱書きの文案を返さない（§3-3）ので、`comment`・
- * `annotationText` の列は書かない（既定の "" のまま。過去の行の値は残る）
- */
+/** 試行に書く結果（送信の成否・1段目の判定・使用量） */
 export interface AiGradingAttemptResult {
   state: Exclude<AiGradingAttemptState, "pending">
   status: ScoringStatus

@@ -208,6 +208,10 @@ describe("DateTime正規化マイグレーション", () => {
     "AiPrompt",
     // 20261010120000 で追加（AI 採点の項目の案）。normalize migration より後で ISO text 生成
     "AiRubricProposal",
+    // 20261011140000 で追加（問いかけで直している助言の文）。normalize migration より後で ISO text 生成
+    "AiRubricProposalAdviceDraft",
+    // 20261011150000 で追加（問いかけの「その他」の欄に書いている文）。normalize migration より後で ISO text 生成
+    "AiRubricProposalInstructionDraft",
     "AiRubricProposalMember",
     "AiRubricProposalOption",
     "AiRubricProposalResponse",

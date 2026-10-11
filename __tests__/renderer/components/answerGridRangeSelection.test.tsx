@@ -343,6 +343,8 @@ function AiGridHarness() {
         onSelect={grid.handleSelectAnswer}
         onReplaceSelection={(ids) => grid.setSelection(new Set(ids))}
         totalCount={grid.gridItems.length}
+        pageAnswerImages={[]}
+        advicePreview={null}
       />
     </>
   )

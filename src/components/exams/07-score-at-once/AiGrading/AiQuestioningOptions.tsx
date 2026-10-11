@@ -110,6 +110,7 @@ export function AiQuestioningOptions({
                   flow.setOtherText(step.id, event.target.value)
                 }
                 onFocus={() => flow.setFocusedIndex(entryIndex)}
+                onBlur={() => flow.forgetOtherText(step.id)}
                 onKeyDown={handleOtherKeyDown}
                 placeholder="例：誤字は1字までなら部分点1点として採点し直して"
                 className={`min-h-14 text-xs ${isFocused ? "" : "hidden"}`}

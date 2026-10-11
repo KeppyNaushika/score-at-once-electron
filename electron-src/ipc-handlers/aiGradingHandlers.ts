@@ -47,7 +47,15 @@ import {
   listAiRubricProposalRunsByCropRegion,
   recordAiRubricProposalDraft,
   type RecordAiRubricProposalDraftInput,
+  setAiRubricProposalAdviceDraft,
+  type SetAiRubricProposalAdviceDraftInput,
 } from "../lib/prisma/aiRubricProposal"
+import {
+  discardAiRubricProposalInstructionDrafts,
+  type DiscardAiRubricProposalInstructionDraftsInput,
+  setAiRubricProposalInstructionDraft,
+  type SetAiRubricProposalInstructionDraftInput,
+} from "../lib/prisma/aiRubricProposalInstructionDraft"
 import { getCurrentActorUserId } from "../lib/prisma/auditActor"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
@@ -169,6 +177,21 @@ export const aiGradingHandlers = {
   "aiGrading:recordProposalDraft": async (
     input: RecordAiRubricProposalDraftInput
   ) => recordAiRubricProposalDraft(input, requireActorUserId()),
+
+  /** 問いかけの助言の欄の文を書く（1打鍵ごと。案ごと・教員ごとの行をその場で書き換える） */
+  "aiGrading:setProposalAdviceDraft": async (
+    input: SetAiRubricProposalAdviceDraftInput
+  ) => setAiRubricProposalAdviceDraft(input, requireActorUserId()),
+
+  /** 問いかけの「その他」の欄の文を書く（1打鍵ごと。案ごと・教員ごとの行をその場で書き換える） */
+  "aiGrading:setProposalInstructionDraft": async (
+    input: SetAiRubricProposalInstructionDraftInput
+  ) => setAiRubricProposalInstructionDraft(input, requireActorUserId()),
+
+  /** 確定のとき、「その他」を選んでいない案の欄の文（自分の行）を捨てる */
+  "aiGrading:discardProposalInstructionDrafts": async (
+    input: DiscardAiRubricProposalInstructionDraftsInput
+  ) => discardAiRubricProposalInstructionDrafts(input, requireActorUserId()),
 
   /**
    * 案の外の問いかけ（AI チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書くだけ

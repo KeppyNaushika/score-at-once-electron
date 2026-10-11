@@ -2,7 +2,7 @@
  * AI採点モードの一覧（docs/vlm-grading-design.md §10）。
  *
  * ここで固定すること:
- * - 答案の下の札は、採用の前か後かを1つの状態に分ける（提案・採用済み・採用後に変更・未判定・失敗…）
+ * - 答案の下の札は、表示中の試行から1つの状態に決める（提案・未判定・結果待ち・失敗・拒否）
  * - 絞り込みは「自分の採点」と「AI の採点」の2組で、組の中は OR、組どうしは AND
  * - 採点種順は、マスに見えている状態（自分の採点、無ければ成功した AI の判定）で並べる
  */
@@ -37,7 +37,6 @@ import {
 } from "./helpers/aiGradingRowFixtures"
 
 const POINTS = 4
-const ADOPTED_AT = new Date("2026-10-02T00:00:00.000Z")
 
 const cropRegion: QuestionAnswerRegionRow = {
   id: CROP_REGION_ID,
@@ -114,7 +113,7 @@ describe("答案の下の札", () => {
     ).toBe("refused")
   })
 
-  it("成功した判定を採用していなければ提案（自分が採点済みでも）", () => {
+  it("成功した判定は提案（自分が採点済みでも）", () => {
     expect(classifyProposalChip(reviewed(answerWithAttempt("s1")))).toBe(
       "proposal"
     )
@@ -134,44 +133,6 @@ describe("答案の下の札", () => {
         )
       )
     ).toBe("proposal")
-  })
-
-  it("採用して自分の採点が判定のままなら採用済み、変えていれば採用後に変更", () => {
-    const adoptedAttempt: Partial<AiGradingAttemptRow> = {
-      status: "partial",
-      partialScore: 2,
-      adoptedAt: ADOPTED_AT,
-    }
-    expect(
-      classifyProposalChip(
-        reviewed(
-          answerWithAttempt("s1", adoptedAttempt, {
-            questionScore: makeQuestionScore({
-              examStudentId: "s1",
-              status: "partial",
-              partialScore: 2,
-            }),
-          })
-        )
-      )
-    ).toBe("adopted")
-    expect(
-      classifyProposalChip(
-        reviewed(
-          answerWithAttempt("s1", adoptedAttempt, {
-            questionScore: makeQuestionScore({
-              examStudentId: "s1",
-              status: "partial",
-              partialScore: 3,
-            }),
-          })
-        )
-      )
-    ).toBe("changed")
-    // 採用したあとで未採点に戻した
-    expect(
-      classifyProposalChip(reviewed(answerWithAttempt("s1", adoptedAttempt)))
-    ).toBe("changed")
   })
 })
 

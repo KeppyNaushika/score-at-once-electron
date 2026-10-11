@@ -290,17 +290,35 @@ describe("朱書きの差分", () => {
 
   /** 置き場所の代わり（どの行に何の文で置いたかを残す） */
   const placed: { rowId: string; text: string }[] = []
+  /** 置く・書き換えるときに避けるよう渡された注釈（行 → 注釈の id） */
+  const occupyingIdsByRowId = new Map<string, string[]>()
   const plan = (rows: AdviceSyncRow[], rules: AdviceCombinationRule[] = []) => {
     placed.length = 0
+    occupyingIdsByRowId.clear()
     return planRubricAdviceSync({
       rows,
       rubricItems,
       combinations: rules,
-      place: (row, adviceText) => {
+      place: (row, adviceText, occupyingAnnotations) => {
         placed.push({ rowId: row.id, text: adviceText })
+        occupyingIdsByRowId.set(
+          row.id,
+          occupyingAnnotations.map((annotation) => annotation.id)
+        )
         return adviceAnnotation(`new-${row.id}`, adviceText)
       },
-      rewrap: (_row, _annotation, adviceText) => `【${adviceText}】`,
+      replace: (row, annotation, adviceText, occupyingAnnotations) => {
+        occupyingIdsByRowId.set(
+          row.id,
+          occupyingAnnotations.map((occupying) => occupying.id)
+        )
+        return {
+          text: `【${adviceText}】`,
+          x: annotation.x,
+          y: annotation.y,
+          fontSize: annotation.fontSize,
+        }
+      },
     })
   }
 
@@ -317,7 +335,7 @@ describe("朱書きの差分", () => {
     expect(result.deletes).toEqual([])
   })
 
-  it("文が変わったら、位置を変えずに文だけを書き換える（折り返しの違いだけなら書き換えない）", () => {
+  it("文が変わったら書き換える（位置と大きさは replace が決める。折り返しの違いだけなら書き換えない）", () => {
     const result = plan([
       makeRow(
         "score-1",
@@ -332,7 +350,13 @@ describe("朱書きの差分", () => {
     ])
     expect(result.creates).toEqual([])
     expect(result.updates).toEqual([
-      { drawingAnnotationId: "advice-2", text: "【単位を書こう】" },
+      {
+        drawingAnnotationId: "advice-2",
+        text: "【単位を書こう】",
+        x: expect.any(Number),
+        y: expect.any(Number),
+        fontSize: expect.any(Number),
+      },
     ])
     expect(result.deletes).toEqual([])
   })
@@ -393,6 +417,36 @@ describe("朱書きの差分", () => {
     const withAdvice = plan([makeRow("score-2", ["item-unit"], [handWritten])])
     expect(withAdvice.creates).toHaveLength(1)
     expect(withAdvice.deletes).toEqual([])
+  })
+
+  it("置く・書き換えるときは、その行の手で書いた文字の注釈だけを避けるよう渡す（助言の朱書き・文字でない注釈は渡さない）", () => {
+    const handWrittenText = {
+      ...newDrawingAnnotation({ type: "text", x: 0.2, y: 0.2, text: "よし" }),
+      id: "hand-text",
+    }
+    const handWrittenLine = {
+      ...newDrawingAnnotation({ type: "line", x: 0.2, y: 0.2 }),
+      id: "hand-line",
+    }
+    const result = plan([
+      makeRow("score-1", ["item-unit"], [handWrittenText, handWrittenLine]),
+      makeRow(
+        "score-2",
+        ["item-unit"],
+        [
+          adviceAnnotation("advice-2", "単位を書きなさい"),
+          adviceAnnotation("advice-dup", "単位を書きなさい"),
+          handWrittenText,
+        ]
+      ),
+    ])
+    expect(occupyingIdsByRowId.get("score-1")).toEqual(["hand-text"])
+    expect(occupyingIdsByRowId.get("score-2")).toEqual(["hand-text"])
+    // 手で書いた注釈は作る・直す・消すの対象にしない
+    expect(result.updates.map((update) => update.drawingAnnotationId)).toEqual([
+      "advice-2",
+    ])
+    expect(result.deletes).toEqual(["advice-dup"])
   })
 
   it("決まりを決めると、その組み合わせの行に決まりの文で作る", () => {

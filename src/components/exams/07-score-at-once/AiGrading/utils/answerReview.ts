@@ -8,17 +8,12 @@ import { SCORING_STATUS_ORDER } from "@/lib/scoringStatusColors"
 
 import type { AiGradingAnswer, AttemptWithRun } from "../types"
 import { cellStatusOf } from "./aiGridFilter"
-import { isAdoptedAttempt, resolveDisplayedAttempt } from "./attemptSelection"
+import { resolveDisplayedAttempt } from "./attemptSelection"
 import {
   classifyReviewReasons,
   confidenceRank,
   type ReviewReason,
 } from "./reviewReasons"
-import {
-  isSameJudgement,
-  isScored,
-  judgementOfQuestionScore,
-} from "./scoreComparison"
 
 /** 答案1件の印（計算した値。行は持たない） */
 export interface AnswerReview {
@@ -26,10 +21,6 @@ export interface AnswerReview {
   reviewReasons: ReviewReason[]
   /** 表示中の試行が、選んでいる採点指示とは別の採点指示のもの */
   isFromOtherPrompt: boolean
-  /** 表示中の試行を採用した */
-  isAdopted: boolean
-  /** 採用したあとで、自分の採点を AI の判定から変えた（表示するだけで上書きしない） */
-  isChangedAfterAdoption: boolean
 }
 
 export interface AnswerReviewContext {
@@ -53,9 +44,6 @@ export function reviewAnswer(
     questionScore: answer.questionScore,
     points: context.points,
   }
-  const isAdopted = displayedAttempt
-    ? isAdoptedAttempt(displayedAttempt)
-    : false
   return {
     displayedAttempt,
     reviewReasons: classifyReviewReasons(reviewInput),
@@ -63,17 +51,6 @@ export function reviewAnswer(
       displayedAttempt !== null &&
       context.selectedPromptId !== null &&
       displayedAttempt.run.promptId !== context.selectedPromptId,
-    isAdopted,
-    isChangedAfterAdoption:
-      displayedAttempt !== null &&
-      isAdopted &&
-      answer.questionScore !== undefined &&
-      isScored(answer.questionScore) &&
-      !isSameJudgement(
-        displayedAttempt.attempt,
-        judgementOfQuestionScore(answer.questionScore),
-        context.points
-      ),
   }
 }
 

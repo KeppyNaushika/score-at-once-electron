@@ -9,6 +9,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import { annotationsByCropRegionQuery } from "@/queries/drawing"
 import { rubricAnswerInkQuery } from "@/queries/rubric"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
@@ -39,7 +40,7 @@ interface RubricAdvicePreviewProps {
 /**
  * 重なった助言の下見（docs/vlm-grading-design.md §3-7）。その組み合わせの答案に、選んでいる
  * 選択肢の朱書きを実際に置いた形で描く（一覧表示と同じ部品。保存した助言の朱書きは下見に
- * 差し替え、手で書いた注釈はそのまま描く）
+ * 差し替え、手で書いた注釈はそのまま描く。置く場所は手で書いた文字の注釈を避ける）
  */
 export function RubricAdvicePreview({
   cropRegion,
@@ -68,12 +69,23 @@ export function RubricAdvicePreview({
     )
   )
 
+  const { data: savedAnnotations } = useQuery(
+    annotationsByCropRegionQuery(cropRegion.id, currentUserId)
+  )
+
   // 下見の朱書きの id は計算のたびに変わるので、置く材料が変わったときだけ作り直す
   const previewByExamStudentId = useMemo(() => {
     const inkGridByExamStudentId = indexInkGridsByExamStudent(
       measurements ?? [],
       cropRegion.id,
       pageAnswerImages
+    )
+    // 避ける手で書いた文字の注釈（助言の朱書きは下見に差し替わるので避けない）
+    const occupyingByExamStudentId = Map.groupBy(
+      (savedAnnotations ?? []).filter(
+        (annotation) => annotation.type === "text" && !annotation.isRubricAdvice
+      ),
+      (annotation) => annotation.questionScore?.examStudentId ?? ""
     )
     return new Map(
       previewScoringDatas.map((scoringData): [string, DrawingAnnotation[]] => {
@@ -85,12 +97,16 @@ export function RubricAdvicePreview({
                   inkGridByExamStudentId.get(scoringData.examStudentId) ?? null,
                 region: cropRegion,
                 pageSize,
+                occupyingAnnotations: occupyingByExamStudentId.get(
+                  scoringData.examStudentId
+                ),
               })
         return [scoringData.examStudentId, annotation ? [annotation] : []]
       })
     )
   }, [
     measurements,
+    savedAnnotations,
     cropRegion,
     pageAnswerImages,
     previewScoringDatas,

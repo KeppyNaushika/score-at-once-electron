@@ -141,7 +141,6 @@ describe("表示する試行と印", () => {
       examStudentId: "s",
       id: "a-old",
       createdAt: new Date("2026-10-02T00:00:00.000Z"),
-      adoptedAt: new Date("2026-10-02T00:00:00.000Z"),
     },
     { id: "run-old", promptId: "prompt-1" }
   )
@@ -151,7 +150,7 @@ describe("表示する試行と印", () => {
     expect(resolveDisplayedAttempt(attempts)?.attempt.id).toBe("a-old")
   })
 
-  it("別の採点指示・採用済み・採用後の変更を印にする", () => {
+  it("別の採点指示の判定を印にする", () => {
     const review = reviewAnswer(
       makeAnswer("s", {
         attempts,
@@ -166,8 +165,6 @@ describe("表示する試行と印", () => {
       }
     )
     expect(review.isFromOtherPrompt).toBe(true)
-    expect(review.isAdopted).toBe(true)
-    expect(review.isChangedAfterAdoption).toBe(true)
   })
 
   describe("並べ方（2段の並べ替え。最後は生徒順）", () => {

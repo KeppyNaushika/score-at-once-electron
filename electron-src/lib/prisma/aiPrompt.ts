@@ -77,9 +77,8 @@ export async function readRubricItemsForPrompt(cropRegionId: string): Promise<{
 }
 
 /**
- * 教員が書いたプロンプトの中身。作成者・項目の一覧の文・改訂のときだけ埋まる2欄は含めない
- * （作成者は main が操作者から決め、項目の一覧の文はアプリが写す。改訂の欄は廃止した
- * プロンプトの改訂の名残で、もう書かない）。旧列 `questionImagePath` も書かない
+ * 教員が書いたプロンプトの中身。作成者・項目の一覧の文は含めない
+ * （作成者は main が操作者から決め、項目の一覧の文はアプリが写す）
  */
 export type CreateAiPromptData = Pick<
   Prisma.AiPromptUncheckedCreateInput,
