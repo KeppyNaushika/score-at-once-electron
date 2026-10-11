@@ -126,6 +126,7 @@ export function drawMainCanvas(
       canvasWidth,
       pageSpacing,
       zoom,
+      pageSize,
       scoringMarkConfig,
       scoringMarkImages,
     },

@@ -15,7 +15,6 @@ export interface ExportOptions {
   includeGradingData: boolean
   format: "pdf" | "excel"
   markPosition: string
-  markSize: number
   showMarks: boolean
   pdfOrientation: PdfOrientation
   parallelCount: number // 並列処理数（1-8）

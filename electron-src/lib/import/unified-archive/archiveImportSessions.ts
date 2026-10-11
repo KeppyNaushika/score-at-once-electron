@@ -8,11 +8,13 @@
  * electron には依存しない。migration の場所と、表・列を比べる相手の DB は呼び出し側が渡す。
  */
 
+import Database from "better-sqlite3"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 
+import { convertArchiveAnswerOverlayLengths } from "../../prisma/answerOverlayLengthConversion"
 import {
   openUnifiedArchive,
   UnifiedArchiveOpenError,
@@ -47,6 +49,22 @@ export interface OpenUnifiedArchiveImportSessionOptions {
   referenceDatabasePath: string
 }
 
+/**
+ * 現行化の続き: 答案に重ねる要素の長さを画素から mm へ直す（SQL の migration の後）。
+ * 答案画像の大きさを読む非同期の処理なので、同期の `openUnifiedArchive` の外で行う。
+ * 同梱の答案画像を読めない試験は画素のまま残り、取り込んだ後に起動時の変換が拾う
+ */
+const finishOpenedArchiveMigration = async (
+  opened: OpenedUnifiedArchive
+): Promise<void> => {
+  const db = new Database(opened.databasePath, { fileMustExist: true })
+  try {
+    await convertArchiveAnswerOverlayLengths(db, opened.filesDirectory)
+  } finally {
+    db.close()
+  }
+}
+
 const sessions = new Map<string, UnifiedArchiveImportSession>()
 
 const removeDirectory = (directory: string): void => {
@@ -61,9 +79,9 @@ const removeDirectory = (directory: string): void => {
  * アーカイブを一時ディレクトリへ開いて、作業を始める。守りに掛かったものは失敗ではなく
  * `rejected` で返す（ウィザードが理由を出す）。それ以外の失敗は作業ディレクトリを消して投げる
  */
-export function openUnifiedArchiveImportSession(
+export async function openUnifiedArchiveImportSession(
   options: OpenUnifiedArchiveImportSessionOptions
-): UnifiedArchiveImportSessionOpenResult {
+): Promise<UnifiedArchiveImportSessionOpenResult> {
   const workDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "sao-import-"))
   try {
     const opened = openUnifiedArchive({
@@ -73,6 +91,7 @@ export function openUnifiedArchiveImportSession(
       migrationsDir: options.migrationsDir,
       referenceDatabasePath: options.referenceDatabasePath,
     })
+    await finishOpenedArchiveMigration(opened)
     const sessionId = crypto.randomUUID()
     const session: UnifiedArchiveImportSession = {
       archivePath: options.archivePath,

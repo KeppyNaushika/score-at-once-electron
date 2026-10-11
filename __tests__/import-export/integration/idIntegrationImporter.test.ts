@@ -5,8 +5,24 @@
  * 実際のSQLiteテスト用DBを使用し、インポートパイプライン全体を検証する
  */
 
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
+import sharp from "sharp"
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
+import {
+  convertPixelLengthsToMm,
+  overlayPixelsPerMm,
+} from "../../../src/lib/answerOverlayPlacement"
 import {
   createArchiveClassesData,
   createArchiveExamData,
@@ -936,68 +952,144 @@ describe("executeIdIntegrationImport", () => {
   })
 
   // II-13: 出力設定（正規化済み）の作成
-  it("II-13: 重ね描きのスタイルが作成される", async () => {
-    const { data, examId } = createBasicTestData()
+  // 旧アーカイブの長さは答案画像の画素。取り込みで同梱の答案画像を読み、mm へ直して書く
+  describe("II-13: 重ね描きのスタイル", () => {
+    let answerSheetDirectory: string
 
-    data.examData.answerOverlayStyles = [
-      {
-        id: generateId(),
-        examId,
-        overlayKind: "mark",
-        position: "top-left",
-        anchor: "top-left",
-        offsetX: 0,
-        offsetY: 0,
-        size: 50,
-        color: "#ef4444",
-        opacity: 100,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    const preMatch = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
+    beforeEach(() => {
+      answerSheetDirectory = fs.mkdtempSync(
+        path.join(os.tmpdir(), "legacy-answer-sheets-")
+      )
     })
 
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    const styles = await prisma.examAnswerOverlayStyle.findMany({
-      where: { examId: result.examId! },
+    afterEach(() => {
+      fs.rmSync(answerSheetDirectory, { recursive: true, force: true })
     })
-    expect(styles.length).toBe(1)
-    expect(styles[0].position).toBe("top-left")
+
+    /** 画素の重ね描きスタイルを1件持つ旧アーカイブを取り込み、書かれた行を返す */
+    async function importPixelMarkStyle(answerSheetPaths: string[]) {
+      const { data, examId } = createBasicTestData()
+      data.answerSheetPaths = answerSheetPaths
+
+      data.examData.answerOverlayStyles = [
+        {
+          id: generateId(),
+          examId,
+          overlayKind: "mark",
+          position: "top-left",
+          anchor: "top-left",
+          offsetX: 3,
+          offsetY: -4,
+          size: 50,
+          color: "#ef4444",
+          opacity: 100,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]
+
+      const preMatch = createFileOverviewData({
+        student: createPreMatchingResult({
+          noMatch: data.studentsData.students.map((student) => ({
+            importId: student.id,
+            importData: { ...student },
+            displayLabel: student.lastName,
+          })),
+        }),
+        classroom: createPreMatchingResult({
+          noMatch: data.classesData.classrooms.map((classroom) => ({
+            importId: classroom.id,
+            importData: { ...classroom },
+            displayLabel: classroom.name,
+          })),
+        }),
+        subtotalGroup: createPreMatchingResult({
+          noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
+            importId: subtotalGroup.id,
+            importData: { ...subtotalGroup },
+            displayLabel: subtotalGroup.name,
+          })),
+        }),
+        exam: {
+          isIdMatch: false,
+          importExamId: examId,
+          importData: {},
+          displayLabel: "テスト",
+        },
+      })
+
+      const result = await executeIdIntegrationImport(
+        data,
+        preMatch,
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      return prisma.examAnswerOverlayStyle.findMany({
+        where: { examId: result.examId! },
+      })
+    }
+
+    const writeAnswerSheet = async (
+      fileName: string,
+      width: number,
+      height: number
+    ): Promise<string> => {
+      const filePath = path.join(answerSheetDirectory, fileName)
+      await sharp({
+        create: { width, height, channels: 3, background: "#ffffff" },
+      })
+        .png()
+        .toFile(filePath)
+      return filePath
+    }
+
+    it("同梱の答案画像で mm へ変換して作成される（描く画素は変わらない）", async () => {
+      // ラベルは A4（createArchiveExamData）だが、答案は A3 を 144dpi で読んだ画像
+      const styles = await importPixelMarkStyle([
+        await writeAnswerSheet("1.png", 1684, 2381),
+        await writeAnswerSheet("2.png", 1684, 2381),
+        await writeAnswerSheet("3.png", 1191, 1684),
+      ])
+
+      expect(styles.length).toBe(1)
+      expect(styles[0].position).toBe("top-left")
+      expect(styles[0].lengthUnit).toBe("mm")
+      const pixelsPerMm = overlayPixelsPerMm("A4", 1684, 2381)
+      const expected = convertPixelLengthsToMm(
+        {
+          overlayKind: "mark",
+          position: "top-left",
+          size: 50,
+          offsetX: 3,
+          offsetY: -4,
+        },
+        pixelsPerMm
+      )
+      expect(styles[0].size).toBeCloseTo(expected.size, 9)
+      expect(styles[0].offsetX).toBeCloseTo(expected.offsetX, 9)
+      expect(styles[0].offsetY).toBeCloseTo(expected.offsetY, 9)
+      expect(styles[0].size * pixelsPerMm).toBeCloseTo(50, 9)
+    })
+
+    it("答案画像の無いアーカイブは 144dpi 相当で代用して mm にする", async () => {
+      const styles = await importPixelMarkStyle([])
+
+      expect(styles[0].lengthUnit).toBe("mm")
+      expect(styles[0].size).toBeCloseTo((50 * 25.4) / 144, 9)
+    })
+
+    it("読めない答案画像があれば px のまま書く（起動時の変換が拾う）", async () => {
+      const styles = await importPixelMarkStyle([
+        await writeAnswerSheet("1.png", 1191, 1684),
+        path.join(answerSheetDirectory, "missing.png"),
+      ])
+
+      expect(styles[0].lengthUnit).toBe("px")
+      expect(styles[0].size).toBe(50)
+      expect(styles[0].offsetX).toBe(3)
+      expect(styles[0].offsetY).toBe(-4)
+    })
   })
 
   // II-15: Tag/TagSubtotalGroup作成（II-14 は CropRegionMarkingOverride 廃止に伴い欠番）

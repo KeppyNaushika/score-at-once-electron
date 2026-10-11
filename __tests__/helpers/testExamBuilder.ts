@@ -391,7 +391,7 @@ export async function createFullTestExam(
         anchor: "middle-center",
         offsetX: 0,
         offsetY: 0,
-        size: 50,
+        size: 9,
         color: "#ef4444",
         opacity: 100,
       },

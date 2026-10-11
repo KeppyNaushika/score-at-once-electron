@@ -83,7 +83,6 @@ export function useExportPage() {
     includeGradingData: true,
     format: "pdf",
     markPosition: "bottom-right",
-    markSize: 50,
     showMarks: true,
     pdfOrientation: "portrait",
     parallelCount: 4,

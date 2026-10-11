@@ -35,7 +35,7 @@ export const OVERLAY_ANCHORS = [
 export type OverlayAnchor = (typeof OVERLAY_ANCHORS)[number]
 
 /** 想定外値は中央へ落とす */
-const { to: toOverlayAnchor } = defineStringUnion(
+export const { to: toOverlayAnchor } = defineStringUnion(
   OVERLAY_ANCHORS,
   "middle-center"
 )
@@ -46,7 +46,26 @@ export const OVERLAY_KINDS = ["mark", "partial", "subtotal", "total"] as const
 export type OverlayKind = (typeof OVERLAY_KINDS)[number]
 
 /** 想定外値は採点マークへ落とす */
-const { to: toOverlayKind } = defineStringUnion(OVERLAY_KINDS, "mark")
+export const { to: toOverlayKind } = defineStringUnion(OVERLAY_KINDS, "mark")
+
+/**
+ * 長さの列（offsetX / offsetY / size）の単位。
+ *
+ * - "mm": 用紙の上の長さ。描くときに答案画像の画素へ換算する（`resolveOverlayPixelLengths`）
+ * - "px": 答案画像の画素。長さを画素で持っていた頃の行で、答案画像を読んで mm へ変換するまで残る
+ *   （`electron-src/lib/prisma/answerOverlayLengthConversion.ts`）。描画は画素のまま描く
+ *
+ * 変換が済んだかどうかは値の大小から推測せず、この列で行ごとに持つ。
+ */
+export const OVERLAY_LENGTH_UNITS = ["mm", "px"] as const
+
+export type OverlayLengthUnit = (typeof OVERLAY_LENGTH_UNITS)[number]
+
+/** 想定外値は現行の単位（mm）へ落とす */
+const { to: toOverlayLengthUnit } = defineStringUnion(
+  OVERLAY_LENGTH_UNITS,
+  "mm"
+)
 
 /** 基準点の日本語ラベル（設定UIの選択肢） */
 export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {
@@ -68,11 +87,12 @@ export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {
 /** 重ね描き要素のスタイル1行 */
 export type AnswerOverlayStyle = Omit<
   ExamAnswerOverlayStyle,
-  "overlayKind" | "position" | "anchor"
+  "overlayKind" | "position" | "anchor" | "lengthUnit"
 > & {
   overlayKind: OverlayKind
   position: OverlayAnchor
   anchor: OverlayAnchor
+  lengthUnit: OverlayLengthUnit
 }
 
 /** 採点状態ごとの可視性1行 */
@@ -105,6 +125,7 @@ export function toAnswerOverlaySettings(
       overlayKind: toOverlayKind(styleRow.overlayKind),
       position: toOverlayAnchor(styleRow.position),
       anchor: toOverlayAnchor(styleRow.anchor),
+      lengthUnit: toOverlayLengthUnit(styleRow.lengthUnit),
     }
   }
 
@@ -151,6 +172,7 @@ const buildDefaultStyle = (
   overlayKind,
   position: "middle-center",
   anchor: "middle-center",
+  lengthUnit: "mm",
   offsetX: 0,
   offsetY: 0,
   size,
@@ -173,13 +195,18 @@ const buildDefaultVisibility = (
   updatedAt: new Date(0),
 })
 
-/** 設定が未保存の試験に使う既定値 */
+/**
+ * 設定が未保存の試験に使う既定値。
+ *
+ * 大きさは mm。印刷物で読める大きさとして決めた値（画素で持っていた頃の 50 / 14 / 18 / 18 px の
+ * 換算値ではない。画素の行は変換で見た目を保つので、この値が効くのは設定が未保存の試験だけ）
+ */
 export const DEFAULT_ANSWER_OVERLAY_SETTINGS: AnswerOverlaySettings = {
   styles: {
-    mark: buildDefaultStyle("mark", 50, DEFAULT_MARK_COLOR),
-    partial: buildDefaultStyle("partial", 14, DEFAULT_PARTIAL_SCORE_COLOR),
-    subtotal: buildDefaultStyle("subtotal", 18, DEFAULT_SUBTOTAL_SCORE_COLOR),
-    total: buildDefaultStyle("total", 18, DEFAULT_TOTAL_SCORE_COLOR),
+    mark: buildDefaultStyle("mark", 10, DEFAULT_MARK_COLOR),
+    partial: buildDefaultStyle("partial", 3, DEFAULT_PARTIAL_SCORE_COLOR),
+    subtotal: buildDefaultStyle("subtotal", 10, DEFAULT_SUBTOTAL_SCORE_COLOR),
+    total: buildDefaultStyle("total", 10, DEFAULT_TOTAL_SCORE_COLOR),
   },
   visibility: Object.fromEntries(
     SCORING_STATUSES.map((status) => [status, buildDefaultVisibility(status)])

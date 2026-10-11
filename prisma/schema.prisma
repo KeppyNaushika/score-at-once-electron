@@ -907,9 +907,13 @@ model ExamAnswerOverlayStyle {
   overlayKind String // "mark" | "partial" | "subtotal" | "total"
   position    String // 領域内のどこに置くか
   anchor      String // 描画物のどの点を position に合わせるか
-  offsetX     Int
-  offsetY     Int
-  size        Int // マークは画像の一辺、点数はフォントサイズ
+  /// 長さの列（offsetX / offsetY / size）の単位。"mm" | "px"（src/types/scoringOverlay.types.ts）。
+  /// "px" は答案画像の画素で持っていた旧来の行で、答案画像を読んで mm へ変換するまで残る
+  /// （electron-src/lib/prisma/answerOverlayLengthConversion.ts）。描画は単位どおりに換算する
+  lengthUnit  String   @default("mm")
+  offsetX     Float
+  offsetY     Float
+  size        Float // マークは画像の一辺、点数はフォントサイズ
   color       String // HEX #RRGGBB
   opacity     Int // 0-100
   createdAt   DateTime @default(now())
