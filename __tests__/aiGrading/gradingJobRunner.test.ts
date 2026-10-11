@@ -160,8 +160,6 @@ describe("その場の採点", () => {
       expect(attempt).toMatchObject({
         state: "succeeded",
         status: "partial",
-        comment: "",
-        annotationText: "",
         transcription: PARTIAL_JUDGEMENT.transcription,
         observation: PARTIAL_JUDGEMENT.observation,
         confidence: "high",

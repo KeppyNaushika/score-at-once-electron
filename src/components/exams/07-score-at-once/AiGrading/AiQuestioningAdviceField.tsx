@@ -8,7 +8,7 @@ interface AiQuestioningAdviceFieldProps {
   textareaRef: Ref<HTMLTextAreaElement>
   value: string
   onChange: (text: string) => void
-  /** 欄を抜けた（答えてある問いなら、直した助言で答え直す） */
+  /** 欄を抜けた（入力中の覚えを捨てるだけ。書くのは1打鍵ごと） */
   onLeave: () => void
 }
 

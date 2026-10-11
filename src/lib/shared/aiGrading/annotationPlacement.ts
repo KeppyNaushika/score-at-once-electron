@@ -17,6 +17,9 @@
  *    全幅で折り返して枠の左上に置き、`exceedsRegion: true` を返す。
  *    枠の外へのはみ出しは「重なり」より悪いものとして扱う（はみ出した分は他の設問に掛かる）
  *
+ * 答案のほかの文字の注釈は、手書きと同じく埋まっている場所として扱う（`withOccupiedRectangles` で
+ * グリッドに重ねてから 3〜6 を行う。ほかの注釈は動かさない）。
+ *
  * 描画側（`textConversionUtils.ts` の convertTextToSvg）は自分では折り返さず、
  * `\n` で行に分け、1行ごとの高さ＋固定 5px の間隔で縦に並べる。そのためここで改行を入れる。
  */
@@ -217,6 +220,20 @@ export function wrapAnnotationText(
 }
 
 /**
+ * 膨らませた累積和の表を、グリッドごとに1回だけ作る（同じグリッドで文だけを変えて何度も置き直す
+ * 下見のため。グリッドは main から届いたまま書き換えないので、行の参照で覚えてよい）
+ */
+const summedAreaTableByInkGrid = new WeakMap<AnswerInkGrid, number[]>()
+
+function dilatedSummedAreaTableOf(inkGrid: AnswerInkGrid): number[] {
+  const cached = summedAreaTableByInkGrid.get(inkGrid)
+  if (cached) return cached
+  const summedAreaTable = buildDilatedSummedAreaTable(inkGrid)
+  summedAreaTableByInkGrid.set(inkGrid, summedAreaTable)
+  return summedAreaTable
+}
+
+/**
  * 占有グリッドを1セル膨らませ（8近傍）、累積和の表を作る。
  * 表は (rowCount + 1) × (columnCount + 1) の行優先で、[r][c] は r 行・c 列より手前の合計。
  */
@@ -277,6 +294,29 @@ function countOccupiedCells(
   )
 }
 
+/** 折り返した行の箱の大きさ（セル数） */
+function boxOfLines(
+  lines: string[],
+  fontSizeMm: number,
+  paperDimensions: PaperDimensionsMm,
+  inkGrid: AnswerInkGrid
+): WrappedCandidate {
+  const cellWidthMm = inkGrid.cellWidth * paperDimensions.width
+  const cellHeightMm = inkGrid.cellHeight * paperDimensions.height
+  const boxWidthMm =
+    Math.max(0, ...lines.map((line) => lineDisplayWidth(Array.from(line)))) *
+    fontSizeMm
+  const boxHeightMm = lines.length * fontSizeMm * LINE_PITCH_RATIO
+  return {
+    lines,
+    columnSpan: Math.max(
+      1,
+      ceilIgnoringRoundingError(boxWidthMm / cellWidthMm)
+    ),
+    rowSpan: Math.max(1, ceilIgnoringRoundingError(boxHeightMm / cellHeightMm)),
+  }
+}
+
 /** 内幅の各割合で折り返した候補を作る。同じ折り返しになるものは1つにまとめる */
 function buildWrappedCandidates(
   paragraphs: readonly string[],
@@ -286,9 +326,6 @@ function buildWrappedCandidates(
 ): WrappedCandidate[] {
   const innerWidthMm =
     inkGrid.columnCount * inkGrid.cellWidth * paperDimensions.width
-  const cellWidthMm = inkGrid.cellWidth * paperDimensions.width
-  const cellHeightMm = inkGrid.cellHeight * paperDimensions.height
-  const linePitchMm = fontSizeMm * LINE_PITCH_RATIO
 
   const candidatesByText = new Map<string, WrappedCandidate>()
   WRAP_WIDTH_RATIOS.forEach((widthRatio) => {
@@ -299,21 +336,10 @@ function buildWrappedCandidates(
     const wrappedText = lines.join("\n")
     if (candidatesByText.has(wrappedText)) return
 
-    const boxWidthMm =
-      Math.max(...lines.map((line) => lineDisplayWidth(Array.from(line)))) *
-      fontSizeMm
-    const boxHeightMm = lines.length * linePitchMm
-    candidatesByText.set(wrappedText, {
-      lines,
-      columnSpan: Math.max(
-        1,
-        ceilIgnoringRoundingError(boxWidthMm / cellWidthMm)
-      ),
-      rowSpan: Math.max(
-        1,
-        ceilIgnoringRoundingError(boxHeightMm / cellHeightMm)
-      ),
-    })
+    candidatesByText.set(
+      wrappedText,
+      boxOfLines(lines, fontSizeMm, paperDimensions, inkGrid)
+    )
   })
 
   return [...candidatesByText.values()]
@@ -455,7 +481,7 @@ export function placeAnnotation(
   const paragraphs = toAnnotationParagraphs(input.annotationText)
   if (paragraphs.length === 0) return null
 
-  const summedAreaTable = buildDilatedSummedAreaTable(inkGrid)
+  const summedAreaTable = dilatedSummedAreaTableOf(inkGrid)
   const fontSizes = listFontSizesToTry(input.fontSizeMm)
 
   for (const fontSizeMm of fontSizes) {
@@ -510,6 +536,130 @@ export function placeAnnotation(
     smallestFontSizeMm,
     { overlapsInk: true, exceedsRegion: true }
   )
+}
+
+interface AnnotationFitInput {
+  /** 改行を入れた注釈文（`\n` で行に分ける） */
+  wrappedText: string
+  /** 左上の位置（用紙比） */
+  x: number
+  y: number
+  /** 文字の大きさ（mm） */
+  fontSizeMm: number
+  paperDimensions: PaperDimensionsMm
+  /** 解答欄の内側の占有グリッド */
+  inkGrid: AnswerInkGrid
+}
+
+/**
+ * 改行を入れた注釈文を、その位置・その文字の大きさのまま置いたとき、枠（グリッドの範囲）に収まり
+ * 手書きに重ならないか（`placeAnnotation` と同じく、グリッドを1セル膨らませて判定する）。
+ * 置いてある朱書きの文を書き換えるとき、位置と大きさを保てるかを見るのに使う
+ */
+export function fitsAnnotationAt(input: AnnotationFitInput): boolean {
+  const { inkGrid } = input
+  const box = boxOfLines(
+    input.wrappedText.split("\n"),
+    input.fontSizeMm,
+    input.paperDimensions,
+    inkGrid
+  )
+  const column = floorIgnoringRoundingError(
+    (input.x - inkGrid.originX) / inkGrid.cellWidth
+  )
+  const row = floorIgnoringRoundingError(
+    (input.y - inkGrid.originY) / inkGrid.cellHeight
+  )
+  if (
+    column < 0 ||
+    row < 0 ||
+    column + box.columnSpan > inkGrid.columnCount ||
+    row + box.rowSpan > inkGrid.rowCount
+  ) {
+    return false
+  }
+  return (
+    countOccupiedCells(
+      dilatedSummedAreaTableOf(inkGrid),
+      inkGrid.columnCount + 1,
+      column,
+      row,
+      box.columnSpan,
+      box.rowSpan
+    ) === 0
+  )
+}
+
+/** 用紙比の矩形（左上と大きさ） */
+export interface NormalizedRectangle {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/**
+ * 改行を入れた注釈文の箱の大きさ（mm）。`placeAnnotation` が自分の箱を見積もるのと同じ数え方
+ * （表示幅は全角1・半角0.55、行送りは `LINE_PITCH_RATIO`）。行は `\n` で分け、折り返し直さない
+ */
+export function measureWrappedTextMm(
+  wrappedText: string,
+  fontSizeMm: number
+): { widthMm: number; heightMm: number } {
+  const lines = wrappedText
+    .split(/\r?\n/)
+    .map((line) => Array.from(line.replace(/\$/g, "")))
+  return {
+    widthMm: Math.max(0, ...lines.map(lineDisplayWidth)) * fontSizeMm,
+    heightMm: lines.length * fontSizeMm * LINE_PITCH_RATIO,
+  }
+}
+
+/**
+ * 矩形（用紙比）に掛かるセルを埋まっているものとしたグリッド（元のグリッドは書き換えない）。
+ * 答案のほかの文字の注釈を、手書きと同じく避ける場所にするのに使う。矩形が無ければ元のグリッドをそのまま返す
+ * （膨らませた累積和の表の覚えが効く）
+ */
+export function withOccupiedRectangles(
+  inkGrid: AnswerInkGrid,
+  rectangles: readonly NormalizedRectangle[]
+): AnswerInkGrid {
+  if (rectangles.length === 0) return inkGrid
+  const occupiedCells = [...inkGrid.occupiedCells]
+  rectangles.forEach((rectangle) => {
+    const firstColumn = Math.max(
+      0,
+      floorIgnoringRoundingError(
+        (rectangle.x - inkGrid.originX) / inkGrid.cellWidth
+      )
+    )
+    const lastColumn = Math.min(
+      inkGrid.columnCount,
+      ceilIgnoringRoundingError(
+        (rectangle.x + rectangle.width - inkGrid.originX) / inkGrid.cellWidth
+      )
+    )
+    const firstRow = Math.max(
+      0,
+      floorIgnoringRoundingError(
+        (rectangle.y - inkGrid.originY) / inkGrid.cellHeight
+      )
+    )
+    const lastRow = Math.min(
+      inkGrid.rowCount,
+      ceilIgnoringRoundingError(
+        (rectangle.y + rectangle.height - inkGrid.originY) / inkGrid.cellHeight
+      )
+    )
+    for (let row = firstRow; row < lastRow; row += 1) {
+      occupiedCells.fill(
+        true,
+        row * inkGrid.columnCount + firstColumn,
+        row * inkGrid.columnCount + Math.max(firstColumn, lastColumn)
+      )
+    }
+  })
+  return { ...inkGrid, occupiedCells }
 }
 
 /** 字数の目安を出すときに想定する文字の大きさ（mm） */

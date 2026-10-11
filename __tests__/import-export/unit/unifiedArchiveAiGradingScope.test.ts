@@ -57,11 +57,7 @@ const SYNTHETIC_ROWS: Readonly<
     colleagueRun: { userId: "colleague", promptId: "firstPrompt" },
   },
   AiGradingAttempt: {
-    teacherAttempt: {
-      runId: "teacherRun",
-      examStudentId: "examStudent",
-      adoptedQuestionScoreId: "score",
-    },
+    teacherAttempt: { runId: "teacherRun", examStudentId: "examStudent" },
     colleagueAttempt: { runId: "colleagueRun", examStudentId: "examStudent" },
   },
   // 教員の層の項目（設問に従うので、試験を選べば入る）
@@ -176,20 +172,6 @@ describe("AI 採点の記録の範囲", () => {
       AiPrompt: ["firstPrompt", "revisedPrompt"],
       AiGradingRun: ["teacherRun"],
       AiGradingAttempt: ["teacherAttempt"],
-    })
-  })
-
-  it("採用先の採点が外れたら、判定は残して採用先だけを NULL にする", () => {
-    const scope = resolveArchiveScope(tableRows, {
-      roots: { Exam: ["exam"] },
-      exclusions: { QuestionScore: ["score"] },
-      optionalItems: ["aiGradingRecords"],
-    })
-    expect(scope.rows.get("AiGradingAttempt")?.has("teacherAttempt")).toBe(true)
-    expect(scope.nulledReferences).toContainEqual({
-      table: "AiGradingAttempt",
-      id: "teacherAttempt",
-      column: "adoptedQuestionScoreId",
     })
   })
 })

@@ -552,11 +552,7 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     role: "optional",
     option: "aiGradingRecords",
     owner: ["promptId"],
-    references: [
-      required("userId", "User"),
-      required("promptId", "AiPrompt"),
-      nullable("resultPromptId", "AiPrompt"),
-    ],
+    references: [required("userId", "User"), required("promptId", "AiPrompt")],
   },
   AiGradingAttempt: {
     role: "optional",
@@ -565,8 +561,6 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     references: [
       required("runId", "AiGradingRun"),
       required("examStudentId", "ExamStudent"),
-      nullable("adoptedQuestionScoreId", "QuestionScore"),
-      nullable("adoptedDrawingAnnotationId", "DrawingAnnotation"),
     ],
   },
   // 1段目の当てはまりと2段目の項目の案（§5-3）。試行・実行・案に従う。項目（教員の層）は
@@ -612,6 +606,26 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       required("proposalId", "AiRubricProposal"),
       nullable("optionId", "AiRubricProposalOption"),
       nullable("resultRubricItemId", "RubricItem"),
+    ],
+  },
+  // 問いかけで直している助言の文（§3-5）。案に従う
+  AiRubricProposalAdviceDraft: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["proposalId"],
+    references: [
+      required("proposalId", "AiRubricProposal"),
+      required("userId", "User"),
+    ],
+  },
+  // 問いかけの「その他」の欄に書いている文（§3-5）。案に従う
+  AiRubricProposalInstructionDraft: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["proposalId"],
+    references: [
+      required("proposalId", "AiRubricProposal"),
+      required("userId", "User"),
     ],
   },
   // 問いかけの答えの下書きと確定（§3-5）。答え・試行に従う

@@ -6,7 +6,8 @@
  * - 同意して API キーを保存した事業者が無ければ「AI採点」は採点モードの選択肢に出ない
  * - 実行ダイアログは送る答案の4つの選び方（未採点・無答以外・全て・選択）ごとに件数を出し、
  *   既定は未採点。切り替えると件数と送る答案が変わる。選んでいなければ「選択」は選べない
- * - 採点の履歴は目的ごとに古い順の番号（採点 1・チェック 1）と採点指示の番号で呼ぶ
+ * - 採点の履歴は AI 採点・AI チェックのタブに目的ごとに分けて出し、目的ごとに古い順の番号（採点 1・チェック 1）と採点指示の番号で呼ぶ
+ * - 実行ダイアログは送信を押すと onSent に目的を渡す（作業場はそのタブへ移る）
  *
  * window.electronAPI は偽物で、ネットワークにも実際のキーにも実データにも触れない。
  */
@@ -219,11 +220,13 @@ describe("実行ダイアログ", () => {
       reviewed(makeAnswer("s-no-answer")),
       reviewed(makeAnswer("s-scored")),
     ]
+    const onSent = vi.fn()
     renderWithProviders(
       <AiGradingRunDialog
         purpose="grade"
         open
         onOpenChange={vi.fn()}
+        onSent={onSent}
         examId="exam-1"
         cropRegion={cropRegion}
         settings={SETTINGS}
@@ -262,6 +265,7 @@ describe("実行ダイアログ", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Anthropic へ送信する" })
     )
+    expect(onSent).toHaveBeenCalledWith("grade")
     await waitFor(() => expect(aiGrading.startRun).toHaveBeenCalledTimes(1))
     expect(aiGrading.startRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -518,10 +522,17 @@ describe("絞り込みのボタン（一覧表示と共通）", () => {
   })
 })
 
-function RunHistoryHarness({ runs }: { runs: AiGradingRunRow[] }) {
+function RunHistoryHarness({
+  purpose,
+  runs,
+}: {
+  purpose: "grade" | "check"
+  runs: AiGradingRunRow[]
+}) {
   const [chosenRunId, setChosenRunId] = useState<string | null>(null)
   return (
     <AiRunHistorySection
+      purpose={purpose}
       runs={runs}
       questionScores={[]}
       cropRegionId={CROP_REGION_ID}
@@ -534,44 +545,70 @@ function RunHistoryHarness({ runs }: { runs: AiGradingRunRow[] }) {
   )
 }
 
+const HISTORY_RUNS = [
+  makeRun({
+    id: "run-older",
+    createdAt: new Date("2026-10-01T00:00:00.000Z"),
+  }),
+  makeRun({
+    id: "run-check",
+    purpose: "check",
+    createdAt: new Date("2026-10-01T12:00:00.000Z"),
+  }),
+  makeRun({
+    id: "run-newer",
+    model: "claude-haiku-4-5",
+    mode: "batch",
+    createdAt: new Date("2026-10-02T00:00:00.000Z"),
+  }),
+]
+
 describe("採点の履歴", () => {
-  it("新しい順に並べ、目的ごとの番号と採点指示の番号で呼び、押した実行を選んだ形で出し、「答案ごとに最新の判定」で戻せる", async () => {
+  it("AI 採点のタブには採点の実行だけを新しい順に並べ、目的ごとの番号と採点指示の番号で呼び、押した実行を選んだ形で出し、「答案ごとに最新の判定」で戻せる", async () => {
     installFakeElectronApi({ isUnlocked: true })
     renderWithProviders(
-      <RunHistoryHarness
-        runs={[
-          makeRun({
-            id: "run-older",
-            createdAt: new Date("2026-10-01T00:00:00.000Z"),
-          }),
-          makeRun({
-            id: "run-check",
-            purpose: "check",
-            createdAt: new Date("2026-10-01T12:00:00.000Z"),
-          }),
-          makeRun({
-            id: "run-newer",
-            model: "claude-haiku-4-5",
-            mode: "batch",
-            createdAt: new Date("2026-10-02T00:00:00.000Z"),
-          }),
-        ]}
-      />
+      <RunHistoryHarness purpose="grade" runs={HISTORY_RUNS} />
     )
+    expect(screen.getByText("採点の履歴")).toBeInTheDocument()
     const group = screen.getByRole("group", { name: "一覧に出す実行" })
     const rows = within(group).getAllByRole("button")
-    expect(rows).toHaveLength(4)
+    expect(rows).toHaveLength(3)
     expect(rows[0]).toHaveTextContent("答案ごとに最新の判定")
     expect(rows[0]).toHaveAttribute("aria-pressed", "true")
     expect(rows[1]).toHaveTextContent("claude-haiku-4-5 / 中 / バッチ")
     expect(rows[1]).toHaveTextContent("採点 2・指示 1")
-    expect(rows[2]).toHaveTextContent("チェック 1・指示 1")
-    expect(rows[3]).toHaveTextContent("採点 1・指示 1")
+    expect(rows[2]).toHaveTextContent("採点 1・指示 1")
 
-    await userEvent.click(rows[3])
-    expect(rows[3]).toHaveAttribute("aria-pressed", "true")
+    await userEvent.click(rows[2])
+    expect(rows[2]).toHaveAttribute("aria-pressed", "true")
     expect(rows[0]).toHaveAttribute("aria-pressed", "false")
     await userEvent.click(rows[0])
     expect(rows[0]).toHaveAttribute("aria-pressed", "true")
+  })
+
+  it("AI チェックのタブにはチェックの実行だけを「チェックの履歴」として出す", () => {
+    installFakeElectronApi({ isUnlocked: true })
+    renderWithProviders(
+      <RunHistoryHarness purpose="check" runs={HISTORY_RUNS} />
+    )
+    expect(screen.getByText("チェックの履歴")).toBeInTheDocument()
+    const group = screen.getByRole("group", { name: "一覧に出す実行" })
+    const rows = within(group).getAllByRole("button")
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent("答案ごとに最新の判定")
+    expect(rows[1]).toHaveTextContent("チェック 1・指示 1")
+  })
+
+  it("その目的の実行が無ければ出さない", () => {
+    installFakeElectronApi({ isUnlocked: true })
+    renderWithProviders(
+      <RunHistoryHarness
+        purpose="check"
+        runs={HISTORY_RUNS.filter((run) => run.purpose === "grade")}
+      />
+    )
+    expect(
+      screen.queryByRole("group", { name: "一覧に出す実行" })
+    ).not.toBeInTheDocument()
   })
 })

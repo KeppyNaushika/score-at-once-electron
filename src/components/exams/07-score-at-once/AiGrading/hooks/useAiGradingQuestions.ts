@@ -1,6 +1,6 @@
 /**
  * AI 採点の問いかけ（docs/vlm-grading-design.md §3-5）の問いと答えを、届いた行から導き、
- * 決めたことを下書きとして AI の層へ書く。
+ * 決めたことを下書きとして AI の層へ書く。助言の欄・「その他」の欄の文は1打鍵ごとに、案ごとの行へ書く。
  */
 
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -9,9 +9,12 @@ import { useCallback, useMemo } from "react"
 import {
   type AiRubricProposalRunRow,
   aiRubricProposalsQuery,
+  discardAiRubricProposalInstructionDraftsMutation,
   recordAiAttemptResponsesMutation,
   recordAiRubricProposalDraftMutation,
   setAiQuestioningScoringMethodMutation,
+  setAiRubricProposalAdviceDraftMutation,
+  setAiRubricProposalInstructionDraftMutation,
 } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { toScoringMethod } from "@/types/rubric.types"
@@ -75,11 +78,7 @@ export function useAiGradingQuestions({
 
   const proposalRunId = proposalRun?.id ?? null
   const persistDecision = useCallback(
-    async (
-      step: QuestioningStep,
-      decision: QuestioningDecision,
-      adviceText: string | null
-    ) => {
+    async (step: QuestioningStep, decision: QuestioningDecision) => {
       switch (step.kind) {
         case "scoringMethod":
           if (proposalRunId === null || decision.kind !== "option") return
@@ -105,7 +104,6 @@ export function useAiGradingQuestions({
                     return attemptId ? [{ attemptId, ...score }] : []
                   })
                 : [],
-            adviceText,
           })
         }
         default:
@@ -122,5 +120,51 @@ export function useAiGradingQuestions({
     ]
   )
 
-  return { status, proposalRun, proposalRuns, states, persistDecision }
+  const { mutate: setAdviceDraft } = useMutation(
+    setAiRubricProposalAdviceDraftMutation(examId, cropRegion.id)
+  )
+  /** 助言の欄の文を書く（案の問いだけ。1打鍵ごとに即時） */
+  const persistAdviceText = useCallback(
+    (step: QuestioningStep, adviceText: string) => {
+      if (step.kind !== "proposal") return
+      setAdviceDraft({ proposalId: step.id, adviceText })
+    },
+    [setAdviceDraft]
+  )
+
+  const { mutate: setInstructionDraft } = useMutation(
+    setAiRubricProposalInstructionDraftMutation(examId, cropRegion.id)
+  )
+  /** 「その他」の欄の文を書く（案の問いだけ。1打鍵ごとに即時） */
+  const persistInstructionText = useCallback(
+    (step: QuestioningStep, instructionText: string) => {
+      if (step.kind !== "proposal") return
+      setInstructionDraft({ proposalId: step.id, instructionText })
+    },
+    [setInstructionDraft]
+  )
+  const { mutate: discardInstructionDrafts } = useMutation(
+    discardAiRubricProposalInstructionDraftsMutation(examId, cropRegion.id)
+  )
+  /** 「その他」の欄の文を捨てる（確定のとき、「その他」を選んでいない案の問い） */
+  const discardInstructionTexts = useCallback(
+    (steps: readonly QuestioningStep[]) => {
+      const proposalIds = steps
+        .filter((step) => step.kind === "proposal")
+        .map((step) => step.id)
+      if (proposalIds.length > 0) discardInstructionDrafts({ proposalIds })
+    },
+    [discardInstructionDrafts]
+  )
+
+  return {
+    status,
+    proposalRun,
+    proposalRuns,
+    states,
+    persistDecision,
+    persistAdviceText,
+    persistInstructionText,
+    discardInstructionTexts,
+  }
 }

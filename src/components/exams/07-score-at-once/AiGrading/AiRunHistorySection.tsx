@@ -10,7 +10,7 @@ import {
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { cn } from "@/lib/utils"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import { isStage1RunPurpose } from "@/types/aiGrading.types"
+import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
 
 import type { AiGradingRunRow } from "./types"
 import {
@@ -20,6 +20,8 @@ import {
 } from "./utils/runHistory"
 
 interface AiRunHistorySectionProps {
+  /** 出す実行の目的（AI 採点のタブは grade、AI チェックのタブは check） */
+  purpose: AiGradingStage1Purpose
   runs: AiGradingRunRow[]
   questionScores: QuestionScoreRow[]
   cropRegionId: string
@@ -27,7 +29,7 @@ interface AiRunHistorySectionProps {
   points: number | null
   /** 採点指示の id → 採点指示の番号 */
   promptNumberById: ReadonlyMap<string, number>
-  /** 一覧に出している実行（null は最新） */
+  /** 一覧に出している実行（null は最新。ほかの目的の実行は選んでいないものとして渡す） */
   chosenRunId: string | null
   onChooseRun: (runId: string | null) => void
 }
@@ -45,12 +47,20 @@ function formatRunTime(createdAt: Date): string {
   })
 }
 
+/** 見出し（「採点の履歴」「チェックの履歴」） */
+const HISTORY_TITLES: Record<AiGradingStage1Purpose, string> = {
+  grade: "採点の履歴",
+  check: "チェックの履歴",
+}
+
 /**
- * 設問の実行の履歴（設計 §3-3・§10）。自分の採点の実行を新しい順に並べ、押した実行の判定を
+ * 設問の実行の履歴（設計 §3-3・§10）。AI 採点・AI チェックのタブの下に、そのタブの目的の
+ * 自分の実行を新しい順に並べ（番号は目的ごとに古い順に 1 から）、押した実行の判定を
  * 一覧に出す（その実行に判定の無い答案は、いつもどおり最新の判定）。一致率は自分の採点と
  * 同じ判定だった割合で、設定の良し悪しを見比べるのに使う
  */
 export function AiRunHistorySection({
+  purpose,
   runs,
   questionScores,
   cropRegionId,
@@ -75,7 +85,10 @@ export function AiRunHistorySection({
     () => numberRunsByPurpose(runHistory),
     [runHistory]
   )
-  if (runHistory.length === 0) return null
+  const purposeHistory = runHistory.filter(
+    (entry) => entry.run.purpose === purpose
+  )
+  if (purposeHistory.length === 0) return null
 
   const rowClassName = (isChosen: boolean) =>
     cn(
@@ -86,7 +99,7 @@ export function AiRunHistorySection({
     )
 
   return (
-    <SidePanelSection icon={RotateCcwClock} title="採点の履歴">
+    <SidePanelSection icon={RotateCcwClock} title={HISTORY_TITLES[purpose]}>
       <p className="mb-1 text-[10px] text-muted-foreground">
         押すと、その判定を一覧に出します。一致は自分の採点との一致率です
       </p>
@@ -99,13 +112,10 @@ export function AiRunHistorySection({
         >
           答案ごとに最新の判定
         </button>
-        {runHistory.map((entry) => {
+        {purposeHistory.map((entry) => {
           const { run } = entry
           const isChosen = run.id === chosenRunId
           const promptNumber = promptNumberById.get(run.promptId)
-          const purposeLabel = isStage1RunPurpose(run.purpose)
-            ? RUN_PURPOSE_LABELS[run.purpose]
-            : run.purpose
           return (
             <button
               key={run.id}
@@ -117,7 +127,7 @@ export function AiRunHistorySection({
               <span className="flex items-baseline justify-between gap-2">
                 <span className="tabular-nums">
                   <span className="font-medium">
-                    {purposeLabel} {runNumberById.get(run.id)}
+                    {RUN_PURPOSE_LABELS[purpose]} {runNumberById.get(run.id)}
                   </span>
                   {promptNumber !== undefined && `・指示 ${promptNumber}`}
                   <span className="ml-1 text-muted-foreground">

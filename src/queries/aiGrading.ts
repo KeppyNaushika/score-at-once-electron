@@ -255,6 +255,66 @@ export const recordAiRubricProposalDraftMutation = (
     },
   })
 
+/**
+ * 問いかけの助言の欄の文を書く（§3-5。1打鍵ごとに即時）。案ごと・教員ごとの行をその場で書き換えるので、
+ * 打鍵で行は増えない。案の木（助言の文を同梱）だけを取り直す
+ */
+export const setAiRubricProposalAdviceDraftMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.setProposalAdviceDraft
+      >[0]
+    ) => window.electronAPI.aiGrading.setProposalAdviceDraft(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiRubricProposalsQuery(examId, cropRegionId).queryKey],
+      errorMessage: "助言の文を保存できませんでした",
+    },
+  })
+
+/**
+ * 問いかけの「その他」の欄の文を書く（§3-5。1打鍵ごとに即時）。案ごと・教員ごとの行をその場で書き換えるので、
+ * 打鍵で行は増えない。案の木（欄の文を同梱）だけを取り直す
+ */
+export const setAiRubricProposalInstructionDraftMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.setProposalInstructionDraft
+      >[0]
+    ) => window.electronAPI.aiGrading.setProposalInstructionDraft(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiRubricProposalsQuery(examId, cropRegionId).queryKey],
+      errorMessage: "再採点への指示を保存できませんでした",
+    },
+  })
+
+/** 確定のとき、「その他」を選んでいない案の欄の文を捨てる（§3-5） */
+export const discardAiRubricProposalInstructionDraftsMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.discardProposalInstructionDrafts
+      >[0]
+    ) => window.electronAPI.aiGrading.discardProposalInstructionDrafts(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiRubricProposalsQuery(examId, cropRegionId).queryKey],
+      errorMessage: "再採点への指示の下書きを片付けられませんでした",
+    },
+  })
+
 /** 案の外の問いかけへの答え（下書き）の引数 */
 export type RecordAiAttemptResponsesInput = Parameters<
   typeof window.electronAPI.aiGrading.recordAttemptResponses

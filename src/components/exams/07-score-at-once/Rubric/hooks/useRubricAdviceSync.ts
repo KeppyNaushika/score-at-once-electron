@@ -7,6 +7,7 @@
  * 絞るのは、きっかけに関係の無い行の朱書き（教員が直した文）を巻き戻さないため。
  *
  * 新しく置く朱書きの位置は、答案の占有グリッドで空いている場所（測れなければ枠全体を空きとする）。
+ * その採点行のほかの文字の注釈も避ける（動かさない）。
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -26,7 +27,7 @@ import {
 import {
   type AdvicePlacementContext,
   placeAdviceAnnotation,
-  rewrapAdviceText,
+  replaceAdviceAnnotationText,
 } from "../utils/adviceAnnotationPlacement"
 import {
   buildInkMeasurementSignature,
@@ -118,20 +119,29 @@ export function useRubricAdviceSync({
         if (rows.length === 0) return
         const inkGridByExamStudentId = await readInkGrids()
         const contextOf = (
-          row: RubricAdviceSourceRow
+          row: RubricAdviceSourceRow,
+          occupyingAnnotations: AdvicePlacementContext["occupyingAnnotations"]
         ): AdvicePlacementContext => ({
           inkGrid: inkGridByExamStudentId.get(row.examStudentId) ?? null,
           region: cropRegion,
           pageSize,
+          occupyingAnnotations,
         })
         const plan = planRubricAdviceSync({
           rows,
           rubricItems: source.rubricItems,
           combinations: source.rubricAdviceCombinations,
-          place: (row, adviceText) =>
-            placeAdviceAnnotation(adviceText, contextOf(row)),
-          rewrap: (row, annotation, adviceText) =>
-            rewrapAdviceText(adviceText, annotation, contextOf(row)),
+          place: (row, adviceText, occupyingAnnotations) =>
+            placeAdviceAnnotation(
+              adviceText,
+              contextOf(row, occupyingAnnotations)
+            ),
+          replace: (row, annotation, adviceText, occupyingAnnotations) =>
+            replaceAdviceAnnotationText(
+              adviceText,
+              annotation,
+              contextOf(row, occupyingAnnotations)
+            ),
         })
         if (isEmptyAdviceSyncPlan(plan)) return
         await syncAnnotations({ cropRegionId: cropRegion.id, ...plan })

@@ -87,7 +87,7 @@ export interface AiRunSettings {
 
 /**
  * 一覧の1マス。一覧表示と同じ答案（`ScoringData`。色は自分の採点）に、AI の判定と
- * 印を同梱する。**id は受験者の id**（試行・選択・採用がすべて受験者で引ける）
+ * 印を同梱する。**id は受験者の id**（試行・選択・問いかけの答案がすべて受験者で引ける）
  */
 export interface AiGridItem extends ScoringData {
   reviewedAnswer: ReviewedAiGradingAnswer

@@ -1,12 +1,12 @@
 "use client"
 
-import { FileText, Pencil, Play, Plus } from "lucide-react"
+import { Pencil, Play, Plus, SearchCheck } from "lucide-react"
 import { Fragment, type MouseEvent, type ReactNode, useState } from "react"
 
-import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Button } from "@/components/ui/button"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
 
 import { AiPromptEditorDialog } from "./AiPromptEditorDialog"
 import { AiQuestionImageStrip } from "./AiQuestionImageStrip"
@@ -21,8 +21,8 @@ interface AiPromptPanelProps {
   promptNumberById: ReadonlyMap<string, number>
   selectedPromptId: string | null
   onSelectPrompt: (promptId: string) => void
-  /** その採点指示を選んで、送信ダイアログを開く */
-  onRunWithPrompt: (promptId: string) => void
+  /** その採点指示を選んで、AI 採点（grade）か AI チェック（check）の送信ダイアログを開く */
+  onRunWithPrompt: (promptId: string, purpose: AiGradingStage1Purpose) => void
   settings: AiGradingSettings | undefined
 }
 
@@ -33,7 +33,7 @@ type EditorTarget = { basePrompt: AiPromptRow | null }
  * 設問の採点指示（設計 §3-1）。
  *
  * 上の「新規追加」は白紙から書く。履歴の採点指示をクリックすると選ばれ、中身と
- * 「採点実行」が出る。中身のどこを押しても（右上の鉛筆が目印。Enter・Space でも）編集が開く。
+ * 「AI 採点を実行」「AI チェックを実行」が出る（実行の入口はここだけ）。中身のどこを押しても（右上の鉛筆が目印。Enter・Space でも）編集が開く。
  * 中の問題の画像のサムネイルは押すと拡大のまま（編集は開かない）。編集して保存すると、それを親にした新しい採点指示になり、
  * 元の採点指示は書き換えない
  */
@@ -50,11 +50,13 @@ export function AiPromptPanel({
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
 
   return (
-    <SidePanelSection icon={FileText} title="採点指示">
+    // 見出しは置かない（タブの名前が「採点指示」）
+    <div className="py-2">
       <div className="mb-2">
         <Button
           variant="outline"
           size="sm"
+          className="w-full"
           onClick={() => setEditorTarget({ basePrompt: null })}
           // 既定値（助言の文案の指示の初期値）を読む前に開くと、空欄で始まってしまう
           disabled={!settings}
@@ -94,9 +96,6 @@ export function AiPromptPanel({
                       （{parentNumber} を編集）
                     </span>
                   )}
-                  {prompt.revisionMessage !== "" && (
-                    <span className="ml-1 text-purple-700">AI 修正</span>
-                  )}
                   <span className="block text-muted-foreground">
                     {prompt.createdBy?.name ?? "（削除された利用者）"}・
                     {formatShortDateTime(prompt.createdAt)}
@@ -110,15 +109,27 @@ export function AiPromptPanel({
                     >
                       <PromptContentPreview prompt={prompt} />
                     </PromptContentEditTarget>
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      onClick={() => onRunWithPrompt(prompt.id)}
-                      disabled={!settings}
-                    >
-                      <Play className="h-3 w-3" />
-                      採点実行
-                    </Button>
+                    <div className="space-y-1">
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => onRunWithPrompt(prompt.id, "grade")}
+                        disabled={!settings}
+                      >
+                        <Play className="h-3 w-3" />
+                        AI 採点を実行
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => onRunWithPrompt(prompt.id, "check")}
+                        disabled={!settings}
+                      >
+                        <SearchCheck className="h-3 w-3" />
+                        AI チェックを実行
+                      </Button>
+                    </div>
                   </div>
                 )}
               </li>
@@ -145,7 +156,7 @@ export function AiPromptPanel({
         }
         onCreated={onSelectPrompt}
       />
-    </SidePanelSection>
+    </div>
   )
 }
 

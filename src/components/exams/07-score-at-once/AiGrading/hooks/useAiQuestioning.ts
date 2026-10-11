@@ -16,6 +16,7 @@ import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-s
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { toScoringMethod } from "@/types/rubric.types"
 
+import type { AdviceTextPreviewRequest } from "../utils/adviceTextPreview"
 import { SCORING_METHOD_STEP_ID } from "../utils/gradingQuestions"
 import { draftScoresOf } from "../utils/questioningDraftScores"
 import {
@@ -45,12 +46,20 @@ interface UseAiQuestioningOptions {
   studentAnswerImages: readonly StudentAnswerImageWithExamStudents[]
   /** 開いているタブの問いと、いまの答え */
   states: readonly QuestioningStepState[]
-  /** 決めたことを下書きとして書く（adviceText は直した助言。直していなければ null） */
+  /** 決めたことを下書きとして書く */
   persistDecision: (
     step: QuestioningStep,
-    decision: QuestioningDecision,
-    adviceText: string | null
+    decision: QuestioningDecision
   ) => Promise<unknown>
+  /** 助言の欄の文を書く（1打鍵ごと。助言の無い問いでは呼ばれない） */
+  persistAdviceText: (step: QuestioningStep, adviceText: string) => void
+  /** 「その他」の欄の文を書く（1打鍵ごと。欄の無い問いでは呼ばれない） */
+  persistInstructionText: (
+    step: QuestioningStep,
+    instructionText: string
+  ) => void
+  /** 「その他」の欄の文を捨てる（確定のとき、「その他」を選んでいない問い） */
+  discardInstructionTexts: (steps: readonly QuestioningStep[]) => void
   ownScoreOf: (examStudentId: string) => QuestioningScore | null
   /** AI 採点の案（選び直しの洗い出しと、点を加減する選択肢の点に使う）。チェックでは空 */
   proposals: readonly AiRubricProposalRow[]
@@ -85,6 +94,9 @@ export function useAiQuestioning({
   studentAnswerImages,
   states: modeStates,
   persistDecision,
+  persistAdviceText,
+  persistInstructionText,
+  discardInstructionTexts,
   ownScoreOf,
   proposals,
   onAnnotationsChanged,
@@ -100,19 +112,18 @@ export function useAiQuestioning({
     setHasJustCommitted(false)
   }
   const persistAndReopen = useCallback(
-    (
-      step: QuestioningStep,
-      decision: QuestioningDecision,
-      adviceText: string | null
-    ) => {
+    (step: QuestioningStep, decision: QuestioningDecision) => {
       setHasJustCommitted(false)
-      return persistDecision(step, decision, adviceText)
+      return persistDecision(step, decision)
     },
     [persistDecision]
   )
   const flow = useQuestioningFlow({
     states,
     persistDecision: persistAndReopen,
+    persistAdviceText,
+    persistInstructionText,
+    discardInstructionTexts,
     isEnabled,
     scopeKey,
   })
@@ -160,6 +171,36 @@ export function useAiQuestioning({
         : null,
     [isGridNarrowed, currentMembers]
   )
+
+  // 助言の欄がある問いを開いていれば、欄の文をその問いの答案に下見する（中央の一覧）
+  const currentStepId = currentState?.step.id ?? null
+  const currentAdvice = currentState?.step.advice ?? null
+  const currentAdviceText =
+    currentStepId !== null && currentAdvice
+      ? flow.adviceTextOf(currentStepId)
+      : null
+  const currentRubricItemAdviceText =
+    currentAdvice?.rubricItemAdviceText ?? null
+  const advicePreview = useMemo((): AdviceTextPreviewRequest | null => {
+    if (
+      currentStepId === null ||
+      currentAdviceText === null ||
+      currentMembers === null
+    ) {
+      return null
+    }
+    return {
+      stepId: currentStepId,
+      adviceText: currentAdviceText,
+      rubricItemAdviceText: currentRubricItemAdviceText,
+      examStudentIds: currentMembers.map((member) => member.examStudentId),
+    }
+  }, [
+    currentStepId,
+    currentAdviceText,
+    currentRubricItemAdviceText,
+    currentMembers,
+  ])
 
   const pointDeltaByOptionId = useMemo(
     () =>
@@ -231,6 +272,8 @@ export function useAiQuestioning({
     isGridNarrowed,
     setIsGridNarrowed,
     pinnedExamStudentIds,
+    /** 助言の欄の下見（いまの問いの答案と欄の文）。助言の欄のある問いを開いていなければ null */
+    advicePreview,
     /** 受験者 → 確定すると付く予定の状態（一覧のマスに斜線で重ねる） */
     draftStatusByExamStudentId: new Map(
       [...draftScores].map(([examStudentId, score]) => [

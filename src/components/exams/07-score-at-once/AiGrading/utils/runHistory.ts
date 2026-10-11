@@ -3,9 +3,6 @@
  *
  * 自分の採点の実行を新しい順に並べ、実行ごとに判定の数と自分の採点との一致率を数える。
  * 一覧に出す実行を選ぶのにも使う（選んだ実行の試行を、各答案の表示に使う）。
- *
- * **採用した試行は一致率に数えない。** 採用すると自分の採点がその試行の写しになり、
- * 一致して当然のものが一致率を押し上げる。
  */
 
 import type { QuestionScoreRow } from "@/queries/scoring"
@@ -15,7 +12,6 @@ import {
 } from "@/types/aiGrading.types"
 
 import type { AiGradingRunRow } from "../types"
-import { isAdoptedAttempt } from "./attemptSelection"
 import {
   findOwnQuestionScore,
   isSameJudgement,
@@ -30,7 +26,7 @@ export interface RunHistoryEntry {
   attemptCount: number
   /** 判定が出た試行の数 */
   succeededCount: number
-  /** 自分の採点と比べられた試行の数（自分が採点済み・採用していない） */
+  /** 自分の採点と比べられた試行の数（自分が採点済みのもの） */
   comparedCount: number
   /** 判定と点がどちらも同じだった数 */
   exactMatchCount: number
@@ -77,7 +73,6 @@ export function summarizeRunHistory({
       (attempt) => attempt.state === "succeeded"
     )
     const comparisons = succeededAttempts.flatMap((attempt) => {
-      if (isAdoptedAttempt({ attempt, run })) return []
       const questionScore = findOwnQuestionScore(
         questionScores,
         cropRegionId,
@@ -109,16 +104,19 @@ export function summarizeRunHistory({
 }
 
 /**
- * 一覧に出す実行として効いているもの。選んだ実行が消えた・
- * 自分の採点の実行でなければ null（＝最新）。選択を書き戻さず、毎回ここで導く
+ * 一覧に出す実行として効いているもの。履歴は AI 採点・AI チェックのタブに目的ごとに分けて出すので、
+ * いまのタブの目的（採点指示のタブなら null）の実行でなければ null（＝最新）。選んだ実行が消えた・
+ * 自分の採点の実行でないときも null。選択を書き戻さず、毎回ここで導く
+ * （タブを移ると最新に見え、戻れば選んだ実行に戻る）
  */
 export function resolveChosenRunId(
   chosenRunId: string | null,
   runs: readonly AiGradingRunRow[],
-  currentUserId: string
+  currentUserId: string,
+  purpose: AiGradingStage1Purpose | null
 ): string | null {
   return gradeRunsNewestFirst(runs, currentUserId).some(
-    (run) => run.id === chosenRunId
+    (run) => run.id === chosenRunId && run.purpose === purpose
   )
     ? chosenRunId
     : null

@@ -85,11 +85,12 @@ interface AiGradingWorkspaceProps {
 
 /**
  * 設問1つぶんの AI 採点の作業場。左に採点指示・AI 採点・AI チェックのタブ
- * （問いかけと自分で採点するボタンは AI 採点・AI チェックのタブの中）、
+ * （実行の入口は採点指示のタブ。問いかけ・自分で採点するボタン・その目的の実行の履歴は
+ * AI 採点・AI チェックのタブの中）、
  * 中央はどのタブでも**一覧表示と同じ答案の一覧**（色は自分の採点、斜線と札で AI の提案。
  * 問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる）、右端に設問・絞り込み。
  *
- * AI が答案ごとに書く朱書きの文案は採用しない（朱書きはルーブリック項目の助言から作る。
+ * 朱書きはルーブリック項目の助言から作る（AI が答案ごとに文案を書くことはない。
  * docs/vlm-grading-design.md §4-7）。
  *
  * 表示する実行・選んでいる採点指示・答案の選択は、ここが持つ利用者の選択だけで、
@@ -168,14 +169,6 @@ export function AiGradingWorkspace({
       ),
     [prompts]
   )
-  const { reviewedAnswers, chosenRunId, chooseRun } = useAiAnswerReviewState({
-    answers,
-    selectedPromptId,
-    points,
-    runs,
-    currentUserId,
-    answerOrder: viewSettings.answerOrder,
-  })
   const gradingQuestions = useAiGradingQuestions({ examId, cropRegion, runs })
   const checkQuestions = useAiCheckQuestions({
     examId,
@@ -193,6 +186,16 @@ export function AiGradingWorkspace({
       : "prompt")
   const questioningMode =
     leftTab === "grade" || leftTab === "check" ? leftTab : null
+  // 履歴はタブごとに目的を分けて出すので、効く実行もいまのタブの目的のものだけ
+  const { reviewedAnswers, chosenRunId, chooseRun } = useAiAnswerReviewState({
+    answers,
+    selectedPromptId,
+    points,
+    runs,
+    currentUserId,
+    purpose: questioningMode,
+    answerOrder: viewSettings.answerOrder,
+  })
   const proposals =
     gradingQuestions.proposalRun?.rubricProposals ?? NO_PROPOSALS
   const questioning = useAiQuestioning({
@@ -210,6 +213,9 @@ export function AiGradingWorkspace({
       questioningMode === "check"
         ? checkQuestions.persistDecision
         : gradingQuestions.persistDecision,
+    persistAdviceText: gradingQuestions.persistAdviceText,
+    persistInstructionText: gradingQuestions.persistInstructionText,
+    discardInstructionTexts: gradingQuestions.discardInstructionTexts,
     ownScoreOf: checkQuestions.ownScoreOf,
     proposals: questioningMode === "grade" ? proposals : NO_PROPOSALS,
     onAnnotationsChanged,
@@ -226,6 +232,21 @@ export function AiGradingWorkspace({
   // 自分で採点している間は、一覧の選択の代わりに焦点の答案を出す
   const selectionOverride = questioning.gridSelectionOverride
   if (!provider) return null
+
+  /** AI 採点・AI チェックのタブの下に、そのタブの目的の実行の履歴 */
+  const runHistorySection = (purpose: AiGradingStage1Purpose) => (
+    <AiRunHistorySection
+      purpose={purpose}
+      runs={runs}
+      questionScores={questionScores}
+      cropRegionId={cropRegion.id}
+      currentUserId={currentUserId}
+      points={points}
+      promptNumberById={promptNumberById}
+      chosenRunId={chosenRunId}
+      onChooseRun={chooseRun}
+    />
+  )
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -263,21 +284,11 @@ export function AiGradingWorkspace({
               promptNumberById={promptNumberById}
               selectedPromptId={selectedPromptId}
               onSelectPrompt={setChosenPromptId}
-              onRunWithPrompt={(promptId) => {
+              onRunWithPrompt={(promptId, purpose) => {
                 setChosenPromptId(promptId)
-                setRunDialog({ purpose: "grade" })
+                setRunDialog({ purpose })
               }}
               settings={settings}
-            />
-            <AiRunHistorySection
-              runs={runs}
-              questionScores={questionScores}
-              cropRegionId={cropRegion.id}
-              currentUserId={currentUserId}
-              points={points}
-              promptNumberById={promptNumberById}
-              chosenRunId={chosenRunId}
-              onChooseRun={chooseRun}
             />
           </TabsContent>
           <TabsContent value="grade">
@@ -285,9 +296,6 @@ export function AiGradingWorkspace({
               mode="grade"
               questioning={questioning}
               cropRegion={cropRegion}
-              onRun={
-                selectedPrompt ? () => setRunDialog({ purpose: "grade" }) : null
-              }
               statusNotice={
                 <AiQuestioningStatusNotice
                   examId={examId}
@@ -298,7 +306,9 @@ export function AiGradingWorkspace({
               emptyMessage={
                 gradingQuestions.status.kind === "ready"
                   ? "AI は項目の案を返しませんでした。"
-                  : "AI の判定から作った項目の案を、ここで1問ずつ問いかけます。"
+                  : gradingQuestions.status.kind === "idle"
+                    ? "「採点指示」のタブから AI 採点を実行してください。"
+                    : "AI の判定から作った項目の案を、ここで1問ずつ問いかけます。"
               }
               notes={gradingQuestions.proposalRun?.notes ?? ""}
               onRegrade={(examStudentIds) =>
@@ -309,25 +319,24 @@ export function AiGradingWorkspace({
                 })
               }
             />
+            {runHistorySection("grade")}
           </TabsContent>
           <TabsContent value="check">
             <AiQuestioningPanel
               mode="check"
               questioning={questioning}
               cropRegion={cropRegion}
-              onRun={
-                selectedPrompt ? () => setRunDialog({ purpose: "check" }) : null
-              }
               statusNotice={null}
               emptyMessage={
                 checkQuestions.status === "running"
                   ? "AI が判定しています…"
                   : checkQuestions.status === "idle"
-                    ? "採点済みの答案の食い違いを AI が探し、ここで1問ずつ問いかけます（あなたの点は送りません）。"
+                    ? "「採点指示」のタブから AI チェックを実行してください。"
                     : "食い違いは見つかりませんでした。"
               }
               notes=""
             />
+            {runHistorySection("check")}
           </TabsContent>
         </Tabs>
       </aside>
@@ -362,6 +371,8 @@ export function AiGradingWorkspace({
                 ? questioning.draftStatusByExamStudentId
                 : undefined
             }
+            pageAnswerImages={pageAnswerImages}
+            advicePreview={questioning.advicePreview}
           />
         </div>
       </section>
@@ -392,6 +403,8 @@ export function AiGradingWorkspace({
           onOpenChange={(open) => {
             if (!open) setRunDialog(null)
           }}
+          // 送ったら、進み具合と問いかけが出るタブへ移る
+          onSent={setChosenLeftTab}
           examId={examId}
           cropRegion={cropRegion}
           settings={settings}

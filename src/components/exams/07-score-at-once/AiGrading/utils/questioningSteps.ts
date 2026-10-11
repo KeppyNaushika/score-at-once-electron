@@ -46,6 +46,11 @@ export interface QuestioningOption {
 export interface QuestioningAdvice {
   /** 直していないときの文（当たる項目の助言。項目が無ければ AI の文案） */
   baseText: string
+  /**
+   * 当たる項目（既存の項目に当たる案はその項目、前に確定してできた・結び付けた項目があればそれ）の今の助言。
+   * 項目が無ければ null。答案の助言の朱書きがこの文そのものなら、それはこの案の項目から作った朱書き
+   */
+  rubricItemAdviceText: string | null
   /** いま効いている文（下書きで直した文。直していなければ baseText） */
   text: string
 }
@@ -76,6 +81,11 @@ export interface QuestioningStep {
   allowsManual: boolean
   /** 「その他：再採点を指示する」を出すか（AI 採点の案だけ） */
   allowsInstruction: boolean
+  /**
+   * 「その他」の欄に書いてある文（AI 採点の案だけ。1打鍵ごとに書く行の、いちばん新しいもの）。
+   * 書いていない・欄の無い問いは null
+   */
+  instructionDraft: string | null
 }
 
 /** 教員が決めたこと */

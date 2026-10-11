@@ -6,16 +6,6 @@ import { isStage1RunPurpose } from "@/types/aiGrading.types"
 
 import type { AiGradingRunRow, AiPromptRow, AttemptWithRun } from "../types"
 
-/** 試行に採用の記録があるか */
-export function isAdoptedAttempt(attemptWithRun: AttemptWithRun): boolean {
-  const { attempt } = attemptWithRun
-  return (
-    attempt.adoptedAt !== null ||
-    attempt.adoptedQuestionScoreId !== null ||
-    attempt.adoptedDrawingAnnotationId !== null
-  )
-}
-
 /** 新しい順（作成日時 → id の降順。同時刻でも順が決まる） */
 function compareNewestFirst(
   attemptA: AttemptWithRun,

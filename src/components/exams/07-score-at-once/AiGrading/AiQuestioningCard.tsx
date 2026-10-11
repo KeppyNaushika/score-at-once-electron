@@ -61,8 +61,8 @@ export function AiQuestioningCard({
         <AiQuestioningAdviceField
           textareaRef={flow.adviceTextRef}
           value={flow.adviceTextOf(step.id)}
-          onChange={(text) => flow.setAdviceText(step.id, text)}
-          onLeave={() => flow.saveAdviceText(step.id)}
+          onChange={(text) => flow.changeAdviceText(step.id, text)}
+          onLeave={() => flow.leaveAdviceText(step.id)}
         />
       )}
       {flow.nextBlockedReason && (

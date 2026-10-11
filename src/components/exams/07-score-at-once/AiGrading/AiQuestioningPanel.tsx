@@ -1,6 +1,6 @@
 "use client"
 
-import { RotateCcw, Send } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
@@ -22,8 +22,6 @@ interface AiQuestioningPanelProps {
   mode: QuestioningMode
   questioning: AiQuestioning
   cropRegion: QuestionAnswerRegionRow
-  /** 実行ダイアログを開く（採点指示が無ければ null で、押せない） */
-  onRun: (() => void) | null
   /** 実行の状態（走っている・失敗した）。無ければ null */
   statusNotice: ReactNode
   /** 問いが無いときの案内 */
@@ -36,15 +34,14 @@ interface AiQuestioningPanelProps {
 
 /**
  * 左パネルの「AI 採点」「AI チェック」のタブ（docs/vlm-grading-design.md §3-5・§3-10）。
- * 実行の入口と、問いかけ（決めたことの記録 → いまの問いと選択肢・自分で採点するボタン → 全部答えたら見直しと確定）。
- * 問いに入る答案は中央の一覧で見る（絞り込みのスイッチ・付く予定の点の斜線）。
+ * 問いかけ（決めたことの記録 → いまの問いと選択肢・自分で採点するボタン → 全部答えたら見直しと確定）。
+ * 実行の入口は「採点指示」のタブにある。問いに入る答案は中央の一覧で見る（絞り込みのスイッチ・付く予定の点の斜線）。
  * **確定するまで教員の採点は何も変わらない**（決めたことは AI の層の下書き）
  */
 export function AiQuestioningPanel({
   mode,
   questioning,
   cropRegion,
-  onRun,
   statusNotice,
   emptyMessage,
   notes,
@@ -119,20 +116,6 @@ export function AiQuestioningPanel({
 
   return (
     <div className="space-y-3 py-3 text-[11px]">
-      <Button
-        size="sm"
-        className="w-full text-xs"
-        onClick={onRun ?? undefined}
-        disabled={onRun === null}
-      >
-        <Send className="h-3.5 w-3.5" />
-        {mode === "grade" ? "AI 採点を実行…" : "AI チェックを実行…"}
-      </Button>
-      {onRun === null && (
-        <p className="text-muted-foreground">
-          先に「採点指示」のタブで作ってください。
-        </p>
-      )}
       {statusNotice}
 
       <AiQuestioningLog

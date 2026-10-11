@@ -13,18 +13,18 @@ import type { SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 /**
  * データディレクトリからの相対パスでファイルを指す列。
  *
- * schema.prisma でファイルを指す列はこの5つだけ（模範解答・答案画像・解答用紙定義の
- * セル内画像・AI 採点のプロンプトの問題の画像（旧列と今の表））。名前に path / file / image /
- * url / dir / src を含む String 列を schema から洗うと、この5列と `anchorDirection`
+ * schema.prisma でファイルを指す列はこの4つだけ（模範解答・答案画像・解答用紙定義の
+ * セル内画像・AI 採点のプロンプトの問題の画像）。名前に path / file / image /
+ * url / dir / src を含む String 列を schema から洗うと、この4列と `anchorDirection`
  * （向きの文字列でファイルではない）しか無い。
+ * 旧列 AiPrompt.questionImagePath を持つ古いアーカイブも、取り込みで migration を当てると
+ * 値が AiPromptQuestionImage に写ってから列が落ちるので、ここに載せなくてもファイルは写る。
  * 列を足したらここにも足すこと（表・列の実在は unifiedArchiveRegistry.test.ts が検査する）。
  */
 export const ARCHIVE_FILE_COLUMNS = [
   { table: "ExamPage", column: "imagePath" },
   { table: "StudentAnswerImage", column: "imagePath" },
   { table: "AsbImageElement", column: "imagePath" },
-  // 旧列（もう書かない）。migration 20261011120000 より前のアーカイブの行が指すファイル
-  { table: "AiPrompt", column: "questionImagePath" },
   { table: "AiPromptQuestionImage", column: "imagePath" },
 ] as const
 

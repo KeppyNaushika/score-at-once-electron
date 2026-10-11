@@ -129,7 +129,7 @@ AI を呼ぶのは、1段目・2段目・まとめた一文の作成・次の往
 答案1件ずつに、採点指示＋答案の画像を送る。返させるもの（§6-1）:
 
 - 判定（`status`・`partialScore`）、確信度（`confidence`）。教員向けの配点理由（`comment`）は返させない（所見と重なるため。
-  `comment` を持つ過去の試行の列は残す）
+  列は migration 20261011150000 で落とした）
 - **読み取った内容**（`transcription`）：答案に何が書かれているか
 - **所見**（`observation`）：模範解答・採点基準・既存の項目と比べて、どこが同じでどこが違うか。2段目は画像を見ないので、ここを具体的に書かせる
   （例：「2x=6 と移項し x=3。途中式あり。最終解は正しい」「−5 を移項したとき符号を変えず x=−2。方針は正しい」）
@@ -175,8 +175,8 @@ AI 採点（2段目の項目の案）と AI チェック（§3-10）は、同じ
 ```
 
 - **置き場所。** AI採点モードの左パネルのタブは「採点指示」「AI 採点」「AI チェック」。
-  「AI 採点」「AI チェック」のタブの中に、実行の入口と問いかけ（決めたことの記録・いまの問いと選択肢・自分で採点するボタン・見直しと確定・2段目の気づいた点）を
-  縦に出す。**中央はどのタブでも答案の一覧のまま**（一覧表示と同じ表示の形。上の図は流れを示すもので、置き場所ではない）
+  「AI 採点」「AI チェック」のタブの中に、問いかけ（決めたことの記録・いまの問いと選択肢・自分で採点するボタン・見直しと確定・2段目の気づいた点）と
+  その目的の実行の履歴を縦に出す（実行の入口は「採点指示」のタブ。§11 の画面）。**中央はどのタブでも答案の一覧のまま**（一覧表示と同じ表示の形。上の図は流れを示すもので、置き場所ではない）
 - **一覧とのつなぎ。** 一覧は、いまの問いに入る答案に確信度の低い順で絞る（タブの中のスイッチで外せば、いつもの絞り込みと並べ方に戻る）。
   ↑↓ で焦点を移した選択肢・決めた答えで確定すると付く点は、その答案のマスに**斜線**で重ねる（斜線 = 未確定・塗り = 確定の約束のまま。
   採点済みのマスにも重ねる。確定すれば塗りになる）。点を加減する案の選択肢は、その項目1つだけが当たったとして計算した点を出す
@@ -194,14 +194,23 @@ AI 採点（2段目の項目の案）と AI チェック（§3-10）は、同じ
   行の全体がボタンで、押すと（焦点を当てて Enter・Space でも）その問いを開く（焦点はいまの答えに置く）
 - **助言（朱書き）。** 案の問いのカードに欄を出し、助言を入れておく（直していなければ、当たる項目があればその助言、無ければ2段目の文案。空なら朱書きしない）。
   クリックで入り、Esc で抜ける。欄の中では採点キー・選択のキーは効かず（素の Enter は改行）、Ctrl/⌘+Enter・Ctrl/⌘+Shift+Enter だけが効く。
-  直した文は答えと一緒に下書き（`AiRubricProposalResponse.adviceText`。null は直していない、"" は助言なし）に書く。答えたあとに直したら、欄を抜けたときに
-  同じ答えで答え直す。答える前に直した文は画面に持つだけ（問いを移っても残る）
+  直した文は**1打鍵ごとに即時に**、案ごと・教員ごとの行（`AiRubricProposalAdviceDraft`。同じ行をその場で書き換える。"" は助言なし）に書く
+  （答えの行は追記なので書かない。答える前に直した文も読み込み直して残る）。最後の確定より前に直した文は効かない（今の項目の助言が土台）。
+  確定済みの問いの助言を直したら、同じ答えを1回だけ書き直して下書きに戻す（確定し直すと項目の助言に入る）。
+  欄の文は、中央の一覧のその問いの答案に朱書きとして下見する（打鍵が落ち着いて 300ms で置き直す。置き方は §9 と同じ）。
+  **下見はほかの注釈を変えない。** 手で書いた注釈も、ほかの項目の助言の朱書きも、保存したまま描く。答案の助言の朱書きが
+  この案の項目の助言そのもの（案に当たる項目・前の確定でできた項目があり、朱書きの文がその項目の今の助言と同じ）のときだけ、
+  その朱書きを欄の文に差し替える（今の位置で収まれば保つ。欄が空なら隠す）。それ以外の答案には、欄の文を別の朱書きとして足す
+  （欄が空なら何も足さない）。置く場所は、その答案のほかの文字の注釈を避ける（§9）。ほかの項目の助言と並べる・重なった助言の
+  決まりは下見では効かせず、確定のときに効く
 - **「自分で採点する」。** その上で Enter を押すと、問いの答案を ←→ で移りながら（一覧ではその答案を選んだ形で出す。マスのクリックでも移れる）、
   いつもの採点キー（英字の採点状態・数字で部分点の入力欄）か、タブの「自分で採点」のボタン（このときだけ押せる）で1件ずつ付ける（付けると次の答案へ。付けた点もマスに斜線で出る）。もう一度 Enter（か「次へ」）で決めて次へ。↑↓ で別の選択肢へ移ると抜ける。**ここで付けた点も下書き**で、確定で入る
   （「この流れの中で決めたことは最後の確定で入る」に揃える。問いかけの外＝普段の採点の画面の採点キーは、今まで通りその場で確定）
 - **「その他：再採点を指示する」。** ↓ で選ぶと欄に入る。欄の中でカーソルが1行目にあるときの ↑ で上の選択肢へ戻る（2行目以降の ↑ は普通の行の移動）。
   素の Enter は日本語入力の変換の確定と改行（送らない。変換中のキーは見ない）。Ctrl/⌘+Enter で決めて次へ、Ctrl/⌘+Shift+Enter で前へ。
-  中身は問いを移っても残る。**確定を押すとき、その問いで「その他」を選んでいなければ中身は捨てる。**
+  中身は**1打鍵ごとに即時に**、案ごと・教員ごとの行（`AiRubricProposalInstructionDraft`。同じ行をその場で書き換える）に書くので、
+  問いを移っても読み込み直しても残る。決めたときは欄の文（前後の空白を落とす）を答えの `freeText` に写す。
+  **確定を押すとき、その問いで「その他」を選んでいなければ中身は捨てる**（その案の行を消す）。
   書く文は**再採点への指示**（項目の案を作り直す指示ではない）。確定したものを、次の往復の**1段目にだけ**「教員の指示」として添える（2段目には添えない）
 - **下書き。** 決めたことは、決めたその場で AI の層に書く（読み込み直しても消えない）。案への答えは `AiRubricProposalResponse`（`committedAt` が null のものが下書き。
   自分で採点した点は `AiRubricProposalResponseScore`）、案の外の問いへの答えは答案ごとの `AiAttemptResponse`、採点方式は2段目の run の
@@ -359,7 +368,7 @@ renderer で計算し、`QuestionScore` の status / partialScore に書く。
   決まりの無い組み合わせは、左パネルに「未決定」として問いかける（§3-7）
 - 項目を消すと、その項目を含む決まりも消す（残りの項目が2つ以上でも残さない）。残った項目の組み合わせは未決定として問い直す
 - 朱書きは `DrawingAnnotation` として書き、`isRubricAdvice` を立てる。位置は §9 の配置で決め、教員が動かした位置は保つ。
-  助言の文が変わったら、この印の付いた朱書きの文だけを書き換える
+  助言の文が変わったら、この印の付いた朱書きを書き換える（今の位置・文字の大きさで収まれば保ち、収まらなければ置き直す。§9）
 - 個別に書きたい答案には、これまでどおり 07 の注釈編集で手書きする（`isRubricAdvice` は立たない）
 
 ### 4-8. 段階評価（後の段）
@@ -407,30 +416,32 @@ A/B/C のような段階評価（#836 の `SCALE`）は、採点方式に `scale
 
 **既存の表（実装済み）と、その変更**
 
-| 表                                         | 列（変更点は太字）                                                                                                                                                                                                                                                                                                                                                                                                                                                    | 関係・削除                                                |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `AiPrompt`（採点指示）                     | `cropRegionId`、`parentPromptId?`、`createdByUserId?`、`questionText`、**`questionImagePath?`（使わない。値は `AiPromptQuestionImage` へ移した。列の削除は判断待ち）**、`modelAnswerText`、`sendModelAnswerImage`、`rubricText`（採点基準の自由文）、`annotationInstruction`（助言の文案の指示）、**`renderedRubricItems`（送った時点の項目の一覧の文。足す）**、**`revisionInstruction`・`revisionMessage`（削除）**                                                 | CropRegion とともに消える。親・作成者が消えたら SetNull   |
-| `AiGradingRun`（1回の実行）                | `userId`、`promptId`、`purpose`（**`grade` / `group` / `check`（AI チェック。§3-10）/ `advice`。`revise` は廃止**）、`templateVersion`、`provider`、`model`、`effort`、`mode`（realtime / batch / **cli**）、`status`、`externalBatchId?`、`submittedClientId`、`imageScale`、`points`、**`notes`（2段目の気づいた点。足す）**、**`questioningScoringMethod`（問いかけの前に決めた採点方式の下書き。足す）**、トークン数4列、`endedAt?`、**`resultPromptId`（削除）** | 利用者・採点指示とともに消える                            |
-| `AiGradingAttempt`（答案1件への1回の判定） | `runId`、`examStudentId`、`state`、`status`、`partialScore`、`comment`、`transcription`、**`observation`（所見。足す）**、`confidence`、`errorMessage`、トークン数4列、`adoptedQuestionScoreId?`、`adoptedDrawingAnnotationId?`、`adoptedAt?`、**`annotationText`（削除）**                                                                                                                                                                                           | run・ExamStudent とともに消える。採用先が消えたら SetNull |
+| 表                                         | 列（変更点は太字）                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 関係・削除                                              |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `AiPrompt`（採点指示）                     | `cropRegionId`、`parentPromptId?`、`createdByUserId?`、`questionText`、`modelAnswerText`、`sendModelAnswerImage`、`rubricText`（採点基準の自由文）、`annotationInstruction`（助言の文案の指示）、**`renderedRubricItems`（送った時点の項目の一覧の文。足す）**。**`questionImagePath`（値は `AiPromptQuestionImage` へ写した）・`revisionInstruction`・`revisionMessage` は落とした**                                                                                    | CropRegion とともに消える。親・作成者が消えたら SetNull |
+| `AiGradingRun`（1回の実行）                | `userId`、`promptId`、`purpose`（**`grade` / `group` / `check`（AI チェック。§3-10）/ `advice`。`revise` は廃止**）、`templateVersion`、`provider`、`model`、`effort`、`mode`（realtime / batch / **cli**）、`status`、`externalBatchId?`、`submittedClientId`、`imageScale`、`points`、**`notes`（2段目の気づいた点。足す）**、**`questioningScoringMethod`（問いかけの前に決めた採点方式の下書き。足す）**、トークン数4列、`endedAt?`。**`resultPromptId` は落とした** | 利用者・採点指示とともに消える                          |
+| `AiGradingAttempt`（答案1件への1回の判定） | `runId`、`examStudentId`、`state`、`status`、`partialScore`、`transcription`、**`observation`（所見。足す）**、`confidence`、`errorMessage`、トークン数4列。**`comment`・`annotationText`・`adoptedQuestionScoreId`・`adoptedDrawingAnnotationId`・`adoptedAt` は落とした**                                                                                                                                                                                              | run・ExamStudent とともに消える                         |
 
 - 1段目が既存の項目に当たると返したもの（`matchedRubricItemIds`）は、次の表に持つ
-- 試行の「採用」（判定をそのまま自分の採点として書く）の画面と口は廃止した。点は問いかけの確定で入る。`adopted*` の列は残し、
-  過去に採用した試行は一致率に数えない
+- 試行の「採用」（判定をそのまま自分の採点として書く）の画面と口は廃止した。点は問いかけの確定で入る。`adopted*` の列も落とした
+  （一致率は採用の有無を見ず、成功した試行をすべて数える）
 
 **新しい表**
 
-| 表                                                  | 列                                                                                                                                                                                                                               | 関係・削除                                                                         |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `AiPromptQuestionImage`（採点指示の問題の画像）     | `promptId`、`imagePath`（data ディレクトリからの相対パス）、`sortOrder`（送る順）                                                                                                                                                | 採点指示とともに消える。書き換えない（採点指示を作るときに一緒に作る）             |
-| `AiAttemptRubricMatch`（1段目の当てはまり）         | `attemptId`、`rubricItemId`                                                                                                                                                                                                      | 試行とともに消える。項目が消えたら一緒に消える                                     |
-| `AiRubricProposal`（項目の案）                      | `runId`（2段目の run。CLI では1段目と同じ run）、`label`、`description`、`adviceDraft`（助言の文案）、`matchedRubricItemId?`（既存の項目に当たる特徴のとき）、`sortOrder`                                                        | run とともに消える。項目が消えたら SetNull                                         |
-| `AiRubricProposalOption`（案の選択肢）              | `proposalId`、`effectKind`・`pointDelta?`・`setStatus?`・`setScore?`（RubricItem と同じ形）、`rationale`、`recommended` Boolean、`sortOrder`                                                                                     | 案とともに消える                                                                   |
-| `AiRubricProposalMember`（案に入る答案）            | `proposalId`、`attemptId`                                                                                                                                                                                                        | 案・試行とともに消える                                                             |
-| `AiRubricProposalResponse`（教員の答え）            | `proposalId`、`optionId?`（「その他」・自分で採点なら null）、`freeText`、`adviceText?`（直した助言。null は直していない）、`resultRubricItemId?`（確定でできた・結び付けた項目）、`committedAt?`（確定した日時。下書きは null） | 案とともに消える。選択肢・項目が消えたら SetNull。答え直しは新しい行（最新が効く） |
-| `AiRubricProposalResponseScore`（自分で採点した点） | `responseId`、`attemptId`、`status`、`partialScore?`                                                                                                                                                                             | 答え・試行とともに消える                                                           |
-| `AiAttemptResponse`（案の外の問いへの答え）         | `attemptId`、`choice`（`rescore` / `keep` / `manual`）、`status?`・`partialScore?`（直す点・付けた点）、`committedAt?`                                                                                                           | 試行とともに消える。答え直しは新しい行（答案ごとに最新が効く）                     |
-| `AiAdviceDraft`（まとめた一文の案）                 | `runId`（`advice` の run）、`text`                                                                                                                                                                                               | run とともに消える                                                                 |
-| `AiAdviceDraftItem`                                 | `draftId`、`rubricItemId`（どの組み合わせの案か）                                                                                                                                                                                | 案・項目とともに消える                                                             |
+| 表                                                             | 列                                                                                                                                                                             | 関係・削除                                                                         |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `AiPromptQuestionImage`（採点指示の問題の画像）                | `promptId`、`imagePath`（data ディレクトリからの相対パス）、`sortOrder`（送る順）                                                                                              | 採点指示とともに消える。書き換えない（採点指示を作るときに一緒に作る）             |
+| `AiAttemptRubricMatch`（1段目の当てはまり）                    | `attemptId`、`rubricItemId`                                                                                                                                                    | 試行とともに消える。項目が消えたら一緒に消える                                     |
+| `AiRubricProposal`（項目の案）                                 | `runId`（2段目の run。CLI では1段目と同じ run）、`label`、`description`、`adviceDraft`（助言の文案）、`matchedRubricItemId?`（既存の項目に当たる特徴のとき）、`sortOrder`      | run とともに消える。項目が消えたら SetNull                                         |
+| `AiRubricProposalOption`（案の選択肢）                         | `proposalId`、`effectKind`・`pointDelta?`・`setStatus?`・`setScore?`（RubricItem と同じ形）、`rationale`、`recommended` Boolean、`sortOrder`                                   | 案とともに消える                                                                   |
+| `AiRubricProposalMember`（案に入る答案）                       | `proposalId`、`attemptId`                                                                                                                                                      | 案・試行とともに消える                                                             |
+| `AiRubricProposalResponse`（教員の答え）                       | `proposalId`、`optionId?`（「その他」・自分で採点なら null）、`freeText`、`resultRubricItemId?`（確定でできた・結び付けた項目）、`committedAt?`（確定した日時。下書きは null） | 案とともに消える。選択肢・項目が消えたら SetNull。答え直しは新しい行（最新が効く） |
+| `AiRubricProposalResponseScore`（自分で採点した点）            | `responseId`、`attemptId`、`status`、`partialScore?`                                                                                                                           | 答え・試行とともに消える                                                           |
+| `AiAttemptResponse`（案の外の問いへの答え）                    | `attemptId`、`choice`（`rescore` / `keep` / `manual`）、`status?`・`partialScore?`（直す点・付けた点）、`committedAt?`                                                         | 試行とともに消える。答え直しは新しい行（答案ごとに最新が効く）                     |
+| `AiRubricProposalAdviceDraft`（直している助言）                | `proposalId`、`userId`、`adviceText`（1打鍵ごとに同じ行を書き換える。同じ案・教員の行が複数あれば updatedAt の新しい方）                                                       | 案・教員とともに消える。最後の確定より前の行は効かない                             |
+| `AiRubricProposalInstructionDraft`（書いている再採点への指示） | `proposalId`、`userId`、`instructionText`（「その他」の欄の文。1打鍵ごとに同じ行を書き換える。同じ案・教員の行が複数あれば updatedAt の新しい方）                              | 案・教員とともに消える。確定で「その他」を選んでいない案の行は消す                 |
+| `AiAdviceDraft`（まとめた一文の案）                            | `runId`（`advice` の run）、`text`                                                                                                                                             | run とともに消える                                                                 |
+| `AiAdviceDraftItem`                                            | `draftId`、`rubricItemId`（どの組み合わせの案か）                                                                                                                              | 案・項目とともに消える                                                             |
 
 - 答えた教員の列は持たない。問いかけは run を実行した教員にだけ出すので、run の `userId` で分かる
 - 送った全文は保存しない。採点指示の行（`renderedRubricItems` を含む）・アプリ共通の指示の版・run の `points` から組み立て直せる
@@ -605,6 +616,12 @@ Claude Code・Codex のサブスクリプションで採点するための送り
 6. どこにも収まらなければ、重なるインクが最少の位置に置き、短くするよう促す
 7. `isRubricAdvice` を立てた `DrawingAnnotation` として書く（色 `#ef4444`、`anchorDirection: top-left`、fontSize は mm）。
    書いた後は 07 の既存の注釈編集で位置・文言を直せる
+8. 文を書き換えるとき（項目の助言を直した・問いかけの下見）は、まず今の位置・文字の大きさのまま枠の右端までの幅で折り返し、
+   枠に収まって（膨らませた）手書きに重ならなければ位置と大きさを保つ（教員が動かした位置を保つ）。収まらなければ 1〜6 で置き直す
+   （`fitsAnnotationAt`・`replaceAdviceAnnotationText`）。測れなかった答案は枠全体を空きとして判定する
+9. **その答案（同じ採点行）のほかの文字の注釈も、手書きと同じく埋まっている場所として扱う**（置く・書き換える朱書きそのものと、
+   同期で重複して消す朱書きは除く）。注釈の箱は、文・文字の大きさ・`anchorDirection` から 2. と同じ数え方で見積もる。
+   ほかの注釈は動かさず、書き換えもしない（`withOccupiedRectangles`・`annotationBoxesOf`）
 
 ---
 
@@ -692,9 +709,12 @@ Claude Code・Codex のサブスクリプションで採点するための送り
 
 - **左パネル：** 「採点指示」「AI 採点」「AI チェック」のタブ。AI 採点を実行した設問では「AI 採点」を開く
   - **採点指示。** 採点指示は古い順に「指示 1」「指示 2」…と呼ぶ（表示だけの番号）。中身は見出しと値の2列で、中身のどこを押しても
-    （右上の鉛筆が目印。Enter・Space でも）編集が開く（問題の画像のサムネイルは押すと拡大）。その下に幅いっぱいの「採点実行」。
-    下に採点の履歴（「採点 N」「チェック N」を目的ごとに古い順に番号を振り、使った採点指示の番号を添える）
-  - **AI 採点・AI チェック。** 実行の入口と問いかけ（記録・いまの問いと選択肢・自分で採点するボタン・見直しと確定。AI 採点は2段目の気づいた点も）（§3-5・§3-10）。
+    （右上の鉛筆が目印。Enter・Space でも）編集が開く（問題の画像のサムネイルは押すと拡大）。その下に幅いっぱいの「AI 採点を実行」と
+    「AI チェックを実行」（実行の入口はここだけ）。送ると、進み具合と問いかけが出る「AI 採点」「AI チェック」のタブへ移る
+  - **AI 採点・AI チェック。** 問いかけ（記録・いまの問いと選択肢・自分で採点するボタン・見直しと確定。AI 採点は2段目の気づいた点も）（§3-5・§3-10）。
+    下にそのタブの目的の実行の履歴（「採点の履歴」は「採点 N」、「チェックの履歴」は「チェック N」。目的ごとに古い順に番号を振り、
+    使った採点指示の番号を添える。先頭は「答案ごとに最新の判定」）。押した実行の判定を一覧に出すのはそのタブを開いている間だけで、
+    ほかのタブでは答案ごとに最新の判定に見える（戻れば選んだ実行に戻る）。
     重なった助言の問いかけ（§3-7）は、一覧表示・個別表示のルーブリックのパネルに出す
 - **中央：** どのタブでも答案の一覧（白さ順の並べ替えができる）。問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる
 - **右端：固定のパネル。** 設問の移動・表示。この試験の AI の費用の概算は、採点モードの行の左端に出す
@@ -773,12 +793,15 @@ AI の問いかけでは、英字の採点キーと数字の部分点は「自�
 | 注釈用の占有グリッド            | **残す**（§8・§9）                                                                                                                                                                                                                                                                                                                        |
 | 対象の選び方                    | **作り直した。** 旧 `AiGradingTargetSelector`（AI 未判定のみ・採点済みの照合・設定違いの照合を並べた推奨）は削除した。いまは実行ダイアログの4択（未採点・無答以外の全て・全て・選択した答案。§3-2）で、対象は `selectGradingTargets` が決める                                                                                             |
 | プロンプトの改訂                | **削除。** `purpose: "revise"`、`AiPromptRevisionDialog`・`AiRevisionSamplePicker`・`promptRevisionRunner.ts`・`revisionPromptBuilder.ts`、`AiPrompt.revisionInstruction`・`revisionMessage`、`AiGradingRun.resultPromptId`。問いかけの「その他」が役割を引き継ぐ                                                                         |
-| AI が答案ごとに書く朱書きの文案 | **削除（R3 で置き換えるときに）。** `AiGradingAttempt.annotationText` と、それを採用して注釈にする処理。注釈（`DrawingAnnotation`）の機能そのもの、手で書く注釈、採用済みの注釈は残す。AI が関わる朱書きは項目の助言から作る経路（§9）に統一する。代わりができる前に消すと AI の朱書きを入れる手段が無くなるので、R3 まで残す             |
+| AI が答案ごとに書く朱書きの文案 | **削除（列も migration 20261011150000 で落とした）。** `AiGradingAttempt.annotationText` と、それを採用して注釈にする処理。注釈（`DrawingAnnotation`）の機能そのもの、手で書く注釈、採用済みの注釈は残す。AI が関わる朱書きは項目の助言から作る経路（§9）に統一した                                                                       |
 | 確信度の絞り込み                | **削除。** 確信度の低い順に並べる                                                                                                                                                                                                                                                                                                         |
 | `annotationInstruction`         | **意味を変える。** 答案ごとの朱書きの指示から、項目の助言の文案の指示へ                                                                                                                                                                                                                                                                   |
-| 1段目の `comment`               | **返させない。** 1段目は所見（`observation`）を返し、採用の理由には所見を写す。`AiGradingAttempt.comment` の列は残し、過去の試行は `comment` を写す                                                                                                                                                                                       |
+| 1段目の `comment`               | **返させない。** 1段目は所見（`observation`）を返す。採用も廃止したので、`AiGradingAttempt.comment` の列は落とした                                                                                                                                                                                                                        |
 
-列の削除（`revisionInstruction`・`revisionMessage`・`resultPromptId`・`annotationText`）は既存の記録を消すので、migration を適用する前に確認を取る。R1〜R5 ではコードだけを外し、列は残している（過去の改訂の実行は費用の集計に入り続ける）。**列を消すかどうかは、ユーザーの判断待ち。**
+**列は落とした**（ユーザーの判断による。migration 20261011150000）。落としたのは `AiPrompt.questionImagePath`・`revisionInstruction`・`revisionMessage`、
+`AiGradingRun.resultPromptId`、`AiGradingAttempt.comment`・`annotationText`・`adoptedQuestionScoreId`・`adoptedDrawingAnnotationId`・`adoptedAt`、
+`AiRubricProposalResponse.adviceText`。過去の改訂の実行の行（`purpose: "revise"`）は費用の記録として残り、費用の集計に入り続ける。
+監査ログの操作名（`exam.ai_prompt.revise`・`exam.ai_grading.adopt` など）は、過去のログを読むために残している
 
 ---
 

@@ -1,16 +1,22 @@
 /**
  * 助言の朱書きの置き場所と、文を書き換えるときの折り返し（docs/vlm-grading-design.md §9）。
  *
- * 置き場所は `placeAnnotation` が占有グリッドから決める。ここが足すのは、用紙の向きの
- * 決め方と、測れなかった答案の代わりのグリッドと、朱書きの行（`DrawingAnnotation`）への詰め方。
+ * 置き場所は `placeAnnotation` が占有グリッドから決める。文を書き換えるときは、今の位置・大きさで
+ * 収まればそのまま、収まらなければ置き直す（`replaceAdviceAnnotationText`）。ここが足すのは、用紙の向きの
+ * 決め方と、測れなかった答案の代わりのグリッドと、答案のほかの文字の注釈を埋まっている場所として
+ * グリッドに重ねること（ほかの注釈は動かさない）と、朱書きの行（`DrawingAnnotation`）への詰め方。
  * 文字の大きさ（fontSize）は mm で持つ（注釈の mm 縮尺の規約）。
  */
 
 import { DEFAULT_DRAWING_SETTINGS } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import { getOrientedPaperDimensions } from "@/lib/paperSize"
 import {
+  fitsAnnotationAt,
+  measureWrappedTextMm,
+  type NormalizedRectangle,
   placeAnnotation,
   toAnnotationParagraphs,
+  withOccupiedRectangles,
   wrapAnnotationParagraphs,
 } from "@/lib/shared/aiGrading/annotationPlacement"
 import type { AnswerInkGrid } from "@/lib/shared/aiGrading/answerInkGrid"
@@ -110,27 +116,101 @@ function resolvePaperDimensions(
     : getOrientedPaperDimensions(pageSize, false)
 }
 
+/** 避ける文字の注釈（置く・書き換える朱書きそのものは入れない） */
+export type OccupyingTextAnnotation = Pick<
+  DrawingAnnotation,
+  "x" | "y" | "text" | "fontSize" | "anchorDirection"
+>
+
 /** 答案1件の朱書きを置くのに要るもの */
 export interface AdvicePlacementContext {
   /** 答案のその設問の占有グリッド。測れなかったら null（枠全体を空きとして置く） */
   inkGrid: AnswerInkGrid | null
   region: NormalizedRegion
   pageSize: string
+  /**
+   * その答案（採点行）のほかの文字の注釈。手書きと同じく埋まっている場所として避ける（動かさない）。
+   * 置く・書き換える朱書きそのものは入れない。省略は「無い」
+   */
+  occupyingAnnotations?: readonly OccupyingTextAnnotation[]
 }
 
 /**
- * 助言の朱書きを、手書きに重ならない位置に置いた行（まだ保存しない）。文が空なら null。
+ * 文字の注釈の箱（用紙比）。大きさは文・文字の大きさから見積もり（`measureWrappedTextMm`）、
+ * 位置は `anchorDirection` に合わせる（描画の `getTextPositionFromAnchor` と同じ向きの決め方）
+ */
+export function textAnnotationRectangleOf(
+  annotation: OccupyingTextAnnotation,
+  paperDimensions: PaperDimensionsMm
+): NormalizedRectangle {
+  const { widthMm, heightMm } = measureWrappedTextMm(
+    annotation.text,
+    annotation.fontSize
+  )
+  const width = widthMm / paperDimensions.width
+  const height = heightMm / paperDimensions.height
+  const horizontalShare = annotation.anchorDirection.endsWith("right")
+    ? 1
+    : annotation.anchorDirection.endsWith("left")
+      ? 0
+      : 0.5
+  const verticalShare = annotation.anchorDirection.startsWith("bottom")
+    ? 1
+    : annotation.anchorDirection.startsWith("top")
+      ? 0
+      : 0.5
+  return {
+    x: annotation.x - width * horizontalShare,
+    y: annotation.y - height * verticalShare,
+    width,
+    height,
+  }
+}
+
+/** 置き場所を探すグリッド（手書き＋ほかの文字の注釈）と、用紙の寸法 */
+function placementGridOf({
+  inkGrid,
+  region,
+  pageSize,
+  occupyingAnnotations = [],
+}: AdvicePlacementContext): {
+  grid: AnswerInkGrid
+  paperDimensions: PaperDimensionsMm
+} {
+  const paperDimensions = resolvePaperDimensions(pageSize, inkGrid)
+  const grid = withOccupiedRectangles(
+    inkGrid ?? emptyInkGridForRegion(region, pageSize),
+    occupyingAnnotations
+      .filter((annotation) => annotation.text.trim() !== "")
+      .map((annotation) =>
+        textAnnotationRectangleOf(annotation, paperDimensions)
+      )
+  )
+  return { grid, paperDimensions }
+}
+
+/**
+ * 助言の朱書きを、手書きとほかの文字の注釈に重ならない位置に置いた行（まだ保存しない）。文が空なら null。
  * 印（`isRubricAdvice`）を立て、置き場所は左上の角で持つ
  */
 export function placeAdviceAnnotation(
   adviceText: string,
-  { inkGrid, region, pageSize }: AdvicePlacementContext
+  context: AdvicePlacementContext
+): DrawingAnnotation | null {
+  const { grid, paperDimensions } = placementGridOf(context)
+  return placeAdviceAnnotationOnGrid(adviceText, grid, paperDimensions)
+}
+
+function placeAdviceAnnotationOnGrid(
+  adviceText: string,
+  grid: AnswerInkGrid,
+  paperDimensions: PaperDimensionsMm
 ): DrawingAnnotation | null {
   const placement = placeAnnotation({
     annotationText: adviceText,
     fontSizeMm: ADVICE_FONT_SIZE_MM,
-    paperDimensions: resolvePaperDimensions(pageSize, inkGrid),
-    inkGrid: inkGrid ?? emptyInkGridForRegion(region, pageSize),
+    paperDimensions,
+    inkGrid: grid,
   })
   if (!placement) return null
   return newDrawingAnnotation({
@@ -166,6 +246,53 @@ export function rewrapAdviceText(
     toAnnotationParagraphs(adviceText),
     charactersPerLine
   ).join("\n")
+}
+
+/** 書き換えた朱書きの、文と位置・文字の大きさ */
+export interface ReplacedAdviceAnnotation {
+  text: string
+  x: number
+  y: number
+  fontSize: number
+}
+
+/**
+ * 置いてある朱書きの文を書き換える。まず今の位置・文字の大きさのまま折り返し（`rewrapAdviceText`）、
+ * 枠に収まって手書きにもほかの文字の注釈にも重ならなければ**位置と大きさを保つ**（教員が動かした位置を保つ）。
+ * 収まらなければ（長くなって枠からはみ出す・手書きやほかの注釈に掛かる）、新しく置くときと同じく置き直す。
+ * 置き直せない（文が空になる）ときは折り返しだけを返す。
+ * 位置は左上の角（助言の朱書きは `anchorDirection: "top-left"` で作る）として扱う
+ */
+export function replaceAdviceAnnotationText(
+  adviceText: string,
+  annotation: Pick<DrawingAnnotation, "x" | "y" | "fontSize">,
+  context: AdvicePlacementContext
+): ReplacedAdviceAnnotation {
+  const rewrapped = {
+    text: rewrapAdviceText(adviceText, annotation, context),
+    x: annotation.x,
+    y: annotation.y,
+    fontSize: annotation.fontSize,
+  }
+  const { grid, paperDimensions } = placementGridOf(context)
+  const fits = fitsAnnotationAt({
+    wrappedText: rewrapped.text,
+    x: annotation.x,
+    y: annotation.y,
+    fontSizeMm: annotation.fontSize,
+    paperDimensions,
+    inkGrid: grid,
+  })
+  if (fits) return rewrapped
+  const placed = placeAdviceAnnotationOnGrid(adviceText, grid, paperDimensions)
+  return placed
+    ? {
+        text: placed.text,
+        x: placed.x,
+        y: placed.y,
+        fontSize: placed.fontSize,
+      }
+    : rewrapped
 }
 
 /**

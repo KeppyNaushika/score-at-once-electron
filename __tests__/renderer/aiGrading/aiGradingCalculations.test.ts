@@ -20,7 +20,7 @@ import {
 } from "./helpers/aiGradingRowFixtures"
 
 describe("実行の履歴", () => {
-  it("自分の採点の実行を新しい順に並べ、実行ごとに判定の数と一致を数える（採用した試行は数えない）", () => {
+  it("自分の採点の実行を新しい順に並べ、実行ごとに判定の数と一致を数える", () => {
     const olderRun = makeRun({
       id: "run-older",
       createdAt: new Date("2026-10-01T00:00:00.000Z"),
@@ -31,7 +31,7 @@ describe("実行の履歴", () => {
           status: "partial",
           partialScore: 3,
         }),
-        makeAttempt({ examStudentId: "s3", adoptedAt: new Date() }),
+        makeAttempt({ examStudentId: "s3" }),
         makeAttempt({ examStudentId: "s4", state: "errored" }),
       ],
     })
@@ -70,21 +70,41 @@ describe("実行の履歴", () => {
     expect(runHistory[1]).toMatchObject({
       attemptCount: 4,
       succeededCount: 3,
-      comparedCount: 2,
-      exactMatchCount: 1,
-      withinOnePointCount: 2,
+      comparedCount: 3,
+      exactMatchCount: 2,
+      withinOnePointCount: 3,
     })
   })
 
-  it("選んだ実行が無くなった・自分の採点の実行でないときは最新（null）として扱う", () => {
+  it("選んだ実行が無くなった・自分の採点の実行でない・いまのタブの目的でないときは最新（null）として扱う", () => {
     const run = makeRun({ id: "run-1" })
+    const checkRun = makeRun({ id: "run-check", purpose: "check" })
     const reviseRun = makeRun({ id: "run-revise", purpose: "revise" })
-    expect(resolveChosenRunId("run-1", [run], CURRENT_USER_ID)).toBe("run-1")
-    expect(resolveChosenRunId("run-gone", [run], CURRENT_USER_ID)).toBeNull()
+    expect(resolveChosenRunId("run-1", [run], CURRENT_USER_ID, "grade")).toBe(
+      "run-1"
+    )
     expect(
-      resolveChosenRunId("run-revise", [run, reviseRun], CURRENT_USER_ID)
+      resolveChosenRunId("run-gone", [run], CURRENT_USER_ID, "grade")
     ).toBeNull()
-    expect(resolveChosenRunId(null, [run], CURRENT_USER_ID)).toBeNull()
+    expect(
+      resolveChosenRunId(
+        "run-revise",
+        [run, reviseRun],
+        CURRENT_USER_ID,
+        "grade"
+      )
+    ).toBeNull()
+    expect(resolveChosenRunId(null, [run], CURRENT_USER_ID, "grade")).toBeNull()
+    // 履歴は目的ごとのタブに出すので、ほかの目的のタブ・採点指示のタブでは最新に見える
+    expect(
+      resolveChosenRunId("run-check", [run, checkRun], CURRENT_USER_ID, "check")
+    ).toBe("run-check")
+    expect(
+      resolveChosenRunId("run-check", [run, checkRun], CURRENT_USER_ID, "grade")
+    ).toBeNull()
+    expect(
+      resolveChosenRunId("run-1", [run, checkRun], CURRENT_USER_ID, null)
+    ).toBeNull()
   })
 
   it("表示する試行: `<` `>` の選択 → 選んだ実行の試行 → 最新の成功", () => {

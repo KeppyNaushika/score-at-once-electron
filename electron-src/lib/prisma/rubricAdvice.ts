@@ -194,7 +194,8 @@ export async function deleteRubricAdviceCombination(
 
 /**
  * 助言の朱書きを作り直す材料。設問の項目・重なった助言の決まりと、**適用か助言の朱書きが
- * 1つ以上ある採点行の全部（どの採点者のものも）**を、適用と助言の朱書きを同梱して返す。
+ * 1つ以上ある採点行の全部（どの採点者のものも）**を、適用と文字の注釈（助言の朱書きと、置き場所で
+ * 避ける手で書いた文字の注釈）を同梱して返す。
  * 何を作る・直す・消すかは renderer が求める。設問が無ければ null
  */
 export async function getRubricAdviceSource(cropRegionId: string) {
@@ -218,7 +219,7 @@ export async function getRubricAdviceSource(cropRegionId: string) {
         include: {
           rubricApplications: true,
           drawingAnnotations: {
-            where: { isRubricAdvice: true },
+            where: { OR: [{ isRubricAdvice: true }, { type: "text" }] },
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           },
         },
@@ -243,8 +244,17 @@ export interface RubricAdviceSyncInput {
   cropRegionId: string
   /** 作る朱書き（採点行に、まだ助言の朱書きが無いもの） */
   creates: { questionScoreId: string; annotation: DrawingAnnotation }[]
-  /** 文を書き換える朱書き（位置と文字の大きさは変えない） */
-  updates: { drawingAnnotationId: string; text: string }[]
+  /**
+   * 書き換える朱書きの文と位置・文字の大きさ（今の位置で収まれば renderer が元の値をそのまま渡し、
+   * 収まらなければ置き直した値を渡す）
+   */
+  updates: {
+    drawingAnnotationId: string
+    text: string
+    x: number
+    y: number
+    fontSize: number
+  }[]
   /** 消す朱書き */
   deletes: string[]
 }
@@ -300,7 +310,13 @@ export async function syncRubricAdviceAnnotations(
           isRubricAdvice: true,
           questionScore: { cropRegionId: input.cropRegionId },
         },
-        data: { text: update.text, updatedAt: new Date() },
+        data: {
+          text: update.text,
+          x: update.x,
+          y: update.y,
+          fontSize: update.fontSize,
+          updatedAt: new Date(),
+        },
       })
       updatedCount += updated.count
     }

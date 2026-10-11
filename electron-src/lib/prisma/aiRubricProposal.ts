@@ -5,13 +5,15 @@
  * AI の層は追記だけ。案は書き換えず、答え直しは新しい答えの行（最新が効く）。
  *
  * **答えは下書き（`recordAiRubricProposalDraft`）で、教員の層へ書くのは確定のとき
- * （`commitAiRubricProposalResponse`）だけ。** 選んだ選択肢からルーブリック項目を作り（既存の項目に
+ * （`commitAiRubricProposalResponse`）だけ。** 助言の欄の文は答えとは別の行（AiRubricProposalAdviceDraft。
+ * 1打鍵ごとに同じ行を書き換える）に持つ。「その他」の欄の文も同じく別の行（`aiRubricProposalInstructionDraft.ts`）。確定では選んだ選択肢からルーブリック項目を作り（既存の項目に
  * 当たる案なら作らない）、案の答案の操作者自身の採点行に当てる。点の計算と朱書きの合わせは
  * renderer が、返した採点行から行う。
  */
 
 import { Prisma } from "@prisma/client"
 
+import { effectiveProposalAdviceDraftText } from "@/lib/shared/aiGrading/proposalAdviceDraft"
 import type { ValidatedStage2Proposal } from "@/lib/shared/aiGrading/stage2ResponseValidator"
 
 import {
@@ -128,7 +130,8 @@ export async function listTeacherInstructions(
 /**
  * 設問の、その教員の2段目の実行を古い順に、案（選択肢・答案・答えの木）付きで。
  * 答案は試行（判定・確信度・受験者）を、答えは自分で採点した点を同梱する。氏名は画面が受験者から引く。
- * 当たる既存の項目と、答えでできた・結び付けた項目も同梱する（助言の欄に出す文を画面が選ぶ）
+ * 当たる既存の項目と、答えでできた・結び付けた項目、自分が直している助言の文・「その他」の欄に書いている文も同梱する
+ * （欄に出す文を画面が選ぶ）
  */
 export async function listAiRubricProposalRunsByCropRegion(
   cropRegionId: string,
@@ -148,6 +151,14 @@ export async function listAiRubricProposalRunsByCropRegion(
               resultRubricItem: true,
             },
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          },
+          adviceDrafts: {
+            where: { userId },
+            orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+          },
+          instructionDrafts: {
+            where: { userId },
+            orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
           },
         },
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -184,11 +195,6 @@ export interface RecordAiRubricProposalDraftInput {
    * 選択肢・「その他」のときは空
    */
   manualScores: QuestioningScoreInput[]
-  /**
-   * 教員が直した助言の文。null は直していない（確定で、既存の項目に当たる案はその項目の助言を
-   * そのまま、ほかは AI の文案を使う）。"" は助言なし
-   */
-  adviceText: string | null
 }
 
 /**
@@ -234,7 +240,6 @@ export async function recordAiRubricProposalDraft(
       proposalId: proposal.id,
       optionId: input.optionId,
       freeText,
-      adviceText: input.adviceText === null ? null : input.adviceText.trim(),
       scores: {
         create: input.manualScores.map((score) => ({
           attemptId: score.attemptId,
@@ -248,6 +253,49 @@ export async function recordAiRubricProposalDraft(
     },
     include: { scores: true },
   })
+}
+
+/** 助言の欄の文の引数 */
+export interface SetAiRubricProposalAdviceDraftInput {
+  proposalId: string
+  /** 欄の文そのまま（確定のときに前後の空白を落とす）。"" は助言なし */
+  adviceText: string
+}
+
+/**
+ * 問いかけの助言の欄の文を書く（§3-5。1打鍵ごと）。案ごと・教員ごとの行を、その場で書き換える
+ * （無ければ作る。複数あれば updatedAt の新しい方）。答えの行（追記）には書かないので、打鍵で行は増えない。
+ * AI の層の下書きなので、答えの下書きと同じく監査ログには残さない（項目の助言が変わるのは確定のときで、そこで残る）。
+ * 書けるのは、その案を出した実行の教員だけ
+ */
+export async function setAiRubricProposalAdviceDraft(
+  input: SetAiRubricProposalAdviceDraftInput,
+  actorUserId: string
+) {
+  const proposal = await prisma.aiRubricProposal.findUnique({
+    where: { id: input.proposalId },
+    include: { run: true },
+  })
+  if (!proposal) throw new Error("項目の案が見つかりません")
+  if (proposal.run.userId !== actorUserId) {
+    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+  }
+  const latest = await prisma.aiRubricProposalAdviceDraft.findFirst({
+    where: { proposalId: proposal.id, userId: actorUserId },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+  })
+  return latest
+    ? prisma.aiRubricProposalAdviceDraft.update({
+        where: { id: latest.id },
+        data: { adviceText: input.adviceText },
+      })
+    : prisma.aiRubricProposalAdviceDraft.create({
+        data: {
+          proposalId: proposal.id,
+          userId: actorUserId,
+          adviceText: input.adviceText,
+        },
+      })
 }
 
 /** 答えの確定の引数 */
@@ -273,7 +321,7 @@ export interface CommitAiRubricProposalResponseInput {
  *   renderer が項目の点のあとに書き（`writeAiQuestioningScores`）、書き終えてから
  *   `markAiQuestioningCommitted` で確定済みにする（点を書く前に失敗しても、下書きが残って確定し直せる）
  *
- * 助言は、教員が直していれば（答えの `adviceText` が null でなければ）その文を項目の助言にする
+ * 助言は、教員が直していれば（効いている AiRubricProposalAdviceDraft があれば。`effectiveProposalAdviceDraftText`）その文を項目の助言にする
  * （新しく作る項目・選び直しで使い回す項目・既存の項目に当たる案の項目のどれでも）。直していなければ、
  * 新しく作る項目は AI の文案、それ以外は項目の助言のまま。既存の項目の助言を書き換えたら、その項目を返す。
  *
@@ -368,8 +416,14 @@ export async function commitAiRubricProposalResponse(
   }
 
   // 教員が直した助言（null は直していない）。項目の助言と同じなら書かない
+  const editedAdvice = effectiveProposalAdviceDraftText(
+    await prisma.aiRubricProposalAdviceDraft.findMany({
+      where: { proposalId: proposal.id, userId: actorUserId },
+    }),
+    proposal.responses.filter((response) => response.id !== draft.id)
+  )?.trim()
   const editedAdviceFor = (rubricItemId: string): string | undefined => {
-    const adviceText = draft.adviceText?.trim()
+    const adviceText = editedAdvice
     if (adviceText === undefined) return undefined
     return livingItems.get(rubricItemId)?.adviceText.trim() === adviceText
       ? undefined
@@ -419,7 +473,7 @@ export async function commitAiRubricProposalResponse(
       {
         cropRegionId: cropRegion.id,
         label: proposal.label,
-        adviceText: draft.adviceText?.trim() ?? proposal.adviceDraft,
+        adviceText: editedAdvice ?? proposal.adviceDraft,
         sortOrder: (lastItem?.sortOrder ?? -1) + 1,
         ...effect,
       },

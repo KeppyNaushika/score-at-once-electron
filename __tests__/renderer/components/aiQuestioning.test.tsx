@@ -17,8 +17,8 @@
  * - 「自分で採点する」は一覧の答案を ←→ で移り（クリックでも移れる）、採点キー（数字は部分点）か
  *   「自分で採点」のボタン（自分で採点の最中だけ押せる）で点を付ける（下書き。一覧に斜線で出る）
  * - 「その他」の欄は ↓ で入り、1行目の ↑ で戻る（2行目の ↑ は戻らない）。素の Enter・変換中の
- *   Enter では送らず、Ctrl/⌘+Enter で決める。中身は問いを移っても残り、確定のとき「その他」を
- *   選んでいない問いの中身は捨てる
+ *   Enter では送らず、Ctrl/⌘+Enter で決める。中身は1打鍵ごとに案ごとの行へ書き（問いを移っても
+ *   読み込み直しても残る）、確定のとき「その他」を選んでいない問いの中身（行）は捨てる
  * - 直接採点の設問に点を加減する案があれば、最初に採点方式を問い、方式は確定のときに変える
  * - AI チェックでは「同じ答えに違う点」と「先生と AI の食い違い」を同じ形で出し、
  *   直すと決めた答案だけを確定で書く
@@ -228,6 +228,8 @@ function makeSignProposal(adjust = false): AiRubricProposalRow {
       makeMember("proposal-sign", attemptC),
     ],
     responses: [],
+    adviceDrafts: [],
+    instructionDrafts: [],
   }
 }
 
@@ -254,6 +256,8 @@ function makeUnitProposal(): AiRubricProposalRow {
     ],
     members: [makeMember("proposal-unit", attemptA)],
     responses: [],
+    adviceDrafts: [],
+    instructionDrafts: [],
   }
 }
 
@@ -275,7 +279,6 @@ function makeProposalRun(
     submittedClientId: "client-1",
     imageScale: 1,
     points: 4,
-    resultPromptId: null,
     notes: "",
     questioningScoringMethod: "",
     inputTokens: 0,
@@ -293,6 +296,8 @@ function makeProposalRun(
 let proposalRuns: AiRubricProposalRunRow[] = []
 let runs: AiGradingRunRow[] = []
 let responseCount = 0
+let adviceWriteCount = 0
+let instructionWriteCount = 0
 
 const updateProposal = (
   proposalId: string,
@@ -320,7 +325,6 @@ const fakeAiGradingApi = {
         status: string
         partialScore: number | null
       }[]
-      adviceText: string | null
     }) => {
       responseCount += 1
       const responseId = `response-${responseCount}`
@@ -329,7 +333,6 @@ const fakeAiGradingApi = {
         proposalId: input.proposalId,
         optionId: input.optionId,
         freeText: input.freeText,
-        adviceText: input.adviceText,
         resultRubricItemId: null,
         resultRubricItem: null,
         committedAt: null,
@@ -350,6 +353,63 @@ const fakeAiGradingApi = {
         responses: [...proposal.responses, response],
       }))
       return response
+    }
+  ),
+  // 助言の欄の文: 案ごとの1行をその場で書き換える（無ければ作る）
+  setProposalAdviceDraft: vi.fn(
+    async (input: { proposalId: string; adviceText: string }) => {
+      adviceWriteCount += 1
+      const updatedAt = new Date(LATER_DATE.getTime() + adviceWriteCount * 1000)
+      updateProposal(input.proposalId, (proposal) => ({
+        ...proposal,
+        adviceDrafts: [
+          {
+            id: proposal.adviceDrafts[0]?.id ?? `advice-${input.proposalId}`,
+            proposalId: input.proposalId,
+            userId: CURRENT_USER_ID,
+            adviceText: input.adviceText,
+            createdAt: proposal.adviceDrafts[0]?.createdAt ?? updatedAt,
+            updatedAt,
+          },
+        ],
+      }))
+      return {}
+    }
+  ),
+  // 「その他」の欄の文: 案ごとの1行をその場で書き換える（無ければ作る）
+  setProposalInstructionDraft: vi.fn(
+    async (input: { proposalId: string; instructionText: string }) => {
+      instructionWriteCount += 1
+      const updatedAt = new Date(
+        LATER_DATE.getTime() + instructionWriteCount * 1000
+      )
+      updateProposal(input.proposalId, (proposal) => ({
+        ...proposal,
+        instructionDrafts: [
+          {
+            id:
+              proposal.instructionDrafts[0]?.id ??
+              `instruction-${input.proposalId}`,
+            proposalId: input.proposalId,
+            userId: CURRENT_USER_ID,
+            instructionText: input.instructionText,
+            createdAt: proposal.instructionDrafts[0]?.createdAt ?? updatedAt,
+            updatedAt,
+          },
+        ],
+      }))
+      return {}
+    }
+  ),
+  discardProposalInstructionDrafts: vi.fn(
+    async (input: { proposalIds: string[] }) => {
+      input.proposalIds.forEach((proposalId) =>
+        updateProposal(proposalId, (proposal) => ({
+          ...proposal,
+          instructionDrafts: [],
+        }))
+      )
+      return { count: input.proposalIds.length }
     }
   ),
   recordAttemptResponses: vi.fn(
@@ -527,6 +587,9 @@ function QuestioningHarness({
     studentAnswerImages: answers.map((answer) => answer.studentAnswerImage),
     states: selected.states,
     persistDecision: selected.persistDecision,
+    persistAdviceText: grading.persistAdviceText,
+    persistInstructionText: grading.persistInstructionText,
+    discardInstructionTexts: grading.discardInstructionTexts,
     ownScoreOf: check.ownScoreOf,
     proposals:
       mode === "grade" ? (grading.proposalRun?.rubricProposals ?? []) : [],
@@ -564,7 +627,6 @@ function QuestioningHarness({
             mode={mode}
             questioning={questioning}
             cropRegion={cropRegion}
-            onRun={() => undefined}
             statusNotice={null}
             emptyMessage="問いはありません"
             notes=""
@@ -573,6 +635,11 @@ function QuestioningHarness({
         )}
       </aside>
       <section aria-label="答案と AI の判定">
+        <output data-testid="advice-preview">
+          {questioning.advicePreview
+            ? `${questioning.advicePreview.adviceText}|${questioning.advicePreview.examStudentIds.join(",")}`
+            : ""}
+        </output>
         <output data-testid="selection">
           {grid.visibleIds
             .filter((examStudentId) => selectedIds.has(examStudentId))
@@ -598,6 +665,8 @@ function QuestioningHarness({
           }
           totalCount={reviewedAnswers.length}
           draftStatusByExamStudentId={questioning.draftStatusByExamStudentId}
+          pageAnswerImages={answers.map((answer) => answer.studentAnswerImage)}
+          advicePreview={questioning.advicePreview}
         />
       </section>
     </div>
@@ -681,6 +750,8 @@ const focusedOption = () =>
 beforeEach(() => {
   vi.clearAllMocks()
   responseCount = 0
+  adviceWriteCount = 0
+  instructionWriteCount = 0
   proposalRuns = [makeProposalRun([makeSignProposal(), makeUnitProposal()])]
   runs = [
     makeRun({
@@ -782,7 +853,6 @@ describe("AI 採点の問いかけ", () => {
         optionId: "option-sign-incorrect",
         freeText: "",
         manualScores: [],
-        adviceText: null,
       })
     )
     await card("単位まで正しい")
@@ -886,7 +956,6 @@ describe("AI 採点の問いかけ", () => {
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
           { attemptId: attemptB.id, status: "partial", partialScore: 3 },
         ],
-        adviceText: null,
       })
     )
     await card("単位まで正しい")
@@ -931,7 +1000,6 @@ describe("AI 採点の問いかけ", () => {
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
           { attemptId: attemptB.id, status: "partial", partialScore: 3 },
         ],
-        adviceText: null,
       })
     )
     expectNoTeacherLayerWrites()
@@ -962,7 +1030,50 @@ describe("AI 採点の問いかけ", () => {
         screen.getByRole("textbox", { name: "再採点への指示" })
       ).toHaveValue("途中式があれば\n部分点")
     )
+    // 打鍵ごとに即時に案ごとの行へ書く（デバウンスしない）。答えの行は書かない
+    expect(
+      fakeAiGradingApi.setProposalInstructionDraft
+    ).toHaveBeenLastCalledWith({
+      proposalId: "proposal-sign",
+      instructionText: "途中式があれば\n部分点",
+    })
+    expect(
+      fakeAiGradingApi.setProposalInstructionDraft.mock.calls.length
+    ).toBeGreaterThanOrEqual("途中式があれば部分点".length)
     expect(fakeAiGradingApi.recordProposalDraft).not.toHaveBeenCalled()
+  })
+
+  it("「その他」の欄: 書いてある行の文を出す（読み込み直しても残る）", async () => {
+    updateProposal("proposal-sign", (proposal) => ({
+      ...proposal,
+      instructionDrafts: [
+        {
+          id: "instruction-older",
+          proposalId: "proposal-sign",
+          userId: CURRENT_USER_ID,
+          instructionText: "古い指示",
+          createdAt: FIXED_DATE,
+          updatedAt: FIXED_DATE,
+        },
+        {
+          id: "instruction-newer",
+          proposalId: "proposal-sign",
+          userId: CURRENT_USER_ID,
+          instructionText: "前に書いた指示",
+          createdAt: FIXED_DATE,
+          updatedAt: LATER_DATE,
+        },
+      ],
+    }))
+    renderView()
+    await card("移項で符号を誤った")
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "再採点への指示" })
+      ).toHaveValue("前に書いた指示")
+    )
+    expect(fakeAiGradingApi.setProposalInstructionDraft).not.toHaveBeenCalled()
   })
 
   it("「その他」の欄: 変換中の Enter では送らず、Ctrl+Enter で再採点への指示として決める", async () => {
@@ -988,7 +1099,6 @@ describe("AI 採点の問いかけ", () => {
         optionId: null,
         freeText: "単位は問わない",
         manualScores: [],
-        adviceText: null,
       })
     )
     expect(await card("単位まで正しい")).toBeInTheDocument()
@@ -1017,6 +1127,10 @@ describe("AI 採点の問いかけ", () => {
     await waitFor(() =>
       expect(fakeAiGradingApi.commitProposalResponse).toHaveBeenCalled()
     )
+    // 書いてある行を消す（欄に書いていない問いの分は頼まない）
+    expect(
+      fakeAiGradingApi.discardProposalInstructionDrafts
+    ).toHaveBeenCalledWith({ proposalIds: ["proposal-sign"] })
 
     await userEvent.click(await logRow("移項で符号を誤った"))
     await card("移項で符号を誤った")
@@ -1062,7 +1176,6 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
     optionId,
     freeText: "",
     manualScores: [],
-    adviceText: null,
   })
 
   it("選択肢はクリックでもダブルクリックでも決めず、焦点を移すだけ", async () => {
@@ -1115,7 +1228,6 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         optionId: null,
         freeText: "途中式を見て",
         manualScores: [],
-        adviceText: null,
       })
     )
     expect(await card(UNIT)).toBeInTheDocument()
@@ -1142,7 +1254,6 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         manualScores: [
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
         ],
-        adviceText: null,
       })
     )
     expect(await card(UNIT)).toBeInTheDocument()
@@ -1198,7 +1309,6 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         optionId: null,
         freeText: "単位は問わない",
         manualScores: [],
-        adviceText: null,
       })
     )
     await card(UNIT)
@@ -1238,7 +1348,6 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         manualScores: [
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
         ],
-        adviceText: null,
       })
     )
     expect(await card(UNIT)).toBeInTheDocument()
@@ -1326,7 +1435,7 @@ describe("助言（朱書き）の欄", () => {
   const adviceField = async (title: string) =>
     within(await card(title)).getByRole("textbox", { name: "助言（朱書き）" })
 
-  it("案の文案を入れて出し、欄の中のキーは採点にも選択にも使わない。Ctrl+Enter で直した文と一緒に決める", async () => {
+  it("案の文案を入れて出し、欄の中のキーは採点にも選択にも使わない。1打鍵ごとに助言の行へ書き、答えには持たせない", async () => {
     renderView()
     const field = await adviceField(SIGN)
     expect(field).toHaveValue("移項の符号を見直そう")
@@ -1338,6 +1447,14 @@ describe("助言（朱書き）の欄", () => {
     await userEvent.type(field, "符号を変えてe{Enter}{ArrowDown}")
     expect(field).toHaveValue("符号を変えてe\n")
     expect(focusedOption()).toHaveTextContent("部分点 2点")
+    // 打鍵ごとに即時に書く（デバウンスしない）。答えの行は書かない
+    expect(fakeAiGradingApi.setProposalAdviceDraft).toHaveBeenLastCalledWith({
+      proposalId: "proposal-sign",
+      adviceText: "符号を変えてe\n",
+    })
+    expect(
+      fakeAiGradingApi.setProposalAdviceDraft.mock.calls.length
+    ).toBeGreaterThanOrEqual("符号を変えてe".length)
     expect(fakeAiGradingApi.recordProposalDraft).not.toHaveBeenCalled()
 
     await userEvent.keyboard("{Control>}{Enter}{/Control}")
@@ -1347,21 +1464,19 @@ describe("助言（朱書き）の欄", () => {
         optionId: "option-sign-partial",
         freeText: "",
         manualScores: [],
-        adviceText: "符号を変えてe",
       })
     )
     await card(UNIT)
-    // 一覧の行の2行目に、直した助言が出る
+    // 一覧の行の2行目に、直した助言が出る（書いた行から読む）
     expect(await logRow(SIGN)).toHaveTextContent("符号を変えてe")
     expectNoTeacherLayerWrites()
   })
 
-  it("答える前に直した文は問いを移っても残り、答えたあとに直すと欄を抜けたときに答え直す", async () => {
+  it("答える前に直した文は書いてあるので、問いを移っても残る", async () => {
     renderView()
     const field = await adviceField(SIGN)
     await userEvent.click(field)
     await userEvent.type(field, "ね")
-    // 答える前は欄を抜けても書かない（画面に持つだけ）
     await userEvent.keyboard("{Escape}")
     expect(field).not.toHaveFocus()
     expect(fakeAiGradingApi.recordProposalDraft).not.toHaveBeenCalled()
@@ -1370,39 +1485,60 @@ describe("助言（朱書き）の欄", () => {
     expect(await adviceField(UNIT)).toHaveValue("")
     await userEvent.click(await logRow(SIGN))
     expect(await adviceField(SIGN)).toHaveValue("移項の符号を見直そうね")
+  })
 
-    // 決めると直した文が一緒に書かれる
-    await userEvent.keyboard("{Enter}")
-    await waitFor(() =>
-      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledWith(
-        expect.objectContaining({ adviceText: "移項の符号を見直そうね" })
-      )
-    )
-    await card(UNIT)
-
-    // 戻って空にし、欄を抜けると、同じ選択肢で答え直す（"" は助言なし）
+  it("確定済みの問いの助言を直すと、同じ答えを1回だけ書き直して下書きに戻す", async () => {
+    updateProposal("proposal-sign", (proposal) => ({
+      ...proposal,
+      responses: [
+        {
+          id: "response-committed",
+          proposalId: "proposal-sign",
+          optionId: "option-sign-partial",
+          freeText: "",
+          adviceText: null,
+          resultRubricItemId: null,
+          resultRubricItem: null,
+          committedAt: LATER_DATE,
+          createdAt: LATER_DATE,
+          updatedAt: LATER_DATE,
+          scores: [],
+        },
+      ],
+    }))
+    renderView()
     await userEvent.click(await logRow(SIGN))
-    const reopened = await adviceField(SIGN)
-    await userEvent.clear(reopened)
-    await userEvent.keyboard("{Escape}")
+    const field = await adviceField(SIGN)
+    await userEvent.click(field)
+    await userEvent.type(field, "ね！")
     await waitFor(() =>
-      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenLastCalledWith({
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledWith({
         proposalId: "proposal-sign",
         optionId: "option-sign-partial",
         freeText: "",
         manualScores: [],
-        adviceText: "",
       })
     )
-    expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledTimes(2)
-    // 文案に戻すと、直していない（null）として書く
-    await userEvent.type(reopened, "移項の符号を見直そう")
-    await userEvent.keyboard("{Escape}")
-    await waitFor(() =>
-      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenLastCalledWith(
-        expect.objectContaining({ adviceText: null })
-      )
+    expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledTimes(1)
+    expect(fakeAiGradingApi.setProposalAdviceDraft).toHaveBeenLastCalledWith({
+      proposalId: "proposal-sign",
+      adviceText: "移項の符号を見直そうね！",
+    })
+  })
+
+  it("欄の文を、いまの問いの答案に下見する（中央の一覧が占有グリッドを測って朱書きを置く）", async () => {
+    renderView()
+    const field = await adviceField(SIGN)
+    expect(screen.getByTestId("advice-preview")).toHaveTextContent(
+      "移項の符号を見直そう|s-c,s-b,s-a"
     )
+    await userEvent.click(field)
+    await userEvent.type(field, "ね")
+    expect(screen.getByTestId("advice-preview")).toHaveTextContent(
+      "移項の符号を見直そうね|s-c,s-b,s-a"
+    )
+    // 打鍵が落ち着いたら、一覧が置く材料（占有グリッド）を取る
+    await waitFor(() => expect(fakeRubricApi.measureInk).toHaveBeenCalled())
   })
 })
 

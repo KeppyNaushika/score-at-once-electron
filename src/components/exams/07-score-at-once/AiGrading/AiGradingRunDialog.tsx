@@ -47,6 +47,8 @@ interface AiGradingRunDialogProps {
   initialScope?: GradingTargetScope
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** 送信を押した（ダイアログは閉じる。結果を待たない） */
+  onSent?: (purpose: AiGradingStage1Purpose) => void
   examId: string
   cropRegion: QuestionAnswerRegionRow
   settings: AiGradingSettings
@@ -81,6 +83,7 @@ function AiGradingRunForm({
   purpose,
   initialScope,
   onOpenChange,
+  onSent,
   examId,
   cropRegion,
   settings,
@@ -163,6 +166,7 @@ function AiGradingRunForm({
         () => {}
       )
     onOpenChange(false)
+    onSent?.(purpose)
   }
 
   return (

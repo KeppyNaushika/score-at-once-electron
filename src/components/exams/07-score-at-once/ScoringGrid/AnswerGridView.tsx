@@ -83,12 +83,13 @@ interface AnswerGridViewProps {
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
   /**
-   * 助言の朱書きの下見（重なった助言の決まりを選ぶとき）。渡すと、保存した助言の朱書き
-   * （`isRubricAdvice`）の代わりにこれを描く。手で書いた注釈はそのまま描く
+   * 助言の朱書きの下見（重なった助言の決まりを選ぶとき・AI 採点の問いかけで助言を直すとき）。
+   * 配列を返した答案は、保存した助言の朱書き（`isRubricAdvice`）の代わりにこれを描く（空なら助言の
+   * 朱書きを描かない）。undefined を返した答案は保存したまま。手で書いた注釈はそのまま描く
    */
   previewRubricAdviceOf?: (
     answer: GridAnswerItem
-  ) => readonly DrawingAnnotation[]
+  ) => readonly DrawingAnnotation[] | undefined
   className?: string
 }
 
