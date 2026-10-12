@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
 import { useItemAnalysis } from "../hooks/useItemAnalysis"
@@ -43,6 +44,90 @@ function getStatusColor(status: string): string {
   }
 }
 
+type ExcelPreviewScore = ExcelPreviewData["rows"][number]["scores"][number]
+
+/** 設問の列だけが表ごとに違う。見出しと各マスの中身・寄せをここで渡す */
+interface QuestionColumnView {
+  alignClassName: "text-right" | "text-center"
+  renderHeader: (label: string, questionIndex: number) => ReactNode
+  renderCell: (score: ExcelPreviewScore) => ReactNode
+  cellClassName?: (score: ExcelPreviewScore) => string
+}
+
+/** 生徒×（合計・小計・設問）の表。点数一覧と正誤一覧で共通 */
+function StudentScoreTable({
+  data,
+  questionColumn,
+}: {
+  data: ExcelPreviewData
+  questionColumn: QuestionColumnView
+}) {
+  const hasSubtotals = data.headers.subtotalLabels.length > 0
+
+  return (
+    <table className="w-full border-collapse text-[10px]">
+      <thead className="sticky top-0 bg-muted">
+        <tr>
+          <th className="border px-1 py-0.5 text-left">#</th>
+          <th className="border px-1 py-0.5 text-left">氏名</th>
+          <th className="border px-1 py-0.5 text-right">合計</th>
+          {hasSubtotals &&
+            data.headers.subtotalLabels.map((label, i) => (
+              <th key={`sub-${i}`} className="border px-1 py-0.5 text-right">
+                {label}
+              </th>
+            ))}
+          {data.headers.questionLabels.map((label, i) => (
+            <th
+              key={i}
+              className={`border px-1 py-0.5 ${questionColumn.alignClassName}`}
+            >
+              {questionColumn.renderHeader(label, i)}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data.rows.map((row, rowIdx) => (
+          <tr key={row.examStudentId} className="hover:bg-muted/50">
+            <td className="border px-1 py-0.5 text-center">{rowIdx + 1}</td>
+            <td className="border px-1 py-0.5 whitespace-nowrap">
+              {row.studentName}
+            </td>
+            <td className="border px-1 py-0.5 text-right font-medium">
+              {row.totalScore ?? "-"}
+            </td>
+            {hasSubtotals &&
+              data.headers.subtotalLabels.map((_, i) => {
+                const subtotalScore = row.subtotalScores[i]
+                return (
+                  <td
+                    key={`sub-${i}`}
+                    className="border px-1 py-0.5 text-right"
+                  >
+                    {subtotalScore?.score ?? "-"}
+                  </td>
+                )
+              })}
+            {row.scores.map((score) => (
+              <td
+                key={score.questionId}
+                className={cn(
+                  "border px-1 py-0.5",
+                  questionColumn.alignClassName,
+                  questionColumn.cellClassName?.(score)
+                )}
+              >
+                {questionColumn.renderCell(score)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 interface ExcelPreviewProps {
   data: ExcelPreviewData
 }
@@ -54,8 +139,6 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
   const [sheetTab, setSheetTab] = useState<SheetTab>("scores")
   const itemAnalysisData = useItemAnalysis(data)
   const spAnalysis = useSpAnalysis(data)
-
-  const hasSubtotals = data.headers.subtotalLabels.length > 0
 
   return (
     <div className="flex h-full flex-col">
@@ -83,125 +166,33 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
         </TabsList>
 
         <TabsContent value="scores" className="mt-0 flex-1 overflow-auto">
-          <table className="w-full border-collapse text-[10px]">
-            <thead className="sticky top-0 bg-muted">
-              <tr>
-                <th className="border px-1 py-0.5 text-left">#</th>
-                <th className="border px-1 py-0.5 text-left">氏名</th>
-                <th className="border px-1 py-0.5 text-right">合計</th>
-                {hasSubtotals &&
-                  data.headers.subtotalLabels.map((label, i) => (
-                    <th
-                      key={`sub-${i}`}
-                      className="border px-1 py-0.5 text-right"
-                    >
-                      {label}
-                    </th>
-                  ))}
-                {data.headers.questionLabels.map((label, i) => (
-                  <th key={i} className="border px-1 py-0.5 text-right">
-                    <div>{label}</div>
-                    <div className="font-normal text-muted-foreground">
-                      ({data.headers.questionMaxScores[i]})
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row, rowIdx) => (
-                <tr key={row.examStudentId} className="hover:bg-muted/50">
-                  <td className="border px-1 py-0.5 text-center">
-                    {rowIdx + 1}
-                  </td>
-                  <td className="border px-1 py-0.5 whitespace-nowrap">
-                    {row.studentName}
-                  </td>
-                  <td className="border px-1 py-0.5 text-right font-medium">
-                    {row.totalScore ?? "-"}
-                  </td>
-                  {hasSubtotals &&
-                    data.headers.subtotalLabels.map((_, i) => {
-                      const subtotalScore = row.subtotalScores[i]
-                      return (
-                        <td
-                          key={`sub-${i}`}
-                          className="border px-1 py-0.5 text-right"
-                        >
-                          {subtotalScore?.score ?? "-"}
-                        </td>
-                      )
-                    })}
-                  {row.scores.map((score, i) => (
-                    <td key={i} className="border px-1 py-0.5 text-right">
-                      {score.score ?? "-"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <StudentScoreTable
+            data={data}
+            questionColumn={{
+              alignClassName: "text-right",
+              renderHeader: (label, questionIndex) => (
+                <>
+                  <div>{label}</div>
+                  <div className="font-normal text-muted-foreground">
+                    ({data.headers.questionMaxScores[questionIndex]})
+                  </div>
+                </>
+              ),
+              renderCell: (score) => score.score ?? "-",
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="results" className="mt-0 flex-1 overflow-auto">
-          <table className="w-full border-collapse text-[10px]">
-            <thead className="sticky top-0 bg-muted">
-              <tr>
-                <th className="border px-1 py-0.5 text-left">#</th>
-                <th className="border px-1 py-0.5 text-left">氏名</th>
-                <th className="border px-1 py-0.5 text-right">合計</th>
-                {hasSubtotals &&
-                  data.headers.subtotalLabels.map((label, i) => (
-                    <th
-                      key={`sub-${i}`}
-                      className="border px-1 py-0.5 text-right"
-                    >
-                      {label}
-                    </th>
-                  ))}
-                {data.headers.questionLabels.map((label, i) => (
-                  <th key={i} className="border px-1 py-0.5 text-center">
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row, rowIdx) => (
-                <tr key={row.examStudentId} className="hover:bg-muted/50">
-                  <td className="border px-1 py-0.5 text-center">
-                    {rowIdx + 1}
-                  </td>
-                  <td className="border px-1 py-0.5 whitespace-nowrap">
-                    {row.studentName}
-                  </td>
-                  <td className="border px-1 py-0.5 text-right font-medium">
-                    {row.totalScore ?? "-"}
-                  </td>
-                  {hasSubtotals &&
-                    data.headers.subtotalLabels.map((_, i) => {
-                      const subtotalScore = row.subtotalScores[i]
-                      return (
-                        <td
-                          key={`sub-${i}`}
-                          className="border px-1 py-0.5 text-right"
-                        >
-                          {subtotalScore?.score ?? "-"}
-                        </td>
-                      )
-                    })}
-                  {row.scores.map((score, i) => (
-                    <td
-                      key={i}
-                      className={`border px-1 py-0.5 text-center ${getStatusColor(score.status)}`}
-                    >
-                      {getStatusSymbol(score.status, score.score)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <StudentScoreTable
+            data={data}
+            questionColumn={{
+              alignClassName: "text-center",
+              renderHeader: (label) => label,
+              cellClassName: (score) => getStatusColor(score.status),
+              renderCell: (score) => getStatusSymbol(score.status, score.score),
+            }}
+          />
         </TabsContent>
 
         <TabsContent

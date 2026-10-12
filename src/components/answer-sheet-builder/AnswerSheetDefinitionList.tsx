@@ -5,13 +5,15 @@ import { FilePen } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
-import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
 import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
+import {
+  ENTITY_LIST_CREATE_PRIORITY,
+  entityListToolbarActions,
+} from "@/components/common/entity-list/entityListToolbarActions"
 import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
 import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
@@ -99,24 +101,25 @@ export function AnswerSheetDefinitionList() {
     [currentUser.id]
   )
 
-  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+  /** 選んだ解答用紙へ、既存のタグを保ったまま同じタグを足す */
+  const assignTagToDefinitions = useCallback(
+    async (tagName: string, definitionIds: string[]) => {
+      const tag = await findOrCreateTag(tagName)
+      await addTagToDefinitions({ definitionIds, tagId: tag.id })
+    },
+    [findOrCreateTag, addTagToDefinitions]
+  )
+
+  const { bulkTagAction, listProps } = useEntityListControls(
     visibleDefinitions,
     ASB_FILTER_ACCESSORS,
     {
       rowNoun: "解答用紙",
       searchPlaceholder: "名前・タグで検索",
       tagOptions: allTags,
+      assignTag: assignTagToDefinitions,
       isSelectable: isTaggable,
     }
-  )
-
-  const handleBulkAddTag = useCallback(
-    (tagName: string) =>
-      addTagToSelection(tagName, async (trimmedTagName, definitionIds) => {
-        const tag = await findOrCreateTag(trimmedTagName)
-        await addTagToDefinitions({ definitionIds, tagId: tag.id })
-      }),
-    [addTagToSelection, findOrCreateTag, addTagToDefinitions]
   )
 
   // ドロップダウン「編集」: 作成ページ（エディタ）へ直行
@@ -144,7 +147,7 @@ export function AnswerSheetDefinitionList() {
     })
   }
 
-  const actions = useMemo<ToolbarAction[]>(() => {
+  const actions = useMemo(() => {
     // 並びに出す姿と「…」の中の姿が同じもの。作るのは1回にして、幅を測る控えの
     // 並びと本物で同じ要素が使われるようにする
     const ownerScopeToggle = (
@@ -157,10 +160,10 @@ export function AnswerSheetDefinitionList() {
       </label>
     )
 
-    const toolbarActions: ToolbarAction[] = [
-      {
+    return entityListToolbarActions({
+      create: {
         id: "create",
-        priority: 80,
+        priority: ENTITY_LIST_CREATE_PRIORITY,
         node: (
           <CreateDefinitionButton
             userId={currentUser.id}
@@ -182,36 +185,19 @@ export function AnswerSheetDefinitionList() {
           </CreateDefinitionButton>
         ),
       },
-      importToolbarAction,
-      {
-        // 「誰の解答用紙を見るか」は絞り込みの一種なので、他の絞り込みと同じ側に置く
-        id: "owner-scope",
-        priority: 65,
-        node: ownerScopeToggle,
-        collapsedNode: ownerScopeToggle,
-      },
-    ]
-
-    if (selectedIds.size > 0) {
-      toolbarActions.push(
-        bulkTagToolbarAction({
-          priority: 60,
-          selectedCount: selectedIds.size,
-          allTags,
-          onAssign: handleBulkAddTag,
-        })
-      )
-    }
-
-    return toolbarActions
-  }, [
-    allTags,
-    currentUser.id,
-    handleBulkAddTag,
-    importToolbarAction,
-    showAllOwners,
-    selectedIds,
-  ])
+      archiveImport: importToolbarAction,
+      filters: [
+        {
+          // 「誰の解答用紙を見るか」は絞り込みの一種なので、他の絞り込みと同じ側に置く
+          id: "owner-scope",
+          priority: 65,
+          node: ownerScopeToggle,
+          collapsedNode: ownerScopeToggle,
+        },
+      ],
+      bulkTag: bulkTagAction,
+    })
+  }, [bulkTagAction, currentUser.id, importToolbarAction, showAllOwners])
 
   return (
     <>

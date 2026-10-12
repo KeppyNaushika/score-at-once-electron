@@ -10,9 +10,11 @@ import { describe, expect, it } from "vitest"
 import {
   MINIMUM_FONT_SIZE_MM,
   placeAnnotation,
+} from "@/lib/shared/aiGrading/annotationPlacement"
+import {
   sanitizeAnnotationText,
   wrapAnnotationText,
-} from "@/lib/shared/aiGrading/annotationPlacement"
+} from "@/lib/shared/aiGrading/annotationTextWrap"
 import type { AnswerInkGrid } from "@/lib/shared/aiGrading/answerInkGrid"
 
 /** A4 縦 */

@@ -15,10 +15,12 @@ import {
   measureWrappedTextMm,
   type NormalizedRectangle,
   placeAnnotation,
-  toAnnotationParagraphs,
   withOccupiedRectangles,
-  wrapAnnotationParagraphs,
 } from "@/lib/shared/aiGrading/annotationPlacement"
+import {
+  toAnnotationParagraphs,
+  wrapAnnotationParagraphs,
+} from "@/lib/shared/aiGrading/annotationTextWrap"
 import type { AnswerInkGrid } from "@/lib/shared/aiGrading/answerInkGrid"
 import {
   type DrawingAnnotation,

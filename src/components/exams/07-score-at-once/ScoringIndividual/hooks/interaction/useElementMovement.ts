@@ -41,6 +41,52 @@ interface UseElementMovementProps {
   ) => string | null
 }
 
+/** 移動開始時の状態（移動中の座標は、開始時の行からの絶対座標で求める） */
+interface MoveStart {
+  startMouseX: number
+  startMouseY: number
+  /** 行をそのまま控える（座標だけ抜き出すと、どの列を動かすかの判断が抜き出した形に依存する） */
+  elements: Map<string, DrawingAnnotation>
+}
+
+/**
+ * 選択要素を、移動開始時の座標 + マウスの移動量へ動かす更新
+ *
+ * 線の移動（`lineEditMode === "move"`）と通常の移動で共通。開始時に控えていない要素は飛ばす。
+ */
+function translateSelectedElements(
+  moveStart: MoveStart,
+  selectedElementIds: string[],
+  imageCoords: { x: number; y: number }
+): Array<{ elementId: string; updates: Partial<DrawingAnnotation> }> {
+  const deltaX = imageCoords.x - moveStart.startMouseX
+  const deltaY = imageCoords.y - moveStart.startMouseY
+
+  return selectedElementIds.flatMap((elementId) => {
+    const originalElement = moveStart.elements.get(elementId)
+    if (!originalElement) return []
+
+    const updates: Partial<DrawingAnnotation> = {
+      x: originalElement.x + deltaX,
+      y: originalElement.y + deltaY,
+    }
+
+    // 線の場合はendX/endYも更新
+    if (originalElement.type === "line") {
+      updates.endX = originalElement.endX + deltaX
+      updates.endY = originalElement.endY + deltaY
+    }
+
+    // テキストの場合はdisplayX/displayYも更新
+    if (originalElement.type === "text") {
+      updates.displayX = originalElement.displayX + deltaX
+      updates.displayY = originalElement.displayY + deltaY
+    }
+
+    return [{ elementId, updates }]
+  })
+}
+
 /**
  * 描画要素の移動・リサイズ操作を管理するフック。
  *
@@ -115,13 +161,8 @@ export function useElementMovement({
     originalHeight: number
   } | null>(null)
 
-  // 移動開始時の状態を保存（絶対座標計算用）。
-  // 行をそのまま控える（座標だけ抜き出すと、どの列を動かすかの判断が抜き出した形に依存する）
-  const moveStartRef = useRef<{
-    startMouseX: number
-    startMouseY: number
-    elements: Map<string, DrawingAnnotation>
-  } | null>(null)
+  // 移動開始時の状態を保存（絶対座標計算用）
+  const moveStartRef = useRef<MoveStart | null>(null)
 
   // リサイズ処理
   const handleElementResize = useCallback(
@@ -284,62 +325,19 @@ export function useElementMovement({
           })
         } else if (lineEditMode === "move") {
           // 移動開始時の座標から絶対座標で計算
-          const deltaX = imageCoords.x - moveStartRef.current.startMouseX
-          const deltaY = imageCoords.y - moveStartRef.current.startMouseY
-
-          // 全選択要素を移動開始時の座標 + delta で更新
-          selectedElementIds.forEach((elementId) => {
-            const originalCoords = moveStartRef.current?.elements.get(elementId)
-            if (originalCoords) {
-              const updates: Partial<DrawingAnnotation> = {
-                x: originalCoords.x + deltaX,
-                y: originalCoords.y + deltaY,
-              }
-
-              // 線の場合はendX/endYも更新
-              if (originalCoords.type === "line") {
-                updates.endX = originalCoords.endX + deltaX
-                updates.endY = originalCoords.endY + deltaY
-              }
-
-              // テキストの場合はdisplayX/displayYも更新
-              if (originalCoords.type === "text") {
-                updates.displayX = originalCoords.displayX + deltaX
-                updates.displayY = originalCoords.displayY + deltaY
-              }
-
-              applyMove(elementId, updates)
-            }
-          })
+          translateSelectedElements(
+            moveStartRef.current,
+            selectedElementIds,
+            imageCoords
+          ).forEach(({ elementId, updates }) => applyMove(elementId, updates))
         }
       } else {
         // 通常の移動（全選択要素を移動）- 絶対座標ベース
-        const deltaX = imageCoords.x - moveStartRef.current.startMouseX
-        const deltaY = imageCoords.y - moveStartRef.current.startMouseY
-
-        selectedElementIds.forEach((elementId) => {
-          const originalCoords = moveStartRef.current?.elements.get(elementId)
-          if (originalCoords) {
-            const updates: Partial<DrawingAnnotation> = {
-              x: originalCoords.x + deltaX,
-              y: originalCoords.y + deltaY,
-            }
-
-            // 線の場合はendX/endYも更新
-            if (originalCoords.type === "line") {
-              updates.endX = originalCoords.endX + deltaX
-              updates.endY = originalCoords.endY + deltaY
-            }
-
-            // テキストの場合はdisplayX/displayYも更新
-            if (originalCoords.type === "text") {
-              updates.displayX = originalCoords.displayX + deltaX
-              updates.displayY = originalCoords.displayY + deltaY
-            }
-
-            applyMove(elementId, updates)
-          }
-        })
+        translateSelectedElements(
+          moveStartRef.current,
+          selectedElementIds,
+          imageCoords
+        ).forEach(({ elementId, updates }) => applyMove(elementId, updates))
       }
       return true
     },
