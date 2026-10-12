@@ -311,16 +311,6 @@ describe("段カード", () => {
     expect(screen.queryByText("開く")).toBeNull()
   })
 
-  it("進み具合は数で出す（％も進捗バーも出さない）", () => {
-    renderOverview({ stepCompletion: ALL_MEASURABLE_DONE })
-    const preparation = phaseCard("準備")
-
-    // ％ではなく数で言う（残りが何段か読める）
-    expect(within(preparation).getByText("5/5 完了")).toBeVisible()
-    expect(within(preparation).queryByText(/%/)).toBeNull()
-    expect(screen.queryByRole("progressbar")).toBeNull()
-  })
-
   it("途中のまとまりは数を出さず、次にやることだけを言う", () => {
     // 数は済んだまとまりの足元にだけ出す。途中の「2/5」を見出しにも出すと、
     // 同じカードが2か所で進み具合を語り、行の ✓ と合わせて3回同じことを言う
@@ -333,7 +323,7 @@ describe("段カード", () => {
     ).toBeVisible()
   })
 
-  it("採点確定は採点のまとまりに並び、他の段と同じく数に入る", () => {
+  it("採点確定は採点のまとまりに並ぶ（確定だけのカードは無い）", () => {
     renderOverview()
     // 確定だけのカードは無い（確定は採点の一部）
     expect(screen.queryByText("確定")).toBeNull()
@@ -344,7 +334,7 @@ describe("段カード", () => {
     ).toHaveAttribute("href", "/exams/exam-1/08-finalize")
   })
 
-  it("採点の分母は答案・採点・確定の3段", () => {
+  it("採点の分母は答案・採点・確定の3段（確定も他の段と同じく数に入る）", () => {
     renderOverview({
       stepCompletion: {
         ...ALL_MEASURABLE_DONE,
@@ -388,12 +378,14 @@ describe("段カード", () => {
     expect(within(scoring).queryByText(/^次へ: /)).toBeNull()
   })
 
-  it("判定できる段が全部済んだまとまりは「完了」と言う", () => {
+  it("判定できる段が全部済んだまとまりは数で「完了」と言う（％も進捗バーも出さない）", () => {
     renderOverview({ stepCompletion: ALL_MEASURABLE_DONE })
     const preparation = phaseCard("準備")
 
-    // 済んだことは足元の数で言う（見出しには出さない）
+    // 済んだことは足元の数で言う（見出しには出さない）。％ではなく数で言う（残りが何段か読める）
     expect(within(preparation).getByText("5/5 完了")).toBeVisible()
+    expect(within(preparation).queryByText(/%/)).toBeNull()
+    expect(screen.queryByRole("progressbar")).toBeNull()
     expect(within(preparation).queryByText(/^次へ: /)).toBeNull()
 
     // 判定できる段が済めば、その先のまとまりは待機中でなくなる

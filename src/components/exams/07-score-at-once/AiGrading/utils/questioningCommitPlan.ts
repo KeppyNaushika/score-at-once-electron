@@ -25,7 +25,7 @@ import {
 } from "./questioningSteps"
 
 /** 教員が直接決めた点1マス */
-export interface QuestioningDirectScore extends QuestioningScore {
+interface QuestioningDirectScore extends QuestioningScore {
   examStudentId: string
 }
 

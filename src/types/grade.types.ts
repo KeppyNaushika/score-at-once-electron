@@ -168,7 +168,7 @@ export type GradeDataSourceWithRelations = Omit<
 }
 
 /** 境界データ */
-export type GradeBoundaryData = Omit<GradeItemBoundary, "minPercentage"> & {
+type GradeBoundaryData = Omit<GradeItemBoundary, "minPercentage"> & {
   minPercentage: number
 }
 

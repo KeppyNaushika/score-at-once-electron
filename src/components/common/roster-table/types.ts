@@ -9,7 +9,7 @@ import type { ReactNode } from "react"
  */
 
 /** 正規化された学級情報 */
-export interface RosterClassroomInfo {
+interface RosterClassroomInfo {
   className: string | null
   classroomCode?: string | null
   grade?: number | null

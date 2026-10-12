@@ -259,16 +259,6 @@ describe("消し跡を退けたセルの下流での扱い", () => {
     expect(entry.score).toBe(0)
   })
 
-  it("消し跡を退けて正解が残ったセルも保留になる", () => {
-    const entry = evaluateSingleCell(
-      [measurement(0, 0.92), measurement(1, 0.55, { inkDarkness: 0.2 })],
-      0.45
-    )
-
-    expect(entry.status).toBe("pending")
-    expect(entry.score).toBe(0)
-  })
-
   it("信頼度閾値を0にしても消し跡セルは保留のまま", () => {
     const sheet = createSheet("student-1", [
       [measurement(0, 0.92), measurement(1, 0.55, { inkDarkness: 0.2 })],

@@ -102,55 +102,21 @@ export async function processSubtotalGroupIdIntegration(
     if (!importGroup) return
 
     if (!decision || decision.decisionType === "create_new") {
-      const existingByName = await tx.subtotalGroup.findFirst({
-        where: { name: importGroup.name },
+      // 名前はアーカイブの値のまま作る。同じ名前のグループが並ぶのは正常で、id で区別する
+      // （見分けるのは画面の役目）。id はアーカイブの id を使い、既に使われているときだけ振り直す
+      const existingById = await tx.subtotalGroup.findUnique({
+        where: { id: importId },
       })
-
-      if (existingByName) {
-        // B5修正: create_new の意図を尊重し、サフィックス付きで新規作成
-        const newName = await generateUniqueName(importGroup.name, tx)
-        const newId = crypto.randomUUID()
-        await tx.subtotalGroup.create({
-          data: {
-            id: newId,
-            name: newName,
-            ...policy.createdTimestamps(importGroup),
-          },
-        })
-        idMappings.subtotalGroup[importId] = newId
-        counts.created.subtotalGroups++
-        warnings.push(
-          `小計グループ「${importGroup.name}」は同名のグループが存在するため「${newName}」として新規作成しました`
-        )
-      } else {
-        // scoreファイルのIDをそのまま使用（存在チェック付き）
-        const existingById = await tx.subtotalGroup.findUnique({
-          where: { id: importId },
-        })
-        if (existingById) {
-          // IDが衝突する場合は新規IDで作成
-          const newId = crypto.randomUUID()
-          await tx.subtotalGroup.create({
-            data: {
-              id: newId,
-              name: importGroup.name,
-              ...policy.createdTimestamps(importGroup),
-            },
-          })
-          idMappings.subtotalGroup[importId] = newId
-          counts.created.subtotalGroups++
-        } else {
-          await tx.subtotalGroup.create({
-            data: {
-              id: importId,
-              name: importGroup.name,
-              ...policy.createdTimestamps(importGroup),
-            },
-          })
-          idMappings.subtotalGroup[importId] = importId
-          counts.created.subtotalGroups++
-        }
-      }
+      const newId = existingById ? crypto.randomUUID() : importId
+      await tx.subtotalGroup.create({
+        data: {
+          id: newId,
+          name: importGroup.name,
+          ...policy.createdTimestamps(importGroup),
+        },
+      })
+      idMappings.subtotalGroup[importId] = newId
+      counts.created.subtotalGroups++
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId
       if (!existingId) {
@@ -230,23 +196,4 @@ export async function processSubtotalGroupIdIntegration(
       undefined
     )
   }
-}
-
-/**
- * 同名の小計グループが存在する場合にサフィックス付きのユニーク名を生成
- * 例: "大問" → "大問 (2)", "大問 (2)" → "大問 (3)"
- */
-async function generateUniqueName(
-  baseName: string,
-  tx: PrismaTransaction
-): Promise<string> {
-  for (let i = 2; i <= 100; i++) {
-    const candidate = `${baseName} (${i})`
-    const existing = await tx.subtotalGroup.findFirst({
-      where: { name: candidate },
-    })
-    if (!existing) return candidate
-  }
-  // フォールバック: ランダム名
-  return `${baseName} (${crypto.randomUUID().slice(0, 8)})`
 }

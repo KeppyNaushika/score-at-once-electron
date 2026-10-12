@@ -5,7 +5,9 @@
  * 実際のSQLiteテスト用DBを使用し、Stage 2のID変更処理を検証する
  * FK参照の連鎖的更新と古いレコードの削除を確認する
  *
- * Student.studentNumberとClass.nameのUNIQUE制約はtemp-value方式で回避される。
+ * Student.studentNumber / Classroom.name は temp-value 方式（一時値を挟んでから新しい行を作る）
+ * を通る。この2列の UNIQUE は 2026-08-22 に外したので制約の迂回ではなく、旧と新が同じ値で
+ * 並ぶ時間帯を作らないため（idChangeExecutor.ts 冒頭）。
  */
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -257,7 +259,7 @@ describe("executeIdChanges", () => {
   })
 
   // =========================================================================
-  // 生徒ID変更のテスト（temp-value方式でUNIQUE制約を回避）
+  // 生徒ID変更のテスト（temp-value方式）
   // =========================================================================
   describe("生徒ID変更", () => {
     it("temp-value方式により新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {
@@ -495,7 +497,7 @@ describe("executeIdChanges", () => {
   })
 
   // =========================================================================
-  // 学級ID変更のテスト（temp-value方式でUNIQUE制約を回避）
+  // 学級ID変更のテスト（temp-value方式）
   // =========================================================================
   describe("学級ID変更", () => {
     it("temp-value方式により新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {

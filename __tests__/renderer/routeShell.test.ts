@@ -43,10 +43,7 @@ const dynamicRoutes = fs
   )
 
 describe("動的ルートの殻", () => {
-  it("動的ルートが見つかる（見つからなければ検査が空回りしている）", () => {
-    expect(dynamicRoutes.length).toBeGreaterThan(0)
-  })
-
+  // 動的ルートが見つからなければ（検査の空回り）、空でない ROUTE_PARAM_NAMES と食い違ってここで落ちる
   it("ROUTE_PARAM_NAMES が src/app の動的ルートと一致する", () => {
     expect(
       Object.fromEntries(

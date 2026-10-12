@@ -17,7 +17,7 @@
 import type { DiscriminationLevel } from "@/electron-src/lib/shared/types"
 
 /** 設問1問分の生徒応答（正規化済み） */
-export interface ItemAnalysisInputItem {
+interface ItemAnalysisInputItem {
   questionId: string
   label: string
   maxScore: number
@@ -33,7 +33,7 @@ export interface ItemAnalysisInputStudent {
 }
 
 /** 設問1問分の分析結果 */
-export interface ItemAnalysisItem {
+interface ItemAnalysisItem {
   questionId: string
   label: string
   maxScore: number

@@ -14,10 +14,7 @@ type NonEmptyQueryKey = readonly [unknown, ...unknown[]]
  * 相関の算出も古くなる）。前方一致の1本にまとめようとすると、無関係で重い
  * クエリまで巻き込むか、逆に取り残すかのどちらかになる。
  */
-export type InvalidationTargets = readonly [
-  NonEmptyQueryKey,
-  ...NonEmptyQueryKey[],
-]
+type InvalidationTargets = readonly [NonEmptyQueryKey, ...NonEmptyQueryKey[]]
 
 /**
  * 書き込みが持つ宣言。**DB を書くかどうかで形が違う。**

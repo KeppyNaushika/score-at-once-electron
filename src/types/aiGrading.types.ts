@@ -17,12 +17,7 @@ import { defineStringUnion } from "./stringUnion"
  * 2段目は続けない。教員の点は送らない）。
  * revise は廃止した採点指示の改訂で、過去の行（費用の集計に残る）を読むためだけに残す
  */
-export const AI_GRADING_RUN_PURPOSES = [
-  "grade",
-  "group",
-  "check",
-  "revise",
-] as const
+const AI_GRADING_RUN_PURPOSES = ["grade", "group", "check", "revise"] as const
 export type AiGradingRunPurpose = (typeof AI_GRADING_RUN_PURPOSES)[number]
 export const { to: toAiGradingRunPurpose } = defineStringUnion(
   AI_GRADING_RUN_PURPOSES,
@@ -30,7 +25,7 @@ export const { to: toAiGradingRunPurpose } = defineStringUnion(
 )
 
 /** 答案ごとに画像を送って判定させる（1段目の）実行の目的。採点（grade）とAI チェック（check） */
-export const AI_GRADING_STAGE1_PURPOSES = ["grade", "check"] as const
+const AI_GRADING_STAGE1_PURPOSES = ["grade", "check"] as const
 export type AiGradingStage1Purpose = (typeof AI_GRADING_STAGE1_PURPOSES)[number]
 
 /** 答案ごとの判定（試行）を持つ実行か（採点・AI チェック） */
@@ -67,7 +62,7 @@ export const AI_GRADING_SENDING_IMAGE_SCALE = 1
  * canceled / failed / expired は途中で終わったもの。
  * 外れ値は failed に倒す（知らない状態の実行を「まだ動いている」と見せないため）
  */
-export const AI_GRADING_RUN_STATUSES = [
+const AI_GRADING_RUN_STATUSES = [
   "queued",
   "submitting",
   "in_progress",
@@ -86,7 +81,7 @@ export const { to: toAiGradingRunStatus } = defineStringUnion(
  * 試行（答案1件への1回の判定）の送信の成否。採点の判定（ScoringStatus）とは別のもの。
  * 外れ値は errored に倒す（要確認に回す側）
  */
-export const AI_GRADING_ATTEMPT_STATES = [
+const AI_GRADING_ATTEMPT_STATES = [
   "pending",
   "succeeded",
   "errored",
@@ -106,7 +101,7 @@ export const { is: isAiGradingConfidence, to: toAiGradingConfidence } =
   defineStringUnion(AI_GRADING_CONFIDENCES, "low")
 
 /** 事業者。openai_compatible はローカル LLM を含む OpenAI 互換の接続先 */
-export const AI_GRADING_PROVIDERS = [
+const AI_GRADING_PROVIDERS = [
   "anthropic",
   "openai",
   "gemini",

@@ -11,7 +11,7 @@
  * ここは「実際に踏まないと分からない」ことだけを置く。ロジックの検証は
  * vitest 側（__tests__/renderer, __tests__/exam ほか）に置くこと。
  */
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
 import * as fs from "fs"
 
 import {
@@ -23,6 +23,40 @@ import { launchApp, type LaunchedApp, loginAsAdmin } from "./helpers/launchApp"
 import { E2E_BASE_URL } from "./helpers/rendererPort"
 
 let launched: LaunchedApp
+
+/**
+ * 段のタブ（`WorkflowTabHeader`）を押して画面内で移る。
+ *
+ * **`page.goto` で移ってはいけない。** 文書ごと読み直すと `QueryClient` も作り直され
+ * （永続化は無い）、キャッシュが空になる。キーの衝突も古いキャッシュの持ち込みも、
+ * キャッシュが残ったまま移ったときにしか起きないので、goto では何も再現しない
+ */
+async function clickWorkflowTab(page: Page, label: string): Promise<void> {
+  await page
+    .getByRole("navigation", { name: "ワークフローの段" })
+    .getByRole("link", { name: label, exact: true })
+    .click()
+}
+
+/** 文書に目印を付ける。読み直されると消える */
+const SAME_DOCUMENT_MARK = "__e2eSameDocument"
+
+async function markDocument(page: Page): Promise<void> {
+  await page.evaluate((mark) => {
+    Reflect.set(window, mark, true)
+  }, SAME_DOCUMENT_MARK)
+}
+
+/**
+ * `markDocument` から後、文書が読み直されていない（＝キャッシュが残ったまま移った）
+ * ことを確かめる。タブが通常のリンクに変わるなどして読み直しになると、この e2e は
+ * 何も再現しないまま通ってしまうので、それを止める
+ */
+async function expectSameDocument(page: Page): Promise<void> {
+  expect(
+    await page.evaluate((mark) => Reflect.get(window, mark), SAME_DOCUMENT_MARK)
+  ).toBe(true)
+}
 
 test.afterEach(async () => {
   if (launched) await launched.close()
@@ -75,8 +109,7 @@ test("解答用紙を編集して概要へ移り、作成へ戻っても編集�
     timeout: 15_000,
   })
 
-  const editorUrl = page.url()
-  const detailUrl = editorUrl.replace("/01-edit", "")
+  await markDocument(page)
   const edited = `編集した解答用紙 ${Date.now()}`
 
   const nameInput = page.getByRole("textbox").first()
@@ -86,28 +119,55 @@ test("解答用紙を編集して概要へ移り、作成へ戻っても編集�
     timeout: 15_000,
   })
 
-  await page.goto(detailUrl, { waitUntil: "domcontentloaded" })
-  await expect(page.getByRole("heading", { name: edited })).toBeVisible({
+  await clickWorkflowTab(page, "概要")
+  await expect(page).toHaveURL(/\/answer-sheet-builder\/[^/]+$/, {
     timeout: 15_000,
   })
+  // 作成の段の見出しも「解答用紙の作成｜<名前>」なので、名前は完全一致で引く
+  await expect(
+    page.getByRole("heading", { name: edited, exact: true })
+  ).toBeVisible({ timeout: 15_000 })
 
-  await page.goto(editorUrl, { waitUntil: "domcontentloaded" })
+  await clickWorkflowTab(page, "1. 作成")
+  await expect(page).toHaveURL(/\/answer-sheet-builder\/[^/]+\/01-edit/, {
+    timeout: 15_000,
+  })
   await expect(page.getByRole("textbox").first()).toHaveValue(edited, {
     timeout: 15_000,
   })
 
   // 概要へもう一度移って、書き戻されていないことを確かめる
-  await page.goto(detailUrl, { waitUntil: "domcontentloaded" })
-  await expect(page.getByRole("heading", { name: edited })).toBeVisible({
+  await clickWorkflowTab(page, "概要")
+  await expect(page).toHaveURL(/\/answer-sheet-builder\/[^/]+$/, {
     timeout: 15_000,
   })
+  await expect(
+    page.getByRole("heading", { name: edited, exact: true })
+  ).toBeVisible({ timeout: 15_000 })
+  await expectSameDocument(page)
 })
 
 test("解答用紙の一覧は担当の切り替えを持ち、担当でないものは編集を出さない", async () => {
   // 編集できるのは担当者ひとりだけ（OWNER / VIEWER。Editor は作らない）
   launched = await launchApp()
   const { page } = launched
-  await loginAsAdmin(page)
+
+  // 担当を渡す相手を作る。新規インストールの利用者は見本の管理者1人だけなので、
+  // ログイン画面から1人足す
+  const otherOwnerName = "別の担当"
+  await page.goto(`${E2E_BASE_URL}/login`, { waitUntil: "domcontentloaded" })
+  await page.getByRole("button", { name: "追加", exact: true }).click()
+  await page.getByLabel("ユーザー名").fill("other-owner")
+  await page.getByLabel("表示名").fill(otherOwnerName)
+  await page.getByRole("button", { name: "作成", exact: true }).click()
+  await expect(
+    page.getByRole("heading", { name: otherOwnerName, exact: true })
+  ).toBeVisible({ timeout: 15_000 })
+
+  // 利用者が2人いるので、`loginAsAdmin` の「先頭の『採点を開始』」には頼らず、
+  // 見本の管理者のカードを名指しで押す
+  await page.getByRole("heading", { name: "管理者", exact: true }).click()
+  await expect(page).toHaveURL(`${E2E_BASE_URL}/exams`, { timeout: 15_000 })
 
   await page.goto(`${E2E_BASE_URL}/answer-sheet-builder`, {
     waitUntil: "domcontentloaded",
@@ -116,16 +176,47 @@ test("解答用紙の一覧は担当の切り替えを持ち、担当でない�
   await expect(page).toHaveURL(/\/answer-sheet-builder\/[^/]+\/01-edit/, {
     timeout: 15_000,
   })
+  const definitionName = `渡す解答用紙 ${Date.now()}`
+  await page.getByRole("textbox").first().fill(definitionName)
+  await expect(page.getByText("保存されました")).toBeVisible({
+    timeout: 15_000,
+  })
 
   await page.goto(`${E2E_BASE_URL}/answer-sheet-builder`, {
     waitUntil: "domcontentloaded",
   })
 
-  // 既定は自分が担当の分だけ。切り替えで全員分。
+  // 自分が担当のうちは「編集」が出て、担当は「自分」
+  const rowMenu = page.getByRole("button", {
+    name: `${definitionName}の操作`,
+  })
+  await expect(rowMenu).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole("cell", { name: "自分" }).first()).toBeVisible({
+    timeout: 15_000,
+  })
+  await rowMenu.click()
+  await expect(
+    page.getByRole("menuitem", { name: "編集", exact: true })
+  ).toBeVisible()
+
+  // 担当を渡す
+  await page.getByRole("menuitem", { name: "担当を渡す", exact: true }).click()
+  await page
+    .getByRole("dialog", { name: "担当を渡す" })
+    .getByRole("button", { name: otherOwnerName, exact: true })
+    .click()
+  await expect(page.getByText("担当を渡しました")).toBeVisible({
+    timeout: 15_000,
+  })
+
+  // 既定は自分が担当の分だけなので、渡したものは一覧から消える
+  await expect(rowMenu).toHaveCount(0, { timeout: 15_000 })
+
+  // 切り替えで全員分。
   //
   // **一覧の操作は幅に入りきらないと「…」へ畳まれる**（段階64 で4画面の一覧を
-  // `OverflowToolbar` へ揃えた）ので、並びに出ているとは限らない。ここで見たいのは
-  // 切り替えが**触れること**なので、畳まれていたら開いてから探す。
+  // `OverflowToolbar` へ揃えた）ので、並びに出ているとは限らない。畳まれていたら
+  // 開いてから探す。
   //
   // 役割で引くのは、幅を測るための控えの並びを避けるため。控えは `aria-hidden` なので
   // 支援技術の木には出ないが、文字では引けてしまう（そちらは常に hidden）。
@@ -136,14 +227,30 @@ test("解答用紙の一覧は担当の切り替えを持ち、担当でない�
   await expect(page.getByRole("toolbar", { name: "一覧の操作" })).toBeVisible({
     timeout: 15_000,
   })
-  if ((await ownerScopeToggle.count()) === 0) {
+  const isCollapsed = (await ownerScopeToggle.count()) === 0
+  if (isCollapsed) {
     await page.getByRole("button", { name: "入りきらない操作" }).click()
   }
-  await expect(ownerScopeToggle).toBeVisible({ timeout: 15_000 })
-  // 自分が作ったものは担当が「自分」
-  await expect(page.getByRole("cell", { name: "自分" }).first()).toBeVisible({
-    timeout: 15_000,
-  })
+  await ownerScopeToggle.click()
+  // 「…」の中で切り替えたなら、行の操作を押す前に閉じる
+  if (isCollapsed) await page.keyboard.press("Escape")
+
+  // 渡したものが戻ってきて、担当は渡した相手。操作に「編集」は無い
+  await expect(rowMenu).toBeVisible({ timeout: 15_000 })
+  await expect(
+    page.getByRole("cell", { name: otherOwnerName }).first()
+  ).toBeVisible({ timeout: 15_000 })
+  await rowMenu.click()
+  // メニューが開いたことは、担当でなくても出る「複製」で確かめる
+  await expect(
+    page.getByRole("menuitem", { name: "複製", exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("menuitem", { name: "編集", exact: true })
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("menuitem", { name: "担当を渡す", exact: true })
+  ).toHaveCount(0)
 })
 
 test("04 を開いた後に 03 へ移っても、ページと採点領域の画面が出る", async () => {
@@ -162,15 +269,15 @@ test("04 を開いた後に 03 へ移っても、ページと採点領域の画�
   await expect(page.getByRole("heading", { name: /小計/ })).toBeVisible({
     timeout: 30_000,
   })
+  await markDocument(page)
 
-  await page.goto(`${E2E_BASE_URL}/exams/${examId}/03-region-info`, {
-    waitUntil: "domcontentloaded",
-  })
+  await clickWorkflowTab(page, "3. 領域情報")
   await expect(
     page.getByRole("heading", { name: /^採点領域の詳細情報設定/ })
   ).toBeVisible({ timeout: 30_000 })
   // 04 の画面ではなく 03 の画面が出ていること
   await expect(page.getByRole("heading", { name: /小計/ })).toHaveCount(0)
+  await expectSameDocument(page)
 })
 
 test("09 で変えた出力設定は、07 へ移って戻っても残る", async () => {
@@ -183,29 +290,30 @@ test("09 で変えた出力設定は、07 へ移って戻っても残る", async
   const examId = await createExam(page, `出力設定の試験 ${Date.now()}`)
 
   // 採点マーク設定の「未採点にマークを付けるか」を使う（保存対象の設定）
-  const openExport = async () => {
-    await page.goto(`${E2E_BASE_URL}/exams/${examId}/09-export`, {
-      waitUntil: "domcontentloaded",
-    })
-    const markUnscored = page.locator("#mark-unscored")
-    await expect(markUnscored).toBeVisible({ timeout: 30_000 })
-    return markUnscored
-  }
+  const markUnscored = page.locator("#mark-unscored")
+  await page.goto(`${E2E_BASE_URL}/exams/${examId}/09-export`, {
+    waitUntil: "domcontentloaded",
+  })
+  await expect(markUnscored).toBeVisible({ timeout: 30_000 })
+  await markDocument(page)
 
-  const markUnscored = await openExport()
   const before = await markUnscored.getAttribute("aria-checked")
   await markUnscored.click()
   await expect(markUnscored).not.toHaveAttribute("aria-checked", before ?? "")
   const after = await markUnscored.getAttribute("aria-checked")
 
   // 保存の debounce を跨いで 07 へ移る
-  await page.goto(`${E2E_BASE_URL}/exams/${examId}/07-score-at-once`, {
-    waitUntil: "domcontentloaded",
-  })
+  await clickWorkflowTab(page, "7. 採点")
+  await expect(page).toHaveURL(
+    `${E2E_BASE_URL}/exams/${examId}/07-score-at-once`,
+    { timeout: 15_000 }
+  )
   await page.waitForTimeout(2_000)
 
-  const markUnscoredAgain = await openExport()
-  await expect(markUnscoredAgain).toHaveAttribute("aria-checked", after ?? "")
+  await clickWorkflowTab(page, "9. 結果")
+  await expect(markUnscored).toBeVisible({ timeout: 30_000 })
+  await expect(markUnscored).toHaveAttribute("aria-checked", after ?? "")
+  await expectSameDocument(page)
 })
 
 test("資料の概要と評価項目を往復しても、どちらの画面も出る", async () => {
@@ -218,20 +326,15 @@ test("資料の概要と評価項目を往復しても、どちらの画面も�
   const name = `往復する資料 ${Date.now()}`
   const courseworkId = await createCoursework(page, name)
 
-  const openDetail = async () => {
-    await page.goto(`${E2E_BASE_URL}/coursework/${courseworkId}`, {
-      waitUntil: "domcontentloaded",
-    })
-    await expect(page.getByRole("heading", { name })).toBeVisible({
-      timeout: 30_000,
-    })
-  }
-
-  await openDetail()
-
-  await page.goto(`${E2E_BASE_URL}/coursework/${courseworkId}/03-items`, {
+  await page.goto(`${E2E_BASE_URL}/coursework/${courseworkId}`, {
     waitUntil: "domcontentloaded",
   })
+  await expect(page.getByRole("heading", { name })).toBeVisible({
+    timeout: 30_000,
+  })
+  await markDocument(page)
+
+  await clickWorkflowTab(page, "2. 評価項目")
   // 段のヘッダーも `評価項目の設定｜…` という見出しを出すので、部分一致では2つに
   // 当たる（段階65）。画面そのものの見出しを名指しする
   await expect(
@@ -239,7 +342,15 @@ test("資料の概要と評価項目を往復しても、どちらの画面も�
   ).toBeVisible({ timeout: 30_000 })
 
   // 戻っても資料本体が出る（項目の配列で上書きされていない）
-  await openDetail()
+  await clickWorkflowTab(page, "概要")
+  await expect(page).toHaveURL(`${E2E_BASE_URL}/coursework/${courseworkId}`, {
+    timeout: 15_000,
+  })
+  // 評価項目の段の見出しも「評価項目の設定｜<名前>」なので、名前は完全一致で引く
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
+    timeout: 30_000,
+  })
+  await expectSameDocument(page)
 })
 
 test("関門は画面遷移のたびに効き直す（レイアウトに置いても固まらない）", async () => {

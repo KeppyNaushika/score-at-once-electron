@@ -119,16 +119,17 @@ describe("学級の作業領域", () => {
     await updateClassroom({ id: classroom.id, name: "1年B組" })
     await deleteClassroom(classroom.id)
 
+    // 立て続けの3行は createdAt が同じミリ秒になりうるので、時刻ではなく action で並べる
     const logs = await prisma.auditLog.findMany({
       where: { entityId: classroom.id },
-      orderBy: { createdAt: "asc" },
+      orderBy: { action: "asc" },
     })
     expect(
       logs.map((log) => [log.action, log.scopeId, log.scopeLabel])
     ).toEqual([
       ["class.create", classroom.id, "1年A組"],
-      ["class.update", classroom.id, "1年B組"],
       ["class.delete", classroom.id, "1年B組"],
+      ["class.update", classroom.id, "1年B組"],
     ])
   })
 })

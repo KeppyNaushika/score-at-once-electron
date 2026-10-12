@@ -104,7 +104,7 @@ describe("採点対象と受験者の試験スコープ", () => {
         partialScore: null,
         userId: examA.user.id,
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/採点領域と受験者が別の試験に属しています/)
 
     expect(await testPrisma.questionScore.count()).toBe(0)
   })
@@ -130,7 +130,7 @@ describe("採点対象と受験者の試験スコープ", () => {
           userId: examA.user.id,
         },
       ])
-    ).rejects.toThrow()
+    ).rejects.toThrow(/採点領域と受験者が別の試験に属しています/)
 
     // 正しい1件も書かれない（検査は書き込み前に全件分を見る）
     expect(await testPrisma.questionScore.count()).toBe(0)
@@ -148,7 +148,7 @@ describe("採点対象と受験者の試験スコープ", () => {
         comment: null,
         decidedByUserId: examA.user.id,
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/採点領域と受験者が別の試験に属しています/)
 
     expect(await testPrisma.scoreDecision.count()).toBe(0)
   })

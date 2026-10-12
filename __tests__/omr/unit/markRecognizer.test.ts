@@ -666,9 +666,13 @@ describe("markRecognizer", () => {
       expect(auto.recognizedValues).toEqual(["②"])
     })
 
-    it("マークが無い答案では既定値へフォールバックする", async () => {
-      // 全て白 → 2群に分ける意味がないので自動決定を採用しない
-      const image = createTestImage(imgWidth, imgHeight, bubbles, [])
+    it("紙と見分けにくい汚れしかない答案では既定値へフォールバックする", async () => {
+      // 紙(255)と汚れ(220)の差は 35 で、2群に分ける意味がないので自動決定を採用しない。
+      // 自動決定を採用すると境界が 220 と 255 の間に引かれ、汚れがマークとして読まれる
+      // （真っ白だと閾値によらず同じ結果になり、フォールバックを確かめられない）
+      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
+        { index: 1, gray: 220, coverage: 1, pattern: "solid" },
+      ])
       const cell = makeCell(bubbles)
 
       const result = await recognizeCell(

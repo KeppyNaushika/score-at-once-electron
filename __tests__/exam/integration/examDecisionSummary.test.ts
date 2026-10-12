@@ -373,7 +373,14 @@ describe("試験の裁定サマリ", () => {
 
   it("進捗の分母は答案がある受験者数", async () => {
     const fixture = await createFullTestExam(testPrisma, {
+      studentCount: 3,
       includeStudentAnswerImages: true,
+    })
+    // 1人は答案を上げていない（採点行はある）。分母が受験者の人数なら3、
+    // 答案の枚数なら4（2人×2ページ）になり、答案がある受験者数の2と区別できる
+    const [, , examStudentWithoutAnswer] = fixture.examStudents
+    await testPrisma.studentAnswerImage.deleteMany({
+      where: { examStudentId: examStudentWithoutAnswer.id },
     })
 
     const summary = await getExamDecisionSummary(
@@ -381,10 +388,11 @@ describe("試験の裁定サマリ", () => {
       fixture.user.id
     )
 
+    expect(summary.questions).toHaveLength(fixture.cropRegions.length)
     for (const question of summary.questions) {
-      // 答案は受験者×ページぶんあるが、分母は受験者の人数
-      expect(question.totalStudents).toBe(fixture.examStudents.length)
-      expect(question.scoredCount).toBe(fixture.examStudents.length)
+      expect(question.totalStudents).toBe(2)
+      // 答案の無い受験者の採点行は、採点済みにも数えない
+      expect(question.scoredCount).toBe(2)
     }
   })
 

@@ -43,7 +43,7 @@ export interface ArchiveSelection {
 }
 
 /** 外れた行を指していたため NULL にして書く参照 */
-export interface NulledReference {
+interface NulledReference {
   readonly table: string
   readonly id: string
   readonly column: string

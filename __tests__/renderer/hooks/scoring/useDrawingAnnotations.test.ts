@@ -128,20 +128,28 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("saveElement（新規アノテーション作成）", () => {
     it("新規要素を保存すると作成されたアノテーションを返す", async () => {
+      // 作成側が返す行は、渡した要素と別物にしておく（渡した要素を返す実装と区別するため）
+      const createdAnnotation = createMockAnnotation({
+        id: "created-1",
+        text: "作成された行",
+      })
+      mockAPI.create.mockResolvedValue(createdAnnotation)
+
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
 
       const element = makeElement({ id: "new-1", text: "新規テキスト" })
+      let saved: DrawingAnnotation | null = null
       await act(async () => {
-        const saved = await result.current.saveElement(
+        saved = await result.current.saveElement(
           MOCK_ANNOTATION_TARGET,
           element
         )
-        expect(saved).not.toBeNull()
       })
 
       expect(mockAPI.create).toHaveBeenCalledTimes(1)
+      expect(saved).toEqual(createdAnnotation)
     })
 
     it("コールバックonAnnotationCreatedが呼ばれる", async () => {

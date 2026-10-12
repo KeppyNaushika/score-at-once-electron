@@ -234,7 +234,7 @@ describe("ASB transformer chain", () => {
     expect(withoutPaper.manuscriptPaper).toBeUndefined()
   })
 
-  test("v1.2.0: タグ情報がそのまま保持される（往復）", () => {
+  test("v1.2.0: タグ情報が最新まで変換してもそのまま残る", () => {
     const result = transformAsbToLatest(createV1_2_0_ArchiveData())
 
     expect(result.finalVersion).toBe("1.5.0")

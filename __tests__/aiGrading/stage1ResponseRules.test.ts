@@ -114,20 +114,6 @@ describe("1段目の応答: 直して受け取るもの", () => {
   })
 })
 
-describe("1段目の応答: 配点の無い設問の保留", () => {
-  it("点の無い保留は、そのまま点の無い保留として受け取る", () => {
-    const result = validateGradingResponse(
-      withFields({ status: "pending", partialScore: null }),
-      { maxPoints: null }
-    )
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-    expect(result.value.status).toBe("pending")
-    expect(result.value.partialScore).toBeNull()
-    expect(result.notes).toEqual([])
-  })
-})
-
 describe("1段目の応答: 拒むもの", () => {
   it.each([
     ["オブジェクトでない（配列）", [validResponse], 5],

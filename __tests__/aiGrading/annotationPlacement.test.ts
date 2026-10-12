@@ -120,7 +120,8 @@ describe("placeAnnotation", () => {
     })
   })
 
-  it("上にも下にも空きがあれば、書き終わりの下に置く", () => {
+  it("上にも下にも空きがあれば、上の空きではなく枠のいちばん下に置く（書き終わりの直下ではない）", () => {
+    // 空きは 0〜8行と 14〜29行。上の空きにも収まるが、選ぶのはいちばん下
     const inkGrid = createInkGrid((_, row) => row >= 10 && row <= 12)
     const placement = place("途中式がない", inkGrid)
 

@@ -10,7 +10,6 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  filePageKeys,
   movePageInOrder,
   type PageOrder,
   rebuildPageOrder,
@@ -54,6 +53,11 @@ function buildImportedFile(
   }
 }
 
+/** 取り込んだ順・ページ番号順の並び順（取り込んだ直後と同じ） */
+function mergedPageOrder(files: ImportedFile[]): PageOrder {
+  return rebuildPageOrder(files, "merge", { transforms: [] })
+}
+
 interface SheetSettings {
   files: ImportedFile[]
   /** 全体の N-up（既定は 1in1 = まとめない） */
@@ -66,7 +70,7 @@ interface SheetSettings {
 function sheetsOf(settings: SheetSettings): OutputSheet[] {
   const pages = deriveOutputPages({
     files: settings.files,
-    pageOrder: settings.pageOrder ?? settings.files.flatMap(filePageKeys),
+    pageOrder: settings.pageOrder ?? mergedPageOrder(settings.files),
     excludedPages: settings.excludedPages ?? new Set(),
     pageRotations: settings.pageRotations ?? new Map(),
   })
@@ -147,7 +151,7 @@ describe("ファイルごとの N-up の面", () => {
   it("ドラッグで並べ替えると組み合わせが変わる", () => {
     const files = [buildImportedFile("A", 4, { pagesPerSheet: 2 })]
     const pageOrder = movePageInOrder(
-      filePageKeys(files[0]),
+      mergedPageOrder(files),
       "A:4",
       "A:1",
       "before"

@@ -403,7 +403,7 @@ export type SubtotalGroupMatchingStrategy = "by_name" | "individual" | "all_new"
  * **「取り込まない」は無い。** 採点行は採点者を親に持つので、結ばずに置くと行が
  * 親を失う（外部キーが立たない）。答えは「既存の利用者に結ぶ」か「新しく作る」の2つ。
  */
-export type UserMatchingStrategy = "by_username" | "individual" | "all_new"
+type UserMatchingStrategy = "by_username" | "individual" | "all_new"
 
 /**
  * ID選択（同一人物と判定した場合）

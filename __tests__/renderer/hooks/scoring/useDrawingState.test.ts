@@ -569,7 +569,6 @@ describe("useDrawingState", () => {
         createMockAnnotation({ id: "a1" }),
         createMockAnnotation({ id: "a2" }),
       ])
-      mockAPI.batchCreate.mockResolvedValue([])
 
       const { result } = renderHook(
         () => useDrawingState(MOCK_ANNOTATION_TARGET, true),
@@ -586,6 +585,11 @@ describe("useDrawingState", () => {
 
       expect(result.current.drawingElements).toHaveLength(0)
       expect(result.current.selectedElementIds).toHaveLength(0)
+      // DB 側も行き先ごと消す（空の同期なので作り直しは無い）
+      expect(mockAPI.deleteByTarget).toHaveBeenCalledWith(
+        MOCK_ANNOTATION_TARGET
+      )
+      expect(mockAPI.batchCreate).not.toHaveBeenCalled()
     })
 
     it("DBの全消去に失敗したら消す前の要素へ戻す", async () => {

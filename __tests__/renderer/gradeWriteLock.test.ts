@@ -65,18 +65,7 @@ describe("成績算出のロックで断られた書き込みの知らせ方", (
     )
   })
 
-  it("ほかの失敗は、これまでどおり失敗トーストを出す", async () => {
-    await runMutation(async () => {
-      throw new Error("ディスクがいっぱいです")
-    })
-
-    expect(toast.info).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith(
-      "配点を保存できませんでした",
-      expect.objectContaining({ description: "ディスクがいっぱいです" })
-    )
-  })
-
+  // ほかの失敗が meta.errorMessage の失敗トーストになることは queryClientMutationMeta が見る
   it("文言を含むだけの失敗は、ロックとして扱わない（完全一致で見分ける）", async () => {
     await runMutation(async () => {
       throw new Error(`${GRADE_WRITE_LOCKED_MESSAGE}（ほかの理由）`)

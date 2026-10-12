@@ -10,7 +10,7 @@ import type { AttemptWithRun } from "../types"
 import { isDisagreeing } from "./scoreComparison"
 
 /** 要確認の理由（並び＝画面に出す順） */
-export const REVIEW_REASONS = [
+const REVIEW_REASONS = [
   "awaitingResult",
   "errored",
   "refused",

@@ -18,7 +18,6 @@ import {
   createIdIntegrationConfig,
   createMatchedItem,
   createPreMatchingResult,
-  createScoringConflict,
   generateId,
 } from "../../helpers/testDataFactory"
 import {
@@ -313,8 +312,20 @@ describe("edgeCases", () => {
 
     const cropSubtotals = await prisma.cropSubtotal.findMany({
       where: { cropRegion: { examPage: { examId: result.examId! } } },
+      include: { cropRegion: true, subtotal: true },
     })
-    expect(cropSubtotals.length).toBe(2)
+    // 設問ごとに、アーカイブで結んでいた小計へ結ばれている
+    expect(
+      cropSubtotals
+        .map((cropSubtotal) => [
+          cropSubtotal.cropRegion.label,
+          cropSubtotal.subtotal.name,
+        ])
+        .sort()
+    ).toEqual([
+      ["問1", "前半"],
+      ["問2", "後半"],
+    ])
   })
 
   // EC-6（2回目の取り込みの冪等）は idIntegrationImporter.test.ts の II-16 / II-17 へ統合、
@@ -325,7 +336,6 @@ describe("edgeCases", () => {
     const examId = generateId()
     const studentId = generateId()
     const studentNumber = `MANUAL_${Date.now()}`
-    const scoreId = generateId()
 
     // まず既存データを作成
     await prisma.student.create({
@@ -431,7 +441,6 @@ describe("edgeCases", () => {
       ]),
       scoresData: createArchiveScoresData([
         {
-          id: scoreId,
           cropRegionId: region.id,
           examStudentId,
           status: "incorrect",
@@ -446,24 +455,6 @@ describe("edgeCases", () => {
     data.scoresData.questionScores[0].updatedAt = new Date(
       "2000-01-01T00:00:00.000Z"
     ).toISOString()
-
-    // 事前照合の競合一覧は確認画面に件数を見せるためのもので、取り込みの判断には使われない
-    const conflict = createScoringConflict({
-      importScoreId: scoreId,
-      existingScoreId: existingScore.id,
-      cropRegionId: region.id,
-      studentId,
-      importScore: {
-        status: "incorrect",
-        partialScore: 0,
-        updatedAt: new Date("2000-01-01").toISOString(),
-      },
-      existingScore: {
-        status: "correct",
-        partialScore: 10,
-        updatedAt: new Date("2025-07-01").toISOString(),
-      },
-    })
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -481,12 +472,6 @@ describe("edgeCases", () => {
         importData: {},
         existingData: {},
         displayLabel: "テスト",
-      },
-      scoringConflicts: {
-        conflicts: [conflict],
-        conflictCount: 1,
-        newCount: 0,
-        unchangedCount: 0,
       },
     })
 

@@ -184,7 +184,7 @@ export const deleteStudent = async (id: string): Promise<void> => {
   }
 }
 
-export interface StudentSubtotalScore {
+interface StudentSubtotalScore {
   subtotalId: string
   subtotalName: string
   subtotalGroupId: string

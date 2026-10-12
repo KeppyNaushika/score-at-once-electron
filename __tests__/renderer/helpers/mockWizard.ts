@@ -10,6 +10,8 @@ import { initialState } from "@/hooks/import/constants"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { ImportWizardState } from "@/types/examArchive.types"
 
+import { createMockImportSummary } from "./mockData"
+
 /**
  * モック化された UseImportWizardReturn を作成する
  */
@@ -30,61 +32,13 @@ export function createMockWizard(
     clearSubtotalMappings: vi.fn(),
     goToNextStep: vi.fn(),
     goBack: vi.fn(),
-    executeImport: vi.fn().mockResolvedValue({
-      success: true,
-      examId: "mock-exam-id",
-      summary: {
-        created: {
-          students: 1,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 4,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-        updated: {
-          students: 0,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 0,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-        skipped: {
-          students: 0,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 0,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-        unchanged: {
-          students: 2,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 8,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-      },
-      warnings: [],
-    }),
+    executeImport: vi
+      .fn<UseImportWizardReturn["executeImport"]>()
+      .mockResolvedValue({
+        examId: "mock-exam-id",
+        summary: createMockImportSummary(),
+        warnings: [],
+      }),
     reset: vi.fn(),
     clearError: vi.fn(),
   }

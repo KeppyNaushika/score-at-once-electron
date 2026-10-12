@@ -63,7 +63,7 @@ export type AnyCollectedCourseworkData =
   CollectedCourseworkData | CollectedCourseworkDataV1_1_0
 
 /** v1.2.0 のアーカイブ全体（現行） */
-export type CourseworkArchiveDataV1_2_0 = CourseworkArchiveData
+type CourseworkArchiveDataV1_2_0 = CourseworkArchiveData
 
 /** 読み込み時点では版が確定していないので、扱いうる版の総和で受ける */
 export type AnyCourseworkArchiveData =

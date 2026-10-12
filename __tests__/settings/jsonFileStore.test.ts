@@ -86,22 +86,29 @@ describe("jsonFileStore", () => {
     })
   })
 
-  it("更新が失敗すれば、メモリもファイルも変えずに投げ、次の更新は通る", async () => {
+  it("書き込みが失敗すれば、メモリもファイルも変えずに投げ、次の更新は通る", async () => {
     const store = createStore()
     await store.load()
     await store.update(() => ({ count: 5 }))
 
+    // 一時ファイルの置き場にディレクトリを置いて、書き込みそのものを失敗させる。
+    // （直す関数で投げさせると書き込みより前で止まるので、メモリを書き込みより先に
+    // 変える実装でも通ってしまう）
+    const temporaryPath = `${filePath}.tmp`
+    fs.mkdirSync(temporaryPath)
     await expect(
-      store.update(() => {
-        throw new Error("直せない")
-      })
-    ).rejects.toThrow("直せない")
+      store.update((counter) => ({ count: counter.count + 1 }))
+    ).rejects.toThrow(/EISDIR/)
     expect(store.read()).toEqual({ count: 5 })
     expect(JSON.parse(fs.readFileSync(filePath, "utf-8"))).toEqual({
       count: 5,
     })
 
+    fs.rmdirSync(temporaryPath)
     await store.update((counter) => ({ count: counter.count + 1 }))
     expect(store.read()).toEqual({ count: 6 })
+    expect(JSON.parse(fs.readFileSync(filePath, "utf-8"))).toEqual({
+      count: 6,
+    })
   })
 })

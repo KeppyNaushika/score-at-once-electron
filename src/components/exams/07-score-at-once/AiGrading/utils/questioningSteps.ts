@@ -60,7 +60,7 @@ export interface QuestioningAdvice {
  * 問いの種類。scoringMethod は直接採点の設問で最初に聞く採点方式、proposal は2段目の項目の案、
  * outside はどの案にも入らない答案、sameAnswer は同じ答えに違う点、disagreement は先生と AI の食い違い
  */
-export type QuestioningStepKind =
+type QuestioningStepKind =
   "scoringMethod" | "proposal" | "outside" | "sameAnswer" | "disagreement"
 
 /** 問い1つ（カード1枚） */

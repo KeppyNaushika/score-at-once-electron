@@ -37,8 +37,9 @@ issue とコミットに残るので、ここへ記録を積み上げない。**
   へ移した（`npm run dev` を開いたまま撮ると**そちらのコードに対して**撮れる罠）
 - `catch` は29箇所から**2箇所**へ。ログインの失敗を握り潰さなくなった
 - seed を `seedCli.ts` / `setup-data.ts` / `helpers/` へ出し、撮影の spec と分けた
-- 実運用の DB へ繋がりうる穴を2段構えで塞いだ（`helpers/syncGuard.ts` と
-  `helpers/databasePathProbe.ts`）
+- 実運用の DB へ繋がりうる穴を2段構えで塞いだ（seed の前に撮影用 data の設定が共有モードを
+  指していないかを見る `helpers/syncGuard.ts` と、起動したアプリが実際に開いた DB を
+  `sync.getConfig()` で訊いて突き合わせる `take-screenshots.spec.ts`）
 - **8. 採点確定**と**監査ログ**の画面も撮るようになった
 
 **リリースの成果物ではない。** 出力（`__tests__/screenshots/output/`）は `.gitignore`

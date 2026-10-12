@@ -57,7 +57,7 @@ export const { to: toOverlayKind } = defineStringUnion(OVERLAY_KINDS, "mark")
  *
  * 変換が済んだかどうかは値の大小から推測せず、この列で行ごとに持つ。
  */
-export const OVERLAY_LENGTH_UNITS = ["mm", "px"] as const
+const OVERLAY_LENGTH_UNITS = ["mm", "px"] as const
 
 export type OverlayLengthUnit = (typeof OVERLAY_LENGTH_UNITS)[number]
 

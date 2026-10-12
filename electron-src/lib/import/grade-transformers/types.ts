@@ -74,7 +74,7 @@ export type GradeArchiveDataV1_13_0 = Omit<
 }
 
 /** 1.17.0 のアーカイブ全体（現行。比較が付いた） */
-export type GradeArchiveDataV1_17_0 = GradeArchiveData
+type GradeArchiveDataV1_17_0 = GradeArchiveData
 
 /** 読み込み時点では版が確定していないので、扱いうる版の総和で受ける */
 export type AnyGradeArchiveData =

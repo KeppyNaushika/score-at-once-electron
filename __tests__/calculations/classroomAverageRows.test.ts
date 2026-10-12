@@ -3,8 +3,9 @@
  *
  * appendClassroomAverageRows が
  * - 全体平均行（受験者＝合計点 non-null）
- * - teacherStatistics 学級ごとの学級平均行（母集団=学級全体、重複カウント）
- * を正しい列に出すことを検証する。
+ * - 渡された学級ごとの学級平均行（母集団=学級全体、複数学級に属す生徒は各学級へ重複カウント）
+ * を正しい列に出すことを検証する。teacherStatistics で学級を絞るのは呼び出し側
+ * （sheetCreators）で、この関数は渡された学級をすべて出す。
  */
 import * as ExcelJS from "exceljs"
 import { describe, expect, it } from "vitest"
@@ -13,18 +14,17 @@ import { appendClassroomAverageRows } from "@/electron-src/lib/export/excel/aver
 import type { ScoringData } from "@/electron-src/lib/shared/types"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
-/** ExamClassroomWithMembers の最小モック（テストで使う teacherStatistics / class.name / memberships のみ） */
+/** ExamClassroomWithMembers の最小モック（テストで使う classroom.name / memberships のみ） */
 function makeClass(
   name: string,
-  studentIds: string[],
-  teacherStatistics = true
+  studentIds: string[]
 ): ExamClassroomWithMembers {
   return {
     id: `ec-${name}`,
     examId: "e1",
     classroomId: `c-${name}`,
     administered: true,
-    teacherStatistics,
+    teacherStatistics: true,
     studentReport: true,
     order: 0,
     classroom: {
@@ -69,9 +69,10 @@ const QUESTION_REGIONS = [
 /** ヘッダー列: 受験状態,順位,学年,学級,出席番号,学籍番号,氏名(7),合計点(8),...設問 */
 const NAME_COL = 7
 const TOTAL_COL = 8
+const QUESTION1_COL = 9
 
 describe("appendClassroomAverageRows", () => {
-  it("全体平均と teacherStatistics 学級平均を正しい列・値で出す", () => {
+  it("全体平均と学級平均を正しい列・値で出す", () => {
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet("点数一覧")
     worksheet.addRow([
@@ -100,10 +101,48 @@ describe("appendClassroomAverageRows", () => {
     const overall = worksheet.getRow(3) // header=1, 空行=2, 全体平均=3
     expect(overall.getCell(NAME_COL).value).toBe("全体平均")
     expect(overall.getCell(TOTAL_COL).value).toBe(60)
+    // 設問の平均は合計点の右の設問列に出る: (6+8+4)/3=6
+    expect(overall.getCell(QUESTION1_COL).value).toBe(6)
 
     const classRow = worksheet.getRow(4)
     expect(classRow.getCell(NAME_COL).value).toBe("3-A組平均")
     expect(classRow.getCell(TOTAL_COL).value).toBe(70)
+    expect(classRow.getCell(QUESTION1_COL).value).toBe(7)
+    expect(worksheet.rowCount).toBe(4)
+  })
+
+  it("複数の学級に属す生徒は、それぞれの学級平均に数える", () => {
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("点数一覧")
+    worksheet.addRow([
+      "受験状態",
+      "順位",
+      "学年",
+      "学級",
+      "出席番号",
+      "学籍番号",
+      "氏名",
+      "合計点",
+      "問1",
+    ])
+
+    // S2 は 3-A組 と 選択α の両方に属す
+    const all = [
+      makeStudent("S1", 60, 6),
+      makeStudent("S2", 80, 8),
+      makeStudent("S3", 40, 4),
+    ]
+    const classes = [
+      makeClass("3-A組", ["S1", "S2"]),
+      makeClass("選択α", ["S2", "S3"]),
+    ]
+
+    appendClassroomAverageRows(worksheet, all, classes, [], QUESTION_REGIONS)
+
+    expect(worksheet.getRow(4).getCell(NAME_COL).value).toBe("3-A組平均")
+    expect(worksheet.getRow(4).getCell(TOTAL_COL).value).toBe(70)
+    expect(worksheet.getRow(5).getCell(NAME_COL).value).toBe("選択α平均")
+    expect(worksheet.getRow(5).getCell(TOTAL_COL).value).toBe(60)
   })
 
   it("未採点(totalScore null)は平均母数から除外される", () => {

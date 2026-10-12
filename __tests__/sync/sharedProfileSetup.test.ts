@@ -287,7 +287,7 @@ describe("ローカル → 共有の移行", () => {
         sharedFolderPath: sharedFolder,
         clientId: path.join("no-such-directory", "x"),
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/ENOENT.*no-such-directory/)
 
     expect(fs.readdirSync(sharedFolder)).toEqual(["既にあった.txt"])
     // 片づけの前に閉じてある（Windows でも作りかけの控えを消せる）
@@ -346,11 +346,10 @@ describe("合流（空の DB から共有フォルダに追いつく）", () => 
     // PC-B のローカルモードの試験は、共有の控えにも共有フォルダにも入らない
     expect(countRows(replicaB, "Exam")).toBe(1)
     expect(countRows(localDatabasePath(DATA_B), "Exam")).toBe(1)
-    // 合流の同期は閉じてある（控えを開いた手が残っていない）ので、控えを置き換えられる
+    // 合流の同期は閉じてある（控えを開いた手が残っていない）ので、Windows でも
+    // 控えを置き換えられる。macOS・Linux は開いたままでも rename できるので、
+    // rename してみせても証明にならない。開いた手が無いことを直接見る
     expect(openFilesUnder(path.join(DATA_B, "shared"))).toEqual([])
-    const movedAside = `${replicaB}.moved`
-    fs.renameSync(replicaB, movedAside)
-    fs.renameSync(movedAside, replicaB)
   }, 120_000)
 
   it("合流した PC-B の書き込みは、普通のクライアントとして PC-A へ届く", async () => {
@@ -536,8 +535,8 @@ describe("同期のインスタンスを閉じる", () => {
 
     await instance.close()
 
+    // 消せることは確かめない。macOS・Linux は開いたままでも消せるので、消してみせても
+    // Windows で消せる証明にならない
     expect(openFilesUnder(directory)).toEqual([])
-    fs.rmSync(directory, { recursive: true })
-    expect(fs.existsSync(directory)).toBe(false)
   }, 120_000)
 })

@@ -16,14 +16,14 @@ import { defineStringUnion } from "./stringUnion"
 
 /** 表示モード */
 const REPORT_DISPLAY_MODES = ["detail", "subtotal_only"] as const
-export type ReportDisplayMode = (typeof REPORT_DISPLAY_MODES)[number]
+type ReportDisplayMode = (typeof REPORT_DISPLAY_MODES)[number]
 export const { to: toReportDisplayMode } = defineStringUnion(
   REPORT_DISPLAY_MODES,
   "detail"
 )
 
 /** 得点率形式 */
-export type ScoreRateFormat = "percentage" | "grade5" | "gradeAE"
+type ScoreRateFormat = "percentage" | "grade5" | "gradeAE"
 
 /** 平均点表示タイプ */
 /** 統計の種別 */
@@ -60,14 +60,14 @@ export type StatisticVisibility = Record<
 /** 順位表示タイプ */
 /** テーブル列数（最大10列） */
 const REPORT_PAGE_LAYOUTS = ["auto", "single", "double"] as const
-export type ReportPageLayout = (typeof REPORT_PAGE_LAYOUTS)[number]
+type ReportPageLayout = (typeof REPORT_PAGE_LAYOUTS)[number]
 export const { to: toReportPageLayout } = defineStringUnion(
   REPORT_PAGE_LAYOUTS,
   "auto"
 )
 
 const REPORT_PAGE_ORIENTATIONS = ["portrait", "landscape"] as const
-export type ReportPageOrientation = (typeof REPORT_PAGE_ORIENTATIONS)[number]
+type ReportPageOrientation = (typeof REPORT_PAGE_ORIENTATIONS)[number]
 export const { to: toReportPageOrientation } = defineStringUnion(
   REPORT_PAGE_ORIENTATIONS,
   "portrait"
@@ -188,7 +188,7 @@ export interface ExamInfoForReport {
 }
 
 /** 生徒ごとの小計点データ（renderer側計算用） */
-export interface StudentSubtotalScore {
+interface StudentSubtotalScore {
   studentId: string
   score: number | null
   status: ExamStudentStatus

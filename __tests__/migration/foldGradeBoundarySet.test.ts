@@ -18,13 +18,13 @@ import * as os from "os"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
-import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
-import { createPrismaClientForPath } from "../helpers/testPrismaClient"
+import {
+  applyAppMigration,
+  buildDatabaseBeforeMigration,
+} from "../helpers/preMigrationDatabase"
 
 const TEST_ROOT = path.join(os.tmpdir(), "fold-grade-boundary-set")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../prisma/migrations")
 const TARGET_MIGRATION =
   "20260801000000_fold_grade_boundary_set_into_grade_item_boundary"
 
@@ -41,41 +41,6 @@ const withDatabase = <T>(operation: (db: SqliteDatabase) => T): T => {
   } finally {
     db.close()
   }
-}
-
-const migrationNames = (): string[] =>
-  fs
-    .readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort()
-
-const applyMigration = (db: SqliteDatabase, name: string): void => {
-  db.exec(
-    fs.readFileSync(path.join(MIGRATIONS_DIR, name, "migration.sql"), "utf-8")
-  )
-}
-
-/** init ＋ 本マイグレーションの1つ手前までを適用した DB を用意する */
-async function buildDatabaseBeforeTargetMigration(): Promise<void> {
-  await bootstrapSchema(DB_PATH)
-  const prisma = createPrismaClientForPath(DB_PATH)
-  try {
-    await createBaseline(prisma)
-  } finally {
-    await prisma.$disconnect()
-  }
-
-  const names = migrationNames()
-  const targetIndex = names.indexOf(TARGET_MIGRATION)
-  expect(targetIndex).toBeGreaterThan(0)
-
-  withDatabase((db) => {
-    for (const name of names.slice(0, targetIndex)) {
-      if (name === "20260322232329_init") continue
-      applyMigration(db, name)
-    }
-  })
 }
 
 const ISO = "2026-07-01T00:00:00.000+00:00"
@@ -140,10 +105,10 @@ afterEach(() => {
 
 describe("境界セットを畳んで評価項目へ直付けする", () => {
   it("境界が親セットの評価項目を引き継ぎ、内容も日時も変わらない", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     withDatabase((db) => {
       seedLegacyBoundaries(db)
-      applyMigration(db, TARGET_MIGRATION)
+      applyAppMigration(db, TARGET_MIGRATION)
     })
 
     const boundaries = withDatabase(
@@ -184,10 +149,10 @@ describe("境界セットを畳んで評価項目へ直付けする", () => {
   })
 
   it("境界0本の空セットは何も残さない（設定済みに見える状態が消える）", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     withDatabase((db) => {
       seedLegacyBoundaries(db)
-      applyMigration(db, TARGET_MIGRATION)
+      applyAppMigration(db, TARGET_MIGRATION)
     })
 
     const emptyItemBoundaries = withDatabase((db) =>
@@ -202,10 +167,10 @@ describe("境界セットを畳んで評価項目へ直付けする", () => {
   })
 
   it("容器と旧テーブルがスキーマから消える", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     withDatabase((db) => {
       seedLegacyBoundaries(db)
-      applyMigration(db, TARGET_MIGRATION)
+      applyAppMigration(db, TARGET_MIGRATION)
     })
 
     const tableNames = withDatabase((db) =>
@@ -222,10 +187,10 @@ describe("境界セットを畳んで評価項目へ直付けする", () => {
   })
 
   it("評価項目を消すと境界もカスケード削除される（FKが新テーブルへ張られている）", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     const remaining = withDatabase((db) => {
       seedLegacyBoundaries(db)
-      applyMigration(db, TARGET_MIGRATION)
+      applyAppMigration(db, TARGET_MIGRATION)
       db.pragma("foreign_keys = ON")
       db.prepare(`DELETE FROM "GradeItem" WHERE id = 'item-filled'`).run()
       return db

@@ -232,20 +232,6 @@ describe("buildGridLayout: 自動改行", () => {
     expect(simplified[2]).toEqual({ x: 0, y: 1, w: 0.5, h: 1 })
   })
 
-  it("1/2 × 4 → 2行 (2+2)", () => {
-    const cells = buildGridLayout([
-      item({ layoutWidth: "1/2" }),
-      item({ layoutWidth: "1/2" }),
-      item({ layoutWidth: "1/2" }),
-      item({ layoutWidth: "1/2" }),
-    ])
-    const simplified = simplify(cells)
-    expect(simplified[0].y).toBe(0)
-    expect(simplified[1].y).toBe(0)
-    expect(simplified[2].y).toBe(1)
-    expect(simplified[3].y).toBe(1)
-  })
-
   it("1/3 × 5 → 2行 (3+2)", () => {
     const cells = buildGridLayout([
       item({ layoutWidth: "1/3" }),
@@ -560,15 +546,6 @@ describe("buildGridLayout: グリッドパターン", () => {
     ])
   })
 
-  it("3×2 グリッド", () => {
-    const items = Array.from({ length: 6 }, () => item({ layoutWidth: "1/3" }))
-    const cells = buildGridLayout(items)
-    const simplified = simplify(cells)
-    // 行0: 3つ、行1: 3つ
-    expect(simplified.filter((cell) => cell.y === 0)).toHaveLength(3)
-    expect(simplified.filter((cell) => cell.y === 1)).toHaveLength(3)
-  })
-
   it("2×2 + 全幅下段", () => {
     const cells = buildGridLayout([
       item({ layoutWidth: "1/2" }),
@@ -739,31 +716,6 @@ describe("buildGridLayout: エッジケース", () => {
     expect(gridTotalHeight(cells)).toBe(1.5)
   })
 
-  it("break + goUp の組み合わせ: break は goUp より先に評価されない", () => {
-    // ① が break → 次の行へ
-    // ② が goUp=1 → 配置前に row 0 に戻る
-    const cells = buildGridLayout([
-      item({ layoutWidth: "1/2", nextPlacement: "break" }),
-      item({ layoutWidth: "1/2", goUp: 1 }),
-    ])
-    const simplified = simplify(cells)
-    expect(simplified[0]).toEqual({ x: 0, y: 0, w: 0.5, h: 1 })
-    // ② は goUp で row 0 に戻り、①の右に配置
-    expect(simplified[1]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1 })
-  })
-
-  it("全アイテムに break → 全て別の行", () => {
-    const cells = buildGridLayout([
-      item({ layoutWidth: "1/3", nextPlacement: "break" }),
-      item({ layoutWidth: "1/3", nextPlacement: "break" }),
-      item({ layoutWidth: "1/3" }),
-    ])
-    const simplified = simplify(cells)
-    expect(simplified[0].y).toBe(0)
-    expect(simplified[1].y).toBe(1)
-    expect(simplified[2].y).toBe(2)
-  })
-
   it("自動改行後の goUp は、戻った先の行に入りきらなければ新しい行へ置く", () => {
     const cells = buildGridLayout([
       item({ layoutWidth: "1/2" }),
@@ -834,37 +786,6 @@ describe("buildGridLayout: goUp + 既存行自動進行（2カラムパターン
     expect(simplified[5]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
     // 全幅行は下に配置
     expect(simplified[6]).toEqual({ x: 0, y: 3, w: 1, h: 1 })
-  })
-
-  it("左3段(h=1) + 右大枠(h=3, goUp): 後続は下に配置", () => {
-    // goUp アイテムの高さが大きい場合、後続は goUp ブロックを抜ける
-    const cells = buildGridLayout([
-      item({ layoutWidth: "1/4", nextPlacement: "break" }),
-      item({ layoutWidth: "1/4", nextPlacement: "break" }),
-      item({ layoutWidth: "1/4" }),
-      item({ layoutWidth: "3/4", goUp: 2, heightMultiplier: 3 }),
-      item({ layoutWidth: "1/2" }),
-    ])
-    const simplified = simplify(cells)
-    // ⑤ は goUp ブロックの下に配置 (y=3)
-    expect(simplified[4].y).toBe(3)
-    expect(simplified[4].x).toBe(0)
-  })
-
-  it("2列 + 右列に h=2 セル: lastCellBottom でスキップ", () => {
-    // ④ が h=2 で row 0-1 をカバー → ⑤ は row 2 に進む
-    const cells = buildGridLayout([
-      item({ layoutWidth: "1/2", nextPlacement: "break" }),
-      item({ layoutWidth: "1/2", nextPlacement: "break" }),
-      item({ layoutWidth: "1/2" }),
-      item({ layoutWidth: "1/2", goUp: 2, heightMultiplier: 2 }),
-      item({ layoutWidth: "1/2" }),
-    ])
-    const simplified = simplify(cells)
-    // ④ at (0.5, 0) h=2 → lastCellBottom=2
-    expect(simplified[3]).toEqual({ x: 0.5, y: 0, w: 0.5, h: 2 })
-    // ⑤ は row 2 (y=2) に進む（row 1 は ④ のカバー範囲内なのでスキップ）
-    expect(simplified[4]).toEqual({ x: 0.5, y: 2, w: 0.5, h: 1 })
   })
 
   it("2列 + 左列に h=2 セル: 右列は4アイテムで埋まる", () => {

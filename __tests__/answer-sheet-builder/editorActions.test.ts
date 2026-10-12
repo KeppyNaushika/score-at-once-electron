@@ -129,6 +129,7 @@ describe("編集操作は id で指した実体だけを変える", () => {
 
   it("並べ替えは id の並びで指す", () => {
     const { result } = renderEditor(twoMajorsWithTwoSubs())
+    const untouched = result.current.definition.majorQuestions[1]
 
     act(() => {
       result.current.actions.reorderSubQuestions("major-1", [
@@ -143,11 +144,7 @@ describe("編集操作は id で指した実体だけを変える", () => {
       )
     ).toEqual(["sub-1b", "sub-1a"])
     // もう一方の大問は触っていないので参照ごと残る
-    expect(
-      result.current.definition.majorQuestions[1].subQuestions.map(
-        (subQuestion) => subQuestion.id
-      )
-    ).toEqual(["sub-2a", "sub-2b"])
+    expect(result.current.definition.majorQuestions[1]).toBe(untouched)
   })
 })
 
@@ -409,15 +406,22 @@ describe("編集は書き込みの意図として渡る", () => {
     const { result, edits } = renderEditor(twoMajorsWithTwoSubs())
 
     act(() => {
-      result.current.actions.applyLabelPreset("major", "1,2,3,4")
+      // 元のラベル（"1","2"）と違う値にする。同じだと、ラベルを付け替えずに
+      // 元の値を返す実装でも通る
+      result.current.actions.applyLabelPreset("major", "I,II,III,IV")
     })
 
     const [edit] = edits
     if (edit.type !== "APPLY_LABEL_PRESET") throw new Error("種類が違う")
     expect(edit.payload.relabeled).toEqual([
-      { id: "major-1", label: "1" },
-      { id: "major-2", label: "2" },
+      { id: "major-1", label: "I" },
+      { id: "major-2", label: "II" },
     ])
+    expect(
+      result.current.definition.majorQuestions.map(
+        (majorQuestion) => majorQuestion.label
+      )
+    ).toEqual(["I", "II"])
   })
 
   it("元に戻すのは意図ではなく、戻した先の姿がそのまま渡る", () => {

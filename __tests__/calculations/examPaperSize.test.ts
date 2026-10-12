@@ -10,16 +10,7 @@ import { describe, expect, it } from "vitest"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 
 describe("resolveExamPaperSize", () => {
-  it("ページ番号が最小のページの用紙サイズを採る", () => {
-    expect(
-      resolveExamPaperSize([
-        { pageNumber: 2, imagePath: "b.png", pageSize: "A4" },
-        { pageNumber: 1, imagePath: "a.png", pageSize: "B4" },
-      ])
-    ).toBe("B4")
-  })
-
-  it("取得順が番号順でなくても番号で決める", () => {
+  it("ページ番号が最小のページの用紙サイズを採る（取得順が番号順でなくても番号で決める）", () => {
     // include に orderBy が無い経路があり、取得順は当てにできない
     expect(
       resolveExamPaperSize([

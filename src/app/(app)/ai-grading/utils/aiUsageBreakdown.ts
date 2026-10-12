@@ -16,8 +16,7 @@ import {
 import type { MyAiGradingRunRow } from "../types"
 
 /** 実行の行が持つ試験 */
-export type RunExam =
-  MyAiGradingRunRow["prompt"]["cropRegion"]["examPage"]["exam"]
+type RunExam = MyAiGradingRunRow["prompt"]["cropRegion"]["examPage"]["exam"]
 
 /** 月1つぶん */
 export interface MonthlyUsage extends RunCostSummary {

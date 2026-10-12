@@ -141,7 +141,7 @@ export function computeUsageCost(
 }
 
 /** 単価が無くて合計に入れなかった、事業者・モデル・送り方1つぶんの使用量 */
-export interface UnpricedUsage extends UsageCostTarget {
+interface UnpricedUsage extends UsageCostTarget {
   missing: MissingPriceReason
   usage: RecordedTokenUsage
 }

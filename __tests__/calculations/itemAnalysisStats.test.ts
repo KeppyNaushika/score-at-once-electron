@@ -113,13 +113,14 @@ describe("computeItemAnalysis - dValue", () => {
   })
 
   it("下位群が正答・上位群が誤答なら負のD値", () => {
+    // 上位群・下位群（各1名）が同点の並びに左右されないよう、最上位と最下位を1名ずつにする
     const data = [
-      makeStudent([0, 1, 1]), // total 2（最上位）
-      makeStudent([0, 1, 0]),
-      makeStudent([1, 0, 0]),
-      makeStudent([1, 0, 0]), // total 1 だが q1 正答
+      makeStudent([0, 1, 1, 1]), // total 3（最上位・q1 誤答）
+      makeStudent([0, 1, 1, 0]), // total 2
+      makeStudent([1, 1, 0, 0]), // total 2
+      makeStudent([1, 0, 0, 0]), // total 1（最下位・q1 正答）
     ]
-    expect(dValueOf(computeItemAnalysis(data), "q1") as number).toBeLessThan(0)
+    expect(dValueOf(computeItemAnalysis(data), "q1")).toBeCloseTo(-1, 6)
   })
 
   it("部分点は得点率として比例反映される（=誤答0ではない）", () => {

@@ -307,6 +307,7 @@ describe("その場の採点", () => {
     })
     expect(storedRun.status).toBe("canceled")
     const attempts = await attemptsOf(run.id)
+    expect(attempts).toHaveLength(3)
     attempts.forEach((attempt) => {
       expect(attempt.state).toBe("errored")
       expect(attempt.errorMessage).toBe("中止しました")
@@ -336,6 +337,7 @@ describe("その場の採点", () => {
     })
     expect(storedRun.status).toBe("failed")
     const attempts = await attemptsOf(run.id)
+    expect(attempts).toHaveLength(3)
     attempts.forEach((attempt) => {
       expect(attempt.state).toBe("errored")
       expect(attempt.errorMessage).toContain("invalid x-api-key")
@@ -375,6 +377,36 @@ describe("その場の採点", () => {
 })
 
 describe("バッチ", () => {
+  it("バッチの中止は事業者へ取り消しを頼むだけで、試行は回収が閉じるまで待ちのまま", async () => {
+    const fake = createFakeProvider({})
+    const runner = createGradingJobRunner(
+      createTestDependencies(fake.provider, fixture.dataDirectory)
+    )
+    const { run } = await runner.startGradingRun(
+      startInput("batch"),
+      fixture.exam.user.id
+    )
+
+    await expect(
+      runner.cancelRun(run.id, fixture.otherUser.id)
+    ).rejects.toThrow("実行した教員だけ")
+    expect(fake.cancelBatch).not.toHaveBeenCalled()
+
+    await runner.cancelRun(run.id, fixture.exam.user.id)
+
+    expect(fake.cancelBatch).toHaveBeenCalledTimes(1)
+    expect(fake.cancelBatch).toHaveBeenCalledWith("batch_fake_1")
+    const storedRun = await testPrisma.aiGradingRun.findUniqueOrThrow({
+      where: { id: run.id },
+    })
+    expect(storedRun.status).toBe("in_progress")
+    const attempts = await attemptsOf(run.id)
+    expect(attempts).toHaveLength(3)
+    attempts.forEach((attempt) => {
+      expect(attempt.state).toBe("pending")
+    })
+  })
+
   it("預けて、この端末の回収で結果を取り込み、返らなかった試行は期限切れにする", async () => {
     let batchStatus: "in_progress" | "ended" = "in_progress"
     const fake = createFakeProvider({

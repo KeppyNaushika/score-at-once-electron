@@ -18,7 +18,7 @@ import type { AuditCategory, AuditTargetType } from "@/lib/shared/auditActions"
 import prisma from "./client"
 
 /** 対象1つでの絞り込み（`AuditLogTarget` の種類と id） */
-export interface AuditLogTargetFilter {
+interface AuditLogTargetFilter {
   targetType: AuditTargetType
   targetId: string
 }

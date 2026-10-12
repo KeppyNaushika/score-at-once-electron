@@ -271,9 +271,17 @@ describe("computeEllipticalInkStats", () => {
 
     it("バブルが画像端で切れても中心を空と誤認しない", () => {
       // 中心側の画素が1つも入らない位置。0を返すと「中心が空」と読まれ、
-      // 正しく塗られたマークが消し跡として退けられてしまう
+      // 正しく塗られたマークが消し跡として退けられてしまう。
+      // 画像全体を黒くして、ずらした先の画像内の部分が確かに塗られているようにする
+      // （白いままだと全体も中心も0で、代用しなくても一致してしまう）
+      const blackImage: RawImageData = {
+        data: Buffer.alloc(imgWidth * imgHeight * 3, 0),
+        width: imgWidth,
+        height: imgHeight,
+        channels: 3,
+      }
       const stats = computeEllipticalInkStats(
-        createInkedImage(0, "all"),
+        blackImage,
         cx,
         // 楕円の大半が画像外に出る位置へずらす
         imgHeight + halfH - 2,
@@ -282,7 +290,8 @@ describe("computeEllipticalInkStats", () => {
         128
       )
 
-      expect(stats.innerFillRatio).toBe(stats.fillRatio)
+      expect(stats.fillRatio).toBe(1)
+      expect(stats.innerFillRatio).toBe(1)
     })
 
     it("暗いピクセルが無ければ濃さは0", () => {

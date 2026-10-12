@@ -118,7 +118,7 @@ describe("成績のセルのスコープ検査", () => {
         gradeItemId: fixture.otherGradeItemId,
         excluded: true,
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/別の成績に属しています/)
     expect(await testPrisma.gradeItemExclusion.count()).toBe(0)
   })
 
@@ -131,7 +131,7 @@ describe("成績のセルのスコープ検査", () => {
         gradeItemId: fixture.gradeItemId,
         overrideLabel: "A",
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/対象生徒または評価項目が見つかりません/)
     expect(await testPrisma.gradeOverride.count()).toBe(0)
   })
 })

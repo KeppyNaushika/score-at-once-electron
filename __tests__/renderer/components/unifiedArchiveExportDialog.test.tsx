@@ -468,6 +468,7 @@ describe("統合アーカイブの書き出しダイアログ", () => {
       ).not.toHaveTextContent(LOST_TEXT)
 
       // チェックの無い行では引かず、赤字も赤枠も消える
+      const previewCallCountBeforeHover = previewExport.mock.calls.length
       await user.hover(
         within(dialog).getByRole("option", { name: "英語テスト" })
       )
@@ -481,6 +482,12 @@ describe("統合アーカイブの書き出しダイアログ", () => {
       expect(
         within(dialog).queryByText(/件の選択を解除/)
       ).not.toBeInTheDocument()
+      // 外した選択の下見は、今いる行が変わってから 200ms 待って引く。それより長く待っても
+      // 1回も引いていない
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      expect(previewExport.mock.calls.slice(previewCallCountBeforeHover)).toEqual(
+        []
+      )
     })
 
     it("一緒に外れるものが無い行には、赤字を出さない", async () => {

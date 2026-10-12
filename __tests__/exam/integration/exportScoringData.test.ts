@@ -78,7 +78,9 @@ describe("Excel 出力の採点データ", () => {
       result.questionRegions.map((cropRegion) => cropRegion.label)
     ).toEqual(fixture.cropRegions.map((cropRegion) => cropRegion.label))
 
+    expect(result.scoringData).toHaveLength(1)
     const [scoringData] = result.scoringData
+    expect(scoringData.scores).toHaveLength(fixture.cropRegions.length)
     // 配点が 0 に落ちると成績表の満点欄が全て 0 になる
     for (const [index, score] of scoringData.scores.entries()) {
       expect(score.maxScore).toBe(fixture.cropRegions[index].points)
@@ -178,6 +180,12 @@ describe("Excel 出力の採点データ", () => {
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
     const [scoringData] = result.scoringData
 
+    // 小計そのものは載る（載らなければ下のループは空回りする）
+    expect(
+      scoringData.subtotalScores
+        .map((subtotalScore) => subtotalScore.subtotalId)
+        .sort()
+    ).toEqual(fixture.subtotals.map((subtotal) => subtotal.id).sort())
     for (const subtotalScore of scoringData.subtotalScores) {
       expect(subtotalScore.hasQuestionAssignments).toBe(false)
       expect(subtotalScore.score).toBeNull()

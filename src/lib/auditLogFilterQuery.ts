@@ -14,7 +14,7 @@
  */
 
 /** 絞り込みの欄の種類。欄の定義（候補の出し方など）は一覧の画面の `filterFields.ts` */
-export const AUDIT_FILTER_FIELD_KEYS = [
+const AUDIT_FILTER_FIELD_KEYS = [
   "scope",
   "student",
   "cropRegion",

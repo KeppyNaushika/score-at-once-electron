@@ -6,7 +6,7 @@
  * **枝問にも原稿用紙が付くこと**、**オフにしても設定とマーカーが消えないこと**を見る。
  *
  * replaceAsbDefinition / getAsbDefinition は ./client シングルトン（アプリ本体のDB）を使うため、
- * archiveRoundTrip と同様に client をテスト用クライアントへモックする。
+ * examArchiveExtract と同様に client をテスト用クライアントへモックする。
  */
 
 import * as fs from "fs"

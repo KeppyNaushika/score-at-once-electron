@@ -71,10 +71,10 @@ const prisma = getTestPrismaClient()
 
 const EXAM_FIXTURE = "exam-full.score"
 
-describe("exportImportRoundTrip", () => {
+describe("examArchiveImport", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-rt-"))
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-import-"))
   })
 
   afterEach(() => {

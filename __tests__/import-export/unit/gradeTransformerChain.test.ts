@@ -542,9 +542,23 @@ describe("内包資料が空の旧アーカイブ", () => {
 
 describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化）", () => {
   it("射影された入れ子をテーブルごとのセクションへ展開する", () => {
-    const { data, appliedTransformations } = transformGradeToLatest(
-      buildV1_11_0Archive()
-    )
+    const archive = buildV1_11_0Archive()
+    const buildSource = (
+      name: string
+    ): (typeof archive.gradeData.gradeItems)[number]["dataSources"][number] => ({
+      type: "exam_total",
+      name,
+      weight: 100,
+      order: 0,
+      examName: null,
+      subtotalName: null,
+      cropRegionLabel: null,
+    })
+    archive.gradeData.gradeItems = [
+      { name: "知識・技能", order: 0, dataSources: [buildSource("中間")] },
+      { name: "思考・判断", order: 1, dataSources: [buildSource("期末")] },
+    ]
+    const { data, appliedTransformations } = transformGradeToLatest(archive)
 
     expect(appliedTransformations).toContainEqual({
       from: "1.12.0",
@@ -555,15 +569,20 @@ describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化�
     expect(data).not.toHaveProperty("boundariesData")
     expect(data.grades).toHaveLength(1)
     expect(data.grades[0].name).toBe("1学期成績")
-    expect(data.gradeItems.length).toBeGreaterThan(0)
-    // 各行が id を持ち、アーカイブ内で結合できる
+    expect(data.gradeItems).toHaveLength(2)
+    // 各行が id を持ち、アーカイブ内で元の入れ子の親へ結合できる
+    const gradeItemNameById = new Map(
+      data.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
+    )
     expect(
-      data.gradeDataSources.every((dataSource) =>
-        data.gradeItems.some(
-          (gradeItem) => gradeItem.id === dataSource.gradeItemId
-        )
-      )
-    ).toBe(true)
+      data.gradeDataSources.map((dataSource) => [
+        dataSource.name,
+        gradeItemNameById.get(dataSource.gradeItemId),
+      ])
+    ).toEqual([
+      ["中間", "知識・技能"],
+      ["期末", "思考・判断"],
+    ])
   })
 
   it("生徒・学級は full レコードとして外部参照セクションへ出る", () => {

@@ -1493,74 +1493,86 @@ describe("transformExamArchiveToLatest", () => {
  */
 describe("セクションが欠けたアーカイブ", () => {
   /**
-   * JSON が書き手の都合で落としうるセクション（archiveExtractor が既定値を入れる相手）。
-   *
    * キーを消すのは `Reflect.deleteProperty`。`ExamArchiveData` は最新版の形しか
    * 表せず、名前付き interface は `Record<string, unknown>` へ代入できないため
    * （`as` を使わずにキーを外す手段がこれ）。
+   *
+   * 消す前にキーが在ることを確かめる。無いキーを消しても何も起きず、
+   * 欠けたアーカイブを作ったつもりで完全なアーカイブを通してしまうため。
+   */
+  function dropSection(container: object, key: string): void {
+    expect(container).toHaveProperty(key)
+    Reflect.deleteProperty(container, key)
+  }
+
+  /**
+   * JSON が書き手の都合で落としうるセクション（archiveExtractor が既定値を入れる相手）。
+   *
+   * 1.0.0 は Project→Exam 改名前なので、同じセクションでもキーの名前が違う
+   * （`projectStudents`/`projectPages`）。1.0.0 の形に無いセクション（`tagsData`）は
+   * 1.0.0 側を null にして、現行の形だけで確かめる。
    */
   const OMITTABLE_SECTIONS: Array<{
     path: string
-    drop: (data: ExamArchiveData) => void
+    dropFromV1_0_0: ((data: ExamArchiveData) => void) | null
+    dropFromCurrent: (data: ExamArchiveData) => void
   }> = [
     {
       path: "scoresData.questionScores",
-      drop: (data) => {
-        Reflect.deleteProperty(data.scoresData, "questionScores")
-      },
+      dropFromV1_0_0: (data) => dropSection(data.scoresData, "questionScores"),
+      dropFromCurrent: (data) => dropSection(data.scoresData, "questionScores"),
     },
     {
       path: "scoresData.drawingAnnotations",
-      drop: (data) => {
-        Reflect.deleteProperty(data.scoresData, "drawingAnnotations")
-      },
+      dropFromV1_0_0: (data) =>
+        dropSection(data.scoresData, "drawingAnnotations"),
+      dropFromCurrent: (data) =>
+        dropSection(data.scoresData, "drawingAnnotations"),
     },
     {
       path: "examData.examStudents",
-      drop: (data) => {
-        Reflect.deleteProperty(data.examData, "examStudents")
-      },
+      dropFromV1_0_0: (data) => dropSection(data.examData, "projectStudents"),
+      dropFromCurrent: (data) => dropSection(data.examData, "examStudents"),
     },
     {
       path: "examData.examPages",
-      drop: (data) => {
-        Reflect.deleteProperty(data.examData, "examPages")
-      },
+      dropFromV1_0_0: (data) => dropSection(data.examData, "projectPages"),
+      dropFromCurrent: (data) => dropSection(data.examData, "examPages"),
     },
     {
       path: "examData.cropRegions",
-      drop: (data) => {
-        Reflect.deleteProperty(data.examData, "cropRegions")
-      },
+      dropFromV1_0_0: (data) => dropSection(data.examData, "cropRegions"),
+      dropFromCurrent: (data) => dropSection(data.examData, "cropRegions"),
     },
     {
       path: "studentsData.students",
-      drop: (data) => {
-        Reflect.deleteProperty(data.studentsData, "students")
-      },
+      dropFromV1_0_0: (data) => dropSection(data.studentsData, "students"),
+      dropFromCurrent: (data) => dropSection(data.studentsData, "students"),
     },
     {
       path: "tagsData.tags",
-      drop: (data) => {
-        if (data.tagsData) Reflect.deleteProperty(data.tagsData, "tags")
-      },
+      dropFromV1_0_0: null,
+      dropFromCurrent: (data) => dropSection(data.tagsData ?? {}, "tags"),
     },
   ]
 
   // 最古の版から通すと全27変換が走るので、どの変換器の取りこぼしも捕まる
   for (const section of OMITTABLE_SECTIONS) {
-    test(`${section.path} を持たない 1.0.0 アーカイブが最新まで変換できる`, () => {
-      const data = createV1_0_0_ArchiveData()
-      section.drop(data)
+    const { dropFromV1_0_0 } = section
+    if (dropFromV1_0_0) {
+      test(`${section.path} を持たない 1.0.0 アーカイブが最新まで変換できる`, () => {
+        const data = createV1_0_0_ArchiveData()
+        dropFromV1_0_0(data)
 
-      const result = transformExamArchiveToLatest(data)
+        const result = transformExamArchiveToLatest(data)
 
-      expect(result.finalVersion).toBe("1.27.0")
-    })
+        expect(result.finalVersion).toBe("1.27.0")
+      })
+    }
 
     test(`${section.path} を持たない現行アーカイブが変換を通る`, () => {
       const data = createCurrentArchiveData()
-      section.drop(data)
+      section.dropFromCurrent(data)
 
       expect(() => transformExamArchiveToLatest(data)).not.toThrow()
     })

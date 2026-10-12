@@ -336,5 +336,15 @@ describe("deployPendingMigrations", () => {
     expect(
       await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
     ).toBe(0)
+    // 返り値だけでなく、migration も流さず記録の表も作らない
+    const tableNames = withDatabase((db) =>
+      db
+        .prepare<[], { name: string }>(
+          `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`
+        )
+        .all()
+        .map((row) => row.name)
+    )
+    expect(tableNames).toEqual(["Unrelated"])
   })
 })

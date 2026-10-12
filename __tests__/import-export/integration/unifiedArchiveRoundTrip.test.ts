@@ -9,7 +9,9 @@
  *
  * 段階3の終わりの条件（docs/unified-archive-design.md §10）: 書き出し → 取り込みの往復で行が一致する。
  * 各部品の規則は unifiedArchiveCreate / unifiedArchiveOpen / unifiedArchiveImport の各テストが見る。
- * ここは、部品を本番と同じ順でつないで、空にした DB へ統合で取り込むと元に戻ることだけを見る。
+ * ここは、部品を本番と同じ順でつないで、空にした DB へ統合で取り込むと元に戻ることを見る
+ * （範囲は試験・資料・成績算出・解答用紙定義・在籍・採点・利用者の設定・監査ログまで。
+ * 利用者の passcode は書かない）。
  *
  * テスト DB は migration でなく schema から直に作るので `_prisma_migrations` を持たない。開く側は
  * それを必要とするため、テスト DB の複製にアプリの全 migration を適用済みとして記録し、それを
@@ -116,6 +118,29 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
     fixture = await createUnifiedArchiveFixture(prisma)
     fileFixture = await createUnifiedArchiveFileFixture(prisma, fixture)
     fileContentsByPath = writeDataDirectoryFiles(DATA_DIR, allImagePaths())
+    // passcode は書き出しにも取り込みにも載らない
+    await prisma.user.update({
+      where: { id: fixture.examA.user.id },
+      data: { passcode: "1234", passcodeType: "pin" },
+    })
+    await prisma.auditLog.create({
+      data: {
+        userId: fixture.examA.user.id,
+        action: "exam.update",
+        category: "exam",
+        scopeId: fixture.examA.exam.id,
+        entityType: "Exam",
+        entityId: fixture.examA.exam.id,
+        summary: "試験名を変えた",
+        targets: {
+          create: {
+            targetType: "Student",
+            targetId: fixture.examA.examStudents[0].studentId,
+            targetLabel: "対象の生徒",
+          },
+        },
+      },
+    })
     await prisma.returnSnapshot.create({
       data: {
         examStudentId: fixture.examA.examStudents[0].id,
@@ -146,7 +171,7 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
           Grade: [fixture.gradeId],
           AsbDefinition: [fileFixture.asbDefinitionId],
         },
-        optionalItems: ["userSettings"],
+        optionalItems: ["userSettings", "auditLog"],
       },
       exportedByUserId: fixture.examA.user.id,
       appVersion: "0.0.0-test",
@@ -164,10 +189,15 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
       "Exam",
       "Coursework",
       "Grade",
+      "AsbDefinition",
       "AsbImageElement",
+      "StudentClassroomMembership",
       "QuestionScore",
       "ReturnSnapshot",
+      "GradeComparison",
       "UserPreference",
+      "AuditLog",
+      "AuditLogTarget",
     ]) {
       expect(archiveIds.get(table)?.length ?? 0, table).toBeGreaterThan(0)
     }
@@ -185,6 +215,8 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
 
     expect(plan.uniqueConflicts).toEqual([])
     expect(plan.warnings).toEqual([])
+    expect(plan.renamedIds).toEqual([])
+    expect(plan.idMap).toEqual({})
     for (const [table, ids] of archiveIds) {
       expect(plan.counts[table], table).toEqual({
         created: ids.length,
@@ -193,9 +225,21 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
         skipped: 0,
       })
     }
+    expect(Object.keys(plan.counts).sort()).toEqual(
+      [...archiveIds.keys()].sort()
+    )
     const rowsAfterImport = readRowsByIds(TEST_DB_PATH, archiveIds)
     for (const [table, rows] of rowsBeforeExport) {
       expect(rowsAfterImport.get(table), table).toEqual(rows)
+    }
+    // 作り直した利用者は passcode を持たない
+    const users = await prisma.user.findMany({
+      where: { id: { in: archiveIds.get("User") ?? [] } },
+    })
+    expect(users.length).toBeGreaterThan(0)
+    for (const user of users) {
+      expect(user.passcode, user.id).toBeNull()
+      expect(user.passcodeType, user.id).toBe("none")
     }
     expect(findDanglingReferences(TEST_DB_PATH)).toEqual([])
 

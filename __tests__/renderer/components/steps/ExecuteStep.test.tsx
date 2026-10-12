@@ -11,7 +11,9 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ExecuteStep } from "@/components/import/steps/ExecuteStep"
+import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 
+import { createMockImportSummary } from "../../helpers/mockData"
 import { createMockWizard } from "../../helpers/mockWizard"
 
 describe("ExecuteStep", () => {
@@ -31,13 +33,17 @@ describe("ExecuteStep", () => {
   })
 
   it("EX-2: 実行中にプログレス表示がされる", async () => {
-    let resolveImport: (value: unknown) => void
+    let resolveImport: (
+      importResult: Awaited<ReturnType<UseImportWizardReturn["executeImport"]>>
+    ) => void
     const wizard = createMockWizard()
-    wizard.executeImport = vi.fn().mockReturnValue(
-      new Promise((resolve) => {
-        resolveImport = resolve
-      })
-    )
+    wizard.executeImport = vi
+      .fn<UseImportWizardReturn["executeImport"]>()
+      .mockReturnValue(
+        new Promise((resolve) => {
+          resolveImport = resolve
+        })
+      )
 
     const onClose = vi.fn()
     render(<ExecuteStep wizard={wizard} onClose={onClose} />)
@@ -46,58 +52,8 @@ describe("ExecuteStep", () => {
 
     // resolveして完了させる
     resolveImport!({
-      success: true,
       examId: "test",
-      summary: {
-        created: {
-          students: 0,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 0,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-        updated: {
-          students: 0,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 0,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-        skipped: {
-          students: 0,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 0,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-        unchanged: {
-          students: 0,
-          classes: 0,
-          users: 0,
-          pages: 0,
-          regions: 0,
-          scores: 0,
-          annotations: 0,
-          subtotalGroups: 0,
-          masterImages: 0,
-          answerSheetImages: 0,
-        },
-      },
+      summary: createMockImportSummary(),
       warnings: [],
     })
 
@@ -106,13 +62,15 @@ describe("ExecuteStep", () => {
     })
   })
 
-  it("EX-5: 失敗時にエラーメッセージが表示される", async () => {
+  it("EX-5: 失敗時に state.error の文言が表示される", async () => {
     // 失敗時 executeImport は null を返し、文言は wizard の state.error に載る
     const wizard = createMockWizard()
-    wizard.executeImport = vi.fn().mockResolvedValue(null)
+    wizard.executeImport = vi
+      .fn<UseImportWizardReturn["executeImport"]>()
+      .mockResolvedValue(null)
     wizard.state = {
       ...wizard.state,
-      error: "インポートに失敗しました: DB接続エラー",
+      error: "DB接続エラー",
     }
     const onClose = vi.fn()
 
@@ -121,6 +79,8 @@ describe("ExecuteStep", () => {
     await waitFor(() => {
       expect(screen.getByText("インポートに失敗しました")).toBeInTheDocument()
     })
+    expect(screen.getByText("DB接続エラー")).toBeInTheDocument()
+    expect(screen.queryByText("詳細は不明です")).not.toBeInTheDocument()
   })
 
   it("EX-6: 試験を開くボタンでonCompleteとonCloseが呼ばれる", async () => {

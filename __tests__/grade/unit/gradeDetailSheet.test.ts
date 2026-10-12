@@ -154,21 +154,6 @@ describe("createDetailSheet: 列構成", () => {
     ])
   })
 
-  it("1人目の生徒が除外でも、ヘッダーと全行のセル数が一致する", () => {
-    // 回帰の核: 以前はヘッダーを students[0] から導いていたため、1人目が除外だと
-    // その項目のヘッダーが「合計」1列に縮み、非除外の生徒の行だけが長くなっていた。
-    const { header, rows } = cellCounts(
-      makeResult([
-        makeStudent("s1", ["gi-knowledge"]), // 1人目が知識・技能で除外
-        makeStudent("s2"),
-        makeStudent("s3"),
-      ])
-    )
-
-    expect(header).toBe(EXPECTED_COLUMNS)
-    expect(rows).toEqual([EXPECTED_COLUMNS, EXPECTED_COLUMNS, EXPECTED_COLUMNS])
-  })
-
   it("全生徒が除外でもヘッダーと行のセル数が一致する", () => {
     const { header, rows } = cellCounts(
       makeResult([
@@ -181,13 +166,17 @@ describe("createDetailSheet: 列構成", () => {
     expect(rows).toEqual([EXPECTED_COLUMNS, EXPECTED_COLUMNS])
   })
 
-  it("1人目が除外でも、非除外の生徒の点数が正しい列に載る", () => {
+  it("1人目が除外でも、ヘッダーは縮まず、非除外の生徒の点数が正しい列に載る", () => {
+    // 回帰の核: 以前はヘッダーを students[0] から導いていたため、1人目が除外だと
+    // その項目のヘッダーが「合計」1列に縮み、非除外の生徒の行だけが長くなっていた。
     const workbook = new ExcelJS.Workbook()
     createDetailSheet(
       workbook,
       makeResult([makeStudent("s1", ["gi-knowledge"]), makeStudent("s2")])
     )
     const sheet = workbook.getWorksheet("詳細")!
+
+    expect(sheet.getRow(1).cellCount).toBe(EXPECTED_COLUMNS)
 
     // s1(3行目ではなく2行目): 知識は除外3セル分、思考は実数
     expect(sheet.getRow(2).values).toEqual([

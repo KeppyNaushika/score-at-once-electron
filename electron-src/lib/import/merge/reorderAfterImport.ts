@@ -25,7 +25,7 @@ import type { PrismaTransaction } from "./types"
  * 詰め直しに要る分だけの Prisma クライアント。
  *
  * 試験の取り込みと資料の取り込みでトランザクション型の宣言が違う（前者は
- * `PrismaTransaction`、後者は `TransactionClient`）ため、使う delegate だけを取り出して
+ * `PrismaTransaction`、後者は `Prisma.TransactionClient`）ため、使う delegate だけを取り出して
  * どちらからも渡せるようにする。
  */
 type ReorderClient = Pick<

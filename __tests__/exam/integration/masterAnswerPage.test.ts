@@ -47,6 +47,9 @@ import {
 
 const prisma = getTestPrismaClient()
 
+/** 「書き換えていない」を日時で見るときに、先に戻しておく過去の固定時刻 */
+const PAST_TIMESTAMP = new Date("2020-01-01T00:00:00.000Z")
+
 /** アップロード1件分のダミー画像 */
 const fileData = (name: string, content: string) => ({
   name,
@@ -367,20 +370,35 @@ describe("moveExamPage", () => {
       fileData("page2.png", "master-2"),
       fileData("page3.png", "master-3"),
     ])
-    const before = await pagesInOrder(exam.id)
+    // 作った直後に動かすと、書き換えても同じミリ秒に収まって日時が一致してしまうので、
+    // 先に過去の固定時刻へ戻しておく
+    await prisma.examPage.updateMany({
+      where: { examId: exam.id },
+      data: { updatedAt: PAST_TIMESTAMP },
+    })
 
     // 前2枚を入れ替える。3枚目は位置が変わらないので触られない
     await moveExamPage(pages[0].id, "right")
 
     const after = await pagesInOrder(exam.id)
-    const untouched = after.find((page) => page.id === pages[2].id)!
-    const original = before.find((page) => page.id === pages[2].id)!
-    expect(untouched.updatedAt).toEqual(original.updatedAt)
+    const updatedAtById = new Map(
+      after.map((page) => [page.id, page.updatedAt.toISOString()])
+    )
+    expect(updatedAtById.get(pages[2].id)).toBe(PAST_TIMESTAMP.toISOString())
+    // 動かした2枚は書いている（日時を戻したことで、書いたかどうかが区別できている）
+    expect(updatedAtById.get(pages[0].id)).not.toBe(
+      PAST_TIMESTAMP.toISOString()
+    )
+    expect(updatedAtById.get(pages[1].id)).not.toBe(
+      PAST_TIMESTAMP.toISOString()
+    )
   })
 
-  it("他の教員が別のページを動かしていても、その結果を踏み潰さない", async () => {
+  it("入れ替えは動かす2枚の行にしか書かず、他の教員が動かしたページの行を書き直さない", async () => {
     // 一覧を丸ごと送っていた頃は、手元が古いまま並び替えると相手の移動ごと
-    // 上書きしていた。入れ替えは動かす2枚にしか触らない
+    // 上書きしていた。今の API は手元の一覧を受け取らないので古い手元は再現できない。
+    // 同時に動かしたときに同期（行ごとの後勝ち）で相手の移動が残るのは、こちらの入れ替えが
+    // 相手の動かした行に書かないからなので、それを行の更新日時で確かめる
     const exam = await prisma.exam.create({ data: { examName: "同時移動" } })
     const pages = await uploadMasterAnswers(exam.id, [
       fileData("page1.png", "master-1"),
@@ -389,8 +407,15 @@ describe("moveExamPage", () => {
       fileData("page4.png", "master-4"),
     ])
 
-    // 別の教員が後ろ2枚を入れ替えた後で、こちらが前2枚を入れ替える
+    // 別の教員が後ろ2枚を入れ替えた
     await moveExamPage(pages[2].id, "right")
+    // 書いたかどうかを日時で区別できるよう、全ページを過去の固定時刻へ戻す
+    await prisma.examPage.updateMany({
+      where: { examId: exam.id },
+      data: { updatedAt: PAST_TIMESTAMP },
+    })
+
+    // こちらが前2枚を入れ替える
     await moveExamPage(pages[0].id, "right")
 
     expect(await pageIdsInOrder(exam.id)).toEqual([
@@ -399,5 +424,13 @@ describe("moveExamPage", () => {
       pages[3].id,
       pages[2].id,
     ])
+    const after = await pagesInOrder(exam.id)
+    const otherTeacherPages = after.filter(
+      (page) => page.id === pages[2].id || page.id === pages[3].id
+    )
+    expect(otherTeacherPages).toHaveLength(2)
+    for (const page of otherTeacherPages) {
+      expect(page.updatedAt.toISOString()).toBe(PAST_TIMESTAMP.toISOString())
+    }
   })
 })

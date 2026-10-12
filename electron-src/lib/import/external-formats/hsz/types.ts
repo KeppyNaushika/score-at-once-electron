@@ -21,7 +21,7 @@ export interface HszDbInfo {
 // sheets: シート（試験）のメタ情報
 // =============================================================================
 
-export interface HszSheet {
+interface HszSheet {
   id: number
   /** 教科ID（HSZ_SUBJECT_MAP参照） */
   subject_id: number
@@ -78,7 +78,7 @@ export interface HszSheet {
 // sheet_pages: ページ情報
 // =============================================================================
 
-export interface HszSheetPage {
+interface HszSheetPage {
   id: number
   sheet_id: number
   /** 0始まりのページ番号 */
@@ -165,7 +165,7 @@ export interface HszSheetField {
 /**
  * フィールドの矩形座標（ピクセル）
  */
-export interface HszFieldRim {
+interface HszFieldRim {
   /** left: X座標 */
   l: number
   /** top: Y座標 */

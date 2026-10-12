@@ -62,6 +62,9 @@ describe("ReturnSnapshot capture/diff", () => {
 
     const diff = await getReturnDiff(fixture.exam.id)
     expect(diff.hasAnySnapshot).toBe(true)
+    expect(
+      diff.diffs.map((studentDiff) => studentDiff.examStudentId).sort()
+    ).toEqual([...examStudentIds].sort())
     for (const studentDiff of diff.diffs) {
       expect(studentDiff.hasSnapshot).toBe(true)
       expect(studentDiff.changed).toBe(false)

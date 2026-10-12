@@ -10,7 +10,8 @@
  * 端末Aで小問を消すと子の削除だけが端末Bへ伝わり、Bでは枠だけ残って中身が消えた。
  * 作成は伝わらないのに削除は伝わる、という非対称になる。
  *
- * ここでは schema.prisma を読んで、その不整合が無いことを検査する。
+ * ここでは schema.prisma を読んで、除外リストが空のまま全モデルが自動検出に載ることを
+ * 検査する（空でなければ、上の不整合は起こりえない）。
  */
 import * as fs from "fs"
 import * as path from "path"
@@ -36,54 +37,7 @@ const readModels = (): PrismaModel[] => {
 const isDetectedBySync = (model: PrismaModel): boolean =>
   /^\s+id\s+/m.test(model.body) && /^\s+updatedAt\s+/m.test(model.body)
 
-/** そのモデルが `@relation(fields: [...])` で参照している相手モデル名 */
-const referencedModels = (model: PrismaModel): string[] =>
-  [...model.body.matchAll(/^\s+\w+\s+(\w+)\??\s+@relation\(/gm)].map(
-    (match) => match[1]
-  )
-
 describe("同期対象テーブルの整合", () => {
-  it("除外リストのテーブルはすべて実在する（リネーム・削除の取り残しが無い）", () => {
-    const modelNames = new Set(readModels().map((model) => model.name))
-    const missing = SYNC_EXCLUDE_TABLES.filter(
-      (table) => !modelNames.has(table)
-    )
-
-    expect(missing).toEqual([])
-  })
-
-  it("同期されるテーブルが、同期されないテーブルを参照していない", () => {
-    // **同期されない理由は2つある**。除外リストに載っているか、`updatedAt` が無くて
-    // ライブラリの自動検出から漏れるか。後者を見落とすと、この検査は元の不具合を
-    // 防げない — AsbHeaderField はまさに `updatedAt` が無いために同期対象外だった。
-    const excluded = new Set(SYNC_EXCLUDE_TABLES)
-    const models = readModels()
-    const unsynced = new Set(
-      models
-        .filter((model) => excluded.has(model.name) || !isDetectedBySync(model))
-        .map((model) => model.name)
-    )
-
-    const violations: string[] = []
-    for (const model of models) {
-      if (unsynced.has(model.name)) continue
-
-      for (const target of referencedModels(model)) {
-        if (unsynced.has(target)) {
-          const reason = excluded.has(target)
-            ? "除外リスト"
-            : "updatedAt が無く自動検出から漏れる"
-          violations.push(`${model.name} → ${target}（${reason}）`)
-        }
-      }
-    }
-
-    // 親が同期されないまま子だけ同期されると、参照先の無い行が相手端末に積まれ、
-    // さらに親の作成は伝わらないのに子の削除は伝わるという非対称が生まれる
-    // （ライブラリは foreign_keys を有効化せず、INSERT も FK 違反を捕まえない）
-    expect(violations).toEqual([])
-  })
-
   it("除外リストに無いテーブルは、必ず同期対象として検出される", () => {
     // 業務データは全て共有する方針なので、除外リストに載っていない＝同期されるべき。
     // ところがライブラリの検出条件は `id` と `updatedAt` を持つことなので、
@@ -103,7 +57,11 @@ describe("同期対象テーブルの整合", () => {
   it("除外する表は1つも無い", () => {
     // 業務データ（解答用紙定義・試験・成績・生徒・学級・小計点・タグ）も、
     // 利用者ごとの設定も全て共有する。除外に入れてよいのは「同じ DB を共有していても
-    // 端末ごとに違う値であるべき表」だけで、現時点でそういう表は無い
+    // 端末ごとに違う値であるべき表」だけで、現時点でそういう表は無い。
+    //
+    // **除外を足すときは、検査も足すこと。** 一覧が空のあいだは「除外した表が実在するか」
+    // 「同期される表が除外した表を参照していないか（親は伝わらないのに子の削除は伝わる）」
+    // は空振りにしかならないので置いていない。除外を入れるなら、その2つを書き足す
     expect(SYNC_EXCLUDE_TABLES).toEqual([])
   })
 })

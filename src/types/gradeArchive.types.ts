@@ -394,7 +394,7 @@ export interface GradeArchiveImportOptions {
 }
 
 /** 資料1件分のマッチング候補（ウィザードでユーザーに提示） */
-export interface GradeArchiveCourseworkMatch {
+interface GradeArchiveCourseworkMatch {
   /** アーカイブ内の資料uuid（決定マップのキー） */
   archiveId: string
   name: string

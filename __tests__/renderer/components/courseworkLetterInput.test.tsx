@@ -18,6 +18,7 @@
 
 import "../setup"
 
+import { useQuery } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
@@ -26,6 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { CourseworkItemsContainer } from "@/components/coursework/03-items/CourseworkItemsContainer"
 import { CourseworkScoresContainer } from "@/components/coursework/04-scores/CourseworkScoresContainer"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
+import { courseworkScoresQuery } from "@/queries/coursework"
 import type { PublicUser } from "@/queries/user"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
@@ -186,6 +188,18 @@ function storedLetterScore(courseworkStudentId: string, letterValue: string) {
       },
     },
   }
+}
+
+/**
+ * 評価項目の画面が入力された評語を読み終えたかの印。自分では取りに行かず
+ * （`enabled: false`）、画面の取得が同じキャッシュへ入れたのを見る
+ */
+function ScoresLoadedProbe() {
+  const { isSuccess } = useQuery({
+    ...courseworkScoresQuery(ITEM_ID),
+    enabled: false,
+  })
+  return <output data-testid="scores-loaded">{String(isSuccess)}</output>
 }
 
 const batchUpsertScores = vi.fn()
@@ -398,14 +412,22 @@ describe("評価項目(03): 変換表に無い評語の列挙", () => {
       [storedLetterScore("cs-1", "A"), storedLetterScore("cs-2", "B")]
     )
     const QueryWrapper = createQueryWrapper()
-    render(<CourseworkItemsContainer courseworkId={COURSEWORK_ID} />, {
-      wrapper: QueryWrapper,
-    })
+    render(
+      <>
+        <CourseworkItemsContainer courseworkId={COURSEWORK_ID} />
+        <ScoresLoadedProbe />
+      </>,
+      { wrapper: QueryWrapper }
+    )
 
-    // 変換表の編集欄が出るまで待ってから、注意が無いことを見る
+    // 変換表の編集欄と、入力された評語の両方が届くまで待ってから、注意が無いことを見る。
+    // 評語が届く前は注意が無いのが当たり前なので、編集欄だけ待つとどんな実装でも通る
     expect(
       await screen.findByText("評価記号 → 点数の変換表")
     ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByTestId("scores-loaded")).toHaveTextContent("true")
+    )
     expect(screen.queryByText(/変換表にない評価が入力されています/)).toBeNull()
   })
 })

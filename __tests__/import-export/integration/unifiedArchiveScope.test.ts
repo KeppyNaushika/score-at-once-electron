@@ -235,32 +235,6 @@ describe("統合アーカイブの範囲", () => {
     }
   })
 
-  it("同期のトリガー・内部表は書き出しに入らない", async () => {
-    const sourcePath = path.join(OUTPUT_DIR, "source.db")
-    const seed = new Database(TEST_DB_PATH, { readonly: true })
-    seed.prepare<[string]>("VACUUM INTO ?").run(sourcePath)
-    seed.close()
-    const source = new Database(sourcePath)
-    source.exec(`CREATE TABLE "_sns_rows_Exam" (id TEXT PRIMARY KEY)`)
-    source.exec(
-      `CREATE TRIGGER "sns_exam_insert" AFTER INSERT ON "Exam" BEGIN INSERT INTO "_sns_rows_Exam" (id) VALUES (NEW.id); END`
-    )
-    source.close()
-
-    const scope = resolve({ roots: { Exam: [fixture.examA.exam.id] } })
-    const outputPath = path.join(OUTPUT_DIR, "archive.db")
-    await writeArchiveDatabase(sourcePath, outputPath, scope)
-
-    const archive = new Database(outputPath, { readonly: true })
-    try {
-      const leftovers = archive
-        .prepare<[], { name: string }>(
-          "SELECT name FROM sqlite_master WHERE type = 'trigger' OR name LIKE '\\_sns%' ESCAPE '\\'"
-        )
-        .all()
-      expect(leftovers).toEqual([])
-    } finally {
-      archive.close()
-    }
-  })
+  // 同期のトリガー・内部表が書き出しに入らないことは、書き出し全体を通す
+  // unifiedArchiveCreate.test.ts の archive.db の整合の検査が見る
 })

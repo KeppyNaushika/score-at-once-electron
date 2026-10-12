@@ -45,7 +45,7 @@ import type {
   UnifiedArchiveImportDecisions,
 } from "./types"
 
-export type UnifiedArchiveTableCounts = {
+type UnifiedArchiveTableCounts = {
   created: number
   replaced: number
   kept: number
@@ -130,7 +130,7 @@ export interface UnifiedArchiveImportResult {
 }
 
 /** 行の取り込みが決めた、写すファイル */
-export interface UnifiedArchiveFilePaths {
+interface UnifiedArchiveFilePaths {
   /** 作った・置き換えた行が指すファイル。上書きのときは既存のファイルも置き換える */
   readonly written: readonly string[]
   /**

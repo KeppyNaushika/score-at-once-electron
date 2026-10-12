@@ -43,7 +43,7 @@ export const SCORING_METHOD_STEP_ID = "scoringMethod"
 const OUTSIDE_STEP_ID = "outside"
 
 /** 採点方式の問いの選択肢（この順） */
-export const QUESTIONING_SCORING_METHODS = ["deduction", "addition"] as const
+const QUESTIONING_SCORING_METHODS = ["deduction", "addition"] as const
 export type QuestioningScoringMethod =
   (typeof QUESTIONING_SCORING_METHODS)[number]
 

@@ -22,10 +22,10 @@ import type { ArchiveOptionalItem } from "../../../../src/types/unifiedArchive.t
  * - link: 両側が入ったときだけ入る中間テーブル
  * - optional: 関連データではないが、書き出し画面で選べば入る（既定は含めない）
  */
-export type ArchiveTableRole = "root" | "shared" | "owned" | "link" | "optional"
+type ArchiveTableRole = "root" | "shared" | "owned" | "link" | "optional"
 
 /** 外部キーの列1本 */
-export interface ArchiveReference {
+interface ArchiveReference {
   readonly column: string
   readonly table: string
   /** NOT NULL か。外れた行を指すとき、必須なら参照する行ごと外れ、任意なら NULL にする */

@@ -458,7 +458,7 @@ describe("detectScoringConflicts", () => {
       const user = await createTestUser()
       const examId = generateId()
       const cropRegionId = generateId()
-      const unmappedExamStudentId = generateId()
+      const studentId = generateId()
 
       await createExamWithCropRegions({
         examId,
@@ -466,17 +466,59 @@ describe("detectScoringConflicts", () => {
         userId: user.id,
       })
 
+      await prisma.student.create({
+        data: {
+          id: studentId,
+          studentNumber: "S003",
+          lastName: "高橋",
+          firstName: "次郎",
+          lastNameKana: "タカハシ",
+          firstNameKana: "ジロウ",
+          enrollmentYear: 2024,
+        },
+      })
+      const examStudentId = await createExamStudentRow(examId, studentId)
+      const importExamStudentId = generateId()
+
+      // 既存: correct。生徒が対応付けば、インポートの incorrect と競合する
+      await prisma.questionScore.create({
+        data: {
+          id: generateId(),
+          cropRegionId,
+          examStudentId,
+          status: "correct",
+          partialScore: null,
+          userId: user.id,
+        },
+      })
+
+      const importExamData = createArchiveExamData({ examId })
+      importExamData.examStudents = [
+        archiveExamStudent(importExamStudentId, examId, studentId),
+      ]
       const importData = createExtractedArchiveData({
+        examData: importExamData,
         scoresData: createArchiveScoresData([
           {
             cropRegionId,
-            examStudentId: unmappedExamStudentId,
-            status: "correct",
-            partialScore: "10",
+            examStudentId: importExamStudentId,
+            status: "incorrect",
+            partialScore: null,
+            userId: user.id,
           },
         ]),
       })
 
+      // 受験者行・設問・採点者の対応は揃っているので、生徒の対応があれば競合になる
+      const mapped = await detectScoringConflicts(
+        importData,
+        { [studentId]: studentId },
+        { [cropRegionId]: cropRegionId },
+        { [user.id]: user.id }
+      )
+      expect(mapped.conflictCount).toBe(1)
+
+      // 生徒の対応だけを外すと、同じ行でも新規として数える
       const result = await detectScoringConflicts(
         importData,
         {}, // マッピングなし

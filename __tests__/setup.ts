@@ -1,18 +1,13 @@
 /**
  * Vitestファイルレベルセットアップ
  *
- * 各テストファイルで読み込まれ、テスト用環境変数を設定する
+ * 各テストファイルで読み込まれ、Electron API のスタブ等を敷く
  */
 
 import * as path from "path"
 import { vi } from "vitest"
 
-const TEST_DB_PATH = path.resolve(__dirname, "../data/test-database.db")
-const TEST_DATA_DIR = path.dirname(TEST_DB_PATH)
-
-// テスト用環境変数を設定
-process.env.DATABASE_URL = `file:${TEST_DB_PATH}`
-;(process.env as Record<string, string>).NODE_ENV = "test"
+const TEST_DATA_DIR = path.resolve(__dirname, "../data")
 
 // Electron非依存環境（Vitest/Node）でElectron APIをスタブ化
 // 一部のelectron-src/モジュールがトップレベルで `import { app } from "electron"` を行うため必須

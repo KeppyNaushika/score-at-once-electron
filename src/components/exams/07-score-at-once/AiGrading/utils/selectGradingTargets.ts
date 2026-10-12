@@ -38,7 +38,7 @@ export function isGradingTargetScope(
 }
 
 /** 送る答案を選ぶのに要る答案の形（行のまま） */
-export interface GradingTargetAnswer {
+interface GradingTargetAnswer {
   studentAnswerImage: Pick<
     AiGradingAnswer["studentAnswerImage"],
     "examStudentId"

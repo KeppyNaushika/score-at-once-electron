@@ -51,13 +51,22 @@ describe("答案画像の供給形", () => {
 
     const result = await getStudentsForExam(fixture.exam.id)
 
+    expect(result).toHaveLength(fixture.examStudents.length)
     for (const examStudent of result) {
-      const expected = fixture.studentAnswerImages.filter(
-        (studentAnswerImage) =>
-          studentAnswerImage.examStudentId === examStudent.id
-      ).length
+      const expectedImageIds = fixture.studentAnswerImages
+        .filter(
+          (studentAnswerImage) =>
+            studentAnswerImage.examStudentId === examStudent.id
+        )
+        .map((studentAnswerImage) => studentAnswerImage.id)
+      // 受験者ごとにページの数（2枚）ずつある
+      expect(expectedImageIds).toHaveLength(2)
       // 枚数を数えるのは renderer。main は行を渡すだけ（`_count` を作らない）
-      expect(examStudent.studentAnswerImages.length).toBe(expected)
+      expect(
+        examStudent.studentAnswerImages
+          .map((studentAnswerImage) => studentAnswerImage.id)
+          .sort()
+      ).toEqual(expectedImageIds.sort())
     }
   })
 
@@ -68,6 +77,7 @@ describe("答案画像の供給形", () => {
 
     const result = await getStudentsForExam(fixture.exam.id)
 
+    expect(result).toHaveLength(fixture.examStudents.length)
     for (const examStudent of result) {
       expect(examStudent.studentAnswerImages).toEqual([])
     }

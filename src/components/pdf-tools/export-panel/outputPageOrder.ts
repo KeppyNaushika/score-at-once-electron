@@ -60,17 +60,14 @@ export function movePageInOrder(
 }
 
 /** 取り込んだファイルの全ページのキー（ページ番号順） */
-export function filePageKeys(file: ImportedFile): string[] {
+function filePageKeys(file: ImportedFile): string[] {
   return Array.from({ length: file.pageCount }, (_, i) =>
     sourcePageKey(file.id, i + 1)
   )
 }
 
 /** 並び順から、指定したファイルのページを除く */
-export function withoutFilePageOrder(
-  pageOrder: PageOrder,
-  fileId: string
-): PageOrder {
+function withoutFilePageOrder(pageOrder: PageOrder, fileId: string): PageOrder {
   return pageOrder.filter((pageKey) => !isSourcePageKeyOf(pageKey, fileId))
 }
 
@@ -117,4 +114,90 @@ export function rebuildPageOrder(
     .flatMap(filePageKeys)
     .filter((pageKey) => !arrangedKeySet.has(pageKey))
   return [...arrangedKeys, ...missingKeys]
+}
+
+/**
+ * 並び順と、それを作り直す材料（出力モード・交互挿入の設定）の組。画面はこの組で持ち、
+ * 操作ごとの移り変わりは下の関数だけが決める（どの操作で並び順を作り直すかを1か所に置く）。
+ */
+export interface PageArrangement {
+  mode: PdfExportMode
+  interleaveConfig: InterleaveConfig
+  pageOrder: PageOrder
+}
+
+export const INITIAL_PAGE_ARRANGEMENT: PageArrangement = {
+  mode: "merge",
+  interleaveConfig: { transforms: [] },
+  pageOrder: [],
+}
+
+/**
+ * ファイルを取り込んだ。ページはページ番号順に並び順の末尾に付き、交互挿入の設定は
+ * 取り込んだ順に1ファイル1組で持つ（1回に入れるページ数は1から）。並び順は作り直さない
+ */
+export function arrangementWithImportedFiles(
+  arrangement: PageArrangement,
+  files: ImportedFile[]
+): PageArrangement {
+  return {
+    ...arrangement,
+    pageOrder: [...arrangement.pageOrder, ...files.flatMap(filePageKeys)],
+    interleaveConfig: {
+      ...arrangement.interleaveConfig,
+      transforms: [
+        ...arrangement.interleaveConfig.transforms,
+        ...files.map((file) => ({ fileId: file.id, pagesPerGroup: 1 })),
+      ],
+    },
+  }
+}
+
+/** ファイルを外した。そのファイルのページと交互挿入の設定が消え、残りの順は保つ */
+export function arrangementWithoutFile(
+  arrangement: PageArrangement,
+  fileId: string
+): PageArrangement {
+  return {
+    ...arrangement,
+    pageOrder: withoutFilePageOrder(arrangement.pageOrder, fileId),
+    interleaveConfig: {
+      ...arrangement.interleaveConfig,
+      transforms: arrangement.interleaveConfig.transforms.filter(
+        (transform) => transform.fileId !== fileId
+      ),
+    },
+  }
+}
+
+/**
+ * 出力モードを変えた。並び順をその方式の順に作り直す。方式を選ぶのは順を選ぶ操作
+ * なので、作り直さないと方式を変えても見た目が何も変わらない
+ */
+export function arrangementWithMode(
+  arrangement: PageArrangement,
+  files: ImportedFile[],
+  mode: PdfExportMode
+): PageArrangement {
+  return {
+    ...arrangement,
+    mode,
+    pageOrder: rebuildPageOrder(files, mode, arrangement.interleaveConfig),
+  }
+}
+
+/**
+ * 交互挿入の設定（1回に入れるページ数）を変えた。並び順をその設定で作り直す。
+ * ファイルの増減に伴う設定の増減は取り込み・削除が持つのでここを通らない
+ */
+export function arrangementWithInterleaveConfig(
+  arrangement: PageArrangement,
+  files: ImportedFile[],
+  interleaveConfig: InterleaveConfig
+): PageArrangement {
+  return {
+    ...arrangement,
+    interleaveConfig,
+    pageOrder: rebuildPageOrder(files, arrangement.mode, interleaveConfig),
+  }
 }

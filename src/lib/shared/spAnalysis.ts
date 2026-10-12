@@ -9,7 +9,7 @@
 // ================== S-P表 ==================
 
 /** 設問1問分の生徒応答（正誤の二値） */
-export interface SpInputItem {
+interface SpInputItem {
   questionId: string
   label: string
   /** 正答なら true */
@@ -26,7 +26,7 @@ export interface SpInputStudent {
 }
 
 /** S-P表の生徒行（合計正答数の降順に並ぶ） */
-export interface SpStudentRow {
+interface SpStudentRow {
   examStudentId: string
   studentName: string
   /** 正答数（行和 n_i） */
@@ -38,7 +38,7 @@ export interface SpStudentRow {
 }
 
 /** S-P表の設問列（正答者数の降順に並ぶ） */
-export interface SpProblemColumn {
+interface SpProblemColumn {
   questionId: string
   label: string
   /** 正答者数（列和 m_j） */
@@ -151,7 +151,7 @@ export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
 
 // ================== 得点度数分布 ==================
 
-export interface FrequencyBin {
+interface FrequencyBin {
   /** 階級の下限（含む） */
   lower: number
   /** 階級の上限（最終階級以外は含まない） */

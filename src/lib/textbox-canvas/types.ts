@@ -18,7 +18,7 @@ import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 /**
  * 座標系の種類
  */
-export type CoordinateSystem = "absolute" | "relative"
+type CoordinateSystem = "absolute" | "relative"
 
 /**
  * テキストボックスの基本データ構造（アンカーベース）

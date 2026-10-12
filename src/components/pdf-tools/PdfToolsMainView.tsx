@@ -14,12 +14,15 @@ import type {
 
 import ExportPanel from "./export-panel/ExportPanel"
 import {
-  filePageKeys,
+  arrangementWithImportedFiles,
+  arrangementWithInterleaveConfig,
+  arrangementWithMode,
+  arrangementWithoutFile,
+  INITIAL_PAGE_ARRANGEMENT,
   isSourcePageKeyOf,
   outputPageKey,
+  type PageArrangement,
   type PageOrder,
-  rebuildPageOrder,
-  withoutFilePageOrder,
 } from "./export-panel/outputPageOrder"
 import ImportPanel from "./import-panel/ImportPanel"
 
@@ -32,12 +35,11 @@ export default function PdfToolsMainView({
   previewColumns,
 }: PdfToolsMainViewProps) {
   const [importedFiles, setImportedFiles] = useState<ImportedFile[]>([])
-  // ページの並び順（取り込んだ全ページ。選択していないページも）。出力の順はこれだけで決まる
-  const [pageOrder, setPageOrder] = useState<PageOrder>([])
-  const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
-  const [interleaveConfig, setInterleaveConfig] = useState<InterleaveConfig>({
-    transforms: [],
-  })
+  // ページの並び順（取り込んだ全ページ。選択していないページも）と、それを作り直す材料
+  // （出力モード・交互挿入の設定）。出力の順は並び順だけで決まる
+  const [pageArrangement, setPageArrangement] = useState<PageArrangement>(
+    INITIAL_PAGE_ARRANGEMENT
+  )
   // 全体の N-up。並び順の後で面をまとめるだけなので、変えても並び順は作り直さない
   const [globalNUp, setGlobalNUp] = useState<NUpConfig>({
     pagesPerSheet: 1,
@@ -58,27 +60,12 @@ export default function PdfToolsMainView({
 
   const handleFilesImported = (files: ImportedFile[]) => {
     setImportedFiles((prev) => [...prev, ...files])
-    // 取り込んだファイルのページは、ページ番号順に並び順の末尾に付く
-    setPageOrder((prev) => [...prev, ...files.flatMap(filePageKeys)])
-    // 交互挿入の設定は取り込んだ順に1ファイル1組で持つ（1回に入れるページ数は1から）
-    setInterleaveConfig((prev) => ({
-      ...prev,
-      transforms: [
-        ...prev.transforms,
-        ...files.map((file) => ({ fileId: file.id, pagesPerGroup: 1 })),
-      ],
-    }))
+    setPageArrangement((prev) => arrangementWithImportedFiles(prev, files))
   }
 
   const handleFileRemoved = (fileId: string) => {
     setImportedFiles((prev) => prev.filter((file) => file.id !== fileId))
-    setPageOrder((prev) => withoutFilePageOrder(prev, fileId))
-    setInterleaveConfig((prev) => ({
-      ...prev,
-      transforms: prev.transforms.filter(
-        (transform) => transform.fileId !== fileId
-      ),
-    }))
+    setPageArrangement((prev) => arrangementWithoutFile(prev, fileId))
     // ファイル削除時に対応する除外ページ・ページ別回転もクリア
     setExcludedPages((prev) => withoutFilePages(prev, fileId))
     setPageRotations((prev) => withoutFileRotations(prev, fileId))
@@ -100,24 +87,25 @@ export default function PdfToolsMainView({
     )
   }
 
-  /**
-   * 出力モードを変えたら、並び順をその方式の順に作り直す。方式を選ぶのは順を選ぶ
-   * 操作なので、作り直さないと方式を変えても見た目が何も変わらない。
-   */
+  /** 出力モードを変えたら、並び順をその方式の順に作り直す（`arrangementWithMode`） */
   const handleExportModeChange = (mode: PdfExportMode) => {
-    setExportMode(mode)
-    setPageOrder(rebuildPageOrder(importedFiles, mode, interleaveConfig))
+    setPageArrangement((prev) => arrangementWithMode(prev, importedFiles, mode))
   }
 
   /**
    * 交互挿入の欄から来るのは1回に入れるページ数の変更だけなので、来たら並び順を
-   * 作り直す。ファイルの増減に伴う設定の増減は取り込み・削除が直接持つのでここを
-   * 通らず、N-up・回転はファイルの設定なので並び順に触れない（`handleFileUpdated`）。
+   * 作り直す。N-up・回転はファイルの設定なので並び順に触れない（`handleFileUpdated`）。
    */
   const handleInterleaveConfigChange = (config: InterleaveConfig) => {
-    setInterleaveConfig(config)
-    setPageOrder(rebuildPageOrder(importedFiles, exportMode, config))
+    setPageArrangement((prev) =>
+      arrangementWithInterleaveConfig(prev, importedFiles, config)
+    )
   }
+
+  /** 出力プレビューのドラッグで直した並び順（作り直しの材料は変えない） */
+  const handlePageOrderChange = useCallback((pageOrder: PageOrder) => {
+    setPageArrangement((prev) => ({ ...prev, pageOrder }))
+  }, [])
 
   /**
    * 出力プレビューからページを除外（永続的）。除外はページ単位で、面は残りのページで
@@ -216,16 +204,16 @@ export default function PdfToolsMainView({
           importedFiles={importedFiles}
           excludedPages={excludedPages}
           pageRotations={pageRotations}
-          exportMode={exportMode}
-          interleaveConfig={interleaveConfig}
+          exportMode={pageArrangement.mode}
+          interleaveConfig={pageArrangement.interleaveConfig}
           globalNUp={globalNUp}
-          pageOrder={pageOrder}
+          pageOrder={pageArrangement.pageOrder}
           isProcessing={isProcessing}
           onExportModeChange={handleExportModeChange}
           onInterleaveConfigChange={handleInterleaveConfigChange}
           onGlobalNUpChange={setGlobalNUp}
           onFileUpdated={handleFileUpdated}
-          onPageOrderChange={setPageOrder}
+          onPageOrderChange={handlePageOrderChange}
           onPageExcluded={handlePageExcluded}
           onPageRotated={handlePageRotated}
           onProcessingChange={setIsProcessing}

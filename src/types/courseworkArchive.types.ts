@@ -236,7 +236,7 @@ export interface CourseworkImportOptions {
   studentMatching?: CourseworkMatchingMethod
   /**
    * 未一致の生徒・学級を新規作成するか。
-   * - true（既定・単体インポート）: 名前衝突時サフィックス付きで新規作成
+   * - true（既定・単体インポート）: アーカイブの値のまま新規作成（名前がぶつかっても付け替えない）
    * - false（grade-archive 内包）: 既存 lookup のみ、未一致はスキップ + 警告
    */
   allowCreate?: boolean
