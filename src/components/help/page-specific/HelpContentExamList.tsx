@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react"
 
+import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
 import {
   Badge,
   HelpSection,
@@ -82,10 +83,10 @@ export function HelpContentExamList() {
               試験名・試験日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
             </p>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った試験は「読み込み」で取り込めます（.sao
-              のほか、以前の .score
-              なども選べます）。書き出しは行末の「…」から1件ずつ、
-              チェックを付ければまとめて .sao に書き出せます。
+              別の端末で作った試験は「読み込み」で取り込めます
+              <ArchiveImportFormatsNote legacyFormats=".score や外部の .hsz・.dat" />
+              。書き出しは行末の「…」から1件ずつ、チェックを付ければまとめて
+              .sao に書き出せます。
             </p>
           </div>
         </HelpSection>

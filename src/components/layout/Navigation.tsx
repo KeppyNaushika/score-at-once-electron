@@ -36,6 +36,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/AuthContext"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
 import { cn } from "@/lib/utils"
 
 interface NavItem {
@@ -44,6 +45,11 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
   /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI 採点。設計 §10-1） */
   isExperimental?: boolean
+  /**
+   * web 版では出さない（デスクトップ版でだけ動く機能）。AI 採点は API キーを暗号化して
+   * 保存できず、事業者への通信もブラウザからは通らない（docs/web-version-plan.md の判断待ち）
+   */
+  isDesktopOnly?: boolean
 }
 
 /** 読み上げ・ツールチップの名前（実験的機能なら「（実験的）」を添える） */
@@ -74,6 +80,7 @@ const navGroups: NavItem[][] = [
       label: "AI採点",
       icon: Bot,
       isExperimental: true,
+      isDesktopOnly: true,
     },
     { href: "/audit-logs", label: "操作履歴", icon: RotateCcwClock },
     { href: "/glossary", label: "用語集", icon: BookA },
@@ -164,6 +171,7 @@ export default function Navigation({
 }: NavigationProps) {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const isWebRuntime = useIsWebRuntime()
 
   return (
     // 右の境界線は border でなく内側の影で引く。border だと 64px のうち 1px を取って中身が
@@ -204,44 +212,46 @@ export default function Navigation({
             {navGroups.map((group, groupIndex) => (
               <Fragment key={groupIndex}>
                 {groupIndex > 0 && <Separator className="my-1" />}
-                {group.map((navItem) => (
-                  <CollapsedTooltip
-                    key={navItem.label}
-                    isSidebarMinimized={isSidebarMinimized}
-                    label={navItemAccessibleName(navItem)}
-                  >
-                    <GuardedLink href={navItem.href} passHref>
-                      <Button
-                        variant={
-                          pathname === navItem.href ? "secondary" : "ghost"
-                        }
-                        className={sidebarRowClassName(isSidebarMinimized)}
-                        aria-label={
-                          navItem.isExperimental
-                            ? navItemAccessibleName(navItem)
-                            : undefined
-                        }
-                      >
-                        <navItem.icon className="mr-3" />
-                        <SidebarLabel isSidebarMinimized={isSidebarMinimized}>
-                          {navItem.label}
-                        </SidebarLabel>
-                        {navItem.isExperimental && (
-                          <ExperimentalBadge
-                            label="実験的"
-                            tone={
-                              pathname === navItem.href ? "default" : "muted"
-                            }
-                            className={cn(
-                              "ml-auto px-1.5 py-0 text-[10px] transition-opacity duration-300 ease-in-out",
-                              isSidebarMinimized && "opacity-0"
-                            )}
-                          />
-                        )}
-                      </Button>
-                    </GuardedLink>
-                  </CollapsedTooltip>
-                ))}
+                {group
+                  .filter((navItem) => !(isWebRuntime && navItem.isDesktopOnly))
+                  .map((navItem) => (
+                    <CollapsedTooltip
+                      key={navItem.label}
+                      isSidebarMinimized={isSidebarMinimized}
+                      label={navItemAccessibleName(navItem)}
+                    >
+                      <GuardedLink href={navItem.href} passHref>
+                        <Button
+                          variant={
+                            pathname === navItem.href ? "secondary" : "ghost"
+                          }
+                          className={sidebarRowClassName(isSidebarMinimized)}
+                          aria-label={
+                            navItem.isExperimental
+                              ? navItemAccessibleName(navItem)
+                              : undefined
+                          }
+                        >
+                          <navItem.icon className="mr-3" />
+                          <SidebarLabel isSidebarMinimized={isSidebarMinimized}>
+                            {navItem.label}
+                          </SidebarLabel>
+                          {navItem.isExperimental && (
+                            <ExperimentalBadge
+                              label="実験的"
+                              tone={
+                                pathname === navItem.href ? "default" : "muted"
+                              }
+                              className={cn(
+                                "ml-auto px-1.5 py-0 text-[10px] transition-opacity duration-300 ease-in-out",
+                                isSidebarMinimized && "opacity-0"
+                              )}
+                            />
+                          )}
+                        </Button>
+                      </GuardedLink>
+                    </CollapsedTooltip>
+                  ))}
               </Fragment>
             ))}
           </nav>

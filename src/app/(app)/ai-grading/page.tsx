@@ -3,8 +3,10 @@
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import PageHeader from "@/components/layout/PageHeader"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
 
 import { AiGradingTabs, parseAiGradingTab } from "./components/AiGradingTabs"
 
@@ -24,6 +26,9 @@ function AiGradingTabsFromQuery() {
 
 /** 「AI採点」（実験的機能）の画面（設定・料金・使用トークン。docs/vlm-grading-design.md §9） */
 export default function AiGradingPage() {
+  // web 版はサイドバーに出さないが、URL を直に開いたときは使えない理由を出す
+  const isWebRuntime = useIsWebRuntime()
+
   return (
     <div className="flex h-full flex-col">
       <PageHeader
@@ -33,9 +38,16 @@ export default function AiGradingPage() {
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto max-w-5xl p-6">
           {/* useSearchParams を使う部品は Suspense で包む（本番ビルドの事前描画で要る） */}
-          <Suspense>
-            <AiGradingTabsFromQuery />
-          </Suspense>
+          {isWebRuntime ? (
+            <CautionNotice>
+              {"AI採点はデスクトップ版でだけ使えます。web 版では API キーを暗号化して保存できず、" +
+                "AI の事業者へもブラウザからは接続できないためです。"}
+            </CautionNotice>
+          ) : (
+            <Suspense>
+              <AiGradingTabsFromQuery />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

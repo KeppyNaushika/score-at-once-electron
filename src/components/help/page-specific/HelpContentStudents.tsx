@@ -2,6 +2,7 @@
 
 import { Funnel, LifeBuoy, Lightbulb, Trash, Upload, Users } from "lucide-react"
 
+import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
 import {
   Badge,
   HelpSection,
@@ -67,8 +68,8 @@ export function HelpContentStudents() {
             <div className="rounded-lg bg-purple-50 p-4">
               <p className="text-sm text-purple-800">
                 大人数を登録するときは「Excel 貼付一括追加」が便利です。
-                別の端末で作った生徒データは「読み込み」で取り込めます（.sao
-                のほか、以前の .students も選べます）。
+                別の端末で作った生徒データは「読み込み」で取り込めます
+                <ArchiveImportFormatsNote legacyFormats=".students" />。
               </p>
             </div>
           </div>

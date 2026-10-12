@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { ProviderStatus } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 import { AI_GRADING_CONSENT_VERSION } from "@/lib/shared/aiGrading/consentText"
+import { isWebRuntime } from "@/lib/webRuntime"
 import { aiProviderStatusesQuery } from "@/queries/aiProvider"
 
 /**
@@ -43,7 +44,12 @@ export function useAiGradingAvailability(): {
   unlockedProviders: GradingProviderId[]
 } {
   const currentUser = useCurrentUser()
-  const { data: providerStatuses } = useQuery(aiProviderStatusesQuery())
+  // web 版では API キーを保存できず、解放されることが無いので聞かない。描画の出力は
+  // どちらでも「取得前」と同じなので、ここで実行時の値を読んでもハイドレーションは食い違わない
+  const { data: providerStatuses } = useQuery({
+    ...aiProviderStatusesQuery(),
+    enabled: !isWebRuntime(),
+  })
   const unlockedProviders = (providerStatuses ?? [])
     .filter((status) => isAiProviderUnlocked(status, currentUser.id))
     .map((status) => status.provider)

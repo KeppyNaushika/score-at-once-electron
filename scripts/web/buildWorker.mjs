@@ -80,9 +80,7 @@ const SOURCE_REPLACEMENTS = {
  */
 const UNSUPPORTED_MODULES = {
   "adm-zip": [],
-  sharp: [],
   "sqlite-nas-sync": ["setupSync", "removeSync"],
-  "tar-stream": ["pack", "extract"],
 }
 
 const UNSUPPORTED_NAMESPACE = "web-unsupported"

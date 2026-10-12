@@ -92,13 +92,6 @@ const ANY_IMPORT_FILE_FILTERS = [
   },
 ]
 
-/**
- * web 版で旧形式・外部の形式を選んだときの断り。それらの取り込みは adm-zip と同期の fs に
- * 依存していて、web 版では動かない（docs/web-version-plan.md の判断待ち「旧形式5種の取り込み」）
- */
-const WEB_LEGACY_IMPORT_MESSAGE =
-  "web 版で読み込めるのは統合アーカイブ（.sao）だけです。旧形式（.score・.coursework・.grade・.asb・.students）と .hsz・.dat は、デスクトップ版で読み込んでから統合アーカイブに書き出してください"
-
 interface UnifiedArchiveImportInput {
   sessionId: string
   action: ImportAction
@@ -253,23 +246,21 @@ export const unifiedArchiveHandlers = {
   /**
    * 一覧の「読み込み」のファイル選択。統合アーカイブも旧形式も受け付け、拡張子から種類を
    * 決めて返す（どの取り込み画面を開くかは renderer が種類で決める）。選ばずに閉じたら null。
-   * web 版は統合アーカイブだけを受け付け、ほかを選んだら取り込み画面を開く前に断る
+   * web 版はダイアログで統合アーカイブだけを受け付ける。それでもほかの種類が選ばれたら、
+   * 断るのは renderer（`useArchiveImportLauncher`）で、ここでは種類をそのまま返す
    */
   "unifiedArchive:selectAnyImportFile":
     async (): Promise<SelectedArchiveImportFile | null> => {
-      const webRuntime = isWebRuntime()
       const result = await dialog.showOpenDialog({
         title: "読み込む",
-        filters: webRuntime ? [ARCHIVE_FILE_FILTER] : ANY_IMPORT_FILE_FILTERS,
+        filters: isWebRuntime()
+          ? [ARCHIVE_FILE_FILTER]
+          : ANY_IMPORT_FILE_FILTERS,
         properties: ["openFile"],
       })
       if (result.canceled || result.filePaths.length === 0) return null
       const filePath = result.filePaths[0]
-      const kind = archiveImportFileKindOf(filePath)
-      if (webRuntime && kind !== "sao") {
-        throw new Error(WEB_LEGACY_IMPORT_MESSAGE)
-      }
-      return { path: filePath, kind }
+      return { path: filePath, kind: archiveImportFileKindOf(filePath) }
     },
 
   /** 取り込みウィザードの中で、統合アーカイブを選び直す。選ばずに閉じたら null */
