@@ -25,7 +25,7 @@ export const { to: toAddDataSourceType } = defineStringUnion(
 /** 資料の評価項目セレクトで「資料全体（全項目合計）」を表すセンチネル値 */
 export const COURSEWORK_WHOLE = "__whole__"
 
-/** データソース追加フォームの選択状態。名前と換算満点の既定値を導く入力になる。 */
+/** データソース追加フォームの選択状態。名前と換算配点の既定値を導く入力になる。 */
 export interface AddDataSourceSelection {
   type: AddDataSourceType
   examId: string

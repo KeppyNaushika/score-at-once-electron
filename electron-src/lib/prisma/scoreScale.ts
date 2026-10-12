@@ -1,9 +1,9 @@
 /**
- * 類型評価（類型の組。ScoreScale）と類型（ScoreScaleLevel）の読み書き
+ * 類型表（類型の組。ScoreScale）と類型（ScoreScaleLevel）の読み書き
  * （docs/vlm-grading-design.md §4-8-3・§4-8-3a・§4-8-8）。
  *
  * 組は `examId` が null なら共通（どの試験でも選べる）、値があればその試験だけで選べる。
- * 03 の領域情報と類型評価管理の画面の、どちらからでも作る・直す・消すができる。
+ * 03 の領域情報と類型表管理の画面の、どちらからでも作る・直す・消すができる。
  *
  * **点はここで計算しない。** 点は採点行を読むときに、付けた類型の点数を引く（renderer）。
  * ここは行を返し、受け取った値を書くだけ。使われている件数も、画面は include した行の数で数える。
@@ -69,7 +69,7 @@ export async function getScoreScalesForExam(examId: string) {
 
 /**
  * 組の一覧。試験を渡せば、その試験で選べるもの（その試験のものと共通のもの）だけ。
- * 渡さなければ全部（類型評価管理の画面）
+ * 渡さなければ全部（類型表管理の画面）
  */
 export async function listScoreScales(filter: { examId: string | null }) {
   const scoreScales = await prisma.scoreScale.findMany({
@@ -132,7 +132,7 @@ async function findScaleOrThrow(scoreScaleId: string) {
   const scoreScale = await prisma.scoreScale.findUnique({
     where: { id: scoreScaleId },
   })
-  if (!scoreScale) throw new Error("類型評価が見つかりません")
+  if (!scoreScale) throw new Error("類型表が見つかりません")
   return scoreScale
 }
 
@@ -265,7 +265,7 @@ export async function duplicateScoreScale(
     where: { id: input.scoreScaleId },
     include: { levels: { orderBy: levelOrder } },
   })
-  if (!source) throw new Error("類型評価が見つかりません")
+  if (!source) throw new Error("類型表が見つかりません")
   if (input.examId !== null && input.reassignCropRegionIds.length > 0) {
     const outside = await prisma.cropRegion.findFirst({
       where: {
@@ -330,9 +330,7 @@ export async function deleteScoreScale(
     where: { scoreScaleId },
   })
   if (usedCount > 0) {
-    throw new Error(
-      `${usedCount}問の設問が使っているので、類型評価を消せません`
-    )
+    throw new Error(`${usedCount}問の設問が使っているので、類型表を消せません`)
   }
   const deleted = await prisma.scoreScale
     .delete({ where: { id: scoreScaleId } })
@@ -506,7 +504,7 @@ export async function deleteScoreScaleLevel(
 // ── 設問 ───────────────────────────────────────────────────
 
 /**
- * 設問の類型評価で使う組を選ぶ（null で外す）。選べるのは共通の組と、その設問の試験の組だけ
+ * 設問の類型表で使う組を選ぶ（null で外す）。選べるのは共通の組と、その設問の試験の組だけ
  */
 export async function setCropRegionScoreScale(
   cropRegionId: string,
@@ -525,7 +523,7 @@ export async function setCropRegionScoreScale(
     nextScale.examId !== null &&
     nextScale.examId !== before.examPage.examId
   ) {
-    throw new Error("ほかの試験の類型評価は選べません")
+    throw new Error("ほかの試験の類型表は選べません")
   }
   const updated = await prisma.cropRegion.update({
     where: { id: cropRegionId },
@@ -543,7 +541,7 @@ export async function setCropRegionScoreScale(
     changes: [
       {
         field: "scoreScaleId",
-        label: "類型評価",
+        label: "類型表",
         before: before.scoreScale?.name ?? null,
         after: nextScale?.name ?? null,
       },

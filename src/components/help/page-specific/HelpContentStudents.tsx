@@ -41,13 +41,13 @@ export function HelpContentStudents() {
           />
           <StepItem
             number={3}
-            title="学級に所属させる"
-            description="生徒を学級に所属させると、試験で学級ごとにまとめて追加できます"
+            title="学級に在籍させる"
+            description="生徒を学級に在籍させると、試験で学級ごとにまとめて追加できます"
           />
           <StepItem
             number={4}
             title="探す・絞り込む"
-            description="名前や学籍番号で検索したり、学級・所属状況で絞り込めます"
+            description="名前や学籍番号で検索したり、学級・在籍状況で絞り込めます"
           />
         </div>
       </HelpSection>
@@ -57,18 +57,18 @@ export function HelpContentStudents() {
       <div className="grid gap-6 lg:grid-cols-2">
         <HelpSection
           icon={<Upload className="h-5 w-5 text-purple-600" />}
-          title="追加・読み込みの方法"
+          title="追加・取り込みの方法"
         >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">生徒追加</Badge>
               <Badge variant="outline">Excel 貼付一括追加</Badge>
-              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">取り込み</Badge>
             </div>
             <div className="rounded-lg bg-purple-50 p-4">
               <p className="text-sm text-purple-800">
                 大人数を登録するときは「Excel 貼付一括追加」が便利です。
-                別の端末で作った生徒データは「読み込み」で取り込めます
+                別のPCで作った生徒データは「取り込み」から取り込めます
                 <ArchiveImportFormatsNote legacyFormats=".students" />。
               </p>
             </div>
@@ -81,11 +81,12 @@ export function HelpContentStudents() {
         >
           <div className="space-y-3">
             <div>
-              <h4 className="mb-2 font-medium">所属状況で絞り込む</h4>
+              <h4 className="mb-2 font-medium">在籍状況で絞り込む</h4>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">現在所属中</Badge>
-                <Badge variant="secondary">過去の所属</Badge>
-                <Badge variant="secondary">未所属</Badge>
+                <Badge variant="secondary">在籍中</Badge>
+                <Badge variant="secondary">在籍予定</Badge>
+                <Badge variant="secondary">過去在籍</Badge>
+                <Badge variant="secondary">未在籍</Badge>
               </div>
             </div>
             <div className="rounded-lg bg-blue-50 p-4">
@@ -108,7 +109,7 @@ export function HelpContentStudents() {
           <div className="space-y-3">
             <TipItem type="info">
               <strong>学級に追加されない：</strong>
-              この画面は学校全体の生徒台帳です。学級への所属は、
+              この画面は学校全体の生徒台帳です。学級への在籍は、
               各学級の画面で「生徒を追加」から設定します。
             </TipItem>
 
@@ -136,7 +137,7 @@ export function HelpContentStudents() {
             </TipItem>
 
             <TipItem type="success">
-              年度初めに生徒をまとめて登録し、学級へ所属させておくと、
+              年度初めに生徒をまとめて登録し、学級へ在籍させておくと、
               試験ごとの受験生徒の追加がスムーズになります。
             </TipItem>
           </div>

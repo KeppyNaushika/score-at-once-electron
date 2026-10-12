@@ -6,7 +6,7 @@
  */
 
 import type { AuditActionKey } from "@/lib/shared/auditActions"
-import { syncTableLabel } from "@/lib/shared/syncTableLabels"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
 import { recordAuditLog } from "../prisma/auditLog"
 import type {
@@ -51,7 +51,7 @@ async function recordFoldAuditLog(
     userId: null,
     entityType: fold.tableName,
     entityId: fold.losingId,
-    target: syncTableLabel(fold.tableName),
+    target: tableLabel(fold.tableName),
     extra: {
       losingId: fold.losingId,
       winningId: fold.winningId,
@@ -120,7 +120,7 @@ async function recordParentDeletedAuditLog(
     userId: null,
     entityType: causeTable,
     entityId: causeId,
-    target: syncTableLabel(causeTable),
+    target: tableLabel(causeTable),
     extra: {
       causeTable,
       causeId,

@@ -7,7 +7,7 @@ import { toast } from "sonner"
 export function toastImportWarnings(warnings: string[]): boolean {
   if (warnings.length === 0) return false
   toast.warning(
-    `インポートは完了しましたが ${warnings.length} 件の警告があります`,
+    `取り込みは完了しましたが ${warnings.length} 件の警告があります`,
     {
       description: warnings.join("\n"),
       duration: Infinity,

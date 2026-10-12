@@ -151,7 +151,7 @@ export function OMRCellConfigForm({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Scan className="h-3.5 w-3.5 text-muted-foreground" />
-          <Label className="text-xs text-muted-foreground">OMR自動認識</Label>
+          <Label className="text-xs text-muted-foreground">マーク欄</Label>
         </div>
         <Switch checked={enabled} onCheckedChange={handleToggle} />
       </div>

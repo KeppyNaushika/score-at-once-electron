@@ -29,7 +29,7 @@ export function assertAsbDefinitionEditableBy(definition: AsbDefinition): void {
   const actorUserId = getCurrentActorUserId()
   if (actorUserId === null) {
     throw new Error(
-      "ログインしている利用者が分からないため、解答用紙を編集できません"
+      "ログインしているユーザーが分からないため、解答用紙を編集できません"
     )
   }
   if (definition.userId !== actorUserId) {

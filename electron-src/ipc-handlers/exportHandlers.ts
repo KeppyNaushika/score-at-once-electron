@@ -73,7 +73,7 @@ export const exportHandlers = {
       conflictCheckError =
         error instanceof Error
           ? error.message
-          : "採点者間の食い違いを検査できませんでした"
+          : "採点の不一致を検査できませんでした"
     }
 
     return validateScoringData(
@@ -83,7 +83,7 @@ export const exportHandlers = {
     )
   },
 
-  // 未解決の食い違いを含んだまま出力したことを監査ログに残す。
+  // 未解決の採点の不一致を含んだまま出力したことを監査ログに残す。
   // 出力そのものは止めない（配布物も汚さない）が、後から辿れるようにする。
   "export:recordUnresolvedConflicts": async (options: {
     examId: string
@@ -100,7 +100,7 @@ export const exportHandlers = {
       entityId: options.examId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: `未解決の食い違い${options.conflicts.length}件を含む採点結果を出力しました（合計点が最大${options.scoreImpact}点低く出ます）`,
+      summary: `未解決の採点の不一致${options.conflicts.length}件を含む採点結果を出力しました（合計点が最大${options.scoreImpact}点低く出ます）`,
       extra: {
         exportType: options.exportType,
         conflicts: options.conflicts.map(

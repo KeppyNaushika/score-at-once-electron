@@ -9,7 +9,7 @@ import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/t
 import { defineMutation } from "./defineMutation"
 
 /**
- * AI 採点（実験的機能）の、事業者ごとの同意・API キーの有無・既定値。
+ * AI採点（実験的機能）の、事業者ごとの同意・API キーの有無・既定値。
  *
  * 対応する preload は `electron-src/preload-apis/aiProviderApi.ts`。
  * 保存先は端末ごとの `userData/ai-providers.json` で、DB ではない。
@@ -103,7 +103,7 @@ export const updateAiGradingSettingsMutation = () =>
       window.electronAPI.aiProvider.updateSettings(update),
     meta: {
       invalidates: [aiGradingSettingsQuery().queryKey],
-      errorMessage: "AI 採点の既定値を保存できませんでした",
+      errorMessage: "AI採点の既定値を保存できませんでした",
     },
   })
 

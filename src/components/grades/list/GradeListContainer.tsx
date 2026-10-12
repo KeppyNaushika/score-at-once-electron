@@ -103,7 +103,7 @@ export function GradeListContainer() {
     if (!tryStartCreate()) return
     const gradeId = crypto.randomUUID()
     try {
-      await createGrade.mutateAsync({ id: gradeId, name: "新しい成績" })
+      await createGrade.mutateAsync({ id: gradeId, name: "新しい成績算出" })
       router.push(`/grades/${gradeId}`)
     } catch {
       // 失敗の通知は MutationCache が出す

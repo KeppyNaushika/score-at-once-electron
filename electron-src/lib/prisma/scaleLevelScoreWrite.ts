@@ -52,7 +52,7 @@ export async function setScaleLevels(
   if (input.scaleLevelId !== null) {
     if (!scaleLevel) throw new Error("類型が見つかりません")
     if (scaleLevel.scaleId !== cropRegion.scoreScaleId) {
-      throw new Error("この設問の類型評価の類型ではありません")
+      throw new Error("この設問の類型表の類型ではありません")
     }
   }
 

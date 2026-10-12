@@ -39,24 +39,24 @@ export function buildGradeLockMessage(
   }
   return {
     /** 何がどう使われていて、変えると何が起きるか */
-    lead: `${subject}は、次の成績算出で使われています。変えると、その成績の点数が変わります。`,
+    lead: `${subject}は、次の成績算出で使われています。変えると、その成績算出の得点が変わります。`,
     groups: [...groups.values()],
     /**
-     * 確定済みの評価項目があるときの注意。無ければ null（確定の話は出さない。
-     * 出すと、確定済みの値があって守られるかのように読めるため）
+     * 固定済みの成績評価項目があるときの注意。無ければ null（固定の話は出さない。
+     * 出すと、固定値があって守られるかのように読めるため）
      */
     frozenNote: dataSources.some(isFrozenDataSource)
-      ? "「確定済み」の評価項目は、確定した値のまま変わりません。元データを変えると、成績算出に「確定後に元データが変わっています」と表示されます。"
+      ? "「固定済み」の成績評価項目は、固定値のまま変わりません。元データを変えると、成績算出に「固定後に元データが変わっています」と表示されます。"
       : null,
   }
 }
 
-/** そのデータソースの評価項目を成績算出で確定済みか（1人でも） */
+/** そのデータソースの成績評価項目を成績算出で固定済みか（1人でも） */
 export function isFrozenDataSource(dataSource: UsingGradeDataSource): boolean {
   return isFrozenGradeItem(dataSource.gradeItem)
 }
 
-/** その評価項目を成績算出で確定済みか（1人でも） */
+/** その成績評価項目を成績算出で固定済みか（1人でも） */
 export function isFrozenGradeItem(
   gradeItem: Pick<UsingGradeDataSource["gradeItem"], "frozenScores">
 ): boolean {

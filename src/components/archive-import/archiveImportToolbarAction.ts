@@ -24,7 +24,7 @@ export function archiveImportToolbarAction({
     id: "archive-import",
     priority,
     icon: FolderInput,
-    label: isOpening ? "開いています..." : "読み込み",
+    label: isOpening ? "開いています..." : "取り込み",
     onClick,
     disabled: isOpening,
   })

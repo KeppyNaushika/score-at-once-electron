@@ -6,7 +6,7 @@ import { rubricItemInvalidations } from "./rubric"
 import { questionScoresQuery } from "./scoring"
 
 /**
- * AI 採点（VLM 採点）の採点指示・測定・実行（1段目・2段目）・採用・問いかけ
+ * AI採点（VLM 採点）の採点指示・測定・実行（1段目・2段目）・採用・問いかけ
  * （docs/vlm-grading-design.md §3・§11）。
  *
  * **実行と試行は設問ごとに1本のキーへ載せる。** 採点も採用も「その設問」に書くので、
@@ -189,7 +189,7 @@ export const startAiGradingRunMutation = (
         aiGradingRunsOfExamScope(examId),
         myAiGradingRunsQuery().queryKey,
       ],
-      errorMessage: "AI 採点を始められませんでした",
+      errorMessage: "AI採点を始められませんでした",
     },
   })
 
@@ -228,7 +228,7 @@ export const cancelAiGradingRunMutation = (
         aiGradingRunsOfExamScope(examId),
         myAiGradingRunsQuery().queryKey,
       ],
-      errorMessage: "AI 採点を中止できませんでした",
+      errorMessage: "AI採点を中止できませんでした",
     },
   })
 
@@ -321,7 +321,7 @@ type RecordAiAttemptResponsesInput = Parameters<
 >[0]
 
 /**
- * 案の外の問いかけ（AI チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書く。
+ * 案の外の問いかけ（AIチェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書く。
  * 答えは実行の一覧の試行に同梱されているので、実行のまとまりを取り直す
  */
 export const recordAiAttemptResponsesMutation = (
@@ -378,11 +378,11 @@ export const commitAiRubricProposalResponseMutation = (
         ...rubricItemInvalidations(examId, cropRegionId),
         questionScoresQuery(examId, cropRegionId).queryKey,
       ],
-      errorMessage: "AI の項目の案への答えを確定できませんでした",
+      errorMessage: "AI の項目の案への答えを採点に反映できませんでした",
     },
   })
 
-/** 問いかけで教員が直接決めた点（自分で採点・AI チェックで直す点）を自分の採点として書く */
+/** 問いかけで教員が直接決めた点（自分で採点・AIチェックで直す点）を自分の採点として書く */
 export const writeAiQuestioningScoresMutation = (
   examId: string,
   cropRegionId: string
@@ -417,7 +417,7 @@ export const markAiQuestioningCommittedMutation = (
     scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
     meta: {
       invalidates: [aiGradingRunsScope(examId, cropRegionId)],
-      errorMessage: "問いかけの答えを確定済みにできませんでした",
+      errorMessage: "問いかけの答えを反映済みにできませんでした",
     },
   })
 

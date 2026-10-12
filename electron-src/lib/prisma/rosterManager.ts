@@ -252,7 +252,7 @@ async function computeExclusiveStudents(
  *
  * ここで返した件数を利用者はそのまま画面で見て、同じ配列が削除の要求に添えられて
  * 戻ってくる。main は消す直前に**同じ関数で**数え直して突き合わせる（段階26）。
- * 0名なら項目を返さない（「この学級にのみ所属する生徒はいません」に対応する）。
+ * 0名なら項目を返さない（「この学級にのみ在籍する生徒はいません」に対応する）。
  */
 async function countExclusiveStudentDeletion(
   adapter: RosterAdapter,
@@ -285,7 +285,7 @@ export function rosterClassroomRemovalPreview(
 /**
  * 学級を削除する。
  *
- * @param deleteStudents trueなら、その学級にのみ所属する生徒も削除する（他学級にも
+ * @param deleteStudents trueなら、その学級にのみ在籍する生徒も削除する（他学級にも
  *   在籍する生徒は残す）。falseなら学級登録だけ解除し、生徒は対象に残す。
  * @param confirmedCounts 利用者が確認ダイアログで見た専属生徒の件数。消す直前に
  *   数え直し、増えていれば削除を中止する（`deleteAfterRecount`）。

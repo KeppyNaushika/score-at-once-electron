@@ -34,14 +34,14 @@ export function ScaleValueDisplayField({
   onDisplayChange,
 }: ScaleValueDisplayFieldProps) {
   return (
-    <OptionField label="類型評価の見せ方">
+    <OptionField label="類型の見せ方">
       <ToggleGroup
         type="single"
         variant="outline"
         size="sm"
         selectedTone="primary"
         value={display}
-        aria-label="類型評価の見せ方"
+        aria-label="類型の見せ方"
         onValueChange={ignoreDeselect(SCALE_VALUE_DISPLAYS, onDisplayChange)}
       >
         {SCALE_VALUE_DISPLAYS.map((scaleValueDisplay) => (

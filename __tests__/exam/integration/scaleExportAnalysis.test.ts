@@ -2,7 +2,7 @@
  * 類型評価の設問の Excel 出力（docs/vlm-grading-design.md §4-8-5・§4-8-8 の S4）。
  *
  * - 出力データは設問が使っている組を、類型の並び順で同梱する（点数は serialize 済み）
- * - 正誤一覧は類型を見せ方に従って出し、点数一覧は点にならない採点を 0 点でなく空欄にする
+ * - 正誤一覧は類型を見せ方に従って出し、得点一覧は点にならない採点を 0 点でなく空欄にする
  * - 問題分析は正答率を出さず（平均にも入れない）、類型ごとの人数を 0 人の類型も含めて出す
  * - S-P 表には入れない
  */
@@ -130,7 +130,7 @@ describe("出力データ", () => {
 })
 
 describe("Excel のシート", () => {
-  it("正誤一覧は類型を見せ方に従い、点数一覧は点にならない採点を空欄にする", async () => {
+  it("正誤一覧は類型を見せ方に従い、得点一覧は点にならない採点を空欄にする", async () => {
     await writeScores()
     const exportData = await fetchExportData(fixture.exam.id, [])
     const workbook = new ExcelJS.Workbook()
@@ -165,7 +165,7 @@ describe("Excel のシート", () => {
     expect(studentRow(scoreSheet, 0).getCell(firstQuestionColumn).value).toBe(
       12
     )
-    // 方式と合わない正答は未採点と同じ — 正誤一覧も点数一覧も空欄（記号も 0 点も出さない）
+    // 方式と合わない正答は未採点と同じ — 正誤一覧も得点一覧も空欄（記号も 0 点も出さない）
     expect(studentRow(resultSheet, 2).getCell(firstQuestionColumn).value).toBe(
       ""
     )

@@ -19,9 +19,9 @@ const STATISTIC_KIND_LABELS: Record<StatisticKind, string> = {
   boxPlot: "得点分布",
 }
 
-/** 母集団の見出し。学級は複数ありうるため「所属学級」と複数を含意する語にする */
+/** 母集団の見出し。学級は複数ありうるため「在籍学級」と複数を含意する語にする */
 const STATISTIC_SCOPE_LABELS: Record<StatisticScope, string> = {
-  classroom: "所属学級",
+  classroom: "在籍学級",
   overall: "全体",
 }
 
@@ -40,10 +40,10 @@ export function StatisticsSettingsSection({
         />
       </div>
 
-      {/* 統計は「種別 × 母集団」で選ぶ。学級は複数ありうるので所属学級それぞれに出る */}
+      {/* 統計は「種別 × 母集団」で選ぶ。学級は複数ありうるので在籍学級それぞれに出る */}
       <div className="mt-2 flex flex-col gap-2">
         <Label className="text-xs text-muted-foreground">
-          統計（所属学級ごと／全体）
+          統計（在籍学級ごと／全体）
         </Label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {STATISTIC_KINDS.map((statisticKind) => (

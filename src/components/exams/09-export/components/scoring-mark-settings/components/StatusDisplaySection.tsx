@@ -2,12 +2,15 @@
 
 import Image from "next/image"
 
-import { statusLabels } from "@/components/exams/09-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 import { getMarkImagePath } from "@/components/exams/09-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { AnswerOverlayVisibility } from "@/types/scoringOverlay.types"
-import type { ScoringStatus } from "@/types/scoringStatus.types"
+import {
+  SCORING_STATUSES,
+  type ScoringStatus,
+} from "@/types/scoringStatus.types"
 
 interface StatusDisplaySectionProps {
   visibility: Record<ScoringStatus, AnswerOverlayVisibility>
@@ -26,7 +29,7 @@ export function StatusDisplaySection({
       <div className="space-y-3">
         <Label className="text-sm font-medium">📌 採点マーク表示対象</Label>
         <div className="space-y-2">
-          {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => {
+          {SCORING_STATUSES.map((status) => {
             const markImagePath = getMarkImagePath(status)
             return (
               <div
@@ -49,7 +52,7 @@ export function StatusDisplaySection({
                   ) : (
                     <Image
                       src={markImagePath}
-                      alt={statusLabels[status]}
+                      alt={SCORING_STATUS_LABELS[status]}
                       className="h-6 w-6"
                       width={24}
                       height={24}
@@ -60,7 +63,7 @@ export function StatusDisplaySection({
                     htmlFor={`mark-${status}`}
                     className="cursor-pointer text-sm"
                   >
-                    {statusLabels[status]}
+                    {SCORING_STATUS_LABELS[status]}
                   </Label>
                 </div>
               </div>
@@ -73,7 +76,7 @@ export function StatusDisplaySection({
       <div className="space-y-3">
         <Label className="text-sm font-medium">🔢 点数表示対象</Label>
         <div className="space-y-2">
-          {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => (
+          {SCORING_STATUSES.map((status) => (
             <div
               key={`score-${status}`}
               className="flex items-center space-x-3"
@@ -93,7 +96,7 @@ export function StatusDisplaySection({
                   htmlFor={`score-${status}`}
                   className="cursor-pointer text-sm"
                 >
-                  {statusLabels[status]}
+                  {SCORING_STATUS_LABELS[status]}
                 </Label>
               </div>
             </div>

@@ -26,7 +26,7 @@ interface ScoreScaleDeleteButtonProps {
 }
 
 /**
- * 類型評価を消すボタンと確認（§4-8-3）。使っている設問があれば消せない
+ * 類型表を消すボタンと確認（§4-8-3）。使っている設問があれば消せない
  * （ボタンを止めて件数を示す。押すまでに同期で届いた分は main が数え直して拒む）
  */
 export function ScoreScaleDeleteButton({
@@ -66,13 +66,13 @@ export function ScoreScaleDeleteButton({
           onClick={() => setConfirmOpen(true)}
         >
           <Trash className="mr-1 h-3 w-3" />
-          類型評価を削除
+          類型表を削除
         </Button>
       </div>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>類型評価を削除しますか</AlertDialogTitle>
+            <AlertDialogTitle>類型表を削除しますか</AlertDialogTitle>
             <AlertDialogDescription>
               「{scoreScale.name || "名前なし"}」と、その類型
               {scoreScale.levels.length}件を削除します。

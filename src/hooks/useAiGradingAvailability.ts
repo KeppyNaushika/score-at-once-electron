@@ -26,7 +26,7 @@ export function isAiProviderConsentCurrent(
   )
 }
 
-/** その事業者で AI 採点を使えるか（今の同意があり、API キーが保存されている） */
+/** その事業者で AI採点を使えるか（今の同意があり、API キーが保存されている） */
 export function isAiProviderUnlocked(
   status: ProviderStatus,
   currentUserId: string
@@ -35,7 +35,7 @@ export function isAiProviderUnlocked(
 }
 
 /**
- * 事業者ごとに、この端末の今の利用者に AI 採点が解放されているか。
+ * 事業者ごとに、この端末の今の利用者に AI採点が解放されているか。
  *
  * 07 が「AI採点」モードを出すかどうかの判断に使う。取得前は全事業者を閉じたまま扱う
  * （解放されていないものを一瞬でも見せない）。

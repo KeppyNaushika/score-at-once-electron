@@ -22,10 +22,10 @@ const MATCH_TABS: {
   { table: "Classroom", label: "学級", icon: <School className="h-4 w-4" /> },
   {
     table: "SubtotalGroup",
-    label: "小計グループ",
+    label: "小計点グループ",
     icon: <ListTree className="h-4 w-4" />,
   },
-  { table: "User", label: "利用者", icon: <UserCog className="h-4 w-4" /> },
+  { table: "User", label: "ユーザー", icon: <UserCog className="h-4 w-4" /> },
 ]
 
 const isMatchTable = (value: string): value is ArchiveMatchTable =>
@@ -77,8 +77,8 @@ export function ArchiveMatchStep({
           すべてのデータが自動で紐づきました
         </h3>
         <p className="max-w-md text-center text-muted-foreground">
-          生徒・学級・小計グループ・利用者は、すべて id
-          でこのパソコンのものと一致しました。
+          生徒・学級・小計点グループ・ユーザーは、すべて id
+          でこのPCのものと一致しました。
         </p>
         {nextButton}
       </div>
@@ -93,8 +93,7 @@ export function ArchiveMatchStep({
         </div>
         <h3 className="mb-2 text-xl font-semibold">データの紐づけ</h3>
         <p className="mx-auto max-w-lg text-muted-foreground">
-          id
-          で一致しなかったものを、このパソコンのものと紐づけるか選んでください。
+          id で一致しなかったものを、このPCのものと紐づけるか選んでください。
         </p>
       </div>
 
@@ -160,7 +159,7 @@ export function ArchiveMatchStep({
               {withCandidates.length > 0 && (
                 <section className="space-y-2">
                   <h4 className="text-sm font-medium">
-                    このパソコンに候補があるもの（{withCandidates.length}件）
+                    このPCに候補があるもの（{withCandidates.length}件）
                   </h4>
                   {withCandidates.map(renderRow)}
                 </section>
@@ -168,7 +167,7 @@ export function ArchiveMatchStep({
               {withoutCandidates.length > 0 && (
                 <section className="space-y-2">
                   <h4 className="text-sm font-medium">
-                    このパソコンに同じものが無いもの（{withoutCandidates.length}
+                    このPCに同じものが無いもの（{withoutCandidates.length}
                     件）
                   </h4>
                   {withoutCandidates.map(renderRow)}

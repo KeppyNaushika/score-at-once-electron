@@ -40,12 +40,12 @@ function itemColumns(
   const valueColumn: EditableColumnDef<ScoreRow> = {
     id: item.id,
     header: isLetter
-      ? `${item.name} (評価)`
-      : `${item.name} (満点${item.maxScore})`,
+      ? `${item.name} (評価記号)`
+      : `${item.name} (配点${item.maxScore})`,
     accessorKey: item.id,
     size: 110,
     meta: {
-      placeholder: isLetter ? validLabels || "評価記号" : "数値",
+      placeholder: isLetter ? validLabels || "資料評価記号" : "得点",
       // 文字評価は入力どおり保存する。赤は「変換表に無い」という注意で、
       // 変換表を1つも作っていない段階では判定しない（全マスが赤くても
       // 直しようがない）。数値は有限の数値なら有効で、満点超過も負数も

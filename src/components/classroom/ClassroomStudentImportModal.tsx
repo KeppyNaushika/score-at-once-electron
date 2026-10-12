@@ -156,7 +156,7 @@ export default function ClassroomStudentImportModal({
             {className}への生徒一括追加
           </DialogTitle>
           <DialogDescription>
-            学籍番号、出席番号、所属期間を入力して、学級に生徒を一括で追加できます。
+            学籍番号、出席番号、在籍期間を入力して、学級に生徒を一括で追加できます。
             同じ学籍番号の生徒が既に在籍中の場合は上書きされます。
           </DialogDescription>
         </DialogHeader>

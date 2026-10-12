@@ -152,7 +152,7 @@ export function ConsistencyFields({
       {valueLabels.length > 0 && (
         <div>
           <Label className="text-xs text-muted-foreground">
-            ラベル値（観点の A/B/C 等を数値に換算）
+            成績評価記号の値（観点の A/B/C 等を数値に換算）
           </Label>
           <div className="mt-1 flex flex-wrap gap-2">
             {valueLabels.map((label) => (

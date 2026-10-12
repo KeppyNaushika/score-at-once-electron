@@ -199,15 +199,15 @@ describe("DateTime正規化マイグレーション", () => {
   const POST_MIGRATION_TABLES = new Set([
     // 20261011120000 で追加（AI採点の採点指示の問題の画像）。normalize migration より後で ISO text 生成
     "AiPromptQuestionImage",
-    // 20261011100000 で追加（AI 採点の問いかけの答え）。normalize migration より後で ISO text 生成
+    // 20261011100000 で追加（AI採点の問いかけの答え）。normalize migration より後で ISO text 生成
     "AiAttemptResponse",
-    // 20261010120000 で追加（AI 採点の項目の案）。normalize migration より後で ISO text 生成
+    // 20261010120000 で追加（AI採点の項目の案）。normalize migration より後で ISO text 生成
     "AiAttemptRubricMatch",
-    // 20261005100000 で追加（AI 採点の記録）。normalize migration より後で ISO text 生成
+    // 20261005100000 で追加（AI採点の記録）。normalize migration より後で ISO text 生成
     "AiGradingAttempt",
     "AiGradingRun",
     "AiPrompt",
-    // 20261010120000 で追加（AI 採点の項目の案）。normalize migration より後で ISO text 生成
+    // 20261010120000 で追加（AI採点の項目の案）。normalize migration より後で ISO text 生成
     "AiRubricProposal",
     // 20261011140000 で追加（問いかけで直している助言の文）。normalize migration より後で ISO text 生成
     "AiRubricProposalAdviceDraft",
@@ -216,7 +216,7 @@ describe("DateTime正規化マイグレーション", () => {
     "AiRubricProposalMember",
     "AiRubricProposalOption",
     "AiRubricProposalResponse",
-    // 20261011100000 で追加（AI 採点の問いかけの答え）。normalize migration より後で ISO text 生成
+    // 20261011100000 で追加（AI採点の問いかけの答え）。normalize migration より後で ISO text 生成
     "AiRubricProposalResponseScore",
     // 20260824120000 で追加（アプリ全体の設定）。
     // normalize migration より後で ISO text 生成

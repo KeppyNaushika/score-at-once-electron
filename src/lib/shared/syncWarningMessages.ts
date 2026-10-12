@@ -21,7 +21,7 @@
  * main（将来の記録）の両方が同じ言い換えを引けるようにするため。
  * main が押し出してくるのは**原文のまま**で、言い換えはここ1か所で行う。
  */
-import { syncTableLabel } from "./syncTableLabels"
+import { tableLabel } from "./tableLabels"
 
 /** 同じ種類にまとめた、利用者へ見せる1行ぶんの注意。 */
 interface SyncWarningNotice {
@@ -111,7 +111,7 @@ const RULES: SyncWarningRule[] = [
     pattern: /^Unplaceable ([^:]+):/,
     severity: "warning",
     describe: (match) =>
-      `${syncTableLabel(match[1])}に、まだ画面に出せていないデータがあります。消えてはいません。関わりのあるデータが他のPCから届けば、自動で表示に戻ります。`,
+      `${tableLabel(match[1])}に、まだ画面に出せていないデータがあります。消えてはいません。関わりのあるデータが他のPCから届けば、自動で表示に戻ります。`,
   },
   {
     key: "changelog-unparseable",
@@ -167,14 +167,14 @@ const RULES: SyncWarningRule[] = [
     pattern: /^同期する表 (\S+) に、親のいない行が (\d+) 件ある/,
     severity: "warning",
     describe: (match) =>
-      `${syncTableLabel(match[1])}に、もとになるものが見当たらないデータが${match[2]}件あります。このまま同期を続けると、それらは表示から外れます（消えてはいません）。`,
+      `${tableLabel(match[1])}に、もとになるものが見当たらないデータが${match[2]}件あります。このまま同期を続けると、それらは表示から外れます（消えてはいません）。`,
   },
   {
     key: "missing-parent-unsynced",
     pattern: /^同期しない表 (\S+) に、親のいない行が (\d+) 件ある/,
     severity: "warning",
     describe: (match) =>
-      `${syncTableLabel(match[1])}に、もとになるものが見当たらないデータが${match[2]}件あります。同期では触りませんが、データの傷なので問い合わせてください。`,
+      `${tableLabel(match[1])}に、もとになるものが見当たらないデータが${match[2]}件あります。同期では触りませんが、データの傷なので問い合わせてください。`,
   },
   {
     key: "missing-parent-rest",
@@ -188,14 +188,14 @@ const RULES: SyncWarningRule[] = [
     pattern: /^同期する表 (\S+) の時刻列 \S+ に大きく未来の値がある/,
     severity: "warning",
     describe: (match) =>
-      `${syncTableLabel(match[1])}に、日時が大きく先の日付になっているデータがあります。どのPCの変更が新しいかを正しく比べられません。各PCの時計が合っているか確認してください。`,
+      `${tableLabel(match[1])}に、日時が大きく先の日付になっているデータがあります。どのPCの変更が新しいかを正しく比べられません。各PCの時計が合っているか確認してください。`,
   },
   {
     key: "added-column-not-null",
     pattern: /^同期する表 (\S+) に増えた列 \S+ は NOT NULL/,
     severity: "info",
     describe: (match) =>
-      `${syncTableLabel(match[1])}に増えた項目について、アプリの更新の都合で注意が出ています。動作に影響はありません。`,
+      `${tableLabel(match[1])}に増えた項目について、アプリの更新の都合で注意が出ています。動作に影響はありません。`,
   },
 ]
 

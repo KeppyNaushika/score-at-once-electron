@@ -40,7 +40,7 @@ export function RosterTableFilters({
       <div className="relative flex-1">
         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
         <Input
-          placeholder="名前、ふりがな、学籍番号で検索"
+          placeholder="名前、カナ、学籍番号で検索"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10"

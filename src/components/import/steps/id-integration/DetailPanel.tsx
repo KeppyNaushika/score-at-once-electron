@@ -13,7 +13,7 @@ import type { DecisionType, DetailPanelProps, EntityType } from "./types"
 const PANEL_TITLES: Record<EntityType, string> = {
   student: "生徒の紐づけ確認",
   classroom: "学級の紐づけ確認",
-  subtotalGroup: "小計グループの紐づけ確認",
+  subtotalGroup: "小計点グループの紐づけ確認",
 }
 
 /**

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { GRADE_DATA_SOURCE_TYPE_LABEL } from "@/lib/shared/gradeReferenceMessages"
 import {
   courseworkWorkflowSteps,
   workflowStepHref,
@@ -23,14 +24,6 @@ import {
 import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"
-
-const TYPE_LABELS: Record<string, string> = {
-  exam_total: "合計",
-  subtotal: "小計",
-  crop_region: "設問",
-  coursework: "資料",
-  coursework_total: "資料合計",
-}
 
 interface DataSourceRowProps {
   gradeId: string
@@ -68,12 +61,12 @@ export function DataSourceRow({
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(dataSource.name)
   const [weight, setWeight] = useState(String(dataSource.weight))
-  // 押しただけでは消さない。欠測の推定元に使っている他のソースにも響くため
+  // 押しただけでは消さない。推定に使うデータソースとして選んでいる他のソースにも響くため
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 
   const isCoursework =
     dataSource.type === "coursework" || dataSource.type === "coursework_total"
-  // 満点は元データ（設問配点 / 評価項目満点）からライブ算出した値をバックエンドが
+  // 配点は元データ（設問の配点 / 資料評価項目の配点）からライブ算出した値をバックエンドが
   // 全型で dataSource.maxScore に載せて返す。ここでは表示のみで編集不可。
   const displayMaxScore = dataSource.maxScore
 
@@ -86,7 +79,7 @@ export function DataSourceRow({
     setEditing(false)
   }
 
-  const typeLabel = TYPE_LABELS[dataSource.type] ?? dataSource.type
+  const typeLabel = GRADE_DATA_SOURCE_TYPE_LABEL[dataSource.type]
 
   if (editing) {
     return (
@@ -108,16 +101,16 @@ export function DataSourceRow({
             className="h-8 flex-1"
             placeholder="名前"
           />
-          {/* 満点は元データ追従のため編集不可（表示のみ） */}
+          {/* 配点は元データ追従のため編集不可（表示のみ） */}
           <span className="text-xs text-muted-foreground">
-            満点: {displayMaxScore}
+            配点: {displayMaxScore}
           </span>
           <Input
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             className="h-8 w-20"
             type="text"
-            placeholder="換算満点"
+            placeholder="換算配点"
           />
           <TooltipButton
             label="保存"
@@ -184,7 +177,7 @@ export function DataSourceRow({
         )}
         {isCoursework && dataSource.courseworkItem?.inputMode === "letter" && (
           <Badge variant="outline" className="text-xs font-normal">
-            文字評価:{" "}
+            変換表:{" "}
             {dataSource.courseworkItem.letterScales
               .map((letterScale) => `${letterScale.label}=${letterScale.score}`)
               .join(", ") || "未設定"}
@@ -219,7 +212,7 @@ export function DataSourceRow({
           </>
         )}
         <span className="text-xs text-muted-foreground">
-          満点: {displayMaxScore} / 換算満点: {dataSource.weight}
+          配点: {displayMaxScore} / 換算配点: {dataSource.weight}
         </span>
         <TooltipButton
           label="データソースを編集"
@@ -246,7 +239,7 @@ export function DataSourceRow({
         open={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}
         title="データソースを削除しますか？"
-        description={`「${dataSource.name}」をこの評価項目から外します。元の試験や資料の点数は消えませんが、欠測の推定元にこのデータソースを選んでいた設定からは外れます。`}
+        description={`「${dataSource.name}」をこの成績評価項目から外します。元の試験や資料の得点は消えませんが、推定に使うデータソースとしてこれを選んでいた設定からは外れます。`}
         confirmText="削除"
         variant="destructive"
         icon="trash"

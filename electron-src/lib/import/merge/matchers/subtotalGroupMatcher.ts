@@ -60,7 +60,7 @@ export async function preMatchSubtotalGroups(
         importData: importGroup,
         existingData: idMatch,
         displayLabel,
-        matchReason: "同じパソコンで作成されたデータ",
+        matchReason: "同じPCで作成されたデータ",
         additionalInfo: {
           importSubtotals: importSubs,
           existingSubtotals: existingSubtotalsByGroup.get(idMatch.id),

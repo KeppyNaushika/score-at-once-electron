@@ -3,8 +3,9 @@
 import { CircleX } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveColumnLabel, archiveTableLabel } from "../../archiveTableLabels"
+import { archiveColumnLabel } from "../../archiveColumnLabels"
 import { ARCHIVE_UNRESOLVABLE_MESSAGES } from "../archiveImportLabels"
 import type { ArchiveUnresolvableReason } from "../types"
 
@@ -45,10 +46,10 @@ export function UnresolvableReasonList({
                 <li
                   key={`${reason.table}:${reason.archiveIds.join(",")}:${reason.existingIds.join(",")}`}
                 >
-                  {archiveTableLabel(reason.table)}
+                  {tableLabel(reason.table)}
                   {reason.columns.length > 0 &&
                     `（${reason.columns.map(archiveColumnLabel).join("・")}）`}
-                  : 読み込む行 {reason.archiveIds.length}件 / このパソコンの行{" "}
+                  : 取り込む行 {reason.archiveIds.length}件 / このPCの行{" "}
                   {reason.existingIds.length}件
                 </li>
               ))}

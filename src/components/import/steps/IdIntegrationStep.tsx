@@ -81,8 +81,8 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           すべてのデータが自動で紐づきました
         </h3>
         <p className="mb-8 max-w-md text-center text-muted-foreground">
-          同じパソコンで作成されたデータのため、
-          すべての生徒・学級・小計グループ・採点者が自動的に紐づけられました。
+          同じPCで作成されたデータのため、
+          すべての生徒・学級・小計点グループ・採点者が自動的に紐づけられました。
         </p>
         <Button
           onClick={goToNextStep}
@@ -137,7 +137,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           </TabsTrigger>
           <TabsTrigger value="subtotalGroup" className="gap-2">
             <ListTree className="h-4 w-4" />
-            小計グループ
+            小計点グループ
             {hasSubtotalGroupDecisions && (
               <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">
                 !
@@ -201,7 +201,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       <div className="mt-6 flex flex-col items-center gap-2">
         {hasUndecidedSubtotalGroupNoMatch && (
           <p className="text-sm text-amber-600 dark:text-amber-400">
-            小計グループタブに未決定の項目があります
+            小計点グループタブに未決定の項目があります
           </p>
         )}
         <Button

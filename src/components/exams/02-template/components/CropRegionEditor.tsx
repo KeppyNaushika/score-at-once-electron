@@ -106,7 +106,7 @@ const CropRegionEditor = ({
   )
 
   // Delete/Backspace では確認を挟む。領域を消すと、その領域の採点結果や
-  // 書き込みも一緒に消え、元に戻せないため（3. 領域情報 の削除と同じ）
+  // 書き込みも一緒に消え、元に戻せないため（3. 領域設定 の削除と同じ）
   const handleRequestDeleteArea = (cropRegionId: string) => {
     cropRegionDeletion.openWith(cropRegionId)
   }

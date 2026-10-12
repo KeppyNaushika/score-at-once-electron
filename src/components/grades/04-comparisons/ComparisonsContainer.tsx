@@ -75,16 +75,17 @@ export function ComparisonsContainer({ gradeId }: ComparisonsContainerProps) {
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">比較の設定</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        評価項目ごとに、結果の表で並べて見る相手を選びます。別の成績算出の項目でも、
-        この成績算出の別の項目でも選べます。結果の表では評定の横に、ここに並べた順で
+        成績評価項目ごとに、結果の表で並べて見る相手を選びます。別の成績算出の項目でも、
+        この成績算出の別の項目でも選べます。結果の表では成績評価記号の横に、ここに並べた順で
         ↑（上がった）↓（下がった）→（同じ）が並びます。上下はこの成績算出の項目の
-        成績境界で判定し、どちらかの評定が境界に無いときは
-        *（上下を決められない）、比較先に評定が無いときは ・ になります。
+        成績境界で判定し、どちらかの成績評価記号が成績境界に無いときは
+        *（上下を決められない）、比較先に成績評価記号が無いときは ・
+        になります。
       </p>
 
       {grade.gradeItems.length === 0 ? (
         <div className="py-8 text-center text-sm text-muted-foreground">
-          {`評価項目がありません。「${workflowStep(gradeWorkflowSteps, "02-data-sources").label}」の段で追加してください。`}
+          {`成績評価項目がありません。「${workflowStep(gradeWorkflowSteps, "02-items").label}」の段で追加してください。`}
         </div>
       ) : (
         <div className="space-y-4">

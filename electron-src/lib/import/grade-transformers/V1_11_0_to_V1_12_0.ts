@@ -35,7 +35,7 @@ export class V1_11_0_to_V1_12_0_Transformer implements GradeVersionTransformer {
     ]
     if (discardedScoreCount > 0) {
       warnings.push(
-        `1.11.0→1.12.0: 対象生徒として登録されていない生徒の点数 ${discardedScoreCount} 件を破棄しました`
+        `1.11.0→1.12.0: 対象生徒として登録されていない生徒の得点 ${discardedScoreCount} 件を破棄しました`
       )
     }
 

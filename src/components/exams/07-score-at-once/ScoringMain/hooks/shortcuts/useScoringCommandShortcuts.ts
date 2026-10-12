@@ -85,7 +85,7 @@ export function useScoringCommandShortcuts({
     metadata: {
       title: "Wマークとして採点",
       category: "採点",
-      description: "選択中の答案をダブルマークとして採点します",
+      description: "選択中の答案をWマークとして採点します",
     },
   })
 

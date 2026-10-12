@@ -41,7 +41,7 @@ type GradeProgressSource = Serialized<
 interface GradeStepCompletion {
   /** 1. 生徒管理 */
   hasStudents: boolean
-  /** 2. データソース */
+  /** 2. 成績評価項目（データソースが1つでもあるか） */
   hasDataSources: boolean
   /** 3. 成績境界 */
   hasBoundaries: boolean
@@ -54,7 +54,7 @@ export function getGradeCompletion(
   grade: GradeProgressSource
 ): GradeStepCompletion {
   const studentCount = grade.gradeStudents.length
-  // 境界が引かれている評価項目が1つでもあるか。境界の有無は行の有無そのものなので、
+  // 境界が引かれている成績評価項目が1つでもあるか。境界の有無は行の有無そのものなので、
   // 「境界0本だが設定済み」という状態は作れない
   const hasAnyBoundary = grade.gradeItems.some(
     (gradeItem) => gradeItem.boundaries.length > 0
@@ -82,7 +82,7 @@ export function getGradeStatus(grade: GradeProgressSource): WorkflowNextStep {
     return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "01-students")
   }
   if (!completion.hasDataSources) {
-    return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "02-data-sources")
+    return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "02-items")
   }
   if (!completion.hasBoundaries) {
     return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "03-boundaries")

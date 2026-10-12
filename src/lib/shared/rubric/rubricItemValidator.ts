@@ -6,7 +6,7 @@
  * - `adjust` は `pointDelta` があり、`setStatus`・`setScore` は null
  * - `set` はその逆で、`setStatus` は correct / partial / incorrect / no_answer / pending
  * - 点の範囲と刻みは AI の判定と同じ規則（§6-1）: 0〜配点、0.01 単位。配点の無い設問では点を付けない
- *   - `setScore` は partial では必ずあり、pending では任意、それ以外では null。満点の partial は correct にする
+ *   - `setScore` は partial では必ずあり、pending では任意、それ以外では null。配点と同じ点の partial は correct にする
  *   - `pointDelta` は 0 でなく、絶対値が配点以下
  */
 
@@ -137,7 +137,7 @@ export function validateRubricItemEffect(
     } else {
       checkScoreRange(setScore, maxPoints, "点", reasons)
       if (setStatus === "partial" && setScore === maxPoints) {
-        reasons.push("満点の部分点は、正答の項目にしてください")
+        reasons.push("配点と同じ部分点は、正答の項目にしてください")
       }
     }
   }

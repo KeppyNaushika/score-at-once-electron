@@ -38,12 +38,12 @@ export class V1_9_0_to_V1_10_0_Transformer implements GradeVersionTransformer {
 
     if (droppedBoundarySets > 0) {
       warnings.push(
-        `1.9.0→1.10.0: 総合の成績境界セット ${droppedBoundarySets} 件を破棄しました（総合は撤去され、評定は評価項目として扱います）`
+        `1.9.0→1.10.0: 総合の成績境界セット ${droppedBoundarySets} 件を破棄しました（総合は撤去され、評定は成績評価項目として扱います）`
       )
     }
     if (droppedOverrides > 0) {
       warnings.push(
-        `1.9.0→1.10.0: 総合評定の手動上書き ${droppedOverrides} 件を破棄しました（総合は撤去され、評定は評価項目として扱います）`
+        `1.9.0→1.10.0: 総合評定の上書き ${droppedOverrides} 件を破棄しました（総合は撤去され、評定は成績評価項目として扱います）`
       )
     }
 

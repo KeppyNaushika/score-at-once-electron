@@ -373,8 +373,8 @@ describe("設問・資料・成績算出の中・名簿", () => {
   })
 })
 
-describe("確定済みの判定と文言", () => {
-  it("確定済みの評価項目に写ると、印と強い注意が付く。影響が無ければ変わらないと言う", () => {
+describe("固定済みの判定と文言", () => {
+  it("固定済みの成績評価項目に写ると、印と強い注意が付く。影響が無ければ変わらないと言う", () => {
     const impacts = impactsOf([
       change(
         "QuestionScore",
@@ -387,9 +387,9 @@ describe("確定済みの判定と文言", () => {
       ["知識", false],
       ["小計", true],
     ])
-    expect(items.map(archiveGradeItemImpactBadge)).toEqual([null, "確定済み"])
+    expect(items.map(archiveGradeItemImpactBadge)).toEqual([null, "固定済み"])
     expect(buildArchiveGradeImpactMessage(impacts).frozenNote).toContain(
-      "確定した値のまま変わりません"
+      "固定値のまま変わりません"
     )
 
     expect(buildArchiveGradeImpactMessage([])).toEqual({

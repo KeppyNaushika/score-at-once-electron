@@ -13,7 +13,7 @@ interface MembershipStatusToggleProps {
   onStatusFilterChange: (statusFilter: MembershipStatusFilter) => void
 }
 
-/** 学級の所属を在籍中・終了済みで絞り込むトグル */
+/** 学級の在籍を在籍中・過去在籍で絞り込むトグル */
 export function MembershipStatusToggle({
   statusFilter,
   onStatusFilterChange,
@@ -24,7 +24,7 @@ export function MembershipStatusToggle({
       variant="outline"
       size="sm"
       value={statusFilter}
-      aria-label="所属状況で絞り込む"
+      aria-label="在籍状況で絞り込む"
       onValueChange={ignoreDeselect(
         MEMBERSHIP_STATUS_FILTERS,
         onStatusFilterChange

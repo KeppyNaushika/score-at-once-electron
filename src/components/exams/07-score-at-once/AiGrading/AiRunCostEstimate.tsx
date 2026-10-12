@@ -19,7 +19,7 @@ interface AiRunCostEstimateProps {
   runSettings: AiRunSettings
   /** 送信1回の見積もりの警告額（米ドル）。null なら警告しない */
   budgetWarningUsd: number | null
-  /** 1段目のあとに2段目（項目の案）が続くか。AI チェックは1段目だけ */
+  /** 1段目のあとに2段目（項目の案）が続くか。AIチェックは1段目だけ */
   includesGrouping?: boolean
 }
 
@@ -50,8 +50,8 @@ function describeEstimateBasis(basis: RunCostEstimate["basis"]): string[] {
 
 /**
  * 件数と費用の概算（送る画像の大きさと過去の実行は main が返し、トークン数と金額は
- * 利用者が入れた単価でここで求める）。AI 採点では1段目のあとに自動で続く2段目（項目の案・文字だけ1回）の
- * 概算も足す（AI チェックは1段目だけ）。概算が警告額を超えるときは警告する（送信は止めない）
+ * 利用者が入れた単価でここで求める）。AI採点では1段目のあとに自動で続く2段目（項目の案・文字だけ1回）の
+ * 概算も足す（AIチェックは1段目だけ）。概算が警告額を超えるときは警告する（送信は止めない）
  */
 export function AiRunCostEstimate({
   prompt,

@@ -218,9 +218,9 @@ export function CourseworkStudentsContainer({
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
             deletionLosses={[
-              "この資料の全評価項目に入力された点数・評価記号",
+              "この資料のすべての資料評価項目に入力された得点・資料評価記号",
               "加減点とその理由",
-              "成績通知書に載せるコメント",
+              "個人成績通知書に載せるコメント",
             ]}
             removalWarning={removalWarning}
             // 失敗は例外で伝わり、中央のトーストが知らせる（表示は読み直しで戻る）
@@ -252,9 +252,9 @@ export function CourseworkStudentsContainer({
         enableRemove
         slots={{
           removalLosses: [
-            "この資料の全評価項目に入力された点数・評価記号",
+            "この資料のすべての資料評価項目に入力された得点・資料評価記号",
             "加減点とその理由",
-            "成績通知書に載せるコメント",
+            "個人成績通知書に載せるコメント",
           ],
           removalWarning,
         }}

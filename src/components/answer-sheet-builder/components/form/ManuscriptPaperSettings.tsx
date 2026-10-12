@@ -317,7 +317,7 @@ export function ManuscriptPaperSettings({
                   }
                 />
                 <TooltipButton
-                  label="マーカーを削除"
+                  label="文字位置マーカーを削除"
 
                   variant="ghost"
                   size="icon"
@@ -411,7 +411,7 @@ export function ManuscriptPaperSettings({
 
           {manuscriptPaper.charGuides.length === 0 ? (
             <p className="text-[10px] text-muted-foreground">
-              「追加」で先頭からの文字数の目印を作成。数字（例:
+              「追加」で先頭からの文字数を示す文字位置マーカーを作成。数字（例:
               80）と区切り罫線（○字以内/以上）を組み合わせられます。罫線のみ使うときは数字を空欄に。
             </p>
           ) : (

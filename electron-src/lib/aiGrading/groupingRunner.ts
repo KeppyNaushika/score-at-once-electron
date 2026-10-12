@@ -79,7 +79,7 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
    */
   async function runGrouping(gradeRunId: string, actorUserId: string) {
     if (groupingGradeRunIds.has(gradeRunId)) {
-      throw new Error("この AI 採点の項目の案を作っているところです")
+      throw new Error("この AI採点の項目の案を作っているところです")
     }
     groupingGradeRunIds.add(gradeRunId)
     try {
@@ -93,7 +93,7 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
     const gradeRun = await getAiGradingRunForProcessing(gradeRunId)
     if (!gradeRun) throw new Error("実行が見つかりません")
     if (gradeRun.userId !== actorUserId) {
-      throw new Error("項目の案を作れるのは、AI 採点を実行した教員だけです")
+      throw new Error("項目の案を作れるのは、AI採点を実行した教員だけです")
     }
     if (gradeRun.purpose !== "grade") {
       throw new Error("項目の案は、答案ごとの判定の実行から作ります")

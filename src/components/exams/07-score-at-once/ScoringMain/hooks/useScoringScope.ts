@@ -40,7 +40,7 @@ export function useScoringScope({
   /**
    * 匿名採点（docs/scoring-scope-and-permissions-design.md §3-5）。名前を仮の名前に、
    * 並び（customOrder）を名簿と関係ない順に置き換えた答案を、ここから先へ渡す。
-   * 一覧・個別・AI 採点のどれも名前と並びをこの行から取るので、ここ1か所で効く。
+   * 一覧・個別・AI採点のどれも名前と並びをこの行から取るので、ここ1か所で効く。
    * 書き込みは id で行うので、置き換えた名前や並びが DB へ戻ることはない
    */
   const { isAnonymous, isEnforcedForMe, pseudonymOf, anonymousOrderOf } =

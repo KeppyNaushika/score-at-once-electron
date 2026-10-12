@@ -1,12 +1,14 @@
 import type { ScoreDecision } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { Serialized } from "@/types/prismaExtensions"
 import {
   isStatusCompatibleWithScoringMethod,
   toScoringMethod,
 } from "@/types/rubric.types"
 import {
+  isScoringStatus,
   type ScoringStatus,
   toScoringStatus,
 } from "@/types/scoringStatus.types"
@@ -38,26 +40,10 @@ export const toSerializedScoreDecision = <
 })
 
 /** verdict コードを日本語表示に変換（監査ログ差分用） */
-const verdictLabel = (verdict: string | null | undefined): string => {
-  switch (verdict) {
-    case "correct":
-      return "正解"
-    case "incorrect":
-      return "不正解"
-    case "partial":
-      return "部分点"
-    case "pending":
-      return "保留"
-    case "no_answer":
-      return "無答"
-    case "double_mark":
-      return "複数マーク"
-    case "evaluated":
-      return "類型評価"
-    default:
-      return verdict ?? "（なし）"
-  }
-}
+const verdictLabel = (verdict: string | null | undefined): string =>
+  isScoringStatus(verdict)
+    ? SCORING_STATUS_LABELS[verdict]
+    : (verdict ?? "（なし）")
 
 /**
  * 確定1件の内容。**確定は「このセルの結果はこれだ」を一度に決める1つの操作**なので、
@@ -98,9 +84,22 @@ export type UpsertScoreDecisionData = Required<
  * — createExam / アーカイブインポートは作成者を必ず OWNER として登録するため、
  * 新規試験でこのフォールバックに入ることはない。
  */
-export const canDecideExamScores = async (
+export const canDecideExamScores = (
   examId: string,
   userId: string
+): Promise<{ allowed: boolean; reason?: string }> =>
+  checkExamOwner(examId, userId, "採点確定は所有者だけが行えます")
+
+/**
+ * 試験の所有者（OWNER）だけに許す操作の権限チェック。採点確定と採点担当の割り当てが使う。
+ * 断るときの文は操作ごとに違うので、呼び出し元が `deniedReason` で渡す。
+ *
+ * UserExam が1件も無い試験（旧データ）は制限しない（{@link canDecideExamScores} を参照）。
+ */
+export const checkExamOwner = async (
+  examId: string,
+  userId: string,
+  deniedReason: string
 ): Promise<{ allowed: boolean; reason?: string }> => {
   const members = await prisma.userExam.findMany({
     where: { examId },
@@ -112,10 +111,7 @@ export const canDecideExamScores = async (
   const currentMember = members.find((member) => member.userId === userId)
   if (currentMember?.role === "OWNER") return { allowed: true }
 
-  return {
-    allowed: false,
-    reason: "採点結果の確定は試験の所有者（OWNER）のみが行えます",
-  }
+  return { allowed: false, reason: deniedReason }
 }
 
 /**
@@ -140,8 +136,8 @@ const resolveDecidedScaleLevel = async (
   ) {
     throw new Error(
       scoringMethod === "scale"
-        ? "類型評価の設問は、類型を選んで確定してください"
-        : "この設問は類型評価ではないため、類型では確定できません"
+        ? "類型方式の設問は、類型を選んで確定してください"
+        : "この設問は類型方式ではないため、類型では確定できません"
     )
   }
 
@@ -155,7 +151,7 @@ const resolveDecidedScaleLevel = async (
   })
   if (!scaleLevel) throw new Error("類型が見つかりません")
   if (scaleLevel.scaleId !== cropRegion.scoreScaleId) {
-    throw new Error("この設問の類型評価の類型ではありません")
+    throw new Error("この設問の類型表の類型ではありません")
   }
   return scaleLevel
 }

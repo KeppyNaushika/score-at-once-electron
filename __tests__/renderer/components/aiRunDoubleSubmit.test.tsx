@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 外部へ送るボタンのダブルクリック（07 の AI 採点）。
+ * 外部へ送るボタンのダブルクリック（07 の AI採点）。
  *
  * ここで固定すること:
  * - 実行ダイアログの「送信」を2回続けて押しても、startRun は1回しか呼ばれない
@@ -240,7 +240,7 @@ describe("実行ダイアログの送信", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "AI 採点を始められませんでした",
+        "AI採点を始められませんでした",
         { description: "つながりません" }
       )
     )

@@ -27,7 +27,7 @@ interface StatisticsClassroomSelectorProps {
  *
  * 試験に登録された学級ごとに「教員集計(teacherStatistics)」「生徒表示(studentReport)」を切り替える。
  * - 教員集計: Excel の学級平均行に出す学級
- * - 生徒表示: 個人成績表の学級比較に出す学級（生徒に渡るので慎重に）
+ * - 生徒表示: 試験採点結果個表の学級比較に出す学級（生徒に渡るので慎重に）
  * どちらも複数選択可（1人の生徒が複数学級の平均に数えられる）。受験生徒画面(05)の再採番とは別軸。
  */
 export function StatisticsClassroomSelector({
@@ -123,7 +123,7 @@ export function StatisticsClassroomSelector({
         <span className="font-medium text-foreground">教員集計</span>
         はExcelの学級平均行、
         <span className="font-medium text-foreground">生徒表示</span>
-        は個人成績表の学級比較に出ます（生徒に渡るので慎重に）。
+        は試験採点結果個表の学級比較に出ます（生徒に渡るので慎重に）。
       </p>
       <div className="rounded-md border">
         <Table>

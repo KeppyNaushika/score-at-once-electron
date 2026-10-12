@@ -64,7 +64,7 @@ describe("1段目の文面", () => {
         teacherInstructions: [],
       })
     )
-    expect(withItems).toContain("## ルーブリック項目")
+    expect(withItems).toContain("## 採点項目")
     expect(withItems).toContain(
       `${RUBRIC_ITEMS[0].id} ／ −1点 ／ 移項で符号を誤った`
     )
@@ -78,7 +78,7 @@ describe("1段目の文面", () => {
         teacherInstructions: [],
       })
     )
-    expect(withoutItems).not.toContain("ルーブリック項目")
+    expect(withoutItems).not.toContain("採点項目")
   })
 })
 

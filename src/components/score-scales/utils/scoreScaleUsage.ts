@@ -2,7 +2,7 @@
  * 類型評価（類型の組）の使われ方と、編集の欄の読み取り（docs/vlm-grading-design.md §4-8-3・§4-8-3a）。
  *
  * 使われている件数は main が返した include の行を数える（main では数えない）。
- * 03 の領域情報と類型評価管理の画面が、同じ数え方・同じ言い方を使う。
+ * 03 の領域設定と類型評価管理の画面が、同じ数え方・同じ言い方を使う。
  */
 
 import type { ScoreScaleLevelRow, ScoreScaleRow } from "@/queries/scoreScale"

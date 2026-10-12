@@ -182,7 +182,7 @@ beforeEach(() => {
 describe("1打鍵ごとの書き込み", () => {
   it("名前は打鍵ごとに書く", async () => {
     renderEditor(makeScoreScale({}))
-    await userEvent.type(screen.getByLabelText("類型評価の名前"), "X")
+    await userEvent.type(screen.getByLabelText("類型表の名前"), "X")
     await waitFor(() =>
       expect(fakeApi.rubric.updateScoreScale).toHaveBeenCalledWith("scale-1", {
         name: "記述の3類型X",
@@ -208,7 +208,7 @@ describe("1打鍵ごとの書き込み", () => {
     )
     // 試験の組は確かめない
     expect(
-      screen.queryByText("共通の類型評価を直しますか")
+      screen.queryByText("共通の類型表を直しますか")
     ).not.toBeInTheDocument()
   })
 
@@ -231,7 +231,7 @@ describe("共通の組の点数・類型を直す前の確認", () => {
     await userEvent.type(scoreInputs()[0], "5")
 
     expect(
-      await screen.findByText("共通の類型評価を直しますか")
+      await screen.findByText("共通の類型表を直しますか")
     ).toBeInTheDocument()
     expect(
       within(screen.getByRole("alertdialog")).getByText(
@@ -260,7 +260,7 @@ describe("共通の組の点数・類型を直す前の確認", () => {
       )
     )
     expect(
-      screen.queryByText("共通の類型評価を直しますか")
+      screen.queryByText("共通の類型表を直しますか")
     ).not.toBeInTheDocument()
   })
 
@@ -274,14 +274,14 @@ describe("共通の組の点数・類型を直す前の確認", () => {
       )
     )
     expect(
-      screen.queryByText("共通の類型評価を直しますか")
+      screen.queryByText("共通の類型表を直しますか")
     ).not.toBeInTheDocument()
   })
 
   it("「やめる」は書かず、打ちかけの点数を戻す", async () => {
     renderEditor(globalScaleUsedByOneExam())
     await userEvent.type(scoreInputs()[1], "9")
-    await screen.findByText("共通の類型評価を直しますか")
+    await screen.findByText("共通の類型表を直しますか")
     await userEvent.click(screen.getByRole("button", { name: "やめる" }))
 
     await waitFor(() => expect(scoreInputs()[1]).toHaveValue("6"))
@@ -291,7 +291,7 @@ describe("共通の組の点数・類型を直す前の確認", () => {
   it("類型を足すのも確かめる", async () => {
     renderEditor(globalScaleUsedByOneExam())
     await userEvent.click(screen.getByRole("button", { name: "類型を追加" }))
-    await screen.findByText("共通の類型評価を直しますか")
+    await screen.findByText("共通の類型表を直しますか")
     expect(fakeApi.rubric.createScoreScaleLevel).not.toHaveBeenCalled()
 
     await userEvent.click(screen.getByRole("button", { name: "続けて直す" }))
@@ -431,7 +431,7 @@ describe("使える範囲と削除", () => {
   it("使っている設問があれば組を消せない", () => {
     renderEditor(globalScaleUsedByOneExam())
     expect(
-      screen.getByRole("button", { name: "類型評価を削除" })
+      screen.getByRole("button", { name: "類型表を削除" })
     ).toBeDisabled()
     expect(screen.getByText("2問の設問が使っています")).toBeInTheDocument()
   })
@@ -439,7 +439,7 @@ describe("使える範囲と削除", () => {
   it("使われていない組は確かめてから消す", async () => {
     renderEditor(makeScoreScale({}))
     await userEvent.click(
-      screen.getByRole("button", { name: "類型評価を削除" })
+      screen.getByRole("button", { name: "類型表を削除" })
     )
     expect(fakeApi.rubric.deleteScoreScale).not.toHaveBeenCalled()
     await userEvent.click(screen.getByRole("button", { name: "削除する" }))

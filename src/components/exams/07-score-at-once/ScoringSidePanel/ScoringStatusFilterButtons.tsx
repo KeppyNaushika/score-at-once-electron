@@ -15,6 +15,7 @@ import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKey
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { filterCommandIdOf } from "@/lib/scoringKeybindings"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -23,19 +24,47 @@ import { GRID_4_3_STYLE } from "./scoringToolbarButtons"
 import { ShortcutTooltip } from "./ShortcutTooltip"
 
 const FILTER_BUTTONS = [
-  { status: "unscored", label: "未採点", icon: CircleDashed },
-  { status: "correct", label: "正答", icon: CircleCheckBig },
-  { status: "partial", label: "部分点", icon: Triangle },
-  { status: "pending", label: "保留", icon: Clock },
-  { status: "incorrect", label: "誤答", icon: X },
-  { status: "no_answer", label: "無答", icon: Minus },
-  { status: "double_mark", label: "Wマーク", icon: CopyX },
+  {
+    status: "unscored",
+    label: SCORING_STATUS_LABELS.unscored,
+    icon: CircleDashed,
+  },
+  {
+    status: "correct",
+    label: SCORING_STATUS_LABELS.correct,
+    icon: CircleCheckBig,
+  },
+  {
+    status: "partial",
+    label: SCORING_STATUS_LABELS.partial,
+    icon: Triangle,
+  },
+  {
+    status: "pending",
+    label: SCORING_STATUS_LABELS.pending,
+    icon: Clock,
+  },
+  {
+    status: "incorrect",
+    label: SCORING_STATUS_LABELS.incorrect,
+    icon: X,
+  },
+  {
+    status: "no_answer",
+    label: SCORING_STATUS_LABELS.no_answer,
+    icon: Minus,
+  },
+  {
+    status: "double_mark",
+    label: SCORING_STATUS_LABELS.double_mark,
+    icon: CopyX,
+  },
 ] as const
 
-/** 類型評価の設問でだけ足す、評価済み（類型を付けた答案）の絞り込み */
+/** 類型評価の設問でだけ足す、類型採点済み（類型を付けた答案）の絞り込み */
 const EVALUATED_FILTER_BUTTON = {
   status: "evaluated",
-  label: "類型評価",
+  label: SCORING_STATUS_LABELS.evaluated,
   icon: Layers,
 } as const
 
@@ -47,7 +76,7 @@ interface ScoringStatusFilterButtonsProps {
   commandIdOf?: (status: ScoringStatus) => string
   /** ボタンの組の名前（同じ画面に2組並べるときに読み上げで区別する） */
   "aria-label"?: string
-  /** 評価済み（類型評価）の絞り込みも並べるか（類型評価の設問だけ） */
+  /** 類型採点済みの絞り込みも並べるか（類型評価の設問だけ） */
   showEvaluated?: boolean
 }
 
@@ -73,7 +102,7 @@ export function ScoringStatusFilterButtons({
       <div style={GRID_4_3_STYLE} role="group" aria-label={groupLabel}>
         {filterButtons.map((button) => {
           const isActive = filterSettings[button.status] ?? false
-          // 評価済みの絞り込みには既定のキーが無い（無ければ「?」でなく「なし」と出す）
+          // 類型採点済みの絞り込みには既定のキーが無い（無ければ「?」でなく「なし」と出す）
           const keyBinding =
             keyBindings[commandIdOf(button.status)] ||
             (button.status === "evaluated" ? "なし" : "?")

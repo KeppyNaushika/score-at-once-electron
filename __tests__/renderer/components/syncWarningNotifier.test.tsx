@@ -112,7 +112,7 @@ describe("SyncWarningNotifier", () => {
     const description = descriptionOf(toastWarning)
     expect(description).toContain("読み取れませんでした")
     expect(description).toContain("読み直します")
-    expect(description).toContain("試験の受験生徒")
+    expect(description).toContain("受験生徒")
   })
 
   it("報告だけの知らせは、警告ではなく情報として出す", () => {

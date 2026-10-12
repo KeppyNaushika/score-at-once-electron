@@ -129,9 +129,7 @@ export function usePersistedDrawingElements({
     async (element: DrawingAnnotation) => {
       // 行き先が決まっていなければ保存先が無い（答案・設問・採点者のどれかが未確定）
       if (enablePersistence && !annotationTarget) {
-        console.error(
-          "描画要素の追加には行き先（答案・設問・採点者）が必要です。"
-        )
+        console.error("注釈の追加には行き先（答案・設問・採点者）が必要です。")
         return
       }
 
@@ -143,7 +141,7 @@ export function usePersistedDrawingElements({
         try {
           await saveElement(annotationTarget, element)
         } catch (error) {
-          console.error("描画要素保存エラー:", error)
+          console.error("注釈の保存エラー:", error)
           // 保存に失敗した場合、ローカル状態をロールバック
           setDrawingElements((prev) =>
             prev.filter(
@@ -192,7 +190,7 @@ export function usePersistedDrawingElements({
           }
           await updateElement(updatedElement)
         } catch (error) {
-          console.error("描画要素更新エラー:", error)
+          console.error("注釈の更新エラー:", error)
           // 更新に失敗した場合、ローカル状態をロールバック
           setDrawingElements((prev) =>
             prev.map((element) =>
@@ -238,7 +236,7 @@ export function usePersistedDrawingElements({
               const updatedElement = { ...previousElement, ...elementUpdates }
               await updateElement(updatedElement)
             } catch (error) {
-              console.error("描画要素更新エラー:", error)
+              console.error("注釈の更新エラー:", error)
               // 失敗した要素だけ元へ戻す（ほかの要素は保存できている）
               setDrawingElements((prev) =>
                 prev.map((element) =>
@@ -274,7 +272,7 @@ export function usePersistedDrawingElements({
         try {
           await deleteElement(id)
         } catch (error) {
-          console.error("描画要素削除エラー:", error)
+          console.error("注釈の削除エラー:", error)
           // 削除に失敗した場合、ローカル状態をロールバック
           if (removedElement) {
             setDrawingElements((prev) => [...prev, removedElement])

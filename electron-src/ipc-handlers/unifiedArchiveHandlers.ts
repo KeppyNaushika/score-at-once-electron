@@ -78,7 +78,7 @@ const ARCHIVE_FILE_FILTER = {
  */
 const ANY_IMPORT_FILE_FILTERS = [
   {
-    name: "読み込めるファイル",
+    name: "取り込めるファイル",
     extensions: [...ARCHIVE_IMPORT_FILE_KINDS],
   },
   ARCHIVE_FILE_FILTER,
@@ -252,7 +252,7 @@ export const unifiedArchiveHandlers = {
   "unifiedArchive:selectAnyImportFile":
     async (): Promise<SelectedArchiveImportFile | null> => {
       const result = await dialog.showOpenDialog({
-        title: "読み込む",
+        title: "取り込む",
         filters: isWebRuntime()
           ? [ARCHIVE_FILE_FILTER]
           : ANY_IMPORT_FILE_FILTERS,
@@ -266,7 +266,7 @@ export const unifiedArchiveHandlers = {
   /** 取り込みウィザードの中で、統合アーカイブを選び直す。選ばずに閉じたら null */
   "unifiedArchive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
-      title: "統合アーカイブを読み込む",
+      title: "統合アーカイブを取り込む",
       filters: [ARCHIVE_FILE_FILTER],
       properties: ["openFile"],
     })

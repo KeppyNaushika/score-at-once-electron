@@ -81,7 +81,7 @@ describe("アーカイブが指す利用者", () => {
     // 採点行が書き出しの絞り込みで落ちた教員は、どこからも指されないので載っていない
     expect(archivedUserByName.has("unreferenced")).toBe(false)
 
-    // 書き出したパソコンへ戻す場合を模す（利用者の id まで一致する）
+    // 書き出したPCへ戻す場合を模す（利用者の id まで一致する）
     await createUsersFromArchive(extracted.usersData)
 
     // 判断の対象は「採点層から参照されている採点者」だけ。
@@ -95,15 +95,15 @@ describe("アーカイブが指す利用者", () => {
       ...(preMatch.user!.byName ?? []),
       ...preMatch.user!.noMatch,
     ].map((item) => item.importId)
-    // 書き出したパソコンで読むので、全員が id 一致（＝画面には何も出ない）
+    // 書き出したPCで読むので、全員が id 一致（＝画面には何も出ない）
     expect(askedUserIds).toEqual([])
     expect(preMatch.user!.byId.length).toBe(graderUserIds.size)
 
     cleanupTempDir(extracted.tempDir)
   })
 
-  it("確定を下した人は、別のパソコンへ持って行っても取り込んだ人へ倒れない", async () => {
-    // 別のパソコンを模す: 取り込む人だけが居る
+  it("確定を下した人は、別のPCへ持って行っても取り込んだ人へ倒れない", async () => {
+    // 別のPCを模す: 取り込む人だけが居る
     const importer = await createTestUser({ username: "importer" })
 
     const extracted = await extractLegacyExamArchive(EXAM_FIXTURE)

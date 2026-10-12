@@ -25,12 +25,12 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
           試験アーカイブを選択
         </h3>
         <p className="max-w-lg text-muted-foreground">
-          エクスポートされた .score ファイルを選択してください。
+          書き出された .score ファイルを選択してください。
           <br />
           ファイルには試験データ、 採点結果、画像が含まれています。
         </p>
         <p className="mt-2 max-w-lg text-muted-foreground">
-          エクスポートしたときにログインしていたユーザーにかかわらず、
+          書き出したときにログインしていたユーザーにかかわらず、
           <br />
           現在ログインしているユーザーの試験として追加されます。
         </p>
@@ -68,7 +68,7 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
           <ul className="space-y-2">
             <li className="flex items-center gap-2 text-sm text-muted-foreground">
               <CircleCheck className="h-4 w-4 text-green-500" />
-              一括採点試験データ (.score)
+              試験データ (.score)
             </li>
             <li className="flex items-center gap-2 text-sm text-muted-foreground">
               <CircleCheck className="h-4 w-4 text-green-500" />

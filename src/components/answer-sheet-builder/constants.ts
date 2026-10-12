@@ -242,12 +242,12 @@ export const HEADER_FIELD_PRESETS: {
     },
   },
   {
-    label: "クラス",
-    defaults: { type: "field", label: "クラス", widthMm: 20, gridCount: 3 },
+    label: "組",
+    defaults: { type: "field", label: "組", widthMm: 20, gridCount: 3 },
   },
   {
-    label: "番号",
-    defaults: { type: "field", label: "番号", widthMm: 20, gridCount: 3 },
+    label: "番",
+    defaults: { type: "field", label: "番", widthMm: 20, gridCount: 3 },
   },
   {
     label: "氏名",

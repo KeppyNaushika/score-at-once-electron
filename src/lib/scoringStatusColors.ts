@@ -47,18 +47,6 @@ interface ScoringColorPreset {
   colors: ScoringStatusColors
 }
 
-/** 状態のラベル（日本語） */
-export const SCORING_STATUS_LABELS: Record<ScoringStatus, string> = {
-  unscored: "未採点",
-  correct: "正答",
-  partial: "部分点",
-  pending: "保留",
-  incorrect: "誤答",
-  no_answer: "無答",
-  double_mark: "Wマーク",
-  evaluated: "類型評価",
-}
-
 /** 状態の表示順序 */
 export const SCORING_STATUS_ORDER: ScoringStatus[] = [
   "unscored",

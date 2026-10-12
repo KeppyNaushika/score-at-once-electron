@@ -12,7 +12,7 @@ import { createSheetHeaders } from "./headerCreators"
 import { createDataRows } from "./rowCreators"
 
 /**
- * 点数一覧シートを作成する
+ * 得点一覧シートを作成する
  *
  * @param workbook - Excelワークブック
  * @param questionRegions - 設問領域配列
@@ -30,7 +30,7 @@ export async function createScoreSheet(
   /** teacherStatistics=true の登録学級（受験日所属生徒つき） */
   teacherStatisticsClassrooms: ExamClassroomWithMembers[] = []
 ): Promise<ExcelJS.Worksheet> {
-  const worksheet = workbook.addWorksheet("点数一覧")
+  const worksheet = workbook.addWorksheet("得点一覧")
 
   // ヘッダー行の作成
   await createSheetHeaders(worksheet, questionRegions, subtotalColumns)

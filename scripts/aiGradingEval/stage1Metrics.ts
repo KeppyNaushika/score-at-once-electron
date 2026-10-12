@@ -106,7 +106,7 @@ function aiScore(
           partialScore: verdict.partialScore,
           scaleLevel: null,
         },
-        // AI 採点を評価するのは点の採点の設問だけ（類型評価の設問では AI 採点を開かない）
+        // AI採点を評価するのは点の採点の設問だけ（類型評価の設問では AI採点を開かない）
         { points, scoringMethod: "points" }
       )
 }

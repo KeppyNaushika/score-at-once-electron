@@ -22,7 +22,7 @@ import {
 } from "./utils/rubricEffectLabel"
 
 /**
- * ここで選べる方式。類型評価は類型の組も選ぶので、03 の領域情報で選ぶ
+ * ここで選べる方式。類型評価は類型の組も選ぶので、03 の領域設定で選ぶ
  * （docs/vlm-grading-design.md §4-8-3a）
  */
 const POINT_SCORING_METHODS = SCORING_METHODS.filter(
@@ -105,7 +105,7 @@ export function ScoringMethodSection({
       </p>
       {scoringMethod === "scale" && (
         <p className="mt-1 text-[11px] text-gray-500">
-          類型評価は 03 の領域情報で選びます。
+          類型表は 03 の領域設定で選びます。
         </p>
       )}
       <RubricRecalculationDialog pending={pending} onCancel={cancel} />

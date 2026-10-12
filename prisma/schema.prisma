@@ -499,7 +499,7 @@ model ScoreDecision {
   id              String           @id @default(uuid())
   cropRegionId    String
   examStudentId   String
-  /// 確定した採点判定（correct | incorrect | partial | pending | no_answer | double_mark）
+  /// 確定した採点判定（correct | incorrect | partial | pending | no_answer | double_mark | evaluated）
   verdict         String
   /// 確定点。correct等のverdict自体が点数を決める場合はnull可
   score           Decimal?
@@ -1256,7 +1256,7 @@ model UserClickScoringAction {
   userId     String
   /// 連続クリックの回数（2〜4）
   clickCount Int
-  /// ClickScoringAction（src/components/exams/07-score-at-once/ScoringMain/scoringPreferences.ts）
+  /// ClickScoringAction（src/types/clickScoring.types.ts）
   action     String
 
   createdAt DateTime @default(now())
@@ -1784,7 +1784,8 @@ model GradeStudent {
   @@index([gradeId, customOrder])
 }
 
-/// 成績データソース（6種: exam_total / subtotal / crop_region / coursework / coursework_total）
+/// 成績データソース（6種: exam_total / subtotal / crop_region / coursework / coursework_total と旧型の manual。
+/// manual は Coursework 昇格前の型で、今の画面では作らない。値の定義は src/types/grade.types.ts）
 /// coursework型は CourseworkItem（試験外成績資料の評価項目）を参照する
 /// coursework_total型は Coursework（試験外成績資料）全体を参照し、全評価項目のスコアを合算する
 ///
@@ -1804,7 +1805,7 @@ model GradeStudent {
 model GradeDataSource {
   id                     String   @id @default(uuid())
   gradeItemId            String
-  type                   String // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total"
+  type                   String // "exam_total" | "subtotal" | "crop_region" | "coursework" | "coursework_total" | "manual"（旧型）
   examId                 String?
   subtotalId             String?
   cropRegionId           String?

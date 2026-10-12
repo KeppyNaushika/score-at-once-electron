@@ -20,7 +20,7 @@ interface ScoringMethodToggleButtonProps {
 
 /**
  * 設問の行の「採点方式」のマス。閉じていても方式が分かるよう名前を出し、押すと行の中を開く。
- * 類型評価なのに類型の組を選んでいない設問は類型を選べないので、閉じていても知らせる
+ * 類型方式なのに類型表を選んでいない設問は類型を選べないので、閉じていても知らせる
  */
 export function ScoringMethodToggleButton({
   region,
@@ -38,7 +38,7 @@ export function ScoringMethodToggleButton({
       aria-expanded={expanded}
       title={
         lacksScoreScale
-          ? "類型評価を選んでいないので、類型を選べません"
+          ? "類型表を選んでいないので、類型を選べません"
           : undefined
       }
       onClick={(e) => {

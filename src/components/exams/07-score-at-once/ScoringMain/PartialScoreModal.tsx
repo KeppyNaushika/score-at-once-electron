@@ -112,7 +112,7 @@ export default function PartialScoreModal({
           <DialogTitle className="flex items-center gap-2">
             部分点入力
             <Badge variant="outline">
-              問{questionLabel} ({maxPoints}点満点)
+              問{questionLabel} (配点 {maxPoints}点)
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -152,10 +152,10 @@ export default function PartialScoreModal({
                 <Kbd variant="outlined">Backspace</Kbd> 削除
               </div>
               <div>
-                <Kbd variant="outlined">{partialKeyDisplay}</Kbd> 部分点で確定
+                <Kbd variant="outlined">{partialKeyDisplay}</Kbd> 部分点にする
               </div>
               <div>
-                <Kbd variant="outlined">{pendingKeyDisplay}</Kbd> 保留で確定
+                <Kbd variant="outlined">{pendingKeyDisplay}</Kbd> 保留にする
               </div>
               <div>
                 <Kbd variant="outlined">{cancelKeyDisplay}</Kbd> キャンセル
@@ -208,7 +208,7 @@ export default function PartialScoreModal({
                 }
               }}
             >
-              部分点で確定 ({partialKeyDisplay})
+              部分点にする ({partialKeyDisplay})
             </Button>
             <Button
               variant="default"
@@ -219,7 +219,7 @@ export default function PartialScoreModal({
                 }
               }}
             >
-              保留で確定 ({pendingKeyDisplay})
+              保留にする ({pendingKeyDisplay})
             </Button>
           </div>
         </div>

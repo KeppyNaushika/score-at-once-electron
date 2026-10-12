@@ -23,7 +23,7 @@ export type DataRowSheet =
  * @param worksheet - 対象のワークシート
  * @param scoringData - 採点データ配列
  * @param subtotalColumns - 小計列情報配列（SubtotalGroupから構築）
- * @param sheet - 点数一覧か正誤一覧か（正誤一覧は類型の見せ方つき）
+ * @param sheet - 得点一覧か正誤一覧か（正誤一覧は類型の見せ方つき）
  */
 export async function createDataRows(
   worksheet: ExcelJS.Worksheet,
@@ -96,7 +96,7 @@ export async function createDataRows(
  * @param row - 対象の行
  * @param student - 生徒の採点データ（計算済み小計点を含む）
  * @param subtotalColumns - 小計列情報配列
- * @param isScoreSheet - 点数一覧シートかどうか
+ * @param isScoreSheet - 得点一覧シートかどうか
  */
 function setSubtotalCells(
   row: ExcelJS.Row,
@@ -113,7 +113,7 @@ function setSubtotalCells(
     )
 
     if (isScoreSheet) {
-      // 点数一覧：計算済みの小計点を直接使用
+      // 得点一覧：計算済みの小計点を直接使用
       if (
         subtotalScore &&
         subtotalScore.score !== null &&
@@ -145,7 +145,7 @@ function setSubtotalCells(
  * @param row - 対象の行
  * @param student - 生徒の採点データ
  * @param subtotalCount - 小計列の数
- * @param sheet - 点数一覧か正誤一覧か（正誤一覧は類型の見せ方つき）
+ * @param sheet - 得点一覧か正誤一覧か（正誤一覧は類型の見せ方つき）
  */
 function setQuestionCells(
   row: ExcelJS.Row,
@@ -160,7 +160,7 @@ function setQuestionCells(
     const cell = row.getCell(columnLetter)
 
     if (sheet.kind === "score") {
-      // 点数一覧
+      // 得点一覧
       if (score.status === "unscored") {
         // 未採点の場合は空欄
         cell.value = ""

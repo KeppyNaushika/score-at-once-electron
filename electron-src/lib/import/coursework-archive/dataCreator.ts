@@ -177,12 +177,12 @@ export async function importCourseworkData(
   ) => {
     if (skipped.orphaned > 0) {
       warnings.push(
-        `試験外成績資料「${courseworkName}」: 対象生徒として登録されていない生徒の点数 ${skipped.orphaned} 件を破棄しました`
+        `試験外成績資料「${courseworkName}」: 対象生徒として登録されていない生徒の得点 ${skipped.orphaned} 件を破棄しました`
       )
     }
     if (skipped.unresolved > 0) {
       warnings.push(
-        `試験外成績資料「${courseworkName}」: この環境に存在しない生徒の点数 ${skipped.unresolved} 件を取り込めませんでした`
+        `試験外成績資料「${courseworkName}」: この環境に存在しない生徒の得点 ${skipped.unresolved} 件を取り込めませんでした`
       )
     }
   }
@@ -548,7 +548,7 @@ export async function importCourseworkData(
       reuseId = exists?.id ?? null
       if (!reuseId) {
         warnings.push(
-          `試験外成績資料「${coursework.name}」: 指定された統合先が見つからないため新規作成しました`
+          `試験外成績資料「${coursework.name}」: 指定された取り込み先が見つからないため新規作成しました`
         )
       }
     } else if (!decision) {

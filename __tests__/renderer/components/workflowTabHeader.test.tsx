@@ -172,7 +172,7 @@ function currentTabLabels(): string[] {
 }
 
 describe("WorkflowTabHeader の現在地", () => {
-  it("試験の段は概要込みで10枚並ぶ（8. 採点確定 と 9. 結果 を含む）", () => {
+  it("試験の段は概要込みで10枚並ぶ（8. 採点確定 と 9. 結果と出力 を含む）", () => {
     renderHeaderAt(examHref)
 
     const tabNav = screen.getByRole("navigation", { name: "ワークフローの段" })
@@ -183,14 +183,14 @@ describe("WorkflowTabHeader の現在地", () => {
     expect(tabLabels).toEqual([
       "概要",
       "1. 模範解答",
-      "2. 採点領域",
-      "3. 領域情報",
+      "2. 領域作成",
+      "3. 領域設定",
       "4. 小計点",
       "5. 受験生徒",
       "6. 生徒答案",
       "7. 採点",
       "8. 採点確定",
-      "9. 結果",
+      "9. 結果と出力",
     ])
   })
 
@@ -287,22 +287,22 @@ describe("WorkflowTabHeader の見出しと操作", () => {
     ).toBeInTheDocument()
   })
 
-  it("「次へ」は次の段へ向かい、その段の長い名前を言う", () => {
+  it("「次へ」は次の段へ向かい、タブと同じ段の名前で「〈段の名前〉へ」と言う", () => {
     renderHeaderAt(`${examHref}/01-upload`)
 
     const nextLink = screen.getByRole("link", {
-      name: "次へ：答案の採点領域作成",
+      name: "2. 領域作成へ",
     })
     expect(nextLink.getAttribute("href")).toBe(`${examHref}/02-template`)
   })
 
   it("概要には「次へ」を出さない（段カードが同じことを言う）", () => {
-    // 概要はまとまりごとに「次へ: 〈段の名前〉」を出している。上でも言うと、
+    // 概要はまとまりごとに「〈段の名前〉へ」を出している。上でも言うと、
     // 同じ行き先の口が2つになる
     renderHeaderAt(examHref)
 
     expect(
-      screen.queryByRole("link", { name: /^次へ：/ })
+      screen.queryByRole("link", { name: /^\d+\. .+へ$/ })
     ).not.toBeInTheDocument()
   })
 
@@ -310,7 +310,7 @@ describe("WorkflowTabHeader の見出しと操作", () => {
     renderHeaderAt(`${examHref}/09-export`)
 
     expect(
-      screen.queryByRole("link", { name: /^次へ：/ })
+      screen.queryByRole("link", { name: /^\d+\. .+へ$/ })
     ).not.toBeInTheDocument()
   })
 
@@ -320,7 +320,7 @@ describe("WorkflowTabHeader の見出しと操作", () => {
     renderHeaderAt(`${examHref}/02-template`)
 
     expect(
-      screen.getByRole("link", { name: "次へ：採点領域の詳細情報設定" })
+      screen.getByRole("link", { name: "3. 領域設定へ" })
     ).toBeInTheDocument()
   })
 
@@ -328,7 +328,7 @@ describe("WorkflowTabHeader の見出しと操作", () => {
     renderHeaderAt(`${examHref}/01-upload`)
 
     const nextLink = screen.getByRole("link", {
-      name: "次へ：答案の採点領域作成",
+      name: "2. 領域作成へ",
     })
     const helpButton = screen.getByRole("button", { name: "使い方" })
     // 同じ親（右端の並び）に、次へ → 使い方 の順で入っている

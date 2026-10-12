@@ -82,7 +82,7 @@ export const changeExamMemberRoleMutation = (examId: string) =>
       window.electronAPI.userExam.changeRole(examId, input.userId, input.role),
     meta: {
       invalidates: [scopeKeys.exam(examId)],
-      errorMessage: "参加者の役割を変更できませんでした",
+      errorMessage: "メンバーの権限を変更できませんでした",
     },
   })
 

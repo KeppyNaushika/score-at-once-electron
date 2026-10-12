@@ -275,7 +275,7 @@ describe("ルーブリック採点の画面", () => {
           onToggle={vi.fn()}
         />
       )
-      expect(screen.getByRole("button", { name: "直接採点" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "正誤方式" })).toHaveAttribute(
         "aria-pressed",
         "true"
       )

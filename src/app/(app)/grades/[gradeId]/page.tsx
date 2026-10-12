@@ -105,7 +105,7 @@ export default function GradeDetailPage() {
   const stats: EntityOverviewStat[] = [
     { label: "学級", value: grade.gradeClassrooms.length, tone: "blue" },
     { label: "生徒", value: grade.gradeStudents.length, tone: "indigo" },
-    { label: "評価項目", value: grade.gradeItems.length, tone: "purple" },
+    { label: "成績評価項目", value: grade.gradeItems.length, tone: "purple" },
     { label: "データソース", value: dataSourceCount, tone: "green" },
   ]
 
@@ -130,7 +130,7 @@ export default function GradeDetailPage() {
         phases={gradeWorkflowPhases}
         stepCompletion={{
           "01-students": completion.hasStudents,
-          "02-data-sources": completion.hasDataSources,
+          "02-items": completion.hasDataSources,
           "03-boundaries": completion.hasBoundaries,
           // 比較は任意の段で、置かなくても成績は出せるので済みという状態を持たない
           "04-comparisons": null,

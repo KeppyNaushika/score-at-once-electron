@@ -68,10 +68,12 @@ async function assertSameCoursework(
       score.courseworkStudentId
     )
     if (!itemCourseworkId || !studentCourseworkId) {
-      throw new Error("評価項目または対象生徒が見つかりません")
+      throw new Error("資料評価項目または対象生徒が見つかりません")
     }
     if (itemCourseworkId !== studentCourseworkId) {
-      throw new Error("評価項目と対象生徒が別の試験外成績資料に属しています")
+      throw new Error(
+        "資料評価項目と対象生徒が別の試験外成績資料に属しています"
+      )
     }
   }
 }
@@ -129,7 +131,7 @@ export async function batchUpsertCourseworkScores(
       entityId: scores[0].courseworkItemId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: `資料の点数を更新しました（${scores.length}件）`,
+      summary: `資料の得点を更新しました（${scores.length}件）`,
       extra: { count: scores.length },
       targets: await resolveCourseworkStudentTargets([
         ...new Set(scores.map((score) => score.courseworkStudentId)),

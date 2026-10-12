@@ -74,7 +74,7 @@ export function StudentImportWizardModal({
         <DialogHeader className="border-b bg-muted/30 px-6 py-4">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold">
-              生徒データのインポート
+              生徒データの取り込み
             </DialogTitle>
           </div>
 

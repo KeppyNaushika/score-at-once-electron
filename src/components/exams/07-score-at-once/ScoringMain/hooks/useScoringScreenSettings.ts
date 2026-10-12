@@ -34,7 +34,7 @@ export function useScoringScreenSettings({
     (show: boolean) => {
       if (isEnforcedForMe) {
         toast.info(
-          "この試験では匿名採点が固定されています。名前を出せるのは、オーナーが固定を外したときだけです"
+          "この試験では匿名採点が固定されています。名前を出せるのは、所有者が固定を外したときだけです"
         )
         return
       }

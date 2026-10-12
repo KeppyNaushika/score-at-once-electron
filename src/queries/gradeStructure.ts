@@ -83,7 +83,7 @@ export const createGradeItemMutation = (gradeId: string) =>
       window.electronAPI.grade.createGradeItem({ gradeId, name }),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評価項目を追加できませんでした",
+      errorMessage: "成績評価項目を追加できませんでした",
     },
   })
 
@@ -94,7 +94,7 @@ export const renameGradeItemMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:items` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評価項目の名前を保存できませんでした",
+      errorMessage: "成績評価項目の名前を保存できませんでした",
     },
   })
 
@@ -108,7 +108,7 @@ export const deleteGradeItemMutation = (gradeId: string) =>
         gradeScope(gradeId),
         gradeSourceFitsQuery(gradeId).queryKey,
       ],
-      errorMessage: "評価項目を削除できませんでした",
+      errorMessage: "成績評価項目を削除できませんでした",
     },
   })
 
@@ -118,7 +118,7 @@ export const reorderGradeItemsMutation = (gradeId: string) =>
       window.electronAPI.grade.reorderGradeItems(orders),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評価項目の並び順を保存できませんでした",
+      errorMessage: "成績評価項目の並び順を保存できませんでした",
     },
   })
 
@@ -216,7 +216,7 @@ export const applyGradeBoundaryPresetMutation = (gradeId: string) =>
     }) => window.electronAPI.grade.replaceGradeItemBoundaries(input),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の刻みを設定できませんでした",
+      errorMessage: "成績境界を設定できませんでした",
     },
   })
 
@@ -231,7 +231,7 @@ export const createGradeItemBoundaryMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:boundaries` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の境界を追加できませんでした",
+      errorMessage: "成績境界を追加できませんでした",
     },
   })
 
@@ -245,7 +245,7 @@ export const updateGradeItemBoundaryMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:boundaries` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の境界を保存できませんでした",
+      errorMessage: "成績境界を保存できませんでした",
     },
   })
 
@@ -256,7 +256,7 @@ export const deleteGradeItemBoundaryMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:boundaries` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の境界を削除できませんでした",
+      errorMessage: "成績境界を削除できませんでした",
     },
   })
 
@@ -267,7 +267,7 @@ export const reorderGradeItemBoundariesMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:boundaries` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の境界の並び順を保存できませんでした",
+      errorMessage: "成績境界の並び順を保存できませんでした",
     },
   })
 
@@ -278,7 +278,7 @@ export const deleteAllGradeItemBoundariesMutation = (gradeId: string) =>
       window.electronAPI.grade.deleteGradeItemBoundaries(gradeItemId),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の境界を削除できませんでした",
+      errorMessage: "成績境界を削除できませんでした",
     },
   })
 

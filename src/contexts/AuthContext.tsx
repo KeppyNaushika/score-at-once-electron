@@ -53,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const dropStaleToken = useEffectEvent(() => {
     showSyncToast(
       "warning",
-      "ログイン中の利用者は、他のPCで削除されたためログアウトしました",
-      "この利用者と、その採点結果などのデータは、同期で削除されています。別の利用者でログインしてください。"
+      "ログイン中のユーザーは、他のPCで削除されたためログアウトしました",
+      "このユーザーと、その採点結果などのデータは、同期で削除されています。別のユーザーでログインしてください。"
     )
     clearAuthToken.mutate()
   })

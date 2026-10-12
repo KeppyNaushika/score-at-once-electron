@@ -138,9 +138,9 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     expect(warnings.some((warning) => warning.includes("成績境界セット"))).toBe(
       true
     )
-    expect(warnings.some((warning) => warning.includes("手動上書き"))).toBe(
-      true
-    )
+    expect(
+      warnings.some((warning) => warning.includes("総合評定の上書き"))
+    ).toBe(true)
     // 件数が本文に出ていること（0件でも warning が出る誤りの検出）
     expect(warnings.join("\n")).toContain("1 件")
   })
@@ -206,9 +206,9 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     expect(data.gradeItemBoundaries).toHaveLength(1)
     expect(data.gradeOverrides).toHaveLength(0)
     // 上書きは元々0件なので上書き側の warning は出ない
-    expect(warnings.some((warning) => warning.includes("手動上書き"))).toBe(
-      false
-    )
+    expect(
+      warnings.some((warning) => warning.includes("総合評定の上書き"))
+    ).toBe(false)
   })
 })
 
@@ -640,7 +640,7 @@ describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化�
     // 学籍番号での照合には使えるが、氏名が無いので取り込み側は生徒を作らない
     expect(data.studentsData[0].lastName).toBe("")
     expect(
-      warnings.some((warning) => warning.includes("氏名・学級所属を持ちません"))
+      warnings.some((warning) => warning.includes("氏名・在籍を持ちません"))
     ).toBe(true)
     // 在籍期間を捏造しないので学級所属は空
     expect(data.membershipsData).toEqual([])
@@ -807,9 +807,9 @@ describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化�
     const { data, warnings } = transformGradeToLatest(archive)
 
     expect(data.gradeOverrides).toHaveLength(0)
-    expect(warnings.some((warning) => warning.includes("同名の評価項目"))).toBe(
-      true
-    )
+    expect(
+      warnings.some((warning) => warning.includes("同名の成績評価項目"))
+    ).toBe(true)
   })
 })
 

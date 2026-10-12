@@ -1,5 +1,5 @@
 /**
- * AI 採点（実験的機能）の事業者ごとの同意・API キー・既定値の IPC（設計 §9）。
+ * AI採点（実験的機能）の事業者ごとの同意・API キー・既定値の IPC（設計 §9）。
  *
  * **API キーを返すチャンネルは作らない。** 出すのは「キーがあるか」だけで、キーの復号は
  * 接続テストの中（main）だけで行う（`__tests__/aiGrading/aiProviderHandlers.test.ts` が
@@ -58,7 +58,7 @@ export const aiProviderHandlers = {
     const userId = getCurrentActorUserId()
     if (userId === null) {
       throw new Error(
-        "ログインしている利用者が分からないため、同意を記録できません"
+        "ログインしているユーザーが分からないため、同意を記録できません"
       )
     }
     // 別の利用者が同意し直すときは、前の利用者のキーは消える（recordConsent）

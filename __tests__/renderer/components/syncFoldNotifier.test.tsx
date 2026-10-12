@@ -103,7 +103,7 @@ describe("SyncFoldNotifier", () => {
     // 3件それぞれではなく、まとめて1回
     expect(toastWarning).toHaveBeenCalledTimes(1)
     const description = descriptionOf(toastWarning)
-    expect(description).toContain("試験の受験生徒 2件")
+    expect(description).toContain("受験生徒 2件")
     expect(description).toContain("タグ 1件")
     // 隠れただけなので、戻った側のトーストは出さない
     expect(toastInfo).not.toHaveBeenCalled()
@@ -145,11 +145,11 @@ describe("SyncFoldNotifier", () => {
     })
 
     expect(toastWarning).toHaveBeenCalledTimes(1)
-    expect(descriptionOf(toastWarning)).toContain("試験の受験生徒 1件")
+    expect(descriptionOf(toastWarning)).toContain("受験生徒 1件")
     expect(descriptionOf(toastWarning)).not.toContain("タグ")
     expect(toastInfo).toHaveBeenCalledTimes(1)
     expect(descriptionOf(toastInfo)).toContain("タグ 1件")
-    expect(descriptionOf(toastInfo)).not.toContain("試験の受験生徒")
+    expect(descriptionOf(toastInfo)).not.toContain("受験生徒")
   })
 
   it("知らない表の名前は、そのまま出して黙らない", () => {

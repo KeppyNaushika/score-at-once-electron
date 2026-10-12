@@ -1,5 +1,5 @@
 /**
- * AI 採点（VLM 採点）の、DB に String で保存する列の値の集合の唯一の定義源。
+ * AI採点（VLM 採点）の、DB に String で保存する列の値の集合の唯一の定義源。
  *
  * SQLite(Prisma) は enum を持たないので、`AiGradingRun` / `AiGradingAttempt` の文字列の列が
  * 取りうる値はここにしか無い（docs/vlm-grading-design.md §4-2）。境界（lib の返り値）で
@@ -13,7 +13,7 @@ import { defineStringUnion } from "./stringUnion"
 
 /**
  * 実行の目的。grade は1段目（答案ごとの判定）、group は2段目（1段目の結果から項目の案を作る）。
- * check はAI チェック（採点済みの答案を1段目だけで判定し、教員の採点と手元で比べる。
+ * check はAIチェック（採点済みの答案を1段目だけで判定し、教員の採点と手元で比べる。
  * 2段目は続けない。教員の点は送らない）。
  * revise は廃止した採点指示の改訂で、過去の行（費用の集計に残る）を読むためだけに残す
  */
@@ -24,11 +24,11 @@ export const { to: toAiGradingRunPurpose } = defineStringUnion(
   "grade"
 )
 
-/** 答案ごとに画像を送って判定させる（1段目の）実行の目的。採点（grade）とAI チェック（check） */
+/** 答案ごとに画像を送って判定させる（1段目の）実行の目的。採点（grade）とAIチェック（check） */
 const AI_GRADING_STAGE1_PURPOSES = ["grade", "check"] as const
 export type AiGradingStage1Purpose = (typeof AI_GRADING_STAGE1_PURPOSES)[number]
 
-/** 答案ごとの判定（試行）を持つ実行か（採点・AI チェック） */
+/** 答案ごとの判定（試行）を持つ実行か（採点・AIチェック） */
 export function isStage1RunPurpose(
   purpose: string
 ): purpose is AiGradingStage1Purpose {
@@ -36,7 +36,7 @@ export function isStage1RunPurpose(
 }
 
 /**
- * 案の外の問いかけ（AI チェック・どの案にも入らない答案）への答えの種類（`AiAttemptResponse.choice`）。
+ * 案の外の問いかけ（AIチェック・どの案にも入らない答案）への答えの種類（`AiAttemptResponse.choice`）。
  * rescore はその判定に直す、keep はこのままにする、manual は自分で採点する。
  * 外れ値は keep に倒す（教員の採点を勝手に変えない側）
  */

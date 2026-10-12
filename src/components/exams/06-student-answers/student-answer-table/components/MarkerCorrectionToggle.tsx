@@ -45,7 +45,7 @@ export function MarkerCorrectionToggle({
               : "text-gray-400 opacity-30"
           }`}
         />
-        マーカー補正
+        OMRマーカー補正
       </Label>
     </div>
   )
@@ -56,7 +56,7 @@ export function MarkerCorrectionToggle({
         <Tooltip>
           <TooltipTrigger asChild>{toggle}</TooltipTrigger>
           <TooltipContent className="max-w-sm">
-            <p className="font-medium">模範解答にマーカーが検出できません</p>
+            <p className="font-medium">模範解答にOMRマーカーが検出できません</p>
             {diagnostics && (
               <pre className="mt-1 text-xs whitespace-pre-wrap text-gray-300">
                 {diagnostics}

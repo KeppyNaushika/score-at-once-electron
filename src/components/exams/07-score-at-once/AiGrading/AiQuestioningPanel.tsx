@@ -26,14 +26,14 @@ interface AiQuestioningPanelProps {
   statusNotice: ReactNode
   /** 問いが無いときの案内 */
   emptyMessage: string
-  /** 2段目が返した気づいた点（AI 採点だけ） */
+  /** 2段目が返した気づいた点（AI採点だけ） */
   notes: string
-  /** 指示を添えて再採点する（AI 採点だけ。答案を選んで実行ダイアログを開く） */
+  /** 指示を添えて再採点する（AI採点だけ。答案を選んで実行ダイアログを開く） */
   onRegrade?: (examStudentIds: string[]) => void
 }
 
 /**
- * 左パネルの「AI 採点」「AI チェック」のタブ（docs/vlm-grading-design.md §3-5・§3-10）。
+ * 左パネルの「AI採点」「AIチェック」のタブ（docs/vlm-grading-design.md §3-5・§3-10）。
  * 問いかけ（決めたことの記録 → いまの問いと選択肢・自分で採点するボタン → 全部答えたら見直しと確定）。
  * 実行の入口は「採点指示」のタブにある。問いに入る答案は中央の一覧で見る（絞り込みのスイッチ・付く予定の点の斜線）。
  * **確定するまで教員の採点は何も変わらない**（決めたことは AI の層の下書き）
@@ -69,13 +69,13 @@ export function AiQuestioningPanel({
       const instructionMembers = questioning.committedInstructionMembers
       return (
         <section
-          aria-label="確定済み"
+          aria-label="反映済み"
           className="space-y-1 rounded border border-gray-200 p-2"
         >
           <p className="text-xs font-medium text-gray-800">
             {questioning.hasJustCommitted
-              ? "確定しました"
-              : "すべて確定しています"}
+              ? "採点に反映しました"
+              : "すべて採点に反映しています"}
           </p>
           <p className="text-muted-foreground">
             上の記録を押すと選び直せます。
@@ -99,7 +99,7 @@ export function AiQuestioningPanel({
         summary={summary}
         blockedReason={
           questioning.isMethodUnanswered
-            ? "最初の問い（採点方式）に答えると確定できます。"
+            ? "最初の問い（採点方式）に答えると採点に反映できます。"
             : null
         }
         isCommitting={questioning.isCommitting}
@@ -145,7 +145,7 @@ export function AiQuestioningPanel({
       )}
       {states.length > 0 && (
         <p className="text-[10px] text-muted-foreground">
-          斜線は確定すると付く点です。「確定する」まで採点は変わりません。
+          斜線は反映すると付く点です。「採点に反映する」まで採点は変わりません。
         </p>
       )}
 

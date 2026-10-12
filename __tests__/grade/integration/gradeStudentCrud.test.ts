@@ -610,7 +610,7 @@ describe("GradeStudent / GradeClassroom", () => {
       )
       // classroomA の student1,2 は他学級に属さない → 2名が削除対象
       expect(preview).toEqual([
-        { countedName: "この学級にのみ所属する生徒", shownCount: 2 },
+        { countedName: "この学級にのみ在籍する生徒", shownCount: 2 },
       ])
     })
 
@@ -633,7 +633,7 @@ describe("GradeStudent / GradeClassroom", () => {
 
       // student1 は classroomB にも属するため、classroomA 専属は student2 のみ
       expect(preview).toEqual([
-        { countedName: "この学級にのみ所属する生徒", shownCount: 1 },
+        { countedName: "この学級にのみ在籍する生徒", shownCount: 1 },
       ])
     })
   })

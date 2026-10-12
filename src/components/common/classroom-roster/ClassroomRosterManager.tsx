@@ -292,7 +292,7 @@ export function ClassroomRosterManager({
       <TableHeader>
         <TableRow>
           <TableHead className="w-12.5"></TableHead>
-          <TableHead>クラス名</TableHead>
+          <TableHead>学級名</TableHead>
           <TableHead>学年</TableHead>
           <TableHead className="text-center">生徒数</TableHead>
           {flagColumns.map((flagColumn) => (
@@ -362,15 +362,15 @@ export function ClassroomRosterManager({
           <DialogHeader>
             <DialogTitle>学級を追加</DialogTitle>
             <DialogDescription>
-              関連付けるクラスを選択してください。
+              関連付ける学級を選択してください。
             </DialogDescription>
           </DialogHeader>
 
           {availableClassrooms.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              <p>追加可能なクラスがありません</p>
+              <p>追加可能な学級がありません</p>
               <p className="mt-1 text-sm">
-                「クラス管理」から新しいクラスを作成してください
+                「学級管理」から新しい学級を作成してください
               </p>
             </div>
           ) : (
@@ -379,7 +379,7 @@ export function ClassroomRosterManager({
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12.5"></TableHead>
-                    <TableHead>クラス名</TableHead>
+                    <TableHead>学級名</TableHead>
                     <TableHead>学年</TableHead>
                     <TableHead className="text-center">生徒数</TableHead>
                   </TableRow>

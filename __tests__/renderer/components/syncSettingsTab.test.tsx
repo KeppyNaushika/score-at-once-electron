@@ -140,7 +140,7 @@ describe("SyncSettingsTab", () => {
     ])
 
     expect(screen.getByText("直近の同期で出た注意")).toBeTruthy()
-    expect(screen.getByText(/試験の受験生徒/)).toBeTruthy()
+    expect(screen.getByText(/受験生徒/)).toBeTruthy()
     expect(screen.getByText(/バージョンの違う/)).toBeTruthy()
   })
 
@@ -206,7 +206,7 @@ describe("SyncSettingsTab", () => {
     fireEvent.click(screen.getByRole("button", { name: /共有フォルダを追加/ }))
 
     const dialog = await screen.findByRole("alertdialog")
-    expect(dialog.textContent).toContain("統合しません")
+    expect(dialog.textContent).toContain("混ぜません")
     fireEvent.click(screen.getByRole("button", { name: "合流する" }))
     await waitFor(() =>
       expect(connectSharedFolder).toHaveBeenCalledWith({

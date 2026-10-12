@@ -52,7 +52,7 @@ describe(".coursework の取り込み", () => {
       <CourseworkImportDialog
         archivePath="/tmp/a.coursework"
         preview={courseworkPreview([
-          "アーカイブ（v1.0.0）を現行（v1.1.0）へ変換して読み込みます。",
+          "アーカイブ（v1.0.0）を現行（v1.1.0）へ変換して取り込みます。",
         ])}
         onClose={() => {}}
       />,
@@ -61,7 +61,7 @@ describe(".coursework の取り込み", () => {
     expect(screen.getByText("取り込む前に確認してください")).toBeInTheDocument()
     expect(
       screen.getByText(
-        "アーカイブ（v1.0.0）を現行（v1.1.0）へ変換して読み込みます。"
+        "アーカイブ（v1.0.0）を現行（v1.1.0）へ変換して取り込みます。"
       )
     ).toBeInTheDocument()
   })

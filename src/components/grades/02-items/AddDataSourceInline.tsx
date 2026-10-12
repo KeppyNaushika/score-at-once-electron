@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { dateSearchKeywords } from "@/lib/searchKeywords"
+import { GRADE_DATA_SOURCE_TYPE_LABEL } from "@/lib/shared/gradeReferenceMessages"
 import {
   type CourseworkCandidate,
   courseworkCandidatesQuery,
@@ -60,10 +61,10 @@ export function AddDataSourceInline({
   const [selectedSubtotalGroupId, setSelectedSubtotalGroupId] = useState("")
   const [selectedSubtotalId, setSelectedSubtotalId] = useState("")
   const [selectedCropRegionId, setSelectedCropRegionId] = useState("")
-  // coursework型: 資料→評価項目の2段選択
+  // coursework型: 資料→資料評価項目の2段選択
   const [selectedCourseworkId, setSelectedCourseworkId] = useState("")
   const [selectedCourseworkItemId, setSelectedCourseworkItemId] = useState("")
-  // 名前と換算満点は選択内容から導く。ユーザーが手入力したときだけ下書きが優先される。
+  // 名前と換算配点は選択内容から導く。ユーザーが手入力したときだけ下書きが優先される。
   // 「どの選択に対して入力したか」を同梱することで、選択が変われば下書きは自動的に無効になる
   // （Select ごとに破棄を呼ぶ形にすると、呼び忘れた経路で前の設問の名前が残る）
   const [draft, setDraft] = useState<{
@@ -209,7 +210,7 @@ export function AddDataSourceInline({
     courseworks.find((coursework) => coursework.id === selectedCourseworkId)
       ?.items ?? []
 
-  // coursework型は評価項目を必須選択にするための判定（満点は元データ追従で入力欄なし）
+  // coursework型は資料評価項目を必須選択にするための判定（配点は元データ追従で入力欄なし）
   const isCoursework = type === "coursework"
 
   if (!open) {
@@ -246,9 +247,16 @@ export function AddDataSourceInline({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="exam_total">全設問合計</SelectItem>
-            <SelectItem value="subtotal">小計点</SelectItem>
-            <SelectItem value="crop_region">設問</SelectItem>
+            <SelectItem value="exam_total">
+              {GRADE_DATA_SOURCE_TYPE_LABEL.exam_total}
+            </SelectItem>
+            <SelectItem value="subtotal">
+              {GRADE_DATA_SOURCE_TYPE_LABEL.subtotal}
+            </SelectItem>
+            <SelectItem value="crop_region">
+              {GRADE_DATA_SOURCE_TYPE_LABEL.crop_region}
+            </SelectItem>
+            {/* 資料を選んだ後で、資料評価項目1つか資料の合計点かを選ぶ */}
             <SelectItem value="coursework">試験外成績資料</SelectItem>
           </SelectContent>
         </Select>
@@ -262,7 +270,7 @@ export function AddDataSourceInline({
             placeholder="試験を選択"
             searchPlaceholder="試験名・試験日で検索"
             emptyText="該当する試験がありません"
-            aria-label="データ元にする試験"
+            aria-label="データソースにする試験"
             className="h-8 w-48"
           />
         )}
@@ -278,7 +286,7 @@ export function AddDataSourceInline({
               }}
             >
               <SelectTrigger className="h-8 w-40">
-                <SelectValue placeholder="観点グループ" />
+                <SelectValue placeholder="小計点グループ" />
               </SelectTrigger>
               <SelectContent>
                 {subtotalGroups.map((subtotalGroup) => (
@@ -294,7 +302,7 @@ export function AddDataSourceInline({
                 onValueChange={setSelectedSubtotalId}
               >
                 <SelectTrigger className="h-8 w-36">
-                  <SelectValue placeholder="観点" />
+                  <SelectValue placeholder="小計項目" />
                 </SelectTrigger>
                 <SelectContent>
                   {selectedSubtotals.map((subtotal) => (
@@ -327,7 +335,7 @@ export function AddDataSourceInline({
           </Select>
         )}
 
-        {/* coursework型: 資料→評価項目の2段選択 */}
+        {/* coursework型: 資料→資料評価項目の2段選択 */}
         {type === "coursework" && (
           <>
             <Combobox
@@ -335,13 +343,13 @@ export function AddDataSourceInline({
               value={selectedCourseworkId}
               onValueChange={(value) => {
                 setSelectedCourseworkId(value)
-                // 資料を切り替えたら評価項目の選択をやり直させる
+                // 資料を切り替えたら資料評価項目の選択をやり直させる
                 setSelectedCourseworkItemId("")
               }}
               placeholder="資料を選択"
               searchPlaceholder="資料名・実施日で検索"
               emptyText="該当する資料がありません"
-              aria-label="データ元にする資料"
+              aria-label="データソースにする資料"
               className="h-8 w-48"
             />
             {selectedCourseworkId && (
@@ -350,10 +358,12 @@ export function AddDataSourceInline({
                 onValueChange={setSelectedCourseworkItemId}
               >
                 <SelectTrigger className="h-8 w-40">
-                  <SelectValue placeholder="評価項目" />
+                  <SelectValue placeholder="資料評価項目" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={COURSEWORK_WHOLE}>（資料全体）</SelectItem>
+                  <SelectItem value={COURSEWORK_WHOLE}>
+                    （{GRADE_DATA_SOURCE_TYPE_LABEL.coursework_total}）
+                  </SelectItem>
                   {selectedCourseworkItems.map((courseworkItem) => (
                     <SelectItem
                       key={courseworkItem.id}
@@ -381,7 +391,7 @@ export function AddDataSourceInline({
           onChange={(e) => editDraft({ weight: e.target.value })}
           className="h-8 w-20"
           type="text"
-          placeholder="換算満点"
+          placeholder="換算配点"
         />
         <Button
           size="sm"

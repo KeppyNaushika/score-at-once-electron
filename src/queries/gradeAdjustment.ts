@@ -54,7 +54,7 @@ export const upsertGradeOverrideMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:overrides` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の上書きを保存できませんでした",
+      errorMessage: "成績評価記号の上書きを保存できませんでした",
     },
   })
 
@@ -65,7 +65,7 @@ export const deleteGradeOverrideMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:overrides` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "評定の上書きを解除できませんでした",
+      errorMessage: "成績評価記号の上書きを解除できませんでした",
     },
   })
 
@@ -83,7 +83,7 @@ export const freezeGradeScoresMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:frozen` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "成績値を確定できませんでした",
+      errorMessage: "成績を固定できませんでした",
     },
   })
 
@@ -101,7 +101,7 @@ export const unfreezeGradeScoresMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:frozen` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "確定を解除できませんでした",
+      errorMessage: "固定を解除できませんでした",
     },
   })
 

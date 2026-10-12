@@ -73,7 +73,7 @@ export function ExcelExportTab({
       <div className="space-y-2">
         <h4 className="text-xs font-medium">載せる比較</h4>
         <p className="text-xs text-muted-foreground">
-          「成績一覧」の評価項目の右に、比較先の成績と変化（↑ ↓ → * ・）を
+          「成績一覧」の成績評価項目の右に、比較先の成績と変化（↑ ↓ → * ・）を
           並べます。個人成績通知書の記号も、ここで選んだ比較を使います。
         </p>
         {itemsWithComparisons.length === 0 ? (

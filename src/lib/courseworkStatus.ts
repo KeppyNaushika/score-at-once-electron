@@ -38,14 +38,14 @@ export type CourseworkProgressSource = Pick<
 interface CourseworkStepCompletion {
   /** 1. 生徒管理（02-students） */
   hasStudents: boolean
-  /** 2. 評価項目（03-items） */
+  /** 2. 資料評価項目（03-items） */
   hasItems: boolean
 }
 
 /**
  * 試験外成績資料の各段の完了状態を取得する。
  *
- * **「3. 点数入力」の完了は判定できない。** 点数（CourseworkScore）は一覧の
+ * **「3. 得点入力」の完了は判定できない。** 得点（CourseworkScore）は一覧の
  * 取得（`getCourseworks`）にも概要の名前セル2行目にも含まれておらず、
  * 判定のためだけに include を増やすことはしない。ゆえに完了状態は
  * 生徒と評価項目の2つで、点数入力が「次のステップ」の行き止まりになる。

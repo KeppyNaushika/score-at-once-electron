@@ -55,7 +55,7 @@ export function StudentTableRow({
       <TableCell>
         <div className="flex flex-wrap gap-1.5">
           {/* 在籍中 → 在籍予定 → 過去の順に（同じ時期の中は開始日の新しい順）。
-              在籍予定は点線の枠と「予定」で、過去の所属は薄い枠で分ける */}
+              在籍予定は点線の枠と「予定」で、過去在籍は薄い枠で分ける */}
           {student.memberships
             .toSorted((membershipA, membershipB) =>
               compareMembershipPhase(
@@ -93,7 +93,7 @@ export function StudentTableRow({
                 <Badge
                   key={membership.id}
                   variant="outline"
-                  title="過去の所属"
+                  title="過去在籍"
                   className="rounded-full px-2.5 py-0.5 text-xs font-normal text-muted-foreground"
                 >
                   {membership.classroom.name}
@@ -101,7 +101,7 @@ export function StudentTableRow({
               )
             })}
           {student.memberships.length === 0 && (
-            <span className="text-sm text-muted-foreground">未所属</span>
+            <span className="text-sm text-muted-foreground">未在籍</span>
           )}
         </div>
       </TableCell>

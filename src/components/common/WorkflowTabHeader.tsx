@@ -50,7 +50,7 @@ interface WorkflowTabHeaderProps {
  * 上段が Word のタイトルバー、下段が段のタブ。
  *
  * ```
- * [←][→][≡] 模範解答画像の管理｜期末考査（数学）  [次へ：答案の採点領域作成][使い方]
+ * [←][→][≡] 模範解答画像の管理｜期末考査（数学）  [2. 領域作成へ][使い方]
  * 概要  1.模範解答  2.採点領域  …  9.結果
  * ```
  *
@@ -103,7 +103,7 @@ export function WorkflowTabHeader({
    * られない）。
    *
    * **概要でも出さない。** 概要は段カードを並べており、まとまりごとに
-   * 「次へ: 〈段の名前〉」を出している。上でも同じことを言うと、同じ行き先の口が
+   * 「〈段の名前〉へ」を出している。上でも同じことを言うと、同じ行き先の口が
    * 2つになる。
    */
   const nextTab =
@@ -143,7 +143,7 @@ export function WorkflowTabHeader({
           {nextTab && (
             <Button size="sm" className="h-7 text-xs" asChild>
               <GuardedLink href={entityHref + nextTab.path}>
-                次へ：{nextTab.title}
+                {nextTab.label}へ
               </GuardedLink>
             </Button>
           )}

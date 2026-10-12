@@ -130,7 +130,7 @@ export async function uploadStudentAnswers(
     })
     if (validExamStudents.length !== requestedExamStudentIds.length) {
       throw new Error(
-        "配置先の受験者が見つかりません（他の教員が受験生徒を変更した可能性があります）。再読み込みしてください。"
+        "配置先の受験生徒が見つかりません（他の教員が受験生徒を変更した可能性があります）。再読み込みしてください。"
       )
     }
   }
@@ -193,7 +193,7 @@ export async function uploadStudentAnswers(
           }
         } else {
           correctionStatus = "skipped"
-          correctionError = "マスター画像のマーカーが検出できませんでした"
+          correctionError = "模範解答画像のOMRマーカーが検出できませんでした"
         }
       }
 

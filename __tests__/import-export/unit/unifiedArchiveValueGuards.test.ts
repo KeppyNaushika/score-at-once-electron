@@ -118,7 +118,7 @@ describe("列ごとの許す形", () => {
     }
   })
 
-  it("AI 採点の問題の画像: その行の試験の ai-question-images の下の PNG・JPEG", () => {
+  it("AI採点の問題の画像: その行の試験の ai-question-images の下の PNG・JPEG", () => {
     expect(
       matchesColumn(
         "AiPromptQuestionImage",

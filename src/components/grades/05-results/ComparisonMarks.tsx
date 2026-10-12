@@ -151,7 +151,7 @@ export function ComparisonMarks({
         {marks.some((mark) => mark.direction === "unknown") && (
           <p className="mt-2 text-xs text-muted-foreground">
             *
-            はどちらかの評定がこの項目の成績境界に無いため、上下を決められません
+            はどちらかの成績評価記号がこの項目の成績境界に無いため、上下を決められません
           </p>
         )}
       </PopoverContent>

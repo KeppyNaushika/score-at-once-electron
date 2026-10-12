@@ -46,7 +46,7 @@ function stepRowBackground(
  *
  * **行そのものがリンク。** 別に「開く」ボタンを置くと、同じ行き先への口が1枚の
  * カードに2つ出て、しかもボタンの側は行き先を名前で言わない（どの段が開くのか
- * 読めない）。進行中のまとまりにだけ「次へ: 〈段の名前〉」を足す ——これは
+ * 読めない）。進行中のまとまりにだけ「〈段の名前〉へ」を足す ——これは
  * 「どこから手を付けるか」を名指しするもので、行の複製ではない。
  *
  * **数えるのは判定できる段だけ**（`2/5 完了`）。出力のように材料が無い段しか
@@ -181,7 +181,7 @@ export function WorkflowPhaseCard({
           <div className="mt-auto border-t pt-4">
             <Button className={cn(FOOTER_ROW_CLASSES, "w-full")} asChild>
               <GuardedLink href={entityHref + nextStep.tab.path}>
-                次へ: {nextStep.tab.title}
+                {nextStep.tab.label}へ
               </GuardedLink>
             </Button>
           </div>

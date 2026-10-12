@@ -90,13 +90,13 @@ export function StudentAddPanel({
       case "noStudents":
         return "生徒が登録されていません。先に「生徒」ページで生徒を登録してください。"
       case "noClassroomMembership":
-        return "学級に所属している生徒がいません。「個別で追加」タブから追加できます。"
+        return "学級に在籍している生徒がいません。「個別で追加」タブから追加できます。"
       case "noCurrentInClassroom":
         return "在籍中の生徒がいる学級がありません。スイッチをオフにすると、現在在籍していない生徒も表示できます。"
       case "allAdded":
         return classroomActiveOnly
           ? "在籍中の生徒は全て追加しました。"
-          : "学級に所属する生徒は全て追加しました。"
+          : "学級に在籍する生徒は全て追加しました。"
       default:
         return "追加可能な学級がありません"
     }
@@ -294,7 +294,7 @@ export function StudentAddPanel({
               <div className="relative">
                 <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
                 <Input
-                  placeholder="名前、ふりがな、学籍番号で検索"
+                  placeholder="名前、カナ、学籍番号で検索"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"

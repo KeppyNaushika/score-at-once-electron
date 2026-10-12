@@ -196,7 +196,7 @@ export function SubtotalTableView({
           borderBottom: "1px solid #ddd",
         }}
       >
-        小計別得点
+        小計点
       </h2>
 
       <div

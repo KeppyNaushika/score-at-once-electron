@@ -1,5 +1,5 @@
 /**
- * 2段目（特徴を揃えて、ルーブリック項目の案を作る）の文面と出力の形
+ * 2段目（特徴を揃えて、採点項目の案を作る）の文面と出力の形
  * （docs/vlm-grading-design.md §3-4・§6-2・§7-2）
  *
  * 1段目の結果（読み取り・所見・判定）を、画像を付けずに全員分まとめて1回で送る。
@@ -14,6 +14,7 @@ import {
   type RubricItemForPrompt,
 } from "@/types/rubric.types"
 
+import { AI_GRADING_CONFIDENCE_LABELS } from "./confidenceLabels"
 import {
   AI_GRADING_OUTPUT_STATUSES,
   type AiGradingOutputStatus,
@@ -34,7 +35,7 @@ import {
 import { STAGE2_SYSTEM_TEXT } from "./stage2SystemText"
 
 /** 2段目の指示の版 */
-export const STAGE2_TEMPLATE_VERSION = "stage2-4"
+export const STAGE2_TEMPLATE_VERSION = "stage2-5"
 
 /** 案の名前・説明・助言の文案・選択肢の理由の字数の上限 */
 export const STAGE2_LABEL_MAX_LENGTH = 30
@@ -71,18 +72,12 @@ export function stage2AnswerKey(answerIndex: number): string {
   return `A${answerIndex + 1}`
 }
 
-const CONFIDENCE_LABELS: Readonly<Record<AiGradingConfidence, string>> = {
-  high: "高",
-  medium: "中",
-  low: "低",
-}
-
 /** 答案1件を数行の文にする（画像は無いので、読み取りと所見がすべて） */
 function formatAnswer(answer: Stage2AnswerInput, answerIndex: number): string {
   const scoreText =
     answer.partialScore === null ? "" : `（${answer.partialScore}点）`
   const lines = [
-    `[${stage2AnswerKey(answerIndex)}] 仮の判定: ${OUTPUT_STATUS_LABELS[answer.status]}${scoreText} ／ 確信度: ${CONFIDENCE_LABELS[answer.confidence]}`,
+    `[${stage2AnswerKey(answerIndex)}] 仮の判定: ${OUTPUT_STATUS_LABELS[answer.status]}${scoreText} ／ 確信度: ${AI_GRADING_CONFIDENCE_LABELS[answer.confidence]}`,
     `読み取り: ${answer.transcription.trim() === "" ? "（なし）" : answer.transcription.trim()}`,
     `所見: ${answer.observation.trim()}`,
   ]

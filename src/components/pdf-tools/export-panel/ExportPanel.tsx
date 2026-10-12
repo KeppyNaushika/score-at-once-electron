@@ -116,13 +116,13 @@ export default function ExportPanel({
   return (
     <div className="flex h-full min-w-0 flex-col">
       {/*
-        パネルの見出し（左のインポート欄の見出しと同じ段）。出力モードはその右端に置く。
+        パネルの見出し（左の取り込み欄の見出しと同じ段）。出力モードはその右端に置く。
         モードは並び順ごと作り直す大きな切り替えなので、出力の設定より上に置く
       */}
       <div className="flex items-center justify-between gap-2 border-b p-4">
         {/* 狭いときは見出しの文字を切り詰め、出力モードを同じ行に残す */}
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold">エクスポート</h2>
+          <h2 className="truncate text-lg font-semibold">出力</h2>
           <p className="truncate text-sm text-muted-foreground">
             出力設定とプレビュー
           </p>

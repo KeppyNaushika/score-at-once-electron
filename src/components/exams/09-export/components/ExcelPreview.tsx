@@ -83,7 +83,7 @@ interface QuestionColumnView {
   cellClassName?: (score: ExcelPreviewScore) => string
 }
 
-/** 生徒×（合計・小計・設問）の表。点数一覧と正誤一覧で共通 */
+/** 生徒×（合計・小計・設問）の表。得点一覧と正誤一覧で共通 */
 function StudentScoreTable({
   data,
   questionColumn,
@@ -180,7 +180,7 @@ export function ExcelPreview({ data, scaleValueDisplay }: ExcelPreviewProps) {
       >
         <TabsList className="mb-1 grid w-full grid-cols-5">
           <TabsTrigger value="scores" className="text-xs">
-            点数一覧
+            得点一覧
           </TabsTrigger>
           <TabsTrigger value="results" className="text-xs">
             正誤一覧

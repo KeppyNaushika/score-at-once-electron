@@ -11,7 +11,7 @@
  * - partialScore は partial では必ずあり、pending では任意（点の無い保留）。それ以外では無い。
  *   あるときは 0〜配点に収まる
  * - 0.01 より細かい点は 0.01 単位に丸めて受け取り、丸めたことを notes に残す
- * - 満点の partial は correct に寄せる（部分点が満点なら正答と同じ）
+ * - 配点と同じ点の partial は correct に寄せる（部分点が配点と同じなら正答と同じ）
  * - 文字列の字数の上限
  */
 
@@ -84,7 +84,7 @@ interface StatusScoreRuleInput {
  *
  * - partialScore は partial では必ずあり、pending では任意。それ以外では無い
  * - あるときは 0〜配点。0.01 より細かい点は丸めて notes に残す
- * - 満点の partial は correct に寄せる
+ * - 配点と同じ点の partial は correct に寄せる
  */
 export function applyStatusScoreRules(input: StatusScoreRuleInput): {
   status: AiGradingOutputStatus
@@ -115,7 +115,7 @@ export function applyStatusScoreRules(input: StatusScoreRuleInput): {
           `partialScore が 0〜${maxPoints} の範囲にありません: ${partialScore}`
         )
       } else if (status === "partial" && partialScore === maxPoints) {
-        notes.push(`満点の partial を correct にしました（${partialScore}点）`)
+        notes.push(`配点と同じ部分点を正答にしました（${partialScore}点）`)
         status = "correct"
         partialScore = null
       }

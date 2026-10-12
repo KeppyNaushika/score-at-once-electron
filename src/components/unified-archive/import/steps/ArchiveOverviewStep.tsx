@@ -11,9 +11,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { tableLabel } from "@/lib/shared/tableLabels"
 import type { ArchiveOptionalItem } from "@/types/unifiedArchive.types"
 
-import { archiveTableLabel } from "../../archiveTableLabels"
 import { formatArchiveDateTime } from "../archiveImportLabels"
 import type { UnifiedArchiveImportWizardState } from "../hooks/useUnifiedArchiveImportWizard"
 import type { OpenedUnifiedArchive } from "../types"
@@ -37,8 +37,8 @@ const MAIN_TABLES = [
 ]
 
 const OPTIONAL_ITEM_LABELS: Record<ArchiveOptionalItem, string> = {
-  userSettings: "利用者個人の設定",
-  appPreference: "組織の設定",
+  userSettings: "ユーザーごとの設定",
+  appPreference: "全員で共通の設定",
   auditLog: "操作履歴",
   aiGradingRecords: "AI採点の記録",
 }
@@ -50,14 +50,14 @@ function notIncludedItems(manifest: OpenedUnifiedArchive["manifest"]) {
   for (const [table, ids] of Object.entries(exclusions.requested)) {
     if (ids.length > 0) {
       items.push(
-        `${archiveTableLabel(table)} ${ids.length}件（書き出すときに外したもの）`
+        `${tableLabel(table)} ${ids.length}件（書き出すときに外したもの）`
       )
     }
   }
   for (const [table, rowCount] of Object.entries(
     exclusions.excludedRowCounts
   )) {
-    if (rowCount > 0) items.push(`${archiveTableLabel(table)} ${rowCount}行`)
+    if (rowCount > 0) items.push(`${tableLabel(table)} ${rowCount}行`)
   }
   if (selection.scoring.kind === "self") {
     items.push("他の教員の採点・確定・返却版（本人分だけを書き出しています）")
@@ -90,7 +90,7 @@ export function ArchiveOverviewStep({
   const { manifest, appliedMigrations, migratedRowCounts } = opened
   const rootSummary = Object.entries(manifest.selection.roots)
     .filter(([, ids]) => ids.length > 0)
-    .map(([table, ids]) => `${archiveTableLabel(table)} ${ids.length}件`)
+    .map(([table, ids]) => `${tableLabel(table)} ${ids.length}件`)
   const mainRowCounts = MAIN_TABLES.flatMap((table) => {
     const rowCount = manifest.rowCounts[table]
     return rowCount ? [{ table, rowCount }] : []
@@ -122,7 +122,7 @@ export function ArchiveOverviewStep({
           <ul className="flex flex-wrap gap-2">
             {mainRowCounts.map(({ table, rowCount }) => (
               <li key={table} className="rounded bg-muted px-2 py-1 text-xs">
-                {archiveTableLabel(table)} {rowCount}
+                {tableLabel(table)} {rowCount}
               </li>
             ))}
           </ul>
@@ -141,7 +141,7 @@ export function ArchiveOverviewStep({
               <ul className="mt-2 grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
                 {allRowCounts.map(([table, rowCount]) => (
                   <li key={table} className="flex justify-between gap-2">
-                    <span className="truncate">{archiveTableLabel(table)}</span>
+                    <span className="truncate">{tableLabel(table)}</span>
                     <span className="text-muted-foreground tabular-nums">
                       {rowCount}
                     </span>
@@ -165,7 +165,7 @@ export function ArchiveOverviewStep({
                   {migratedEntries
                     .map(
                       ([table, rowCount]) =>
-                        `${archiveTableLabel(table)} ${rowCount}行`
+                        `${tableLabel(table)} ${rowCount}行`
                     )
                     .join("、")}
                 </p>
@@ -189,7 +189,7 @@ export function ArchiveOverviewStep({
                 ))}
               </ul>
               <p className="mt-2 text-xs">
-                取り込みはこのパソコンの行を消さないので、含まれていないものはそのまま残ります。
+                取り込みはこのPCの行を消さないので、含まれていないものはそのまま残ります。
               </p>
             </div>
           </CardContent>

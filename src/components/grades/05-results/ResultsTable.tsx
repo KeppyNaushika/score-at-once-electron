@@ -153,7 +153,7 @@ export function ResultsTable({
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
               <SortHeader
-                label="順序"
+                label="並び順"
                 sortId="registrationOrder"
                 sortKey={sortKey}
                 sortAsc={sortAsc}

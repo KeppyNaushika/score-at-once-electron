@@ -1,5 +1,5 @@
 /**
- * AI 採点の事業者ごとの API キーと同意、機密でない既定値の保存（設計 §9）。
+ * AI採点の事業者ごとの API キーと同意、機密でない既定値の保存（設計 §9）。
  *
  * 端末ごとの設定なので、同期される DB ではなく `userData/ai-providers.json` に置く
  * （`sync/syncConfig.ts` と同じ考え方）。API キーは Electron の `safeStorage` で暗号化し、
@@ -286,7 +286,7 @@ export function createProviderCredentialStore(
     ) {
       throw new ProviderCredentialError(
         "invalid_settings",
-        "同意の記録には利用者 id と同意文の版が要ります"
+        "同意の記録にはユーザー id と同意文の版が要ります"
       )
     }
     const recordedConsent: ProviderConsent = {

@@ -76,7 +76,7 @@ export function CourseworkItemRow({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">満点</Label>
+              <Label className="text-xs">配点</Label>
               <Input
                 value={maxScore}
                 onChange={(e) => onChangeMaxScore(item, e.target.value)}
@@ -101,8 +101,8 @@ export function CourseworkItemRow({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="numeric">数値</SelectItem>
-                  <SelectItem value="letter">文字評価</SelectItem>
+                  <SelectItem value="numeric">点数</SelectItem>
+                  <SelectItem value="letter">評価記号</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -114,7 +114,7 @@ export function CourseworkItemRow({
               {unknownLetterValues !== undefined &&
                 unknownLetterValues.count > 0 && (
                   <p className="text-xs text-amber-700">
-                    変換表にない評価が入力されています:{" "}
+                    変換表にない資料評価記号が入力されています:{" "}
                     {unknownLetterValues.values.join("、")}（
                     {unknownLetterValues.count}件）
                   </p>

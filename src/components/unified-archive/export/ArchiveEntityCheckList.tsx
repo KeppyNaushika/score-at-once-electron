@@ -6,8 +6,8 @@ import {
   ComboboxCheckList,
   type ComboboxCheckOption,
 } from "@/components/common/ComboboxCheckList"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveTableLabel } from "../archiveTableLabels"
 import {
   type ArchiveEntityCatalog,
   archiveEntityLabel,
@@ -103,7 +103,7 @@ export function ArchiveEntityCheckList({
   onActiveIdChange,
   headerControls,
 }: ArchiveEntityCheckListProps) {
-  const kindLabel = archiveTableLabel(kind)
+  const kindLabel = tableLabel(kind)
 
   const checkOptions = useMemo(
     () =>

@@ -96,7 +96,7 @@ export const MEMBERSHIP_STATUS_FILTER_OPTIONS: {
 }[] = [
   { statusFilter: "all", label: "すべて" },
   { statusFilter: "current", label: "在籍中" },
-  { statusFilter: "ended", label: "終了済み" },
+  { statusFilter: "ended", label: "過去在籍" },
 ]
 
 /**

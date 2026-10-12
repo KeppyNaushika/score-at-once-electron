@@ -80,7 +80,7 @@ export const createUserMutation = () =>
     }) => window.electronAPI.createUser(input),
     meta: {
       invalidates: [usersKey],
-      errorMessage: "利用者を作成できませんでした",
+      errorMessage: "ユーザーを作成できませんでした",
     },
   })
 
@@ -92,7 +92,7 @@ export const updateUserMutation = () =>
     },
     meta: {
       invalidates: [usersKey],
-      errorMessage: "利用者を保存できませんでした",
+      errorMessage: "ユーザーを保存できませんでした",
     },
   })
 
@@ -139,7 +139,7 @@ export const deleteUserMutation = () =>
         ["studentExamResults"],
         ["classroomExamResults"],
       ],
-      errorMessage: "利用者を削除できませんでした",
+      errorMessage: "ユーザーを削除できませんでした",
     },
   })
 

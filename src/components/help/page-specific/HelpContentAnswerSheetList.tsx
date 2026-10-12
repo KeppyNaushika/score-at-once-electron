@@ -32,7 +32,7 @@ export function HelpContentAnswerSheetList() {
           解答用紙作成
         </h2>
         <p className="text-muted-foreground">
-          印刷して配る解答用紙を作ります。作った用紙は書き出して他の端末へ渡せます。
+          印刷して配る解答用紙を作ります。作った用紙は書き出して他のPCへ渡せます。
         </p>
       </div>
 
@@ -85,16 +85,16 @@ export function HelpContentAnswerSheetList() {
 
         <HelpSection
           icon={<FolderInput className="h-5 w-5 text-purple-600" />}
-          title="作る・読み込む"
+          title="作る・取り込む"
         >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規作成</Badge>
-              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">取り込み</Badge>
               <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った解答用紙は「読み込み」で取り込めます
+              別のPCで作った解答用紙は「取り込み」から取り込めます
               <ArchiveImportFormatsNote legacyFormats=".asb" />
               。書き出しと複製は行末の「…」から行います。
             </p>

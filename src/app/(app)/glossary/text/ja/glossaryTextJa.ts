@@ -52,7 +52,7 @@ export const GLOSSARY_TEXT_JA: GlossaryText = {
     tag: "タグ",
     examSetup: "準備（1〜6）",
     scoring: "採点（7）",
-    finalizeExport: "採点確定・結果（8・9）",
+    finalizeExport: "採点確定・結果と出力（8・9）",
     coursework: "試験外成績資料",
     grade: "成績算出",
     answerSheetBuilder: "解答用紙作成",

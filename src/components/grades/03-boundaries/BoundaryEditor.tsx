@@ -149,14 +149,14 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
     <div className="space-y-3">
       {boundaries.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          境界が設定されていません。プリセットを選択するか手動で追加してください。
+          境界が設定されていません。プリセットを選択するか行を追加してください。
         </p>
       ) : (
         <SortableTableProvider items={boundaryIds} onDragEnd={handleDragEnd}>
           <div className="space-y-2">
             <div className="grid grid-cols-[28px_1fr_120px_40px] gap-2 text-xs font-medium">
               <span />
-              <span>ラベル</span>
+              <span>成績評価記号</span>
               <span>最低 %</span>
               <span />
             </div>
@@ -234,7 +234,9 @@ function BoundaryRow({
         onChange={(e) => onChangeLabel(boundary, e.target.value)}
         onBlur={() => onBlur(boundary.id, "label")}
         placeholder="例: A"
-        title={isLabelMissing ? "ラベルが空だと評価が付きません" : undefined}
+        title={
+          isLabelMissing ? "成績評価記号が空だと何も付きません" : undefined
+        }
         className={cn(
           "h-8",
           isLabelMissing && "border-red-500 focus-visible:ring-red-500"

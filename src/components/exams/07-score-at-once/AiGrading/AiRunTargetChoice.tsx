@@ -19,7 +19,7 @@ const GRADING_TARGET_SCOPE_TITLES: Record<GradingTargetScope, string> = {
 }
 
 interface AiRunTargetChoiceProps {
-  /** 並べる選び方（AI 採点とチェックで違う） */
+  /** 並べる選び方（AI採点とチェックで違う） */
   scopes: readonly GradingTargetScope[]
   scope: GradingTargetScope
   onScopeChange: (scope: GradingTargetScope) => void

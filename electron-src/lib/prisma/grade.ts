@@ -160,7 +160,7 @@ export async function updateGrade(
     scopeLabel: grade.name,
     target: grade.name,
     changes: diffFields(before ?? undefined, grade, [
-      { field: "name", label: "成績名" },
+      { field: "name", label: "成績算出名" },
       { field: "description", label: "説明" },
     ]),
   })

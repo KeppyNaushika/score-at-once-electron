@@ -101,7 +101,7 @@ export async function fetchExportData(
     resolveEffectiveScores(questionScoresResult, decisionsResult, cropRegions)
   if (scoreConflicts.length > 0) {
     console.warn(
-      `Export: ${scoreConflicts.length}件の採点競合を検出しました（未採点として出力されます）`,
+      `Export: ${scoreConflicts.length}件の採点の不一致を検出しました（未採点として出力されます）`,
       scoreConflicts
     )
   }

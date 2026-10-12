@@ -54,7 +54,7 @@ export function validateCourseworkManifest(
       compatible: false,
       requiresTransform: false,
       warnings,
-      error: `このアーカイブ（v${manifestData.version}）は現在のアプリ（v${COURSEWORK_CURRENT_VERSION}）より新しいため読み込めません。アプリを更新してください。`,
+      error: `このアーカイブ（v${manifestData.version}）は現在のアプリ（v${COURSEWORK_CURRENT_VERSION}）より新しいため取り込めません。アプリを更新してください。`,
     }
   }
 
@@ -65,7 +65,7 @@ export function validateCourseworkManifest(
       compatible: false,
       requiresTransform: false,
       warnings,
-      error: `このアーカイブ（v${manifestData.version}）は古すぎるため読み込めません。`,
+      error: `このアーカイブ（v${manifestData.version}）は古すぎるため取り込めません。`,
     }
   }
 
@@ -73,7 +73,7 @@ export function validateCourseworkManifest(
     compareVersions(manifestData.version, COURSEWORK_CURRENT_VERSION) < 0
   if (requiresTransform) {
     warnings.push(
-      `アーカイブ（v${manifestData.version}）を現行（v${COURSEWORK_CURRENT_VERSION}）へ変換して読み込みます。`
+      `アーカイブ（v${manifestData.version}）を現行（v${COURSEWORK_CURRENT_VERSION}）へ変換して取り込みます。`
     )
   }
 

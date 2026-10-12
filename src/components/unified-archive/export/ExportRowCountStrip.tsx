@@ -5,8 +5,8 @@ import type {
   EntityOverviewStat,
   EntityOverviewStatTone,
 } from "@/components/common/entity-overview/types"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveTableLabel } from "../archiveTableLabels"
 import { MAJOR_TABLES } from "./exportLabels"
 
 /** 表ごとの色（試験・資料・成績算出・解答用紙・生徒のまとまりで色相を分ける） */
@@ -47,7 +47,7 @@ export function ExportRowCountStrip({
     const delta = rowCountDeltas?.[table] ?? 0
     return [
       {
-        label: archiveTableLabel(table),
+        label: tableLabel(table),
         value: (
           <>
             <span className="tabular-nums">{rowCount}</span>

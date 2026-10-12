@@ -106,7 +106,7 @@ export function EditableGradeLabel({
     return (
       <span
         className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
-        title="クリックして成績ラベルを手動入力"
+        title="クリックして成績評価記号を上書き"
         onClick={startEdit}
       >
         -
@@ -127,10 +127,10 @@ export function EditableGradeLabel({
   const isUnknownLabel = isUnknownGradeLabel(boundaries, overrideLabel)
 
   const overrideTooltip = isOverridden
-    ? `自動算出: ${originalLabel ?? "-"} → 手動: ${overrideLabel}`
+    ? `自動算出: ${originalLabel ?? "-"} → 上書き: ${overrideLabel}`
     : undefined
   const tooltipText = isUnknownLabel
-    ? `${overrideTooltip}\nこの評定は成績境界にありません`
+    ? `${overrideTooltip}\nこの成績評価記号は成績境界にありません`
     : overrideTooltip
 
   // Override方向の判定。上書き値が空文字でも「手で触ったセル」であることは

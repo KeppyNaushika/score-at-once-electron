@@ -1,5 +1,5 @@
 /**
- * 個人成績表の印刷用HTMLを生成
+ * 試験採点結果個表の印刷用HTMLを生成
  * renderToStaticMarkupを使い、プレビュー用Reactコンポーネントを再利用してHTML化
  */
 import React from "react"
@@ -47,7 +47,7 @@ export interface PageAllocation {
 }
 
 /**
- * 複数の個人成績表を結合した印刷用HTMLを生成
+ * 複数の試験採点結果個表を結合した印刷用HTMLを生成
  */
 export function generatePrintHtml(
   reports: IndividualReportData[],
@@ -81,7 +81,7 @@ export function generatePrintHtml(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>個人成績表</title>
+  <title>試験採点結果個表</title>
   <style>
     @page {
       size: A4 portrait;

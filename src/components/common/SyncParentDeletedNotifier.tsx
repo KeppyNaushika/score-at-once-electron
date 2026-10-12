@@ -10,7 +10,7 @@ import type {
   SyncParentDeleted,
   SyncParentDeletedReport,
 } from "@/electron-src/lib/sync/types"
-import { syncTableLabel } from "@/lib/shared/syncTableLabels"
+import { tableLabel } from "@/lib/shared/tableLabels"
 import { subscribeSyncParentDeletedChanged } from "@/queries/sync"
 
 /**
@@ -74,7 +74,7 @@ function breakdown(records: SyncParentDeleted[]): string {
   return [...tableNamesByCause]
     .map(
       ([causeTable, tableNames]) =>
-        `${syncTableLabel(causeTable)}の削除にともない ${countByTableLabel(tableNames)}`
+        `${tableLabel(causeTable)}の削除にともない ${countByTableLabel(tableNames)}`
     )
     .join("\n")
 }

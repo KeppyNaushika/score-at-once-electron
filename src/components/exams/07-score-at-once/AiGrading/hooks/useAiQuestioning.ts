@@ -1,7 +1,7 @@
 /**
  * 問いかけ（docs/vlm-grading-design.md §3-5・§3-10）を、左パネルと中央の一覧で分け持つための束ね。
  *
- * 問い・選択肢・記録・見直しは左パネル（AI 採点／AI チェックのタブ）に出し、中央は
+ * 問い・選択肢・記録・見直しは左パネル（AI採点／AIチェックのタブ）に出し、中央は
  * いつもの答案の一覧のまま。ここは両方が読むものを作業場に1つだけ持つ:
  * - 流れ（`useQuestioningFlow`）・確定（`useQuestioningCommit`）・自分で採点のキー
  * - 一覧を、いまの問いの答案に絞る（確信度の低い順。スイッチで外せる）
@@ -61,7 +61,7 @@ interface UseAiQuestioningOptions {
   /** 「その他」の欄の文を捨てる（確定のとき、「その他」を選んでいない問い） */
   discardInstructionTexts: (steps: readonly QuestioningStep[]) => void
   ownScoreOf: (examStudentId: string) => QuestioningScore | null
-  /** AI 採点の案（選び直しの洗い出しと、点を加減する選択肢の点に使う）。チェックでは空 */
+  /** AI採点の案（選び直しの洗い出しと、点を加減する選択肢の点に使う）。チェックでは空 */
   proposals: readonly AiRubricProposalRow[]
   onAnnotationsChanged?: () => void
 }

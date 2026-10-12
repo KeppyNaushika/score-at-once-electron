@@ -12,7 +12,7 @@ function valueToDecision(value: string): CourseworkImportDecision {
 }
 
 /**
- * 旧形式（.coursework / .grade）の取り込みで、資料ごとに「既存へ統合」か「新規作成」かを
+ * 旧形式（.coursework / .grade）の取り込みで、資料ごとに「既存に取り込む」か「新規作成」かを
  * 選ばせる状態。uuid一致があれば既定で統合、無ければ新規作成を初期選択にする。
  *
  * `courseworkMatches` は照合の結果（preview）から渡す。配列が切り替わったら前回の選択は無効になる

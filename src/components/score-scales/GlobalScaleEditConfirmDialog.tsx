@@ -33,7 +33,7 @@ const EDIT_DESCRIPTIONS: Record<GatedScaleEdit["kind"], string> = {
 }
 
 /**
- * 共通の類型評価の点数・類型を直す前の確認（§4-8-3a）。
+ * 共通の類型表の点数・類型を直す前の確認（§4-8-3a）。
  * 使っているすべての試験の点が変わることを、使っている試験・設問の数とともに示す
  */
 export function GlobalScaleEditConfirmDialog({
@@ -53,10 +53,10 @@ export function GlobalScaleEditConfirmDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>共通の類型評価を直しますか</AlertDialogTitle>
+          <AlertDialogTitle>共通の類型表を直しますか</AlertDialogTitle>
           <AlertDialogDescription>
             {pendingEdit
-              ? `「${scoreScale.name || "名前なし"}」は ${usage.examCount}試験・${usage.cropRegionCount}設問で使っています。${EDIT_DESCRIPTIONS[pendingEdit.kind]}と、使っているすべての試験の点が変わります（終わった試験の合計や成績算出の結果も変わります。確定した成績の値は変わりません）。`
+              ? `「${scoreScale.name || "名前なし"}」は ${usage.examCount}試験・${usage.cropRegionCount}設問で使っています。${EDIT_DESCRIPTIONS[pendingEdit.kind]}と、使っているすべての試験の点が変わります（終わった試験の合計や成績算出の結果も変わります。固定値は変わりません）。`
               : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>

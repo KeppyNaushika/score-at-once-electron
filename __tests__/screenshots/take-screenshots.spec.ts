@@ -452,7 +452,7 @@ test.describe.serial("第1章: 初期設定", () => {
           page.getByRole("button", { name: "Excel 貼付一括追加" })
         )
         const importDialog = page.getByRole("dialog", {
-          name: "生徒データのインポート",
+          name: "生徒データの取り込み",
         })
         await expect(importDialog).toBeVisible()
 
@@ -836,7 +836,7 @@ test.describe.serial("第2章: 試験準備", () => {
     await ss(page, "ch2-exam-prep/13-master-upload.png")
   })
 
-  test("2-5 採点領域作成（ASBから自動生成済み）", async () => {
+  test("2-5 領域作成（ASBから自動生成済み）", async () => {
     await nav(page, `/exams/${examId}/02-template`)
     await page.waitForTimeout(1500)
 
@@ -867,7 +867,7 @@ test.describe.serial("第2章: 試験準備", () => {
     await ss(page, "ch2-exam-prep/14-scoring-regions.png")
   })
 
-  test("2-6 領域情報", async () => {
+  test("2-6 領域設定", async () => {
     await nav(page, `/exams/${examId}/03-region-info`)
     await ss(page, "ch2-exam-prep/15-region-info.png")
 
@@ -1021,7 +1021,7 @@ test.describe.serial("第2章: 試験準備", () => {
       }
     )
 
-    // (C) 領域情報: 氏名欄を囲んだ1つ目の種類を「氏名」にする。答案の取り込みで
+    // (C) 領域設定: 氏名欄を囲んだ1つ目の種類を「氏名」にする。答案の取り込みで
     //     「氏名欄のみ」の照合が使えるようになる
     await nav(page, `/exams/${regularExamId}/03-region-info`)
     await captureOptional(
@@ -1192,7 +1192,7 @@ test.describe.serial("第3章: 採点と出力", () => {
       await ss(page, "ch3-scoring/19-annotation-drawn.png")
     })
     await captureOptional("ch3-scoring/20-annotation-list.png", async () => {
-      await clickWhenReady(page.getByRole("tab", { name: "アノテーション" }))
+      await clickWhenReady(page.getByRole("tab", { name: "注釈" }))
       await page.waitForTimeout(1000)
       await ss(page, "ch3-scoring/20-annotation-list.png")
       await clickWhenReady(page.getByRole("tab", { name: "採点" }))
@@ -1206,13 +1206,12 @@ test.describe.serial("第3章: 採点と出力", () => {
         // 一覧表示へ戻す（個別表示のままだと採点の道具立てが出ない）
         await clickWhenReady(page.getByRole("button", { name: "一覧表示" }))
         await page.waitForTimeout(1000)
-        // ショートカット一覧を開くのはヘッダーの「キーボード」。側パネルにある
-        // 同名のボタンは操作モードの切り替えなので、DOM で先に来るヘッダー側を採る
+        // ショートカット一覧を開くのはヘッダーの「ショートカットキー」
         await clickWhenReady(
-          page.getByRole("button", { name: "キーボード", exact: true }).first()
+          page.getByRole("button", { name: "ショートカットキー", exact: true })
         )
         await expect(
-          page.getByRole("dialog", { name: "キーボードショートカット" })
+          page.getByRole("dialog", { name: "ショートカットキー" })
         ).toBeVisible()
         await page.waitForTimeout(500)
         await ss(page, "ch3-scoring/05-scoring-keyboard-help.png")
@@ -1222,7 +1221,7 @@ test.describe.serial("第3章: 採点と出力", () => {
     )
   })
 
-  test("3-5 採点確定（食い違いの裁定）", async () => {
+  test("3-5 採点確定（採点の不一致の裁定）", async () => {
     await nav(page, `/exams/${examId}/08-finalize`)
     await page.waitForTimeout(1500)
     await ss(page, "ch3-scoring/06-finalize.png")
@@ -1285,12 +1284,12 @@ test.describe.serial("第3章: 採点と出力", () => {
       }
     )
 
-    // プレビューの中にもう一段タブがある（点数一覧・正誤一覧・問題分析・S-P表・得点分布）
+    // プレビューの中にもう一段タブがある（得点一覧・正誤一覧・問題分析・S-P表・得点分布）
     await captureOptional(
       "ch3-scoring/12-export-preview-scores.png",
       async () => {
         await clickWhenReady(page.getByRole("tab", { name: "プレビュー" }))
-        await expect(page.getByRole("tab", { name: "点数一覧" })).toBeVisible({
+        await expect(page.getByRole("tab", { name: "得点一覧" })).toBeVisible({
           timeout: 60_000,
         })
         await page.waitForTimeout(1000)
@@ -1315,7 +1314,9 @@ test.describe.serial("第3章: 採点と出力", () => {
     await captureOptional(
       "ch3-scoring/17-export-individual-report.png",
       async () => {
-        await clickWhenReady(page.getByRole("tab", { name: "個人成績表PDF" }))
+        await clickWhenReady(
+          page.getByRole("tab", { name: "試験採点結果個表PDF" })
+        )
         await page.waitForTimeout(800)
         await ss(page, "ch3-scoring/17-export-individual-report.png")
       }
@@ -1356,7 +1357,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
 
     const gradeSteps: [string, string][] = [
       ["01-students", "ch4-grades/03-grade-students.png"],
-      ["02-data-sources", "ch4-grades/04-grade-data-sources.png"],
+      ["02-items", "ch4-grades/04-grade-data-sources.png"],
       ["03-boundaries", "ch4-grades/05-grade-boundaries.png"],
       ["04-comparisons", "ch4-grades/06-grade-comparisons.png"],
     ]
@@ -1468,7 +1469,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
 
   test("4-7 操作履歴", async () => {
     // ここまでの UI 操作（試験の作成・名前や日付の書き換え・学級追加・タグ付け・
-    // 領域情報の編集）が記録されている。種を直に入れて水増しはしない
+    // 領域設定の編集）が記録されている。種を直に入れて水増しはしない
     await nav(page, "/audit-logs")
     await page.waitForTimeout(1000)
     await ss(page, "ch4-grades/24-audit-logs.png")
@@ -1482,7 +1483,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
     await captureOptional(
       "ch4-grades/26-student-detail-membership.png",
       async () => {
-        await clickWhenReady(page.getByRole("tab", { name: "学級所属" }))
+        await clickWhenReady(page.getByRole("tab", { name: "学級の在籍" }))
         await page.waitForTimeout(800)
         await ss(page, "ch4-grades/26-student-detail-membership.png")
       }

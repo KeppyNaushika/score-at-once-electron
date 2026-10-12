@@ -42,7 +42,7 @@ export function StudentCandidateCard({
             </label>
             <div className="text-right">
               <div className="text-sm font-medium">
-                {student.memberships[0]?.classroom.name || "未所属"}
+                {student.memberships[0]?.classroom.name || "未在籍"}
               </div>
               {student.memberships[0]?.attendanceNumber != null && (
                 <div className="text-xs text-muted-foreground">

@@ -58,7 +58,7 @@ export async function preMatchStudents(
         importData: importStudent,
         existingData: idMatch,
         displayLabel,
-        matchReason: "同じパソコンで作成されたデータ",
+        matchReason: "同じPCで作成されたデータ",
       })
       continue
     }

@@ -36,9 +36,9 @@ export function ExamIntegrationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>採点試験に変換</DialogTitle>
+          <DialogTitle>試験に変換</DialogTitle>
           <DialogDescription>
-            この解答用紙から採点試験を作成します。
+            この解答用紙から試験を作成します。
           </DialogDescription>
         </DialogHeader>
 

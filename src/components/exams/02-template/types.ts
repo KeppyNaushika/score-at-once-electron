@@ -1,5 +1,5 @@
 /**
- * 02-template (採点領域作成) 関連の型定義統合ファイル
+ * 02-template (領域作成) 関連の型定義統合ファイル
  */
 
 import { type CropRegion } from "@prisma/client"

@@ -118,7 +118,7 @@ export const SHORTCUT_LABELS: Record<string, string> = {
   "scoring.openPartialWith9": "9 で部分点の入力を始める",
   "scoring.openPartialWithDot": "小数点で部分点の入力を始める",
 
-  // 描画ツール（個別表示）。名前はツールパレットの表示に合わせる
+  // 注釈ツール（個別表示）。名前はツールパレットの表示に合わせる
   "tool.hand": "ハンドツール",
   "tool.select": "選択ツール",
   "tool.text": "テキストツール",
@@ -145,7 +145,7 @@ export function getShortcutLabel(commandId: string): string {
 
 /**
  * 設定画面で変えられるコマンドの分類
- * 順序: 採点操作 → 部分点の入力 → 選択の場面 → フィルタ → ナビゲーション → 表示制御 → 描画ツール
+ * 順序: 採点操作 → 部分点の入力 → 選択の場面 → フィルタ → ナビゲーション → 表示制御 → 注釈ツール
  */
 export const SHORTCUT_CATEGORIES = {
   scoring: {
@@ -206,7 +206,7 @@ export const SHORTCUT_CATEGORIES = {
       "choice.exit",
     ],
     description:
-      "採点項目を当てる・外す場面と、AI 採点の問いかけで選択肢を選ぶ場面の操作（入る キーと問いかけの 次へ・戻る 以外は、場面の中だけで効く）",
+      "採点項目を当てる・外す場面と、AI採点の問いかけで選択肢を選ぶ場面の操作（入る キーと問いかけの 次へ・戻る 以外は、場面の中だけで効く）",
   },
   filter: {
     label: "フィルタ",
@@ -254,7 +254,7 @@ export const SHORTCUT_CATEGORIES = {
     description: "表示の切り替え",
   },
   tool: {
-    label: "描画ツール",
+    label: "注釈ツール",
     keys: [
       "tool.hand",
       "tool.select",

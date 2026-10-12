@@ -79,7 +79,7 @@ export default function SettingsPage() {
             <TabsList>
               <TabsTrigger value="keyboard" className="gap-2">
                 <Keyboard className="h-4 w-4" />
-                キーボード
+                ショートカットキー
               </TabsTrigger>
               <TabsTrigger value="screen" className="gap-2">
                 <Monitor className="h-4 w-4" />

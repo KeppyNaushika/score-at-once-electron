@@ -95,7 +95,7 @@ describe("ログイン中の利用者が消えたときの知らせ", () => {
     await waitFor(() => expect(electronAPI.clearAuthToken).toHaveBeenCalled())
     expect(toast.warning).toHaveBeenCalledTimes(1)
     expect(vi.mocked(toast.warning).mock.calls[0][0]).toContain(
-      "ログイン中の利用者は、他のPCで削除されたためログアウトしました"
+      "ログイン中のユーザーは、他のPCで削除されたためログアウトしました"
     )
     // 閉じるまで残す
     expect(vi.mocked(toast.warning).mock.calls[0][1]).toMatchObject({

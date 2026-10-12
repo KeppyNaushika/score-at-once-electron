@@ -211,7 +211,7 @@ export async function recordAiRubricProposalDraft(
 ) {
   const proposal = await findProposalForAnswer(input.proposalId)
   if (proposal.run.userId !== actorUserId) {
-    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+    throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
   const freeText = input.freeText.trim()
   if (input.optionId !== null) {
@@ -278,7 +278,7 @@ export async function setAiRubricProposalAdviceDraft(
   })
   if (!proposal) throw new Error("項目の案が見つかりません")
   if (proposal.run.userId !== actorUserId) {
-    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+    throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
   const latest = await prisma.aiRubricProposalAdviceDraft.findFirst({
     where: { proposalId: proposal.id, userId: actorUserId },
@@ -304,7 +304,7 @@ export interface CommitAiRubricProposalResponseInput {
   responseId: string
   /**
    * 項目を当てる（「その他」・自分で採点なら外す）答案（受験者）。案の答案のうち renderer が
-   * 選んだもの（AI 採点では、採点済みの答案も案に入れて置き換えるので、ふつうは案の答案すべて）
+   * 選んだもの（AI採点では、採点済みの答案も案に入れて置き換えるので、ふつうは案の答案すべて）
    */
   examStudentIds: string[]
 }
@@ -340,7 +340,7 @@ export async function commitAiRubricProposalResponse(
   if (!draft) throw new Error("問いかけの答えが見つかりません")
   const proposal = await findProposalForAnswer(draft.proposalId)
   if (proposal.run.userId !== actorUserId) {
-    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+    throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
   if (draft.committedAt !== null) {
     return { response: draft, touchedRows: [], adviceChangedRubricItemId: null }

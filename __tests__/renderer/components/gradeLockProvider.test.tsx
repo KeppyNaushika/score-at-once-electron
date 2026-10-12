@@ -120,7 +120,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-/** 「3. 領域情報」相当のタブ。配点を書く */
+/** 「3. 領域設定」相当のタブ。配点を書く */
 function RegionInfoTab({ examId }: { examId: string }) {
   const updateRegion = useMutation(updateCropRegionMutation(examId))
   return (

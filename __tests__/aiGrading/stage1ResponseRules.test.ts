@@ -47,7 +47,7 @@ describe("1段目の応答: 通るもの", () => {
     ["点の無い保留", withFields({ status: "pending" }), 5],
     ["配点の無い設問の点の無い保留", withFields({ status: "pending" }), null],
     [
-      "満点の保留は保留のまま",
+      "配点と同じ点の保留は保留のまま",
       withFields({ status: "pending", partialScore: 5 }),
       5,
     ],
@@ -90,7 +90,7 @@ describe("1段目の応答: 直して受け取るもの", () => {
     expect(result.ok && result.notes).toEqual([])
   })
 
-  it("満点の partial は correct に寄せ、partialScore を null にする", () => {
+  it("配点と同じ点の partial は correct に寄せ、partialScore を null にする", () => {
     const result = validateGradingResponse(
       withFields({ status: "partial", partialScore: 5 }),
       { maxPoints: 5 }
@@ -102,7 +102,7 @@ describe("1段目の応答: 直して受け取るもの", () => {
     expect(result.notes).toHaveLength(1)
   })
 
-  it("丸めた結果が満点になった partial も correct に寄せる", () => {
+  it("丸めた結果が配点と同じになった partial も correct に寄せる", () => {
     const result = validateGradingResponse(
       withFields({ status: "partial", partialScore: 4.999 }),
       { maxPoints: 5 }

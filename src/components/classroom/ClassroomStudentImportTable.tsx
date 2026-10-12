@@ -44,7 +44,7 @@ export default function ClassroomStudentImportTable({
     },
     {
       id: "startDate",
-      header: "開始日",
+      header: "在籍の開始日",
       accessorKey: "startDate",
       size: 150,
       meta: {
@@ -53,7 +53,7 @@ export default function ClassroomStudentImportTable({
     },
     {
       id: "endDate",
-      header: "終了日",
+      header: "在籍の終了日",
       accessorKey: "endDate",
       size: 150,
       meta: {

@@ -12,7 +12,10 @@
 
 import { Prisma } from "@prisma/client"
 
-import { toScoringStatus } from "@/types/scoringStatus.types"
+import {
+  type ScoringStatus,
+  toScoringStatus,
+} from "@/types/scoringStatus.types"
 
 import {
   calculateEffectiveScoreValue,
@@ -82,9 +85,9 @@ interface SnapshotContent {
 // ---- 公開する差分結果の型 ----
 
 export interface ReturnScoreCellState {
-  status: string
+  status: ScoringStatus
   partialScore: number | null
-  /** 類型評価で付けた類型の記号（評価済みのときだけ） */
+  /** 類型評価で付けた類型の記号（類型採点済みのときだけ） */
   scaleLabel: string | null
   /** 配点に基づく実得点（unscored は null） */
   value: number | null

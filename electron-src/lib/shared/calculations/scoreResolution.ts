@@ -151,7 +151,7 @@ export function resolveEffectiveScores(
     const scoringMethod = scoringMethodByCropRegionId.get(cropRegionId)
     if (scoringMethod === undefined) {
       throw new Error(
-        `有効スコアの解決に設問 ${cropRegionId} の採点方式が渡されていません`
+        `有効な得点の解決に設問 ${cropRegionId} の採点方式が渡されていません`
       )
     }
     return isScoreCountedForScoringMethod(scoringMethod, status)

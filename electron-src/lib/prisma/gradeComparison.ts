@@ -45,7 +45,7 @@ export async function createGradeComparison(comparisonInput: {
   comparedGradeItemId: string
 }) {
   if (comparisonInput.gradeItemId === comparisonInput.comparedGradeItemId) {
-    throw new Error("評価項目を自分自身と比較することはできません")
+    throw new Error("成績評価項目を自分自身と比較することはできません")
   }
 
   const existing = await prisma.gradeComparison.findUnique({

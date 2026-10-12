@@ -80,7 +80,7 @@ export function DeleteCourseworkModal({
                     variant: "secondary",
                   },
                   {
-                    label: `評価項目 ${target.items.length}`,
+                    label: `資料評価項目 ${target.items.length}`,
                     variant: "secondary",
                   },
                 ],
@@ -92,7 +92,7 @@ export function DeleteCourseworkModal({
         {
           type: "destructive",
           message:
-            "この操作は取り消せません。対象生徒の登録・評価項目（文字評価の変換表を含む）・入力した点数や評価・加減点とその理由・成績通知書に載せるコメントもすべて削除されます。",
+            "この操作は取り消せません。対象生徒の登録・資料評価項目（変換表を含む）・入力した得点や資料評価記号・加減点とその理由・個人成績通知書に載せるコメントもすべて削除されます。",
         },
         {
           type: "info",

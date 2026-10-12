@@ -16,7 +16,7 @@ interface AiExamCostBadgeProps {
 
 /**
  * 採点モードの行の左端に出す、この試験の AI の費用の概算。
- * AI 採点を使える事業者が無いとき・この試験でまだ AI に送っていないときは出さない
+ * AI採点を使える事業者が無いとき・この試験でまだ AI に送っていないときは出さない
  */
 export function AiExamCostBadge({ examId }: AiExamCostBadgeProps) {
   const { unlockedProviders } = useAiGradingAvailability()

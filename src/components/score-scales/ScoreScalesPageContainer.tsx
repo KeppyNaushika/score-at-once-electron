@@ -51,17 +51,17 @@ const matchesScopeFilter = (
   return (scoreScale.examId === null) === (scopeFilter === "global")
 }
 
-/** 管理の画面で新しく作る共通の類型評価の名前（あとから直せる） */
-const NEW_SCORE_SCALE_NAME = "類型評価"
+/** 管理の画面で新しく作る共通の類型表の名前（あとから直せる） */
+const NEW_SCORE_SCALE_NAME = "類型表"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_SCORE_SCALES: ScoreScaleRow[] = []
 
 /**
- * 類型評価管理（docs/vlm-grading-design.md §4-8-3a）。
+ * 類型表管理（docs/vlm-grading-design.md §4-8-3a）。
  *
- * 共通の類型評価の一覧と編集。どの試験のどの設問が使っているかを示す。
- * 試験の類型評価も絞り込みで出し、共通にできる。作る・直す・消すは 03 の領域情報からもできる
+ * 共通の類型表の一覧と編集。どの試験のどの設問が使っているかを示す。
+ * 試験の類型表も絞り込みで出し、共通にできる。作る・直す・消すは 03 の領域設定からもできる
  */
 export function ScoreScalesPageContainer() {
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("global")
@@ -131,7 +131,7 @@ export function ScoreScalesPageContainer() {
       id: "create",
       priority: 80,
       icon: Plus,
-      label: "共通の類型評価を作成",
+      label: "共通の類型表を作成",
       onClick: () => void handleCreate(),
       disabled: creating,
     }),
@@ -140,7 +140,7 @@ export function ScoreScalesPageContainer() {
   return (
     <div className="flex h-full min-w-full flex-col">
       <PageHeader
-        title="類型評価管理"
+        title="類型表管理"
         subtitle={isPending ? undefined : `${filteredScoreScales.length}件`}
         actions={toolbarActions}
       />
@@ -163,7 +163,7 @@ export function ScoreScalesPageContainer() {
                 <EmptyMedia variant="icon">
                   <Layers />
                 </EmptyMedia>
-                <EmptyTitle>類型評価がありません</EmptyTitle>
+                <EmptyTitle>類型表がありません</EmptyTitle>
               </EmptyHeader>
             </Empty>
           ) : (
@@ -187,7 +187,7 @@ export function ScoreScalesPageContainer() {
             />
           ) : (
             <p className="p-4 text-sm text-muted-foreground">
-              一覧から類型評価を選ぶと、類型と説明と点数を直せます。
+              一覧から類型表を選ぶと、類型と説明と点数を直せます。
             </p>
           )}
         </div>

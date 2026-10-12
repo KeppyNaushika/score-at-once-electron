@@ -277,7 +277,7 @@ export function CourseworkItemsContainer({
     }
     itemDeletion.close()
     forgetText(item)
-    toast.success("評価項目を削除しました", { description: item.name })
+    toast.success("資料評価項目を削除しました", { description: item.name })
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -305,18 +305,18 @@ export function CourseworkItemsContainer({
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">評価項目</h2>
+        <h2 className="text-lg font-semibold">資料評価項目</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          点数を入力する評価項目を作成してください。満点・入力方式（数値／文字評価）を設定できます。変更は自動保存されます。
+          得点を入力する資料評価項目を作成してください。配点・入力方式（点数／評価記号）を設定できます。変更は自動保存されます。
         </p>
       </div>
 
-      {/* 評価項目追加 */}
+      {/* 資料評価項目追加 */}
       <div className="mb-6 flex items-center gap-2">
         <Input
           value={newItemName}
           onChange={(e) => setNewItemName(e.target.value)}
-          placeholder="評価項目名（例: 提出物、小テスト）"
+          placeholder="資料評価項目名（例: 提出物、小テスト）"
           className="max-w-xs"
           onKeyDown={(e) =>
             e.key === "Enter" && !e.nativeEvent.isComposing && handleAddItem()
@@ -328,14 +328,14 @@ export function CourseworkItemsContainer({
           disabled={!newItemName.trim()}
         >
           <Plus className="mr-2 h-4 w-4" />
-          評価項目追加
+          資料評価項目追加
         </Button>
       </div>
 
-      {/* 評価項目リスト（常時インライン編集・DnD並べ替え） */}
+      {/* 資料評価項目リスト（常時インライン編集・DnD並べ替え） */}
       {items.length === 0 ? (
         <div className="py-8 text-center text-sm text-muted-foreground">
-          評価項目がありません。上のフォームから追加してください。
+          資料評価項目がありません。上のフォームから追加してください。
         </div>
       ) : (
         <div className="space-y-3">
@@ -365,8 +365,8 @@ export function CourseworkItemsContainer({
       <ConfirmationModal
         open={itemDeletion.isOpen}
         onClose={itemDeletion.close}
-        title="評価項目を削除しますか？"
-        description={`「${itemDeletion.target?.name ?? ""}」を削除します。この評価項目に入力した点数・評価、加減点とその理由、成績通知書に載せるコメント${itemDeletion.target?.inputMode === "letter" ? "、文字評価の変換表" : ""}も一緒に削除され、元に戻せません。`}
+        title="資料評価項目を削除しますか？"
+        description={`「${itemDeletion.target?.name ?? ""}」を削除します。この資料評価項目に入力した得点・資料評価記号、加減点とその理由、個人成績通知書に載せるコメント${itemDeletion.target?.inputMode === "letter" ? "、変換表" : ""}も一緒に削除され、元に戻せません。`}
         confirmText="削除"
         variant="destructive"
         icon="trash"

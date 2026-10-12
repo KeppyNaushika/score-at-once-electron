@@ -51,7 +51,7 @@ describe("buildGradeLockMessage", () => {
       thinking,
     ])
     expect(message.lead).toContain("この試験は")
-    expect(message.lead).toContain("点数が変わります")
+    expect(message.lead).toContain("得点が変わります")
     expect(message.groups).toEqual([
       {
         grade: { id: "grade-1", name: "1学期成績" },
@@ -74,6 +74,6 @@ describe("buildGradeLockMessage", () => {
       true,
       false,
     ])
-    expect(message.frozenNote).toContain("確定後に元データが変わっています")
+    expect(message.frozenNote).toContain("固定後に元データが変わっています")
   })
 })

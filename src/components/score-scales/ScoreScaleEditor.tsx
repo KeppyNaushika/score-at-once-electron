@@ -16,8 +16,8 @@ import { scoreScaleUsageSummary } from "./utils/scoreScaleUsage"
 interface ScoreScaleEditorProps {
   scoreScale: ScoreScaleRow
   /**
-   * 03 の領域情報から開いたときの試験。試験に戻す先と、「この試験用に複製して直す」の持ち主になる。
-   * 類型評価管理の画面では null
+   * 03 の領域設定から開いたときの試験。試験に戻す先と、「この試験用に複製して直す」の持ち主になる。
+   * 類型表管理の画面では null
    */
   contextExamId: string | null
   /** 設問の配点（03 から開いたとき）。分かれば、配点を超える類型に注記を添える */
@@ -28,8 +28,8 @@ interface ScoreScaleEditorProps {
 }
 
 /**
- * 類型評価（類型の組）の編集（docs/vlm-grading-design.md §4-8-3a）。
- * 03 の領域情報の行の中と、類型評価管理の画面の両方がこれを使う。
+ * 類型表（類型の組）の編集（docs/vlm-grading-design.md §4-8-3a）。
+ * 03 の領域設定の行の中と、類型表管理の画面の両方がこれを使う。
  *
  * 名前・記号・説明・点数は1打鍵ごとに書く。共通の組の点数・類型を直すときだけ、
  * 使っている試験・設問の数を示して確かめる（説明や名前は点に関わらないので確かめない）
@@ -50,7 +50,7 @@ export function ScoreScaleEditor({
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-48 flex-1 flex-col gap-1">
           <Label htmlFor={nameInputId} className="text-xs">
-            類型評価の名前
+            類型表の名前
           </Label>
           <Input
             id={nameInputId}
@@ -70,8 +70,8 @@ export function ScoreScaleEditor({
 
       <p className="text-xs text-muted-foreground">
         {scoreScale.examId === null
-          ? `共通の類型評価です。${usage.examCount}試験・${usage.cropRegionCount}設問で使っています。`
-          : `${scoreScale.exam?.examName ?? "試験"} の類型評価です。${usage.cropRegionCount}設問で使っています。`}
+          ? `共通の類型表です。${usage.examCount}試験・${usage.cropRegionCount}設問で使っています。`
+          : `${scoreScale.exam?.examName ?? "試験"} の類型表です。${usage.cropRegionCount}設問で使っています。`}
       </p>
 
       <ScoreScaleLevelTable

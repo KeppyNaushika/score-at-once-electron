@@ -3,7 +3,7 @@
  *
  * SQLite(Prisma) は enum 非対応のため `CropRegion.type` は `String` で保存され、
  * 値の集合を型で保証できるのはこの TypeScript 定義のみ。02-template（領域作成）と
- * 03-region-info（領域情報）の双方がこの1ファイルから導出すること
+ * 03-region-info（領域設定）の双方がこの1ファイルから導出すること
  * （scoringStatus.types.ts / examStudentStatus.types.ts と同型のパターン）。
  */
 import { defineStringUnion } from "./stringUnion"

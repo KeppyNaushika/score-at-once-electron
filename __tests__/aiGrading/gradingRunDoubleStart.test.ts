@@ -72,7 +72,7 @@ const startInput = (
   imageScale: 1,
 })
 
-const DOUBLE_START_MESSAGE = /同じ答案の AI 採点を始めているところです/
+const DOUBLE_START_MESSAGE = /同じ答案の AI採点を始めているところです/
 
 describe("2重の開始", () => {
   it("開始の処理中に同じ実行が来たら2つ目を拒み、外部へは1回分だけ送る", async () => {

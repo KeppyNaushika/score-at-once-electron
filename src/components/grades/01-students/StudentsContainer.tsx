@@ -204,9 +204,9 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
             deletionLosses={[
-              "この成績で確定（凍結）した成績値",
-              "手動で上書きした評定",
-              "評価項目ごとの除外設定",
+              "この成績算出の固定値",
+              "成績評価記号の上書き",
+              "成績評価項目ごとの除外設定",
             ]}
             // 失敗は例外で伝わり、中央のトーストが知らせる（表示は読み直しで戻る）
             onReorder={async (orderedClassroomIds) => {
@@ -245,10 +245,10 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             href={workflowStepHref(
               `/grades/${gradeId}`,
               gradeWorkflowSteps,
-              "02-data-sources"
+              "02-items"
             )}
           >
-            {nextStepLabel(gradeWorkflowSteps, "02-data-sources")}
+            {nextStepLabel(gradeWorkflowSteps, "02-items")}
           </Link>
         </Button>
       </div>

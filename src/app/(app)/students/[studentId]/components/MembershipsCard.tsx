@@ -64,7 +64,7 @@ export function MembershipsCard({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            学級所属
+            学級の在籍
             <span className="ml-1 text-lg font-normal text-muted-foreground tabular-nums">
               ({student.memberships.length}件)
             </span>
@@ -75,7 +75,7 @@ export function MembershipsCard({
             className="rounded-lg"
           >
             <Plus className="mr-2 h-4 w-4" />
-            所属追加
+            在籍を追加
           </Button>
         </div>
       </CardHeader>
@@ -87,8 +87,8 @@ export function MembershipsCard({
                 <TableRow className="hover:bg-transparent">
                   <TableHead>学級名</TableHead>
                   <TableHead className="w-24">出席番号</TableHead>
-                  <TableHead className="w-36">開始日</TableHead>
-                  <TableHead className="w-36">終了日</TableHead>
+                  <TableHead className="w-36">在籍の開始日</TableHead>
+                  <TableHead className="w-36">在籍の終了日</TableHead>
                   <TableHead>備考</TableHead>
                   <TableHead className="w-20 text-right">操作</TableHead>
                 </TableRow>
@@ -136,7 +136,7 @@ export function MembershipsCard({
                               variant="secondary"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
                             >
-                              終了
+                              過去在籍
                             </Badge>
                           )}
                         </div>
@@ -162,7 +162,7 @@ export function MembershipsCard({
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
                           <TooltipButton
-                            label="所属を編集"
+                            label="在籍を編集"
 
                             variant="ghost"
                             size="icon"
@@ -177,13 +177,13 @@ export function MembershipsCard({
                             <SquarePen className="h-4 w-4" />
                           </TooltipButton>
                           {/* 明日も在籍している所属だけ終了できる（今日で終了させる）。終了日は当日を
-                              含むので、今日終了した所属は今日いっぱい在籍中のまま — 今日の在籍だけで
-                              見ると、押しても消えないボタンになる。在籍予定の所属は今日で終了させると
+                              含むので、今日終了した在籍は今日いっぱい在籍中のまま — 今日の在籍だけで
+                              見ると、押しても消えないボタンになる。在籍予定のものは今日で終了させると
                               開始日より前に終わってしまうので出さない（編集か削除で直す） */}
                           {phase === "current" &&
                             isCurrentMembership(membership, tomorrow) && (
                               <TooltipButton
-                                label="所属を終了"
+                                label="在籍を終了"
 
                                 variant="ghost"
                                 size="icon"
@@ -204,7 +204,7 @@ export function MembershipsCard({
         ) : (
           <div className="py-12 text-center text-muted-foreground">
             <Users className="mx-auto mb-3 h-12 w-12 opacity-30" />
-            <p>学級所属がありません</p>
+            <p>学級の在籍がありません</p>
           </div>
         )}
       </CardContent>

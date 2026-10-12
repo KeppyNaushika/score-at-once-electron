@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
+import { ABSENT_METHOD_LABELS } from "@/components/grades/absentMethodLabels"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -26,15 +27,6 @@ import type {
   EstimationMode,
   GradeDataSourceWithRelations,
 } from "@/types/grade.types"
-
-const ABSENT_METHOD_LABELS: Record<AbsentMethod, string> = {
-  null: "なし",
-  zero: "0点",
-  average: "平均比率法",
-  regression: "重回帰法",
-  equipercentile: "順位法",
-  zscore: "標準偏差法",
-}
 
 /** 他ソースを説明変数に使う推定方法（推定ソース選択UI・R表示の対象） */
 function methodUsesPredictors(method: AbsentMethod): boolean {
@@ -186,12 +178,13 @@ export function EstimationSettingsPopover({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">なし</SelectItem>
-                <SelectItem value="zero">0点</SelectItem>
-                <SelectItem value="average">平均比率法</SelectItem>
-                <SelectItem value="regression">重回帰法</SelectItem>
-                <SelectItem value="equipercentile">順位法</SelectItem>
-                <SelectItem value="zscore">標準偏差法</SelectItem>
+                {Object.entries(ABSENT_METHOD_LABELS).map(
+                  ([absentMethod, label]) => (
+                    <SelectItem key={absentMethod} value={absentMethod}>
+                      {label}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
             {/* このソースが他ソースからどれだけ当てられるか（手法選択の判断材料）。
@@ -256,7 +249,7 @@ export function EstimationSettingsPopover({
               {/* ソース選択（他ソースを説明変数に使う手法のみ） */}
               {methodUsesPredictors(method) && (
                 <div className="space-y-2">
-                  <Label className="text-xs">推定に使用するソース</Label>
+                  <Label className="text-xs">推定に使うデータソース</Label>
                   <RadioGroup
                     value={estimationMode}
                     onValueChange={(value) =>

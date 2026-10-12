@@ -145,7 +145,7 @@ export default function RegionInfoPage() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p>領域情報を読み込み中...</p>
+        <p>領域設定を読み込み中...</p>
       </div>
     )
   }
@@ -182,7 +182,7 @@ export default function RegionInfoPage() {
   }
 
   /**
-   * 「領域情報」タブの中身（表と合計配点）。
+   * 「領域設定」タブの中身（表と合計配点）。
    *
    * 参加者が1人ならタブ帯を描かず、この中身だけを右ペインへ直に置く。
    * どちらの置き方でも同じものが出るよう、1か所で組み立てて使い回す。
@@ -321,7 +321,7 @@ export default function RegionInfoPage() {
         {/*
           Right: Region Details Table
 
-          題は段のヘッダー（「3. 領域情報」）、領域の数は左のフッター、操作の説明は
+          題は段のヘッダー（「3. 領域設定」）、領域の数は左のフッター、操作の説明は
           「使い方」（`HelpContent03RegionInfo`）が言う。ここで言い直さない。
           「※ ページ N を選択中」は表を絞っていないのに絞っているように読めるので消した
         */}
@@ -332,10 +332,10 @@ export default function RegionInfoPage() {
               className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
             >
               <TabsList className="m-3 shrink-0 self-start">
-                <TabsTrigger value="region-info">領域情報</TabsTrigger>
+                <TabsTrigger value="region-info">領域設定</TabsTrigger>
                 <TabsTrigger value="grader-assignment">採点担当</TabsTrigger>
               </TabsList>
-              {/* 既定で開くのは領域情報。担当より先に配点とラベルを埋める段だから */}
+              {/* 既定で開くのは領域設定。担当より先に配点とラベルを埋める段だから */}
               <TabsContent
                 value="region-info"
                 className="flex min-h-0 flex-1 flex-col overflow-hidden"

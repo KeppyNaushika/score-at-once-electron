@@ -80,7 +80,7 @@ export interface ScoringData {
   maxScore: number
   /** QuestionScore.status */
   status: ScoringStatus
-  /** 採点領域情報 */
+  /** 採点領域設定 */
   questionRegion: QuestionAnswerRegionRow
   /** ExamStudent.customOrder (必須・ソート用) */
   customOrder: number
@@ -89,7 +89,7 @@ export interface ScoringData {
 /**
  * 採点操作モード
  * - "keyboard": キーボードモード（選択→キーで採点）
- * - "mouse": マウスモード（クリックで直接採点、選択概念なし）
+ * - "mouse": マウスモード（クリックで採点、選択概念なし）
  */
 export type ScoringOperationMode = (typeof SCORING_OPERATION_MODES)[number]
 
@@ -231,7 +231,7 @@ export interface ScoringContextState {
   choiceSceneOpen: boolean
 
   /**
-   * AI 採点の問いかけで「自分で採点する」を選び、カードの答案を ←→ で移りながら
+   * AI採点の問いかけで「自分で採点する」を選び、カードの答案を ←→ で移りながら
    * 採点キーで点を付けている状態（付けた点は下書きで、確定で入る）
    */
   aiQuestioningManual: boolean

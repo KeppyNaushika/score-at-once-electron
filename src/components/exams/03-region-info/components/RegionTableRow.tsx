@@ -30,22 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { CROP_REGION_AREA_TYPE_LABELS } from "@/lib/cropRegionAreaTypeLabels"
 import type { CropRegionRow } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 import { CROP_REGION_AREA_TYPES } from "@/types/cropRegionAreaType.types"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
-
-// AreaTypeの日本語表示マッピング
-const areaTypeToJapanese: Record<string, string> = {
-  STUDENT_NAME: "氏名",
-  STUDENT_ID: "生徒番号",
-  QUESTION_ANSWER: "設問解答",
-  TOTAL_SCORE: "合計点",
-  SUBTOTAL_SCORE: "小計",
-  MARK: "マーク",
-  COMMENT: "コメント",
-  OTHER: "その他",
-}
 
 type IconType = ComponentType<{ className?: string }>
 
@@ -215,7 +204,7 @@ export const RegionTableRow = ({
             <SelectContent>
               {Object.values(CROP_REGION_AREA_TYPES).map((type) => (
                 <SelectItem key={type} value={type}>
-                  {areaTypeToJapanese[type]}
+                  {CROP_REGION_AREA_TYPE_LABELS[type]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -264,7 +253,7 @@ export const RegionTableRow = ({
             <span className="text-sm text-muted-foreground">-</span>
           )}
         </td>
-        {/* 採点方式（類型評価なら使う類型の組も、開いた行の中で選ぶ） */}
+        {/* 採点方式（類型方式なら使う類型表も、開いた行の中で選ぶ） */}
         <td className="border border-border px-2 py-1">
           {isQuestionAnswer && (
             <ScoringMethodToggleButton

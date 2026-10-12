@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveTableLabel } from "../../archiveTableLabels"
 import { mapArchiveGradeImpacts } from "../archiveGradeImpact"
 import type { UnifiedArchiveImportWizardState } from "../hooks/useUnifiedArchiveImportWizard"
 import type { ArchiveImportResult } from "../types"
@@ -98,7 +98,7 @@ export function ArchiveConfirmStep({
               <TableBody>
                 {countEntries.map(([table, tableCounts]) => (
                   <TableRow key={table}>
-                    <TableCell>{archiveTableLabel(table)}</TableCell>
+                    <TableCell>{tableLabel(table)}</TableCell>
                     {COUNT_COLUMNS.map((countColumn) => (
                       <TableCell
                         key={countColumn.key}

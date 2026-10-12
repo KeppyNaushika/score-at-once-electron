@@ -51,7 +51,7 @@ export async function preMatchClassrooms(
         importData: importClassroom,
         existingData: idMatch,
         displayLabel,
-        matchReason: "同じパソコンで作成されたデータ",
+        matchReason: "同じPCで作成されたデータ",
       })
       continue
     }

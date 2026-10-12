@@ -1,4 +1,4 @@
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { ScoreProposal } from "@/types/scoreDecision.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 

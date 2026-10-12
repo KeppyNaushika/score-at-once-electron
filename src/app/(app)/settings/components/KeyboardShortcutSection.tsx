@@ -35,7 +35,7 @@ export function KeyboardShortcutSection({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>キーボードショートカット</CardTitle>
+          <CardTitle>ショートカットキー</CardTitle>
           <Button onClick={onReset} variant="outline" size="sm">
             デフォルトに戻す
           </Button>

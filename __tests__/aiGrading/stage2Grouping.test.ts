@@ -150,7 +150,7 @@ describe("2段目の応答の検証", () => {
     expect(result.ok && result.uncoveredAnswerKeys).toEqual(["A2"])
   })
 
-  it("満点の partial を correct に寄せ、直したことを残す", () => {
+  it("配点と同じ点の partial を correct に寄せ、直したことを残す", () => {
     const result = validateStage2Response(
       {
         ...VALID_RESPONSE,

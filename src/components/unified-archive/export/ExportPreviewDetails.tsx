@@ -3,9 +3,9 @@
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
+import { tableLabel } from "@/lib/shared/tableLabels"
 import type { UnifiedArchiveMissingFile } from "@/types/unifiedArchive.types"
 
-import { archiveTableLabel } from "../archiveTableLabels"
 import { missingFileDescription } from "./exportLabels"
 
 interface ExportPreviewDetailsProps {
@@ -44,7 +44,7 @@ export function ExportPreviewDetails({
         <dl className="grid max-h-40 grid-cols-3 gap-x-4 gap-y-1 overflow-y-auto rounded-md bg-muted p-2 text-xs">
           {allTableCounts.map(([table, rowCount]) => (
             <div key={table} className="flex justify-between gap-2">
-              <dt>{archiveTableLabel(table)}</dt>
+              <dt>{tableLabel(table)}</dt>
               <dd className="tabular-nums">{rowCount}</dd>
             </div>
           ))}

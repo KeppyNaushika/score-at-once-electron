@@ -22,8 +22,8 @@ import {
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_SCORE_SCALES: ScoreScaleRow[] = []
 
-/** 03 で新しく作る類型評価の名前（あとから直せる） */
-const NEW_SCORE_SCALE_NAME = "類型評価"
+/** 03 で新しく作る類型表の名前（あとから直せる） */
+const NEW_SCORE_SCALE_NAME = "類型表"
 
 interface ScoreScalePickerProps {
   examId: string
@@ -32,7 +32,7 @@ interface ScoreScalePickerProps {
 }
 
 /**
- * 類型評価の設問で使う類型の組を選ぶ・作る・その場で直す（§4-8-3a）。
+ * 類型方式の設問で使う類型表を選ぶ・作る・その場で直す（§4-8-3a）。
  * 選択肢はこの試験のものと共通のものを分けて並べる
  */
 export function ScoreScalePicker({
@@ -85,17 +85,17 @@ export function ScoreScalePicker({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium">類型評価</span>
+        <span className="text-xs font-medium">類型表</span>
         <Combobox
           options={options}
           value={cropRegion.scoreScaleId ?? ""}
           onValueChange={selectScoreScale}
-          placeholder="類型評価を選ぶ"
+          placeholder="類型表を選ぶ"
           searchPlaceholder="名前・類型で探す"
-          emptyText="類型評価がありません"
+          emptyText="類型表がありません"
           disabled={disabled || selecting}
           className="h-8 w-64 text-sm"
-          aria-label="類型評価"
+          aria-label="類型表"
         />
         <Button
           type="button"
@@ -120,7 +120,7 @@ export function ScoreScalePicker({
       {cropRegion.scoreScaleId === null && (
         <p className="flex items-center gap-1 text-xs text-amber-700">
           <TriangleAlert className="h-3.5 w-3.5" />
-          類型評価を選んでいないので、この設問は類型を選べません。
+          類型表を選んでいないので、この設問は類型を選べません。
         </p>
       )}
     </div>

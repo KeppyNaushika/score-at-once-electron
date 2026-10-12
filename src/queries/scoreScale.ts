@@ -6,7 +6,7 @@ import { scopeKeys } from "./keys"
 /**
  * 類型評価（類型の組）と類型（docs/vlm-grading-design.md §4-8-3・§4-8-3a）。
  *
- * 組は共通（どの試験でも選べる）のものと試験のものがあり、03 の領域情報と類型評価管理の
+ * 組は共通（どの試験でも選べる）のものと試験のものがあり、03 の領域設定と類型評価管理の
  * 画面のどちらからでも直せる。共通の組を直すと、使っているどの試験の画面も古くなるので、
  * 組の読み取りは試験のまとまりの外（`scoreScales`）に置き、書き込みはそのまとまりごと取り直す。
  *
@@ -49,7 +49,7 @@ export const createScoreScaleMutation = () =>
     scope: SCORE_SCALE_MUTATION_SCOPE,
     meta: {
       invalidates: [scoreScalesScope],
-      errorMessage: "類型評価を作成できませんでした",
+      errorMessage: "類型表を作成できませんでした",
     },
   })
 
@@ -63,7 +63,7 @@ export const updateScoreScaleMutation = () =>
     scope: SCORE_SCALE_MUTATION_SCOPE,
     meta: {
       invalidates: [scoreScalesScope],
-      errorMessage: "類型評価の名前を変更できませんでした",
+      errorMessage: "類型表の名前を変更できませんでした",
     },
   })
 
@@ -78,7 +78,7 @@ export const setScoreScaleExamMutation = () =>
     scope: SCORE_SCALE_MUTATION_SCOPE,
     meta: {
       invalidates: [scoreScalesScope],
-      errorMessage: "類型評価の使える範囲を変更できませんでした",
+      errorMessage: "類型表の使える範囲を変更できませんでした",
     },
   })
 
@@ -97,7 +97,7 @@ export const duplicateScoreScaleMutation = (examId: string | null) =>
         examId === null
           ? [scoreScalesScope]
           : [scoreScalesScope, scopeKeys.exam(examId)],
-      errorMessage: "類型評価を複製できませんでした",
+      errorMessage: "類型表を複製できませんでした",
     },
   })
 
@@ -109,7 +109,7 @@ export const deleteScoreScaleMutation = () =>
     scope: SCORE_SCALE_MUTATION_SCOPE,
     meta: {
       invalidates: [scoreScalesScope],
-      errorMessage: "類型評価を削除できませんでした",
+      errorMessage: "類型表を削除できませんでした",
     },
   })
 
@@ -195,6 +195,6 @@ export const setCropRegionScoreScaleMutation = (examId: string) =>
     scope: { id: `exam:${examId}:cropRegions` },
     meta: {
       invalidates: [scopeKeys.exam(examId), scoreScalesScope],
-      errorMessage: "類型評価を選べませんでした",
+      errorMessage: "類型表を選べませんでした",
     },
   })

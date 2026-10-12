@@ -8,7 +8,7 @@
  *   決めた答えで付く予定の点は、そのマスに斜線（未確定）で出し、確定すると斜線は消える
  * - 1問ずつ問いと選択肢が出る。↑↓ で選び Enter で決めると、
  *   決めたことは下書きとして AI の層に書かれ、記録に「見出し → 決めたこと」で残り、次の問いへ進む
- * - **確定するまで教員の層には何も書かない**。見直しの「確定する」で初めて全部書く
+ * - **確定するまで教員の層には何も書かない**。見直しの「採点に反映する」で初めて全部書く
  * - 問いの一覧はすべての問いを常に出し（未回答も）、行のどこを押しても（Enter・Space でも）その問いを開く。
  *   見直しに件数と、採点済みの答案を置き換える知らせが出る（問いごとの内訳の表は出さない）
  * - 選択肢のクリックは選ぶだけ（ダブルクリックでも決めない）。カードの「次へ」「戻る」と、問いかけのタブを
@@ -819,7 +819,7 @@ describe("AI 採点の問いかけ", () => {
     await userEvent.keyboard("{Enter}")
     const review = await screen.findByRole("region", { name: "見直し" })
     await userEvent.click(
-      within(review).getByRole("button", { name: "確定する" })
+      within(review).getByRole("button", { name: "採点に反映する" })
     )
     await waitFor(() =>
       expect(fakeAiGradingApi.commitProposalResponse).toHaveBeenCalledTimes(2)
@@ -886,7 +886,7 @@ describe("AI 採点の問いかけ", () => {
 
     const review = await screen.findByRole("region", { name: "見直し" })
     await waitFor(() =>
-      expect(review).toHaveTextContent("4件の採点を確定します")
+      expect(review).toHaveTextContent("4件を採点に反映します")
     )
     expect(within(review).getByRole("note")).toHaveTextContent(
       "うち 1 件は採点済みで、置き換わります。"
@@ -894,7 +894,7 @@ describe("AI 採点の問いかけ", () => {
     expectNoTeacherLayerWrites()
 
     await userEvent.click(
-      within(review).getByRole("button", { name: "確定する" })
+      within(review).getByRole("button", { name: "採点に反映する" })
     )
     await waitFor(() =>
       expect(fakeAiGradingApi.markQuestioningCommitted).toHaveBeenCalled()
@@ -1120,7 +1120,7 @@ describe("AI 採点の問いかけ", () => {
 
     const review = await screen.findByRole("region", { name: "見直し" })
     await userEvent.click(
-      within(review).getByRole("button", { name: "確定する" })
+      within(review).getByRole("button", { name: "採点に反映する" })
     )
     await waitFor(() =>
       expect(fakeAiGradingApi.commitProposalResponse).toHaveBeenCalled()
@@ -1160,7 +1160,7 @@ describe("AI 採点の問いかけ", () => {
     const review = await screen.findByRole("region", { name: "見直し" })
     expect(fakeRubricApi.setScoringMethod).not.toHaveBeenCalled()
     await userEvent.click(
-      within(review).getByRole("button", { name: "確定する" })
+      within(review).getByRole("button", { name: "採点に反映する" })
     )
     await waitFor(() =>
       expect(fakeRubricApi.setScoringMethod).toHaveBeenCalledWith(
@@ -1642,13 +1642,13 @@ describe("AI チェックの問いかけ", () => {
     const review = await screen.findByRole("region", { name: "見直し" })
     // 直すのは s-a だけ（s-b はもう誤答）。置き換えの知らせはチェックでは出さない
     await waitFor(() =>
-      expect(review).toHaveTextContent("1件の採点を確定します")
+      expect(review).toHaveTextContent("1件を採点に反映します")
     )
     expect(within(review).queryByRole("note")).toBeNull()
     expectNoTeacherLayerWrites()
 
     await userEvent.click(
-      within(review).getByRole("button", { name: "確定する" })
+      within(review).getByRole("button", { name: "採点に反映する" })
     )
     await waitFor(() =>
       expect(fakeAiGradingApi.writeQuestioningScores).toHaveBeenCalledWith({

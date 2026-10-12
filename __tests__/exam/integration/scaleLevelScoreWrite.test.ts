@@ -151,7 +151,7 @@ describe("類型を付ける・外す", () => {
         },
         actorId()
       )
-    ).rejects.toThrow("この設問の類型評価の類型ではありません")
+    ).rejects.toThrow("この設問の類型表の類型ではありません")
   })
 })
 
@@ -165,7 +165,7 @@ describe("点の採点の書き込みとの関係", () => {
         status: "evaluated",
         partialScore: null,
       })
-    ).rejects.toThrow("類型評価の書き込み")
+    ).rejects.toThrow("類型方式の書き込み")
   })
 
   it("保留などを点の採点の書き込みで付けると、類型は外れる", async () => {

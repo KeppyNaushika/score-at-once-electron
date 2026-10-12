@@ -57,12 +57,12 @@ function assertPairs(
     const examStudentExamId = examIdByExamStudent.get(pair.examStudentId)
     if (!targetExamId || !examStudentExamId) {
       throw new ExamScopeMismatchError(
-        `${targetLabel}または受験者が見つかりません`
+        `${targetLabel}または受験生徒が見つかりません`
       )
     }
     if (targetExamId !== examStudentExamId) {
       throw new ExamScopeMismatchError(
-        `${targetLabel}と受験者が別の試験に属しています`
+        `${targetLabel}と受験生徒が別の試験に属しています`
       )
     }
   }

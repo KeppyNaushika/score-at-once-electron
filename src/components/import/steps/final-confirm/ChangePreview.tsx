@@ -41,8 +41,8 @@ const FIELD_LABELS: Record<ChangeCategory, Record<string, string>> = {
   student: {
     lastName: "姓",
     firstName: "名",
-    lastNameKana: "姓（カナ）",
-    firstNameKana: "名（カナ）",
+    lastNameKana: "姓カナ",
+    firstNameKana: "名カナ",
     studentNumber: "学籍番号",
     enrollmentYear: "入学年度",
   },
@@ -212,7 +212,7 @@ export function ChangePreview({
     {
       category: "subtotalGroup" as const,
       icon: <ListTree className="h-5 w-5" />,
-      title: "小計グループ",
+      title: "小計点グループ",
       rows: collectChangedRows(
         fileOverviewData.subtotalGroup,
         subtotalGroupConfig,
@@ -231,8 +231,8 @@ export function ChangePreview({
           <h4 className="font-medium">このPCの情報が書き換わるもの</h4>
           <p className="mt-1 text-xs text-muted-foreground">
             {action === "overwrite"
-              ? "「上書きする」を選んだので、時刻を見ずに読み込んだ内容へ置き換えます。"
-              : "「統合する」を選んだので、読み込んだ方が後に書かれているものだけ置き換えます。"}
+              ? "「上書きする」を選んだので、時刻を見ずに取り込む内容へ置き換えます。"
+              : "「新しい方を残す」を選んだので、取り込む方が後に書かれているものだけ置き換えます。"}
           </p>
         </div>
 

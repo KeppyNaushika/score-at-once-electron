@@ -5,7 +5,7 @@ import { ShortcutTooltip } from "@/components/exams/07-score-at-once/ScoringSide
 import { Button } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 import type { DemoStatus } from "./types"

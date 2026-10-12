@@ -1,5 +1,5 @@
 /**
- * 案の外の問いかけ（AI チェックの問い・どの案にも入らない答案）への教員の答え
+ * 案の外の問いかけ（AIチェックの問い・どの案にも入らない答案）への教員の答え
  * （AiAttemptResponse）の書き込み（docs/vlm-grading-design.md §3-5・§3-10）。
  *
  * 問いは届いた試行と教員の採点から画面が毎回組み立てるので、答えは答案（試行）ごとに持つ。
@@ -49,7 +49,7 @@ export async function recordAiAttemptResponses(
     throw new Error("答えた答案の AI の判定が見つかりません")
   }
   if (attempts.some((attempt) => attempt.run.userId !== actorUserId)) {
-    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+    throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
   const pointsByAttemptId = new Map(
     attempts.map((attempt) => [

@@ -14,6 +14,8 @@ import {
 import type { ComponentType } from "react"
 
 import type { CropRegionArea } from "@/components/exams/02-template/types"
+import { CROP_REGION_AREA_TYPE_LABELS } from "@/lib/cropRegionAreaTypeLabels"
+import { toCropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 type CropRegionListProps = {
   areas: CropRegionArea[]
@@ -35,17 +37,6 @@ const typeIcons: Record<string, IconType> = {
   OTHER: Ellipsis,
 }
 
-const typeLabels = {
-  QUESTION_ANSWER: "設問",
-  STUDENT_NAME: "氏名",
-  STUDENT_ID: "番号",
-  TOTAL_SCORE: "合計",
-  SUBTOTAL_SCORE: "小計",
-  MARK: "マーク",
-  COMMENT: "コメント",
-  OTHER: "その他",
-}
-
 const CropRegionList = ({
   areas,
   selectedCropRegionId,
@@ -58,7 +49,7 @@ const CropRegionList = ({
         <h3 className="text-lg font-medium">領域一覧 ({areas.length})</h3>
         {areas.length > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">
-            クリックで選択できます。設問番号や配点は「3. 領域情報」で編集します
+            クリックで選択できます。ラベルや配点は「3. 領域設定」で編集します
           </p>
         )}
       </div>
@@ -80,8 +71,7 @@ const CropRegionList = ({
                 typeIcons[area.type as keyof typeof typeIcons] ||
                 typeIcons["OTHER"]
               const typeLabel =
-                typeLabels[area.type as keyof typeof typeLabels] ||
-                typeLabels["OTHER"]
+                CROP_REGION_AREA_TYPE_LABELS[toCropRegionAreaType(area.type)]
 
               return (
                 <button

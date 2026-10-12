@@ -13,7 +13,7 @@
  * 3. **進み具合の出し方。** 済んだまとまりの足元にだけ、判定できる段を分母にした
  *    `n/m 完了` を出し、
  *    材料が無いまとまり（出力）には数そのものを出さない。％も進捗バーも置かない
- * 4. **まとまりの状態。** 進行中なら「次へ: 〈段の名前〉」、済んだなら「n/m 完了」、
+ * 4. **まとまりの状態。** 進行中なら「〈段の名前〉へ」、済んだなら「n/m 完了」、
  *    前が済んでいないなら「前の段の完了を待機中」
  *
  * ## 共通のレンダラ用セットアップを読み込んでいない理由
@@ -293,10 +293,10 @@ describe("段カード", () => {
     ])
   })
 
-  it("進行中のまとまりは「次へ: 〈段の名前〉」で手を付ける先を名指しする", () => {
+  it("進行中のまとまりは「〈段の名前〉へ」で手を付ける先を名指しする", () => {
     renderOverview()
     const nextButton = within(phaseCard("準備")).getByText(
-      "次へ: 採点領域の詳細情報設定"
+      "3. 領域設定へ"
     )
 
     // まだ済んでいない最初の段（01・02 は済み）へ
@@ -319,7 +319,7 @@ describe("段カード", () => {
 
     expect(within(preparation).queryByText(/^\d+\/\d+ 完了$/)).toBeNull()
     expect(
-      within(preparation).getByText("次へ: 採点領域の詳細情報設定")
+      within(preparation).getByText("3. 領域設定へ")
     ).toBeVisible()
   })
 
@@ -365,7 +365,7 @@ describe("段カード", () => {
     renderOverview()
     const output = phaseCard("出力")
 
-    expect(within(output).getByText("採点結果のファイル出力")).toBeVisible()
+    expect(within(output).getByText("結果と出力")).toBeVisible()
     expect(within(output).queryByText(/^\d+\/\d+ 完了$/)).toBeNull()
   })
 
@@ -375,7 +375,7 @@ describe("段カード", () => {
 
     // 03-region-info が済んでいないので、採点はまだ手を付けられない
     expect(within(scoring).getByText("前の段の完了を待機中")).toBeVisible()
-    expect(within(scoring).queryByText(/^次へ: /)).toBeNull()
+    expect(within(scoring).queryByText(/^\d+\. .+へ$/)).toBeNull()
   })
 
   it("判定できる段が全部済んだまとまりは数で「完了」と言う（％も進捗バーも出さない）", () => {
@@ -386,13 +386,13 @@ describe("段カード", () => {
     expect(within(preparation).getByText("5/5 完了")).toBeVisible()
     expect(within(preparation).queryByText(/%/)).toBeNull()
     expect(screen.queryByRole("progressbar")).toBeNull()
-    expect(within(preparation).queryByText(/^次へ: /)).toBeNull()
+    expect(within(preparation).queryByText(/^\d+\. .+へ$/)).toBeNull()
 
     // 判定できる段が済めば、その先のまとまりは待機中でなくなる
     const output = phaseCard("出力")
     expect(within(output).queryByText("前の段の完了を待機中")).toBeNull()
     expect(
-      within(output).getByText("次へ: 採点結果のファイル出力").closest("a")
+      within(output).getByText("9. 結果と出力へ").closest("a")
     ).toHaveAttribute("href", "/exams/exam-1/09-export")
   })
 })

@@ -85,7 +85,7 @@ export async function deleteGradeItem(id: string) {
     })
     // 理由は disabledReason へ。message は教員が書いた違反の説明で、結果表の
     // ツールチップに出るため汚さない。
-    const reason = `評価項目「${before?.name ?? ""}」の削除で集計対象が変わるため無効化しました。再設定してください。`
+    const reason = `成績評価項目「${before?.name ?? ""}」の削除で集計対象が変わるため無効化しました。再設定してください。`
     for (const constraint of affected) {
       await tx.gradeConstraint.update({
         where: { id: constraint.id },

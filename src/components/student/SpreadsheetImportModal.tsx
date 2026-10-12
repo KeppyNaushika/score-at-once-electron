@@ -70,7 +70,7 @@ export default function SpreadsheetImportModal({
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ClipboardPaste className="h-5 w-5" />
-            生徒データのインポート
+            生徒データの取り込み
           </DialogTitle>
           <DialogDescription>
             Excelやスプレッドシートからコピー&ペーストで生徒データを一括登録できます。

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { CROP_REGION_AREA_TYPE_LABELS } from "@/lib/cropRegionAreaTypeLabels"
 import type {
   AsbHeaderFieldAttributes,
   BorderLineStyle,
@@ -52,10 +53,10 @@ const TYPE_LABELS: Record<HeaderFieldType, string> = {
 
 const LINKED_REGION_LABELS: Record<string, string> = {
   none: "なし",
-  TOTAL_SCORE: "合計点",
-  SUBTOTAL_SCORE: "小計点",
-  STUDENT_NAME: "氏名",
-  STUDENT_ID: "受験番号",
+  TOTAL_SCORE: CROP_REGION_AREA_TYPE_LABELS.TOTAL_SCORE,
+  SUBTOTAL_SCORE: CROP_REGION_AREA_TYPE_LABELS.SUBTOTAL_SCORE,
+  STUDENT_NAME: CROP_REGION_AREA_TYPE_LABELS.STUDENT_NAME,
+  STUDENT_ID: CROP_REGION_AREA_TYPE_LABELS.STUDENT_ID,
 }
 
 export function HeaderFieldEditor({

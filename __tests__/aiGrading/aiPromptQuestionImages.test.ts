@@ -237,7 +237,7 @@ describe("問題の画像の行", () => {
     )
     const recreated = await ensurePromptRendersRubricItems(
       prompt,
-      "## ルーブリック項目\n- 変わった一覧",
+      "## 採点項目\n- 変わった一覧",
       fixture.exam.user.id
     )
 

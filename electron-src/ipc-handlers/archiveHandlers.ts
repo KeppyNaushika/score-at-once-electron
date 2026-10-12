@@ -30,14 +30,14 @@ export const archiveHandlers = {
   // 取り込みウィザードの中でファイルを選び直す（最初のファイルは一覧の「読み込み」で選ぶ）
   "archive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
-      title: "試験をインポート",
+      title: "試験を取り込む",
       filters: [
         {
           name: "対応ファイル (.score, .hsz, .dat)",
           extensions: ["score", "hsz", "dat"],
         },
         {
-          name: "一括採点試験データ (.score)",
+          name: "試験データ (.score)",
           extensions: ["score"],
         },
         {

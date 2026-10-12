@@ -401,7 +401,7 @@ describe("「その他」の欄の文", () => {
         { proposalId: proposal.id, instructionText: "他人" },
         otherUserId
       )
-    ).rejects.toThrow("AI 採点を実行した教員だけ")
+    ).rejects.toThrow("AI採点を実行した教員だけ")
 
     // 一覧の案に、自分の書いている文が同梱される
     const [proposalRun] = await listAiRubricProposalRunsByCropRegion(
@@ -465,7 +465,7 @@ describe("直した助言", () => {
         { proposalId: proposal.id, adviceText: "他人" },
         otherUserId
       )
-    ).rejects.toThrow("AI 採点を実行した教員だけ")
+    ).rejects.toThrow("AI採点を実行した教員だけ")
 
     // 一覧の案に、自分の直した文が同梱される
     const [proposalRun] = await listAiRubricProposalRunsByCropRegion(

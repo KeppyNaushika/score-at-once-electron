@@ -187,7 +187,7 @@ export function ScoringGridDemo({
               variant="outline"
               className="h-4 border-black bg-white px-1 text-xs text-black"
             >
-              {MAX_SCORE}点満点
+              配点 {MAX_SCORE}点
             </Badge>
           </div>
         </div>

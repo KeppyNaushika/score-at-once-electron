@@ -436,7 +436,7 @@ describe("getExamWorkflowStatus の採点確定", () => {
     expect(workflow.url).toBe("/exams/exam-1/08-finalize")
   })
 
-  it("残っていなければ 9. 結果 へ飛ばす（単独採点はここを通る）", () => {
+  it("残っていなければ 9. 結果と出力 へ飛ばす（単独採点はここを通る）", () => {
     const workflow = getExamWorkflowStatus(progressAfterScoring(0), "exam-1")
 
     expect(workflow.url).toBe("/exams/exam-1/09-export")

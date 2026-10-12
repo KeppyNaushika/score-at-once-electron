@@ -61,8 +61,8 @@ const MEMBERSHIP_COLUMNS: ColumnHeadDefinition<
   { label: "学籍番号", sortKey: "studentId" },
   { label: "出席番号", sortKey: "attendanceNumber" },
   { label: "氏名", sortKey: "fullName" },
-  { label: "開始日", sortKey: "startDate" },
-  { label: "終了日", sortKey: "endDate" },
+  { label: "在籍の開始日", sortKey: "startDate" },
+  { label: "在籍の終了日", sortKey: "endDate" },
   { label: "備考" },
   { label: "操作", className: "text-right" },
 ]
@@ -172,7 +172,7 @@ export default function ClassroomMembershipTable({
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              所属一覧
+              在籍一覧
               <span className="ml-1 text-lg font-normal text-muted-foreground tabular-nums">
                 ({displayData.length}名)
               </span>
@@ -271,7 +271,7 @@ export default function ClassroomMembershipTable({
                               variant="secondary"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
                             >
-                              終了
+                              過去在籍
                             </Badge>
                           )}
                         </div>
@@ -301,7 +301,7 @@ export default function ClassroomMembershipTable({
                             <User className="h-4 w-4" />
                           </TooltipButton>
                           <TooltipButton
-                            label="所属を編集"
+                            label="在籍を編集"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
@@ -310,7 +310,7 @@ export default function ClassroomMembershipTable({
                             <SquarePen className="h-4 w-4" />
                           </TooltipButton>
                           <TooltipButton
-                            label="所属を削除"
+                            label="在籍を削除"
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -329,8 +329,8 @@ export default function ClassroomMembershipTable({
             <div className="py-12 text-center text-muted-foreground">
               {/* 所属がそもそも無いのか、状態の絞り込みで隠れただけなのかを分けて言う */}
               {memberships.length === 0
-                ? "所属している生徒はいません"
-                : "条件に一致する所属がありません"}
+                ? "在籍している生徒はいません"
+                : "条件に一致する在籍がありません"}
             </div>
           )}
         </CardContent>
@@ -339,7 +339,7 @@ export default function ClassroomMembershipTable({
       <ConfirmationModal
         open={bulkDeletion.isOpen}
         onClose={bulkDeletion.close}
-        title={`選択された${bulkDeletion.target?.length ?? 0}件の所属を削除しますか？`}
+        title={`選択された${bulkDeletion.target?.length ?? 0}件の在籍を削除しますか？`}
         confirmText="削除"
         variant="destructive"
         icon="trash"

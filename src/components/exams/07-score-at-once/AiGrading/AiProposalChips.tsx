@@ -3,7 +3,7 @@
 import { PROPOSAL_FILL_LEGEND } from "@/components/exams/07-score-at-once/ScoringGrid/constants/proposalFill"
 import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 
 import { confidenceLabel, describeJudgement } from "./utils/answerDisplay"
 import type { ReviewedAiGradingAnswer } from "./utils/answerReview"

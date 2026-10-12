@@ -424,13 +424,13 @@ export class V1_1_0_to_V1_2_0_Transformer implements ExamVersionTransformer {
 
     if (skippedByUserId > 0) {
       annotationWarnings.push(
-        `userIdが未設定のアノテーション${skippedByUserId}件がスキップされました。`
+        `userIdが未設定の注釈${skippedByUserId}件がスキップされました。`
       )
     }
 
     if (skippedByParent > 0) {
       annotationWarnings.push(
-        `親の採点データがスキップされたアノテーション${skippedByParent}件がスキップされました。`
+        `親の採点データがスキップされた注釈${skippedByParent}件がスキップされました。`
       )
     }
 

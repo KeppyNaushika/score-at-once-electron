@@ -111,7 +111,7 @@ test("PC-B: PC-A が再起動する前に合流でき、共有モードで起動
   await stubFolderDialog(launched, SHARED_FOLDER)
   await openSyncSettings(page)
   await page.getByRole("button", { name: /共有フォルダを追加/ }).click()
-  await expect(page.getByText(/統合しません/)).toBeVisible()
+  await expect(page.getByText(/混ぜません/)).toBeVisible()
   await page.getByRole("button", { name: "合流する" }).click()
   await expect(page.getByText("再起動して切り替えますか？")).toBeVisible({
     timeout: 60_000,

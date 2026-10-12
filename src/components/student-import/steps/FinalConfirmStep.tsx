@@ -86,7 +86,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       <div className="text-center">
         <h3 className="text-lg font-semibold">最終確認</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          以下の内容でインポートを実行します
+          以下の内容で取り込みを実行します
         </p>
       </div>
 
@@ -147,14 +147,14 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         <div className="flex items-start gap-2">
           <TriangleAlert className="mt-0.5 h-5 w-5 text-amber-500" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
-            この操作は元に戻せません。インポート前にバックアップを取ることをお勧めします。
+            この操作は元に戻せません。取り込み前にバックアップを取ることをお勧めします。
           </p>
         </div>
       </div>
 
       <div className="flex justify-center pt-4">
         <Button onClick={onExecute} size="lg">
-          インポートを実行
+          取り込みを実行
         </Button>
       </div>
     </div>

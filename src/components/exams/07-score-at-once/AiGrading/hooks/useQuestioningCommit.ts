@@ -236,15 +236,15 @@ export function useQuestioningCommit({
             ? withEditedRubricItem(items, { ...original, ...edited.effect })
             : items
         }, source.rubricItems),
-        // 自分の行は確定の中で計算し直す
+        // 自分の行は反映の中で計算し直す
         questionScores: source.questionScores.filter(
           (questionScore) => questionScore.userId !== currentUserId
         ),
       }),
-      title: "確定しますか",
+      title: "採点に反映しますか",
       description:
-        "問いかけで決めたことを確定します。採点方式や共有している項目が変わります。",
-      confirmLabel: "確定する",
+        "問いかけで決めたことを採点に反映します。採点方式や共有している項目が変わります。",
+      confirmLabel: "採点に反映する",
       change: () => execute(plan),
     })
   }

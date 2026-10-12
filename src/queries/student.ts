@@ -167,7 +167,7 @@ export const deleteStudentMembershipMutation = () =>
     },
   })
 
-/** 在籍を終える（行は残り、終了日が入る） */
+/** 在籍を終了する（行は残り、在籍の終了日が入る） */
 export const endStudentMembershipMutation = () =>
   defineMutation({
     mutationFn: (input: { membershipId: string; endDate?: Date }) =>

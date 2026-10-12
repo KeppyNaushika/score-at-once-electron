@@ -40,7 +40,7 @@ export const convertHszToScore = (hszPath: string) =>
 export const convertDatToScore = (datPath: string) =>
   window.electronAPI.archive.convertDatToScore({ datPath })
 
-/** 採点の食い違いを、統合の決め方を踏まえて数える */
+/** 採点の競合を、統合の決め方を踏まえて数える */
 export const detectExamScoringConflicts = (
   input: Parameters<typeof window.electronAPI.archive.detectScoringConflicts>[0]
 ) => window.electronAPI.archive.detectScoringConflicts(input)

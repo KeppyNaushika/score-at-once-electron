@@ -2,7 +2,7 @@
  * ルーブリック項目の効き方を、項目の一覧に出す短い言葉にする（例: 「−1点」「誤答」「部分点 2点」）。
  */
 
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import { isRubricSetStatus, type ScoringMethod } from "@/types/rubric.types"
 
 import type { RubricScoringItem } from "../types"
@@ -42,10 +42,10 @@ export function rubricItemName(
 
 /** 採点方式の名前（画面の選択肢と見出し） */
 export const SCORING_METHOD_LABELS: Record<ScoringMethod, string> = {
-  points: "直接採点",
+  points: "正誤方式",
   deduction: "減点方式",
   addition: "加点方式",
-  scale: "類型評価",
+  scale: "類型方式",
 }
 
 /** 採点方式の説明（選択肢の下に添える） */

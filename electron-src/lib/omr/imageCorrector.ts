@@ -219,7 +219,7 @@ export async function correctImage(
     if (!masterTL || !masterTR || !masterBL || !masterBR) {
       return {
         success: false,
-        error: "マスターマーカーが4隅揃っていません",
+        error: "模範解答のOMRマーカーが4隅揃っていません",
       }
     }
 
@@ -233,7 +233,7 @@ export async function correctImage(
     if (!resolved) {
       return {
         success: false,
-        error: `答案マーカー検出失敗: ${answerResult.error ?? `${answerResult.markers.length}/4検出`}`,
+        error: `答案のOMRマーカーの検出に失敗: ${answerResult.error ?? `${answerResult.markers.length}/4検出`}`,
       }
     }
 

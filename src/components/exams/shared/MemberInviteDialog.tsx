@@ -171,7 +171,7 @@ export function MemberInviteDialog({
       return (
         <Badge variant="default" className="flex items-center gap-1">
           <Crown className="h-3 w-3" />
-          オーナー
+          所有者
         </Badge>
       )
     }
@@ -255,7 +255,7 @@ export function MemberInviteDialog({
                   setInviteRole(parseExamRole(value) ?? "EDITOR")
                 }
               >
-                <SelectTrigger className="w-32" aria-label="招待するときの役割">
+                <SelectTrigger className="w-32" aria-label="招待するときの権限">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,7 +344,7 @@ export function MemberInviteDialog({
                 <TableHeader>
                   <TableRow>
                     <TableHead>ユーザー</TableHead>
-                    <TableHead>ロール</TableHead>
+                    <TableHead>権限</TableHead>
                     <TableHead>結果出力</TableHead>
                     <TableHead>招待日</TableHead>
                     {isOwner && <TableHead className="w-12"></TableHead>}
@@ -432,7 +432,7 @@ export function MemberInviteDialog({
 
         {/* ヘルプテキスト */}
         <div className="mt-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-          <p className="font-medium">ロールについて</p>
+          <p className="font-medium">権限について</p>
           <ul className="mt-1 list-inside list-disc space-y-1">
             {EXAM_ROLES.map((role) => (
               <li key={role}>
@@ -444,7 +444,7 @@ export function MemberInviteDialog({
               採点者の結果出力は、最初は許可されています。採点者に結果を見せたくないときは「結果出力」を切ってください
             </li>
             <li>
-              オーナーを別の教員へ移すときは、相手の役割を「オーナー」にしてから、自分の役割を変える
+              所有者を別の教員へ移すときは、相手の権限を「所有者」にしてから、自分の権限を変える
             </li>
           </ul>
         </div>

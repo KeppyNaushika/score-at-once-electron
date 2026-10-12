@@ -103,7 +103,7 @@ export function GradeItemSection({
                 {gradeItem.name}
               </h3>
               <TooltipButton
-                label="評価項目名を編集"
+                label="成績評価項目名を編集"
 
                 variant="ghost"
                 size="icon"
@@ -119,7 +119,7 @@ export function GradeItemSection({
             size="icon"
             className="h-7 w-7 text-destructive"
             onClick={() => setIsDeleteConfirmOpen(true)}
-            aria-label={`評価項目「${gradeItem.name}」を削除`}
+            aria-label={`成績評価項目「${gradeItem.name}」を削除`}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -128,8 +128,8 @@ export function GradeItemSection({
         <ConfirmationModal
           open={isDeleteConfirmOpen}
           onClose={() => setIsDeleteConfirmOpen(false)}
-          title="評価項目を削除しますか？"
-          description={`「${gradeItem.name}」を削除します。この評価項目のデータソース${gradeItem.dataSources.length}件・成績境界・手直しした成績・確定した成績も一緒に削除され、元に戻せません。`}
+          title="成績評価項目を削除しますか？"
+          description={`「${gradeItem.name}」を削除します。この成績評価項目のデータソース${gradeItem.dataSources.length}件・成績境界・上書き・固定値も一緒に削除され、元に戻せません。`}
           confirmText="削除"
           variant="destructive"
           icon="trash"

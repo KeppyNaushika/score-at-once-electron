@@ -65,9 +65,9 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
           <Spinner className="size-10 text-primary" />
         </div>
-        <h3 className="mb-2 text-xl font-semibold">インポート中...</h3>
+        <h3 className="mb-2 text-xl font-semibold">取り込み中...</h3>
         <p className="mb-8 text-muted-foreground">
-          データをインポートしています。しばらくお待ちください。
+          データを取り込んでいます。しばらくお待ちください。
         </p>
         <div className="w-full max-w-sm">
           <Progress value={undefined} className="h-2" />
@@ -84,11 +84,9 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-900/30">
             <CircleCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="mb-2 text-xl font-semibold">
-            インポートが完了しました
-          </h3>
+          <h3 className="mb-2 text-xl font-semibold">取り込みが完了しました</h3>
           <p className="text-muted-foreground">
-            試験が正常にインポートされました。
+            試験が正常に取り込まれました。
           </p>
         </div>
 
@@ -97,7 +95,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
           <Card className="mb-6 w-full max-w-md border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
             <CardContent className="p-5">
               <h4 className="mb-4 text-sm font-medium text-green-800 dark:text-green-200">
-                インポート結果
+                取り込み結果
               </h4>
               <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
@@ -178,7 +176,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10">
           <CircleX className="h-10 w-10 text-destructive" />
         </div>
-        <h3 className="mb-2 text-xl font-semibold">インポートに失敗しました</h3>
+        <h3 className="mb-2 text-xl font-semibold">取り込みに失敗しました</h3>
         <p className="max-w-md text-destructive">
           {state.error ?? "詳細は不明です"}
         </p>

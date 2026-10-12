@@ -199,7 +199,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
           <p className="text-sm text-muted-foreground">
             {result.classNames.join("、") || "学級未登録"} /{" "}
             {result.gradeItems.map((gradeItem) => gradeItem.name).join("、") ||
-              "評価項目未設定"}{" "}
+              "成績評価項目未設定"}{" "}
             / {result.students.length}名
           </p>
         </div>
@@ -218,8 +218,8 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
           >
             <Lock className="mr-2 h-4 w-4" />
             {frozenSummary.frozen === 0
-              ? "成績を確定"
-              : "すべて現在の値で再確定"}
+              ? "成績を固定"
+              : "すべて現在の値で固定し直す"}
           </Button>
           {frozenSummary.frozen > 0 && (
             <Button
@@ -227,7 +227,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
               onClick={() => setPendingBulkAction("unfreeze")}
             >
               <LockOpen className="mr-2 h-4 w-4" />
-              確定をすべて解除
+              固定をすべて解除
             </Button>
           )}
           <Button asChild>
@@ -249,13 +249,13 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-sm">
           <span className="flex items-center gap-1.5">
             <Lock className="h-3.5 w-3.5" />
-            {frozenSummary.frozen} / {frozenSummary.freezable} 件を確定済み
+            {frozenSummary.frozen} / {frozenSummary.freezable} 件を固定済み
           </span>
           {frozenSummary.stale > 0 && (
             <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
               <TriangleAlert className="h-3.5 w-3.5" />
               うち {frozenSummary.stale}{" "}
-              件は確定後に元データが変わっています（表示は確定値のまま固定）
+              件は固定後に元データが変わっています（表示は固定値のまま）
             </span>
           )}
         </div>
@@ -305,13 +305,13 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingBulkAction === "refreeze"
-                ? "すべて現在の値で確定し直しますか？"
-                : "確定をすべて解除しますか？"}
+                ? "すべて現在の値で固定し直しますか？"
+                : "固定をすべて解除しますか？"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingBulkAction === "refreeze"
-                ? `確定済みの ${frozenSummary.frozen} 件を含め、すべての成績値を現在のリアルタイム算出値で確定し直します。現在の確定値は復元できません。`
-                : `確定済みの ${frozenSummary.frozen} 件の成績値を破棄し、すべてリアルタイム算出値に戻します。確定時点の値は復元できません。`}
+                ? `固定済みの ${frozenSummary.frozen} 件を含め、すべての成績値を現在のリアルタイム算出値で固定し直します。現在の固定値は復元できません。`
+                : `固定済みの ${frozenSummary.frozen} 件の固定値を破棄し、すべてリアルタイム算出値に戻します。固定した時点の値は復元できません。`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -326,7 +326,9 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
                   unfreezeScores.mutate({ userId: currentUser.id })
               }}
             >
-              {pendingBulkAction === "refreeze" ? "すべて再確定" : "すべて解除"}
+              {pendingBulkAction === "refreeze"
+                ? "すべて固定し直す"
+                : "すべて解除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

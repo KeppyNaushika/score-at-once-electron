@@ -40,17 +40,17 @@ export const ARCHIVE_UNRESOLVABLE_MESSAGES: Record<
   UnifiedArchiveUnresolvableKind,
   string
 > = {
-  multipleExisting: "読み込む1件が、このパソコンの複数の行と同じ値になります。",
+  multipleExisting: "取り込む1件が、このPCの複数の行と同じ値になります。",
   sharedExisting:
-    "読み込む複数の行が、このパソコンの同じ1行に寄せられます（紐づけの選び方を見直してください）。",
-  replacementCollides: "置き換えると、このパソコンの別の行と同じ値になります。",
+    "取り込む複数の行が、このPCの同じ1行に寄せられます（紐づけの選び方を見直してください）。",
+  replacementCollides: "置き換えると、このPCの別の行と同じ値になります。",
   duplicateInArchive:
     "紐づけの結果、アーカイブの中の複数の行が同じ値になります（紐づけの選び方を見直してください）。",
   idTaken:
-    "付け替え先のアーカイブの id が、このパソコンで既に使われています（「このパソコンの id」を選んでください）。",
-  matchTargetMissing: "紐づけ先に選んだ行が、このパソコンにありません。",
+    "付け替え先のアーカイブの id が、このPCで既に使われています（「このPCの id」を選んでください）。",
+  matchTargetMissing: "紐づけ先に選んだ行が、このPCにありません。",
   renameInSeparate:
-    "「別で追加する」では、このパソコンの行をアーカイブの id に付け替えられません。",
+    "「別で追加する」では、このPCの行をアーカイブの id に付け替えられません。",
 }
 
 /** 生の行の1列を文字にする（文字でも数でもなければ空） */
@@ -147,9 +147,9 @@ export function matchedByLabel(
     case "name":
       return table === "Student" ? "姓名が一致" : "名前が一致"
     case "username":
-      return "利用者名が一致"
+      return "ユーザー名が一致"
     case null:
-      return "このパソコンに同じものなし"
+      return "このPCに同じものなし"
     default:
       return matchedBy
   }

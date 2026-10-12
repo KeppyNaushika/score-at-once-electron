@@ -73,13 +73,13 @@ describe("入れない段のガード", () => {
         role="EDITOR"
         allowedTabs={tabsFor("EDITOR", true)}
       >
-        <p>領域情報の中身</p>
+        <p>領域設定の中身</p>
       </ExamStepGuard>
     )
 
-    expect(screen.queryByText("領域情報の中身")).not.toBeInTheDocument()
+    expect(screen.queryByText("領域設定の中身")).not.toBeInTheDocument()
     expect(
-      screen.getByText(/この試験のオーナーが使う段です/)
+      screen.getByText(/この試験の所有者が使う段です/)
     ).toBeInTheDocument()
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
@@ -133,11 +133,11 @@ describe("入れない段のガード", () => {
         // 入れる段を絞った一覧を渡しても、ロールが無ければ絞らない
         allowedTabs={tabsFor("EDITOR", true)}
       >
-        <p>領域情報の中身</p>
+        <p>領域設定の中身</p>
       </ExamStepGuard>
     )
 
-    expect(screen.getByText("領域情報の中身")).toBeInTheDocument()
+    expect(screen.getByText("領域設定の中身")).toBeInTheDocument()
   })
 
   it("参加者の取得が済むまでは中身を出さない（入れない段がちらつかない）", () => {
@@ -149,10 +149,10 @@ describe("入れない段のガード", () => {
         role={null}
         allowedTabs={examWorkflowTabs}
       >
-        <p>領域情報の中身</p>
+        <p>領域設定の中身</p>
       </ExamStepGuard>
     )
 
-    expect(screen.queryByText("領域情報の中身")).not.toBeInTheDocument()
+    expect(screen.queryByText("領域設定の中身")).not.toBeInTheDocument()
   })
 })

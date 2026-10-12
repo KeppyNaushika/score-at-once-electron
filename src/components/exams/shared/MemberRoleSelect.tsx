@@ -86,7 +86,7 @@ export function MemberRoleSelect({
       <SelectTrigger
         size="sm"
         className="w-28"
-        aria-label={`${member.user.name}の役割`}
+        aria-label={`${member.user.name}の権限`}
       >
         <SelectValue />
       </SelectTrigger>
@@ -104,7 +104,7 @@ export function MemberRoleSelect({
     <>
       {isLastOwner ? (
         // 無効の部品はポインタを拾わないので、外側の span で tooltip を受ける
-        <WithTooltip content="最後のオーナーはほかの役割に変えられません。先に別の参加者をオーナーにしてください">
+        <WithTooltip content="最後の所有者はほかの権限に変えられません。先に別の参加者を所有者にしてください">
           <span tabIndex={0} className="inline-flex">
             {select}
           </span>
@@ -116,14 +116,14 @@ export function MemberRoleSelect({
         open={pendingSelfRole !== null}
         onClose={() => setPendingSelfRole(null)}
         title={`自分を${pendingSelfRole ? EXAM_ROLE_LABELS[pendingSelfRole] : ""}にしますか？`}
-        description="この試験のオーナーをやめます。"
+        description="この試験の所有者をやめます。"
         confirmText="変更する"
         variant="warning"
         warnings={[
           {
             type: "warning",
             message:
-              "変更した後は、この試験の設定の変更・参加者の招待や役割の変更・採点担当の割り当て・採点の確定ができなくなります。もう一度オーナーにするには、ほかのオーナーに頼んでください。",
+              "変更した後は、この試験の設定の変更・参加者の招待や権限の変更・採点担当の割り当て・採点の確定ができなくなります。もう一度所有者にするには、ほかの所有者に頼んでください。",
           },
         ]}
         onConfirm={() =>

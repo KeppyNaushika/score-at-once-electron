@@ -59,12 +59,12 @@ export async function assertGradeCellsInSameGrade(
     const itemGradeId = gradeIdByGradeItem.get(cell.gradeItemId)
     if (!studentGradeId || !itemGradeId) {
       throw new GradeScopeMismatchError(
-        "対象生徒または評価項目が見つかりません"
+        "対象生徒または成績評価項目が見つかりません"
       )
     }
     if (studentGradeId !== itemGradeId) {
       throw new GradeScopeMismatchError(
-        "対象生徒と評価項目が別の成績に属しています"
+        "対象生徒と成績評価項目が別の成績算出に属しています"
       )
     }
   }

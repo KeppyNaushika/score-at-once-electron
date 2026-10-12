@@ -123,7 +123,7 @@ export function AiGridDisplaySection({
   )
 }
 
-/** マスの塗りの見方（斜線 = AI提案（未確定）、塗り = 確定） */
+/** マスの塗りの見方（斜線 = AI提案（未反映）、塗り = 採点済み） */
 function ProposalFillLegend() {
   const correctColors = useScoringStatusColors().correct
   const swatchStyle = { borderColor: correctColors.icon }
@@ -140,14 +140,14 @@ function ProposalFillLegend() {
             backgroundImage: hatchedFill(correctColors.icon),
           }}
         />
-        斜線 = AI提案（未確定）
+        斜線 = AI提案（未反映）
       </span>
       <span className="flex items-center gap-1">
         <span
           className="inline-block h-3 w-5 rounded-sm border"
           style={{ ...swatchStyle, backgroundColor: correctColors.bg }}
         />
-        塗り = 確定
+        塗り = 採点済み
       </span>
     </div>
   )

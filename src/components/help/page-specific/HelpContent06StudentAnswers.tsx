@@ -232,9 +232,9 @@ export function HelpContent06StudentAnswers() {
             撮り直した答案に差し替えたいときに使います。
           </span>
           <span className="mt-2 block">
-            <strong>マーカー補正</strong>
-            ：答案の傾きや位置のずれを、模範解答に付いた目印（マーカー）に
-            合わせて自動でそろえます。模範解答にマーカーがある場合だけ使えます。
+            <strong>OMRマーカー補正</strong>
+            ：答案の傾きや位置のずれを、模範解答に付いた目印（OMRマーカー）に
+            合わせて自動でそろえます。模範解答にOMRマーカーがある場合だけ使えます。
           </span>
         </Callout>
       </FocusSection>
@@ -287,9 +287,9 @@ export function HelpContent06StudentAnswers() {
         <p>
           答案がそろったら、画面右上の
           <span className="mx-1 inline-flex items-center">
-            <KeyCap>次へ: 一括採点</KeyCap>
+            <KeyCap>7. 採点へ</KeyCap>
           </span>
-          からステップ7「一括採点」へ進みます。
+          から「7. 採点」へ進みます。
         </p>
       </FocusSection>
     </HelpDoc>

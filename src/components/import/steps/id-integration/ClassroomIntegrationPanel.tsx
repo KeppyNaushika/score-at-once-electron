@@ -43,7 +43,7 @@ export function ClassroomIntegrationPanel({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
-            判断が必要な学級が{needsDecisionCount}クラスあります
+            判断が必要な学級が{needsDecisionCount}学級あります
           </CardTitle>
           <p className="text-sm text-muted-foreground">
             どうやって既存の学級と紐づけますか？
@@ -60,7 +60,7 @@ export function ClassroomIntegrationPanel({
               <StrategyOption
                 value="by_name"
                 id="class-by-name"
-                label={`学級名で紐づける (${byNameCount}クラスが一致)`}
+                label={`学級名で紐づける (${byNameCount}学級が一致)`}
                 description="学級名が同じ学級と紐づけます"
                 recommended={byNameCount > 0}
               />

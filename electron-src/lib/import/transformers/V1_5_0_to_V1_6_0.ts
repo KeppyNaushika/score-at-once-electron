@@ -34,7 +34,7 @@ export class V1_5_0_to_V1_6_0_Transformer implements ExamVersionTransformer {
     const annotationCount = drawingAnnotations.length
     if (annotationCount > 0) {
       warnings.push(
-        `${annotationCount}件の描画アノテーションに isFavorite フィールドを追加しました（デフォルト: false）`
+        `${annotationCount}件の注釈に isFavorite フィールドを追加しました（デフォルト: false）`
       )
     }
 

@@ -280,7 +280,7 @@ describe("かぶった行の片方が隠れたときアプリが黙らない", (
     expect(auditLog.entityType).toBe("ExamStudent")
     expect(auditLog.entityId).toBe("exam-student-a")
     expect(auditLog.summary).toBe(
-      "同期で重複していた試験の受験生徒の片方を隠しました"
+      "同期で重複していた受験生徒の片方を隠しました"
     )
     expect(auditLog.coalesceKey).toBe(
       "sync.duplicate.hide:ExamStudent:exam-student-a"

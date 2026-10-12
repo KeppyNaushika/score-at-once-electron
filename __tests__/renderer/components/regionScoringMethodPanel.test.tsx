@@ -96,7 +96,7 @@ describe("類型評価をまたぐ切り替え", () => {
       scoredRows("correct", "partial", "pending", "no_answer", "incorrect")
     )
     renderPanel("points")
-    await userEvent.click(screen.getByRole("button", { name: "類型評価" }))
+    await userEvent.click(screen.getByRole("button", { name: "類型方式" }))
 
     expect(
       await screen.findByText(/方式と合わない採点が 3件あります/)
@@ -120,7 +120,7 @@ describe("類型評価をまたぐ切り替え", () => {
       scoredRows("correct")
     )
     renderPanel("deduction")
-    await userEvent.click(screen.getByRole("button", { name: "類型評価" }))
+    await userEvent.click(screen.getByRole("button", { name: "類型方式" }))
     await screen.findByText(/方式と合わない採点が 1件あります/)
     await userEvent.click(screen.getByRole("button", { name: "やめる" }))
     expect(fakeApi.rubric.setScoringMethod).not.toHaveBeenCalled()
@@ -131,7 +131,7 @@ describe("類型評価をまたぐ切り替え", () => {
       scoredRows("pending", "unscored")
     )
     renderPanel("points")
-    await userEvent.click(screen.getByRole("button", { name: "類型評価" }))
+    await userEvent.click(screen.getByRole("button", { name: "類型方式" }))
     await waitFor(() =>
       expect(fakeApi.rubric.setScoringMethod).toHaveBeenCalledWith(
         "q1",
@@ -146,7 +146,7 @@ describe("類型評価をまたぐ切り替え", () => {
       scoredRows("evaluated", "evaluated", "correct")
     )
     renderPanel("scale")
-    await userEvent.click(screen.getByRole("button", { name: "直接採点" }))
+    await userEvent.click(screen.getByRole("button", { name: "正誤方式" }))
     expect(
       await screen.findByText(/方式と合わない採点が 2件あります/)
     ).toBeInTheDocument()
@@ -172,14 +172,14 @@ describe("類型評価で使う類型の組", () => {
   it("類型評価が無ければ知らせ、「新しく作る」でこの試験に作ってこの設問に選ぶ", async () => {
     renderPanel("scale")
     expect(
-      screen.getByText(/類型評価を選んでいないので/)
+      screen.getByText(/類型表を選んでいないので/)
     ).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("button", { name: "新しく作る" }))
     await waitFor(() =>
       expect(fakeApi.rubric.createScoreScale).toHaveBeenCalledWith({
         examId: "exam-1",
-        name: "類型評価",
+        name: "類型表",
         // 配点 10点から決めた類型
         levels: [
           { label: "A", score: 10 },

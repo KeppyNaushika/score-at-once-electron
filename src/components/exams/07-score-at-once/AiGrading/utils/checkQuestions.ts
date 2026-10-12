@@ -1,5 +1,5 @@
 /**
- * AI チェックの問い（docs/vlm-grading-design.md §3-10）を、チェックの実行の試行と
+ * AIチェックの問い（docs/vlm-grading-design.md §3-10）を、チェックの実行の試行と
  * 教員の今の採点から手元で組み立てる（AI は呼ばない。教員の点は AI に送っていない）。
  *
  * 1. 同じ答えに違う点: 1段目の書き起こしを正規化して（全角半角・空白の揺れを除く）同じなのに、
@@ -42,7 +42,7 @@ const aiScoreOf = (attempt: CheckAttempt): QuestioningScore => ({
 const CONFIDENCE_RANK = { high: 0, medium: 1, low: 2 } as const
 
 interface BuildCheckQuestioningInput {
-  /** 問いに使うAI チェックの実行（最後に終わったもの）。無ければ問いは無い */
+  /** 問いに使うAIチェックの実行（最後に終わったもの）。無ければ問いは無い */
   checkRun: Pick<AiGradingRunRow, "attempts"> | null
   /** 教員の今の採点（未採点なら null） */
   ownScoreOf: (examStudentId: string) => QuestioningScore | null
@@ -74,7 +74,7 @@ const rescoreOption = (
   writesScore: true,
 })
 
-/** AI チェックの問いを、問いかける順に、いまの答え付きで */
+/** AIチェックの問いを、問いかける順に、いまの答え付きで */
 export function buildCheckQuestioning({
   checkRun,
   ownScoreOf,

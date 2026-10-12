@@ -80,7 +80,7 @@ export function newerArchiveVersionError(
     return null
   }
   if (compareVersions(version, currentVersion) <= 0) return null
-  return `このアーカイブ（v${version}）は現在のアプリ（v${currentVersion}）より新しいため読み込めません。アプリを更新してください。`
+  return `このアーカイブ（v${version}）は現在のアプリ（v${currentVersion}）より新しいため取り込めません。アプリを更新してください。`
 }
 
 /** fromVersion から toVersion へ到達する変換器列を構築する */

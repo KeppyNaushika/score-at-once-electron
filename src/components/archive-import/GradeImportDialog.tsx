@@ -27,7 +27,7 @@ interface GradeImportDialogProps {
  * 成績アーカイブのインポート確認ウィザード
  *
  * 学級/試験/生徒の照合結果を提示し、埋め込み資料（Coursework）ごとに
- * 「既存へ統合（uuid一致 / 名前候補）」か「新規作成」かをユーザーに判断させる。
+ * 「既存に取り込む（uuid一致 / 名前候補）」か「新規作成」かをユーザーに判断させる。
  * uuid一致があれば既定で統合、無ければ新規作成を初期選択にする。
  *
  * 一覧の「読み込み」で .grade を選んだときに開く（ファイルは選び終えている）。
@@ -73,7 +73,7 @@ export function GradeImportDialog({
 
   return (
     <LegacyArchiveImportDialogFrame
-      title="成績アーカイブのインポート"
+      title="成績アーカイブの取り込み"
       description="照合結果を確認し、試験外成績資料の取り込み方法を選択してください。"
       importing={importing}
       onConfirm={() => void handleConfirm()}

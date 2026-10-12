@@ -101,7 +101,7 @@ export function AiGradingRunProgress({
           <div
             key={run.id}
             className="flex items-center gap-2 text-xs"
-            aria-label="AI 採点の進み具合"
+            aria-label="AI採点の進み具合"
           >
             <span className="shrink-0">
               {runLabel} {completed}/{total}

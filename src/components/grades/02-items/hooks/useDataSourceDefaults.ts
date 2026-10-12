@@ -153,7 +153,7 @@ function buildDefaultName(
 }
 
 /**
- * データソース追加フォームの「名前」「換算満点」の既定値を、選択内容から導く。
+ * データソース追加フォームの「名前」「換算配点」の既定値を、選択内容から導く。
  *
  * どちらも state として持たず毎回算出する（ユーザーが入力したらそちらが優先される想定で、
  * 呼び出し側が下書きとの `??` で解決する）。満点の元データは選択肢の取得時に同梱済みなので
@@ -177,7 +177,7 @@ export function useDataSourceDefaults({
         cropRegions,
         courseworks
       ),
-      // 満点が未確定（0）の段階では換算満点を埋めない
+      // 満点が未確定（0）の段階では換算配点を埋めない
       defaultWeight: maxScore > 0 ? String(maxScore) : "",
     }
   }, [selection, exams, subtotalGroups, cropRegions, courseworks])

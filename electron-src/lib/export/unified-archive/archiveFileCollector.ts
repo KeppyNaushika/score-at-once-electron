@@ -13,7 +13,7 @@ import type { SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
  * データディレクトリからの相対パスでファイルを指す列。
  *
  * schema.prisma でファイルを指す列はこの4つだけ（模範解答・答案画像・解答用紙定義の
- * セル内画像・AI 採点のプロンプトの問題の画像）。名前に path / file / image /
+ * セル内画像・AI採点のプロンプトの問題の画像）。名前に path / file / image /
  * url / dir / src を含む String 列を schema から洗うと、この4列と `anchorDirection`
  * （向きの文字列でファイルではない）しか無い。
  * 旧列 AiPrompt.questionImagePath を持つ古いアーカイブも、取り込みで migration を当てると

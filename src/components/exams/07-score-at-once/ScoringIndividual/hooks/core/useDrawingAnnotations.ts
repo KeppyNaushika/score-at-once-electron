@@ -132,8 +132,8 @@ export function useDrawingAnnotations(
           annotationsByTargetQuery(target, type)
         )
       } catch (error) {
-        console.error("アノテーション読み込みエラー:", error)
-        const message = "アノテーション読み込み中にエラーが発生しました"
+        console.error("注釈の読み込みエラー:", error)
+        const message = "注釈の読み込み中にエラーが発生しました"
         setReadError(message)
         callbacksRef.current.onError?.(message)
         return []

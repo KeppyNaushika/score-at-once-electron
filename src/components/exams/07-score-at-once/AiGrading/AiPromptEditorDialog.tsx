@@ -217,7 +217,7 @@ function AiPromptEditorForm({
             value={rubricText}
             onChange={(event) => setRubricText(event.target.value)}
             rows={5}
-            placeholder="例: 根拠まで書かれていれば満点。結論だけなら部分点 1 点"
+            placeholder="例: 根拠まで書かれていれば正答。結論だけなら部分点 1 点"
           />
         </div>
         <div className="space-y-1">

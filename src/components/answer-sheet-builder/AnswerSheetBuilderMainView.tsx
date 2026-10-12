@@ -233,7 +233,7 @@ export function AnswerSheetBuilderMainView({
       <div className="flex h-full flex-col items-center justify-center gap-3">
         <p className="text-sm font-medium">この解答用紙の担当ではありません</p>
         <p className="text-sm text-muted-foreground">
-          編集できるのは担当の{ownerName ?? "利用者"}さんだけです。
+          編集できるのは担当の{ownerName ?? "ユーザー"}さんだけです。
           直したいときは担当を渡してもらってください。
         </p>
         <Button variant="outline" onClick={() => router.back()}>
@@ -309,7 +309,7 @@ export function AnswerSheetBuilderMainView({
                 {omrMarkerWarnings.length > 0 && (
                   <TriangleAlert
                     className="ml-0.5 h-3 w-3 text-orange-600"
-                    aria-label="マーカーの配置に問題があります"
+                    aria-label="OMRマーカーの配置に問題があります"
                   />
                 )}
               </TabsTrigger>

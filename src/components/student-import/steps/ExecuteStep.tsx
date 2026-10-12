@@ -40,7 +40,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
           <CircleAlert className="h-8 w-8 text-red-600" />
         </div>
         <div className="text-center">
-          <h3 className="text-lg font-semibold">インポートに失敗しました</h3>
+          <h3 className="text-lg font-semibold">取り込みに失敗しました</h3>
           <p className="mt-2 text-sm text-muted-foreground">
             {wizard.state.error}
           </p>
@@ -55,7 +55,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
       <div className="flex flex-col items-center justify-center gap-6 py-16">
         <Spinner className="size-12 text-primary" />
         <div className="text-center">
-          <h3 className="text-lg font-semibold">インポート中...</h3>
+          <h3 className="text-lg font-semibold">取り込み中...</h3>
           <p className="mt-2 text-sm text-muted-foreground">
             データを処理しています。しばらくお待ちください。
           </p>
@@ -78,7 +78,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
       </div>
 
       <div className="text-center">
-        <h3 className="text-lg font-semibold">インポートが完了しました</h3>
+        <h3 className="text-lg font-semibold">取り込みが完了しました</h3>
       </div>
 
       <div className="mx-auto grid w-full max-w-md gap-3">
@@ -120,7 +120,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
         {summary.created.memberships > 0 && (
           <div className="text-center text-sm text-muted-foreground">
-            所属関係: {summary.created.memberships}件処理
+            在籍: {summary.created.memberships}件処理
           </div>
         )}
       </div>

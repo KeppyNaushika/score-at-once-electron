@@ -77,7 +77,7 @@ export function IndividualReportTab({
     })
   }
 
-  const sourceLabel = options.dataSourceLabel || "成績資料"
+  const sourceLabel = options.dataSourceLabel || "データソース"
   // 記号を出すときだけ、比較先が読み込めるまで待つ（待たないと「・」で印刷される）
   const waitsForComparisons =
     options.showItemGrades &&
@@ -128,7 +128,7 @@ export function IndividualReportTab({
                     variant="sub"
                   />
                   <OptionCard
-                    label="評価"
+                    label="成績評価記号"
                     checked={options.itemGradeColumnGradeLabel}
                     onChange={(checked) =>
                       updateOption("itemGradeColumnGradeLabel", checked)
@@ -137,7 +137,7 @@ export function IndividualReportTab({
                   />
                   {options.itemGradeColumnGradeLabel && (
                     <OptionCard
-                      label="評価に比較の記号（例 1↑）"
+                      label="成績評価記号に比較の記号（例 1↑）"
                       checked={options.itemGradeComparisonMarks}
                       onChange={(checked) =>
                         updateOption("itemGradeComparisonMarks", checked)
@@ -202,7 +202,7 @@ export function IndividualReportTab({
               <div className="mt-2 flex flex-col gap-2">
                 <OptionField label="表示名">
                   <Input
-                    placeholder="成績資料"
+                    placeholder="データソース"
                     className="h-6 flex-1 text-xs"
                     {...editing(
                       "dataSourceLabel",

@@ -1,5 +1,5 @@
 /**
- * AI 採点の実行の読み出し（設問ごと・試験ごと。docs/vlm-grading-design.md §10）。
+ * AI採点の実行の読み出し（設問ごと・試験ごと。docs/vlm-grading-design.md §10）。
  */
 
 import * as fs from "fs"

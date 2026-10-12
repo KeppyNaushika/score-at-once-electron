@@ -106,7 +106,7 @@ export function AiProviderApiKeyForm({ status }: AiProviderApiKeyFormProps) {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        キーはこの端末だけに暗号化して保存し、保存後は表示しません。キーは利用者が自分で事業者と契約して用意します。
+        キーはこのPCだけに暗号化して保存し、保存後は表示しません。キーはユーザーが自分で事業者と契約して用意します。
       </p>
     </form>
   )

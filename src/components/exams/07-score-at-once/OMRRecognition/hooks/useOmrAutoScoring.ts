@@ -158,7 +158,7 @@ export function useOmrAutoScoring(examId: string) {
         setState((prev) => ({
           ...prev,
           isRecognizing: false,
-          error: `模範解答のマーカーを検出できませんでした（${markerResult.pages[0]?.result.error ?? ""}）`,
+          error: `模範解答のOMRマーカーを検出できませんでした（${markerResult.pages[0]?.result.error ?? ""}）`,
         }))
         return
       }
@@ -180,7 +180,7 @@ export function useOmrAutoScoring(examId: string) {
           ...prev,
           isRecognizing: false,
           // 模範解答の隅は推定しない。ここがずれると全答案の位置合わせがずれる
-          error: `模範解答のページ1のマーカーが検出できません（${page1?.result.error ?? "ページ1がありません"}）`,
+          error: `模範解答のページ1のOMRマーカーが検出できません（${page1?.result.error ?? "ページ1がありません"}）`,
         }))
         return
       }
@@ -257,7 +257,7 @@ export function useOmrAutoScoring(examId: string) {
           examStudentId: result.examStudentId,
           studentName:
             studentNameOf.get(result.examStudentId ?? "") ?? "（不明）",
-          detail: result.error ?? "マーカーを検出できませんでした",
+          detail: result.error ?? "OMRマーカーを検出できませんでした",
         }))
       const markerEstimatedSheets: MarkerIssueSheet[] = results
         .filter((result) => result.success && result.estimatedCorner)

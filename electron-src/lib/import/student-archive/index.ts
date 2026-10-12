@@ -193,14 +193,14 @@ export async function executeStudentImport(
       action: "student.import",
       entityType: "Student",
       entityId: "student-archive",
-      summary: `生徒を${importedStudents}名インポートしました`,
+      summary: `生徒を${importedStudents}名取り込みました`,
       extra: { counts },
     })
 
     return { summary: counts, warnings }
   } catch (error) {
     console.error("Error executing student import:", error)
-    throw error instanceof Error ? error : new Error("インポートに失敗しました")
+    throw error instanceof Error ? error : new Error("取り込みに失敗しました")
   }
 }
 

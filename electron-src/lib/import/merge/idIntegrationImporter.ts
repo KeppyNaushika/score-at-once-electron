@@ -434,7 +434,7 @@ export async function executeIdIntegrationImport(
       await copyImportImages(data, newExamId)
     } catch (copyError) {
       warnings.push(
-        "画像ファイルのコピーに一部失敗しました。再インポートで修復可能です。"
+        "画像ファイルのコピーに一部失敗しました。もう一度取り込むと直せます。"
       )
       console.error("Image copy failed:", copyError)
     }

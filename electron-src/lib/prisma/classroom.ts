@@ -139,7 +139,7 @@ export const deleteClassroom = async (
     })
     if (membershipCount > 0) {
       throw new Error(
-        `学級を削除できません: ${membershipCount} 人の生徒がまだ所属しています。`
+        `学級を削除できません: ${membershipCount} 人の生徒がまだ在籍しています。`
       )
     }
     const deleted = await prisma.classroom.delete({

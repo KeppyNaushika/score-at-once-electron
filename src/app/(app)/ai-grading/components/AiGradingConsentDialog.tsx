@@ -68,7 +68,7 @@ export function AiGradingConsentDialog({
     recordConsent.mutate(provider, {
       onSuccess: () => {
         toast.success(
-          `${providerTerms.providerName} への送信を伴う AI 採点（実験的機能）を有効にしました`
+          `${providerTerms.providerName} への送信を伴う AI採点（実験的機能）を有効にしました`
         )
         onClose()
       },

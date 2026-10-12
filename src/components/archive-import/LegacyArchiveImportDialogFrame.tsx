@@ -53,7 +53,7 @@ export function LegacyArchiveImportDialogFrame({
             キャンセル
           </Button>
           <Button onClick={onConfirm} disabled={importing}>
-            {importing ? "インポート中..." : "インポート"}
+            {importing ? "取り込み中..." : "取り込む"}
           </Button>
         </DialogFooter>
       </DialogContent>
