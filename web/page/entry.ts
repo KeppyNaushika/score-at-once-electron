@@ -9,7 +9,7 @@ import { SERVICE_WORKER_PATH, WORKER_SCRIPT_PATH } from "./webAssetPaths"
  * 同期で読み込まれる（`scripts/web/buildWeb.mjs`）。
  *
  * 1. preload（無改変）を読み込み、`window.electronAPI` を立てる（上の import）
- * 2. web 版で動いていることを画面に知らせる（`src/lib/appImageUrl.ts`）
+ * 2. web 版で動いていることを画面に知らせる（`src/lib/webRuntime.ts`）
  * 3. DB を1タブで専有するためのロックを取り、取れたら main の処理を動かす Worker を起動する
  * 4. 画像を返す Service Worker がこのタブを受け持ち、Worker の準備が済んだら、溜めた要求を送る
  *
@@ -53,9 +53,20 @@ const showBlockingNotice = (title: string, detail: string) => {
 const describeError = (error: unknown) =>
   error instanceof Error ? error.message : String(error)
 
+/**
+ * 起動できないときに添える案内。起動の失敗（migration の失敗は控えから戻してから止まる）で
+ * データは消えないが、利用者が直そうとしてサイトのデータを消すと、そこで本当に失われる
+ */
+const DATA_KEPT_NOTE =
+  "データはこのブラウザの中に残っています。ブラウザのサイトデータは消さずに、" +
+  "時間をおいて開き直してください。"
+
 const failWithNotice = (message: string) => {
   failBoot(message)
-  showBlockingNotice("Score at Once を起動できませんでした", message)
+  showBlockingNotice(
+    "Score at Once を起動できませんでした",
+    `${message}\n\n${DATA_KEPT_NOTE}`
+  )
 }
 
 /**
@@ -119,7 +130,12 @@ const boot = async () => {
   serviceWorkerControl.catch(() => undefined)
 
   if (!navigator.locks) {
-    failWithNotice("このブラウザでは Web Locks を使えません。")
+    // 対応していないブラウザ。開き直しても変わらないので、データの案内は添えない
+    failBoot("このブラウザでは Web Locks を使えません。")
+    showBlockingNotice(
+      "Score at Once を起動できませんでした",
+      "このブラウザでは Web Locks を使えません。"
+    )
     return
   }
   await navigator.locks.request(
