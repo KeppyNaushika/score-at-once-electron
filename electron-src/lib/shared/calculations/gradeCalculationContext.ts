@@ -102,19 +102,10 @@ export async function buildGradeCalcContext(gradeId: string) {
           examStudentId: examStudentRow.id,
           studentId: examStudentRow.studentId,
           status: examStudentRow.status,
-          questionScores: resolvedScores.map((resolvedScore) => ({
-            examStudentId: resolvedScore.examStudentId,
-            cropRegionId: resolvedScore.cropRegionId,
-            status: resolvedScore.status,
-            partialScore: resolvedScore.partialScore,
-          })),
+          questionScores: resolvedScores,
         }
       }),
-      cropRegions: cropRegions.map((cropRegion) => ({
-        id: cropRegion.id,
-        type: cropRegion.type,
-        points: cropRegion.points,
-      })),
+      cropRegions,
     })
   }
 

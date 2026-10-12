@@ -152,6 +152,7 @@ const GRADE_CALCULATION_TABLE_FLAGS: Record<GradeCalculationModel, true> = {
   ExamStudent: true,
   QuestionScore: true,
   ScoreDecision: true,
+  ScoreScaleLevel: true,
 }
 
 /** 成績算出が読むテーブル（ロック中はここへの書き込みを止める） */

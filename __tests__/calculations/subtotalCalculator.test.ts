@@ -70,7 +70,13 @@ function createQuestionAssignment(
   type: string = "QUESTION_ANSWER"
 ): QuestionAssignmentForSubtotal {
   return {
-    cropRegion: { id: cropRegionId, type, points, examPage: { examId } },
+    cropRegion: {
+      id: cropRegionId,
+      type,
+      points,
+      scoringMethod: "points",
+      examPage: { examId },
+    },
   }
 }
 
@@ -80,7 +86,7 @@ function createQuestionScore(
   status: ScoringStatus,
   partialScore: number | null = null
 ): QuestionScoreForSubtotal {
-  return { examStudentId, cropRegionId, status, partialScore }
+  return { examStudentId, cropRegionId, status, partialScore, scaleLevel: null }
 }
 
 // ================== computeSubtotalScore ==================
@@ -387,8 +393,8 @@ describe("computeSubtotalScore - 複数試験で共有された小計", () => {
     vi.clearAllMocks()
     // 配点をそのまま得点として返す（正答のみ）
     mockCalculateActualScore.mockImplementation(
-      (questionScore: { status: string }, maxScore: number) =>
-        questionScore.status === "correct" ? maxScore : null
+      (questionScore: { status: string }, cropRegion: { points: number }) =>
+        questionScore.status === "correct" ? cropRegion.points : null
     )
   })
 

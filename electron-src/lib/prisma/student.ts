@@ -1,10 +1,12 @@
 import type { Prisma } from "@prisma/client"
 
 import { buildStudentDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
+import { calculateActualScore } from "../shared/calculations/actualScore"
 import { diffFields, recordAuditLog } from "./auditLog"
 import { studentAuditTarget } from "./auditTargets"
 import prisma from "./client"
 import { studentGradeRosterInclude } from "./gradeDataSourceUsage"
+import { toSerializedQuestionScore } from "./questionScore"
 
 const studentLabel = (student: {
   lastName: string
@@ -226,6 +228,8 @@ export const getStudentExamResults = async (
                     questionScores: {
                       // 同一試験の受験者は1人だけなので、生徒での絞り込みと同値
                       where: { examStudent: { studentId } },
+                      // 類型評価の点は付けた類型の点数から引く
+                      include: { scaleLevel: true },
                     },
                     cropSubtotals: {
                       where: { assignmentType: "QUESTION_ASSIGNMENT" },
@@ -283,14 +287,11 @@ export const getStudentExamResults = async (
           ) {
             isScored = true
             scoredCount++
-            if (questionScoreRecord.status === "correct") {
-              questionScore = regionPoints
-            } else if (
-              questionScoreRecord.status === "partial" &&
-              questionScoreRecord.partialScore
-            ) {
-              questionScore = Number(questionScoreRecord.partialScore)
-            }
+            questionScore =
+              calculateActualScore(
+                toSerializedQuestionScore(questionScoreRecord),
+                region
+              ) ?? 0
           }
 
           totalScore += questionScore

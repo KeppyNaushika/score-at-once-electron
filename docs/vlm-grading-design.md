@@ -479,6 +479,35 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 | S5  | 08 の確定                                                                                                                   |
 | S6  | ルーブリック項目の `setScaleLevelId` と AI 採点（類型の選択肢）                                                             |
 
+**進み具合（2026-10-12 時点）**
+
+- **S1 済み**（PR #1466）。表は migration `20261012120000`（表と列）と `20261012130000`（`ratio` を `score` へ付け直し）。
+  main は `electron-src/lib/prisma/scoreScale.ts`（IPC は `rubric:*ScoreScale*`）、画面は `src/components/score-scales/`（編集の部品と
+  類型評価管理 `/score-scales`）と `src/components/exams/03-region-info/`（行の中の方式と類型の組の選択）。`.sao` は `ScoreScale` を
+  `owned`（持ち主は null になりうる `examId`）で登録した
+- **S2 済み**（PR #1469）。`SCORING_STATUSES` に `evaluated`。類型の書き込みは `set-scale-levels`
+  （`electron-src/lib/prisma/scaleLevelScoreWrite.ts`）で、点の採点の書き込みは `evaluated` を拒み `scaleLevelId` を null に戻す。
+  07 の画面は `src/components/exams/07-score-at-once/ScaleLevel/`（類型のボタン・数字キー・マスの色・方式と合わない採点の印）。
+  未採点に戻すのは既存の点の採点の書き込みで行う。AI 採点の作業画面は類型評価の設問では開かない
+- 実装の途中で決めたこと（OWNER）: 呼び名は「類型評価」「類型」「説明」「点数」で、類型評価に「ルーブリック」「段階」の語を使わない。
+  減点・加点方式の `RubricItem` は画面では「採点項目」（AI へ送る指示文の語は「ルーブリック項目」のまま）。類型は割合でなく点数を持つ。
+  試験とのつながりは設問の `scoreScaleId` から求め、中間の表は作らない。用語集は #1465
+- **S3 済み**。`calculateActualScore(採点, 設問)` は設問の行（`points`・`scoringMethod`）を受け取り、方式と合わない採点を
+  null にしてから得点化する（`isStatusCompatibleWithScoringMethod`）。類型は id でなく採点行に同梱した `scaleLevel` で受ける。
+  - 読む側は採点行・確定行に `scaleLevel: true` を include する（`getQuestionScoresForExam`・`getScoreDecisionsForExam`・
+    `scoreDecisionSummary.ts`・成績算出の `gradeCalculationReads`・生徒の試験成績 `getStudentExamResults`）。成績算出のロックの表に
+    `ScoreScaleLevel` が入った
+  - リゾルバの有効スコアは `scaleLevelId`・`scaleLevel` を運び、類型が違えば（点数が同じでも）食い違いにする。確定行の類型も運ぶので、
+    S5 は確定の書き込みだけでよい
+  - Excel と成績算出は有効スコアを射影せずそのまま小計・合計へ渡す。設問も行のまま渡す（`ExamDataCache.cropRegions`）
+  - 返却版は評価済みのセルにだけ類型の id（`l`）と記録した時点の点数（`lp`）を足した。共通の類型評価の点数を直すと差分に出る
+  - 生徒の試験成績は独自の点の計算をやめて単一実装を通した（採点者の解決はしないまま。先頭の行を読む今の形は別の課題）
+- 残っている小さなこと: 個別表示の答案に重ねる採点マーク（`drawCropRegionMarks`・`useCropRegionsWithStatus` の独自の点の計算）と
+  PDF の点の文字（`renderAnswerSheet.ts`）は類型を扱わない（S4）。08 の案の束ね（`proposedResults.ts` が判定と部分点で束ねる）は
+  類型の違いを見ない（S5）。進み具合の数え方は方式と合わない採点も採点済みに数える。
+  マウスモードのブラシの並びに正答・部分点が残る（押しても書かずに知らせる）。`useScoringScreen.ts` が 616行。
+  見せ方の3択（`scaleValueDisplay`）は列だけで、画面はまだ（S4）
+
 #### 4-8-8. 実装の細目（着手前に読む）
 
 **型**

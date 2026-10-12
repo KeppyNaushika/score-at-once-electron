@@ -101,8 +101,13 @@ function aiScore(
   return points === null
     ? null
     : calculateActualScore(
-        { status: verdict.status, partialScore: verdict.partialScore },
-        points
+        {
+          status: verdict.status,
+          partialScore: verdict.partialScore,
+          scaleLevel: null,
+        },
+        // AI 採点を評価するのは点の採点の設問だけ（類型評価の設問では AI 採点を開かない）
+        { points, scoringMethod: "points" }
       )
 }
 

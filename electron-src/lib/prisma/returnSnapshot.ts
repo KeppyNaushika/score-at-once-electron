@@ -38,6 +38,13 @@ interface SnapshotScoreCell {
   s: string
   /** partialScore */
   p: number | null
+  /**
+   * 類型評価で付けた類型の id と、記録した時点の類型の点数（評価済みのセルだけ持つ）。
+   * 点数も持つのは、共通の類型評価の点数を直すと印刷した点が変わり、再印刷が要るため。
+   * ほかのセルには書かないので、類型評価より前に記録した返却版の中身は変わらない
+   */
+  l?: string
+  lp?: number
 }
 
 // 捕捉する注釈フィールドは「実際にPDF印刷で使われるもの」に限定する
@@ -127,9 +134,11 @@ const round = (value: number): number => Math.round(value * 1e4) / 1e4
  * ない。返却スナップショットは「その試験の受験者の答案」を対象とするため、受験者を
  * 主語にするのが正しい（#962 §3.3 の棚卸し結果。Phase A の配線変更で解消済み）。
  */
+type ExamCropRegion = Awaited<ReturnType<typeof getCropRegionsByExamId>>[number]
+
 interface ExamState {
-  /** cropRegionId -> { label, maxScore } */
-  regions: Map<string, { label: string | null; maxScore: number | null }>
+  /** cropRegionId -> 設問（配点・方式・ラベル） */
+  regions: Map<string, ExamCropRegion>
   /** examStudentId -> 有効スコア配列 */
   effectiveByExamStudent: Map<string, EffectiveScore[]>
   /** examStudentId -> 正規化済み注釈配列（印刷対象のみ） */
@@ -138,19 +147,9 @@ interface ExamState {
 
 const loadExamState = async (examId: string): Promise<ExamState> => {
   const cropRegions = await getCropRegionsByExamId(examId)
-  const regions = new Map<
-    string,
-    { label: string | null; maxScore: number | null }
-  >()
-  for (const cropRegion of cropRegions) {
-    regions.set(cropRegion.id, {
-      label: cropRegion.label ?? null,
-      maxScore:
-        cropRegion.points !== null && cropRegion.points !== undefined
-          ? Number(cropRegion.points)
-          : null,
-    })
-  }
+  const regions = new Map(
+    cropRegions.map((cropRegion) => [cropRegion.id, cropRegion])
+  )
 
   const scoresResult = await getQuestionScoresForExam(examId)
   const decisionsResult = await getScoreDecisionsForExam(examId)
@@ -211,10 +210,16 @@ const buildContent = (
 ): SnapshotContent => {
   const scores: SnapshotScoreCell[] = effective
     .filter((effectiveScore) => effectiveScore.status !== "unscored")
-    .map((effectiveScore) => ({
+    .map((effectiveScore): SnapshotScoreCell => ({
       r: effectiveScore.cropRegionId,
       s: effectiveScore.status,
       p: effectiveScore.partialScore,
+      ...(effectiveScore.scaleLevelId !== null && {
+        l: effectiveScore.scaleLevelId,
+      }),
+      ...(effectiveScore.scaleLevel !== null && {
+        lp: effectiveScore.scaleLevel.score,
+      }),
     }))
     .sort((cellA, cellB) =>
       cellA.r < cellB.r ? -1 : cellA.r > cellB.r ? 1 : 0
@@ -244,8 +249,9 @@ const computeTotal = (
   let total = 0
   let hasAny = false
   for (const effectiveScore of effective) {
-    const maxScore = regions.get(effectiveScore.cropRegionId)?.maxScore ?? 0
-    const value = calculateEffectiveScoreValue(effectiveScore, maxScore)
+    const cropRegion = regions.get(effectiveScore.cropRegionId)
+    if (!cropRegion) continue
+    const value = calculateEffectiveScoreValue(effectiveScore, cropRegion)
     if (value !== null) {
       total += value
       hasAny = true
@@ -326,7 +332,7 @@ export const captureReturnSnapshot = async (options: {
 
 const toCellState = (
   cell: SnapshotScoreCell | undefined,
-  maxScore: number | null
+  cropRegion: ExamCropRegion | undefined
 ): ReturnScoreCellState | null => {
   if (!cell) return null
   // 返却版の JSON から読み出した値。書いた時点の判定がそのまま入っている
@@ -334,10 +340,16 @@ const toCellState = (
   return {
     status,
     partialScore: cell.p,
-    value: calculateEffectiveScoreValue(
-      { status, partialScore: cell.p },
-      maxScore ?? 0
-    ),
+    value: cropRegion
+      ? calculateEffectiveScoreValue(
+          {
+            status,
+            partialScore: cell.p,
+            scaleLevel: cell.lp !== undefined ? { score: cell.lp } : null,
+          },
+          cropRegion
+        )
+      : null,
   }
 }
 
@@ -420,14 +432,19 @@ export const getReturnDiff = async (
       const before = beforeScores.get(cropRegionId)
       const after = afterScores.get(cropRegionId)
       const same =
-        before && after && before.s === after.s && before.p === after.p
+        before &&
+        after &&
+        before.s === after.s &&
+        before.p === after.p &&
+        before.l === after.l &&
+        before.lp === after.lp
       if (same) continue
-      const maxScore = state.regions.get(cropRegionId)?.maxScore ?? null
+      const cropRegion = state.regions.get(cropRegionId)
       scoreChanges.push({
         cropRegionId,
-        label: state.regions.get(cropRegionId)?.label ?? null,
-        before: toCellState(before, maxScore),
-        after: toCellState(after, maxScore),
+        label: cropRegion?.label ?? null,
+        before: toCellState(before, cropRegion),
+        after: toCellState(after, cropRegion),
       })
     }
 

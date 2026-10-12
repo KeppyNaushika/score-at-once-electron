@@ -66,6 +66,8 @@ export const getQuestionScoresForExam = async (
           },
         },
         user: { omit: PUBLIC_USER_OMIT },
+        // 類型評価の点は付けた類型の点数から引く（docs/vlm-grading-design.md §4-8-8）
+        scaleLevel: true,
       },
       orderBy: [
         { examStudent: { student: { lastName: "asc" } } },

@@ -32,10 +32,12 @@ export type QuestionScoreForSubtotal = Omit<
   | "comment"
   // 手での上書きの印は、点が項目から来たか採点キーから来たかだけで、点そのものではない
   | "overridesRubric"
-  // 類型評価の類型。類型の点数を引くのは実効の点の関数が受け持つ（docs/vlm-grading-design.md §4-8-7 の S3）
+  // 類型評価の類型は id でなく、同梱した類型の行（`scaleLevel`）で持つ。点はその点数から引く
   | "scaleLevelId"
 > & {
   partialScore?: number | null
+  /** 類型評価で付けた類型（docs/vlm-grading-design.md §4-8-8）。類型評価でなければ null */
+  scaleLevel: { score: number } | null
   // SQLite は enum を持てないので Prisma の型は `string`。判定の集合はここで注入する
   // （境界で `toScoringStatus` を1回通す）
   status: ScoringStatus
@@ -53,6 +55,7 @@ export interface QuestionAssignmentForSubtotal {
     id: string
     type: string
     points: number | null
+    scoringMethod: string
     examPage: { examId: string }
   }
 }
@@ -99,14 +102,13 @@ export function computeSubtotalScore(
   for (const cropRegion of assignedCropRegions) {
     if (cropRegion.type !== "QUESTION_ANSWER") continue
 
-    const questionMaxScore = cropRegion.points || 0
-    totalMaxScore += questionMaxScore
+    totalMaxScore += cropRegion.points || 0
 
     const scoreData = examStudentScores.find(
       (questionScore) => questionScore.cropRegionId === cropRegion.id
     )
     if (scoreData) {
-      const actualScore = calculateActualScore(scoreData, questionMaxScore)
+      const actualScore = calculateActualScore(scoreData, cropRegion)
       if (actualScore !== null) {
         hasScoredQuestion = true
         totalScore += actualScore
@@ -152,8 +154,7 @@ function computeStudentTotalScore(
       (cropRegion) => cropRegion.id === scoreData.cropRegionId
     )
     if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
-      const maxScore = cropRegion.points || 0
-      const actualScore = calculateActualScore(scoreData, maxScore)
+      const actualScore = calculateActualScore(scoreData, cropRegion)
       if (actualScore !== null) {
         hasScoredQuestion = true
         totalScore += actualScore
@@ -237,9 +238,8 @@ function computeSubtotalScoreForCropRegion(
     )
     if (!scoreData) continue
 
-    const questionMaxScore = cropRegion.points || 0
-    totalMaxScore += questionMaxScore
-    const actualScore = calculateActualScore(scoreData, questionMaxScore)
+    totalMaxScore += cropRegion.points || 0
+    const actualScore = calculateActualScore(scoreData, cropRegion)
     if (actualScore !== null) {
       hasScoredQuestion = true
       totalScore += actualScore

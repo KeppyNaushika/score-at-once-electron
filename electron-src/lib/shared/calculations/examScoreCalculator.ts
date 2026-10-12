@@ -53,10 +53,7 @@ export function calculateExamTotalScore(
       (questionScore) => questionScore.cropRegionId === cropRegion.id
     )
     if (scoreData) {
-      const actualScore = calculateActualScore(
-        scoreData,
-        cropRegion.points ?? 0
-      )
+      const actualScore = calculateActualScore(scoreData, cropRegion)
       if (actualScore !== null) {
         hasScored = true
         totalScore += actualScore
@@ -92,5 +89,5 @@ export function calculateCropRegionScore(
   )
   if (!scoreData) return null
 
-  return calculateActualScore(scoreData, cropRegion.points ?? 0)
+  return calculateActualScore(scoreData, cropRegion)
 }

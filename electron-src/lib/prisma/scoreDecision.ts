@@ -241,6 +241,8 @@ export const getScoreDecisionsForExam = async (examId: string) => {
     },
     include: {
       decidedBy: { omit: PUBLIC_USER_OMIT },
+      // 類型評価の点は確定した類型の点数から引く
+      scaleLevel: true,
     },
   })
   return decisions.map(toSerializedScoreDecision)

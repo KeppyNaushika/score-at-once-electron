@@ -45,16 +45,18 @@ export const getExamDecisionSummary = async (
     }),
     // 採点行は試験全体で数万行になりうる。行はそのまま持ち（射影しない）、
     // 氏名だけは裁定対象セル（通常わずか）が確定してから別途引いて join を広げない。
+    // 類型評価の点は付けた類型の点数から引くので、類型だけは同梱する
     prisma.questionScore.findMany({
       where: {
         cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
       },
+      include: { scaleLevel: true },
     }),
     prisma.scoreDecision.findMany({
       where: {
         cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
       },
-      include: { decidedBy: { omit: PUBLIC_USER_OMIT } },
+      include: { decidedBy: { omit: PUBLIC_USER_OMIT }, scaleLevel: true },
     }),
     prisma.examStudent.findMany({
       where: { examId },
@@ -226,14 +228,14 @@ export const getExamDecisionSummary = async (
 
   const toProposal = (
     score: (typeof scores)[number],
-    maxScore: number
+    cropRegion: (typeof questionRegions)[number]
   ): ScoreProposal => ({
     questionScoreId: score.id,
     userId: score.userId,
     userName: userNameById.get(score.userId) ?? score.userId,
     status: score.status,
     partialScore: score.partialScore,
-    scoreValue: calculateActualScore(score, maxScore),
+    scoreValue: calculateActualScore(score, cropRegion),
     comment: score.comment,
     updatedAt: score.updatedAt.toISOString(),
   })
@@ -249,9 +251,8 @@ export const getExamDecisionSummary = async (
     const cropRegion = regionById.get(target.cropRegionId)
     if (!cropRegion) continue
 
-    const maxScore = cropRegion.points ?? 0
     const proposals = group
-      .map((score) => toProposal(score, maxScore))
+      .map((score) => toProposal(score, cropRegion))
       .sort((proposalA, proposalB) =>
         proposalA.userName.localeCompare(proposalB.userName, "ja")
       )

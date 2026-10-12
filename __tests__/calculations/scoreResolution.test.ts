@@ -9,24 +9,22 @@ import { describe, expect, it } from "vitest"
 
 import {
   calculateEffectiveScoreValue,
+  type ResolvableQuestionScore,
+  type ResolvableScoreDecision,
   resolveEffectiveScores,
 } from "@/electron-src/lib/shared/calculations/scoreResolution"
-import type {
-  SerializedQuestionScore,
-  SerializedScoreDecision,
-} from "@/types/prismaExtensions"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 // ================== ヘルパー ==================
 
 // リゾルバは「シリアライズ後の行」を受ける。行の全列が揃っている前提なので、
 // ヘルパーも Prisma の行と同じ列を全部持つ（欠けた列を作れないようにするため、
-// 部分的な形を作らず SerializedQuestionScore / SerializedScoreDecision で名乗る）。
+// 部分的な形を作らずリゾルバの入力の型で名乗る）。類型は読む側が同梱する。
 let seq = 0
 
 function score(
-  overrides: Partial<SerializedQuestionScore> = {}
-): SerializedQuestionScore {
+  overrides: Partial<ResolvableQuestionScore> = {}
+): ResolvableQuestionScore {
   seq++
   return {
     id: `id-${String(seq).padStart(4, "0")}`,
@@ -38,6 +36,7 @@ function score(
     userId: "user-1",
     overridesRubric: false,
     scaleLevelId: null,
+    scaleLevel: null,
     createdAt: new Date("2026-06-01T10:00:00Z"),
     updatedAt: new Date("2026-06-01T10:00:00Z"),
     ...overrides,
@@ -45,8 +44,8 @@ function score(
 }
 
 function decision(
-  overrides: Partial<SerializedScoreDecision> = {}
-): SerializedScoreDecision {
+  overrides: Partial<ResolvableScoreDecision> = {}
+): ResolvableScoreDecision {
   return {
     id: "decision-1",
     examStudentId: "student-1",
@@ -55,6 +54,7 @@ function decision(
     score: 5,
     comment: null,
     scaleLevelId: null,
+    scaleLevel: null,
     decidedByUserId: "user-1",
     decidedAt: new Date("2026-06-02T10:00:00Z"),
     createdAt: new Date("2026-06-02T10:00:00Z"),
@@ -62,6 +62,8 @@ function decision(
     ...overrides,
   }
 }
+
+const pointsRegion = { points: 10, scoringMethod: "points" }
 
 // ================== resolveEffectiveScores: 提案のみ ==================
 
@@ -176,7 +178,7 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     expect(resolved).toHaveLength(1)
     expect(resolved[0].status).toBe("unscored")
     expect(conflicts).toEqual([])
-    expect(calculateEffectiveScoreValue(resolved[0], 10)).toBeNull()
+    expect(calculateEffectiveScoreValue(resolved[0], pointsRegion)).toBeNull()
   })
 })
 
@@ -267,14 +269,85 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
   })
 })
 
+// ================== resolveEffectiveScores: 類型評価 ==================
+
+describe("resolveEffectiveScores - 類型評価", () => {
+  const levelA = { score: 10 }
+
+  it("付けた類型を有効スコアへ運ぶ", () => {
+    const scoreRow = score({
+      status: "evaluated",
+      scaleLevelId: "level-a",
+      scaleLevel: levelA,
+    })
+    const { resolved } = resolveEffectiveScores([scoreRow])
+    expect(resolved[0]).toMatchObject({
+      status: "evaluated",
+      scaleLevelId: "level-a",
+      scaleLevel: levelA,
+    })
+  })
+
+  it("同じ類型なら合意、類型が違えば点数が同じでも競合", () => {
+    const agreed = resolveEffectiveScores([
+      score({
+        status: "evaluated",
+        scaleLevelId: "level-a",
+        scaleLevel: levelA,
+      }),
+      score({
+        status: "evaluated",
+        scaleLevelId: "level-a",
+        scaleLevel: levelA,
+      }),
+    ])
+    expect(agreed.conflicts).toEqual([])
+    expect(agreed.resolved[0].scaleLevel).toEqual(levelA)
+
+    const disagreed = resolveEffectiveScores([
+      score({
+        status: "evaluated",
+        scaleLevelId: "level-a",
+        scaleLevel: levelA,
+      }),
+      score({
+        status: "evaluated",
+        scaleLevelId: "level-s",
+        scaleLevel: { score: 10 },
+      }),
+    ])
+    expect(disagreed.resolved).toEqual([])
+    expect(disagreed.conflicts).toHaveLength(1)
+  })
+
+  it("確定の類型も有効スコアへ運ぶ", () => {
+    const { resolved } = resolveEffectiveScores(
+      [],
+      [
+        decision({
+          verdict: "evaluated",
+          score: null,
+          scaleLevelId: "level-a",
+          scaleLevel: levelA,
+        }),
+      ]
+    )
+    expect(resolved[0]).toMatchObject({
+      source: "decision",
+      scaleLevelId: "level-a",
+      scaleLevel: levelA,
+    })
+  })
+})
+
 // ================== calculateEffectiveScoreValue ==================
 
 describe("calculateEffectiveScoreValue", () => {
   it("correctは満点を返す", () => {
     expect(
       calculateEffectiveScoreValue(
-        { status: "correct", partialScore: null },
-        10
+        { status: "correct", partialScore: null, scaleLevel: null },
+        pointsRegion
       )
     ).toBe(10)
   })
@@ -283,7 +356,10 @@ describe("calculateEffectiveScoreValue", () => {
     const zeroStatuses = ["incorrect", "no_answer", "double_mark"] as const
     for (const status of zeroStatuses) {
       expect(
-        calculateEffectiveScoreValue({ status, partialScore: null }, 10)
+        calculateEffectiveScoreValue(
+          { status, partialScore: null, scaleLevel: null },
+          pointsRegion
+        )
       ).toBe(0)
     }
   })
@@ -291,18 +367,24 @@ describe("calculateEffectiveScoreValue", () => {
   it("unscoredはnullを返す", () => {
     expect(
       calculateEffectiveScoreValue(
-        { status: "unscored", partialScore: null },
-        10
+        { status: "unscored", partialScore: null, scaleLevel: null },
+        pointsRegion
       )
     ).toBeNull()
   })
 
   it("partial/pendingはpartialScoreを返す", () => {
     expect(
-      calculateEffectiveScoreValue({ status: "partial", partialScore: 3 }, 10)
+      calculateEffectiveScoreValue(
+        { status: "partial", partialScore: 3, scaleLevel: null },
+        pointsRegion
+      )
     ).toBe(3)
     expect(
-      calculateEffectiveScoreValue({ status: "pending", partialScore: 6 }, 10)
+      calculateEffectiveScoreValue(
+        { status: "pending", partialScore: 6, scaleLevel: null },
+        pointsRegion
+      )
     ).toBe(6)
   })
 })
