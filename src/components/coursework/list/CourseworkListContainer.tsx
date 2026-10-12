@@ -5,16 +5,15 @@ import { ClipboardList, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
-import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
 import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
+import {
+  entityListCreateAction,
+  entityListToolbarActions,
+} from "@/components/common/entity-list/entityListToolbarActions"
 import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
 import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import {
-  type ToolbarAction,
-  toolbarButtonAction,
-} from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
@@ -69,8 +68,12 @@ const EMPTY_COURSEWORKS: CourseworkSummary[] = []
 export function CourseworkListContainer() {
   const router = useRouter()
   const deleteCoursework = useMutation(deleteCourseworkMutation())
-  const findOrCreateTag = useMutation(findOrCreateTagMutation())
-  const addTagToCourseworks = useMutation(addTagToCourseworksMutation())
+  const { mutateAsync: findOrCreateTag } = useMutation(
+    findOrCreateTagMutation()
+  )
+  const { mutateAsync: addTagToCourseworks } = useMutation(
+    addTagToCourseworksMutation()
+  )
   const createCoursework = useMutation(createCourseworkMutation())
   const { data: courseworks = EMPTY_COURSEWORKS, isPending: isLoading } =
     useQuery(courseworkListQuery())
@@ -121,61 +124,39 @@ export function CourseworkListContainer() {
     [courseworks]
   )
 
-  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+  // 既存タグを保ったまま1件ずつ足す（全置換 setTags による stale 消失を回避）
+  const assignTagToCourseworks = useCallback(
+    async (tagName: string, courseworkIds: string[]) => {
+      const tag = await findOrCreateTag(tagName)
+      await addTagToCourseworks({ courseworkIds, tagId: tag.id })
+    },
+    [findOrCreateTag, addTagToCourseworks]
+  )
+
+  const { bulkTagAction, listProps } = useEntityListControls(
     courseworks,
     COURSEWORK_FILTER_ACCESSORS,
     {
       rowNoun: "資料",
       searchPlaceholder: "資料名・タグ・学級で検索",
       tagOptions: allTags,
+      assignTag: assignTagToCourseworks,
       classroomOptions,
     }
   )
 
-  // 既存タグを保ったまま1件ずつ足す（全置換 setTags による stale 消失を回避）
-  const handleBulkAddTag = useCallback(
-    (tagName: string) =>
-      addTagToSelection(tagName, async (trimmedTagName, courseworkIds) => {
-        const tag = await findOrCreateTag.mutateAsync(trimmedTagName)
-        await addTagToCourseworks.mutateAsync({
-          courseworkIds,
-          tagId: tag.id,
-        })
+  const actions = useMemo(
+    () =>
+      entityListToolbarActions({
+        create: entityListCreateAction({
+          label: "新規作成",
+          onClick: () => void handleCreate(),
+        }),
+        archiveImport: importToolbarAction,
+        bulkTag: bulkTagAction,
       }),
-    [addTagToSelection, findOrCreateTag, addTagToCourseworks]
+    [bulkTagAction, handleCreate, importToolbarAction]
   )
-
-  const actions = useMemo<ToolbarAction[]>(() => {
-    const toolbarActions: ToolbarAction[] = [
-      toolbarButtonAction({
-        id: "create",
-        priority: 80,
-        icon: Plus,
-        label: "新規作成",
-        onClick: () => void handleCreate(),
-      }),
-      importToolbarAction,
-    ]
-
-    if (selectedIds.size > 0) {
-      toolbarActions.push(
-        bulkTagToolbarAction({
-          priority: 60,
-          selectedCount: selectedIds.size,
-          allTags,
-          onAssign: handleBulkAddTag,
-        })
-      )
-    }
-
-    return toolbarActions
-  }, [
-    allTags,
-    handleBulkAddTag,
-    handleCreate,
-    importToolbarAction,
-    selectedIds,
-  ])
 
   return (
     <>

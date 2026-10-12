@@ -6,16 +6,15 @@ import { useRouter } from "next/navigation"
 import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
-import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
 import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
+import {
+  entityListCreateAction,
+  entityListToolbarActions,
+} from "@/components/common/entity-list/entityListToolbarActions"
 import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
 import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import {
-  type ToolbarAction,
-  toolbarButtonAction,
-} from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
@@ -76,8 +75,10 @@ export function GradeListContainer() {
   const createGrade = useMutation(createGradeMutation())
   const deleteGrade = useMutation(deleteGradeMutation())
   const duplicateGrade = useMutation(duplicateGradeMutation())
-  const findOrCreateTag = useMutation(findOrCreateTagMutation())
-  const addTagToGrades = useMutation(addTagToGradesMutation())
+  const { mutateAsync: findOrCreateTag } = useMutation(
+    findOrCreateTagMutation()
+  )
+  const { mutateAsync: addTagToGrades } = useMutation(addTagToGradesMutation())
   const archive = useEntityListArchive()
   const { importToolbarAction, openUnifiedExport } = archive
   // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
@@ -128,58 +129,39 @@ export function GradeListContainer() {
     [grades]
   )
 
-  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+  /** 選んだ成績算出へ、既存のタグを保ったまま同じタグを足す */
+  const assignTagToGrades = useCallback(
+    async (tagName: string, gradeIds: string[]) => {
+      const tag = await findOrCreateTag(tagName)
+      await addTagToGrades({ gradeIds, tagId: tag.id })
+    },
+    [findOrCreateTag, addTagToGrades]
+  )
+
+  const { bulkTagAction, listProps } = useEntityListControls(
     grades,
     GRADE_FILTER_ACCESSORS,
     {
       rowNoun: "成績算出",
       searchPlaceholder: "成績算出名・タグ・学級で検索",
       tagOptions: allTags,
+      assignTag: assignTagToGrades,
       classroomOptions,
     }
   )
 
-  /** 選んだ成績算出へ、既存のタグを保ったまま同じタグを足す */
-  const handleBulkAddTag = useCallback(
-    (tagName: string) =>
-      addTagToSelection(tagName, async (trimmedTagName, gradeIds) => {
-        const tag = await findOrCreateTag.mutateAsync(trimmedTagName)
-        await addTagToGrades.mutateAsync({ gradeIds, tagId: tag.id })
+  const actions = useMemo(
+    () =>
+      entityListToolbarActions({
+        create: entityListCreateAction({
+          label: "新規作成",
+          onClick: () => void handleCreate(),
+        }),
+        archiveImport: importToolbarAction,
+        bulkTag: bulkTagAction,
       }),
-    [addTagToSelection, findOrCreateTag, addTagToGrades]
+    [bulkTagAction, handleCreate, importToolbarAction]
   )
-
-  const actions = useMemo<ToolbarAction[]>(() => {
-    const toolbarActions: ToolbarAction[] = [
-      toolbarButtonAction({
-        id: "create",
-        priority: 80,
-        icon: Plus,
-        label: "新規作成",
-        onClick: () => void handleCreate(),
-      }),
-      importToolbarAction,
-    ]
-
-    if (selectedIds.size > 0) {
-      toolbarActions.push(
-        bulkTagToolbarAction({
-          priority: 60,
-          selectedCount: selectedIds.size,
-          allTags,
-          onAssign: handleBulkAddTag,
-        })
-      )
-    }
-
-    return toolbarActions
-  }, [
-    allTags,
-    handleBulkAddTag,
-    handleCreate,
-    importToolbarAction,
-    selectedIds,
-  ])
 
   return (
     <>

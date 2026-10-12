@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
+import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import type { MultiSelectFilterConfig } from "@/components/common/ListFilterControls"
+import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 
@@ -19,8 +21,13 @@ interface UseEntityListControlsOptions<TRow> {
   rowNoun: string
   /** 検索欄の placeholder（「試験名・タグで検索」など、何を見ているかを言う） */
   searchPlaceholder: string
-  /** タグ絞り込みの選択肢 */
+  /** タグ絞り込みの選択肢。一括タグ付けの候補にも同じものを出す */
   tagOptions: MultiSelectFilterConfig["options"]
+  /**
+   * 選んだ行へタグを足す書き込み（実体ごとに書き込み先が違う）。
+   * 依存配列に入るので、呼び手は `useCallback` で参照を安定させること
+   */
+  assignTag: AssignTagToRows
   /** 学級絞り込みの選択肢。学級を持たない画面は渡さない（絞り込みごと出さない） */
   classroomOptions?: MultiSelectFilterConfig["options"]
   /**
@@ -47,6 +54,7 @@ export function useEntityListControls<TRow extends { id: string }>(
     rowNoun,
     searchPlaceholder,
     tagOptions,
+    assignTag,
     classroomOptions,
     isSelectable,
   }: UseEntityListControlsOptions<TRow>
@@ -106,7 +114,7 @@ export function useEntityListControls<TRow extends { id: string }>(
    * - 成功したら件数を知らせ、選択を解く
    */
   const addTagToSelection = useCallback(
-    async (tagName: string, assignTag: AssignTagToRows) => {
+    async (tagName: string) => {
       const trimmedTagName = tagName.trim()
       if (!trimmedTagName || selectedIds.size === 0) return
       const rowIds = [...selectedIds]
@@ -120,7 +128,24 @@ export function useEntityListControls<TRow extends { id: string }>(
       })
       clearSelection()
     },
-    [selectedIds, clearSelection, rowNoun]
+    [selectedIds, assignTag, clearSelection, rowNoun]
+  )
+
+  /**
+   * ヘッダー右の「タグ追加」。選択中だけ現れる。並びの中での優先度は4画面とも 60
+   * （読み込みの 70 より先に畳む）。並びのどこに置くかは呼び手が決める
+   */
+  const bulkTagAction = useMemo<ToolbarAction | null>(
+    () =>
+      selectedIds.size > 0
+        ? bulkTagToolbarAction({
+            priority: 60,
+            selectedCount: selectedIds.size,
+            allTags: tagOptions,
+            onAssign: addTagToSelection,
+          })
+        : null,
+    [selectedIds.size, tagOptions, addTagToSelection]
   )
 
   const tagFilter = useMemo<MultiSelectFilterConfig>(
@@ -174,7 +199,8 @@ export function useEntityListControls<TRow extends { id: string }>(
   return {
     /** 選択（今ある行のうち選べるものだけ。絞り込みで隠れた行も含む） */
     selectedIds,
-    addTagToSelection,
+    /** ヘッダー右の「タグ追加」。何も選んでいないときは null */
+    bulkTagAction,
     /** `EntityListPage` へそのまま広げて渡す */
     listProps,
   }

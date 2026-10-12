@@ -12,6 +12,8 @@ import type {
 } from "@/types/drawingAnnotation.types"
 import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 
+import { constrainToSquare } from "./squareConstraint"
+
 /** 新規描画作成フックのプロパティ */
 interface UseDrawingCreationProps {
   /** 現在のツール */
@@ -83,46 +85,6 @@ export function useDrawingCreation({
 }: UseDrawingCreationProps): UseDrawingCreationReturn {
   // 描画中の要素を追跡（描画完了時にDB保存するため）
   const drawingElementRef = useRef<DrawingAnnotation | null>(null)
-
-  /**
-   * Shift制約を適用（正方形/正円）
-   *
-   * @description
-   * 正規化座標で同じ値にすると画像のアスペクト比により縦横比が崩れる。
-   * ピクセル単位で同じサイズになるよう変換する。
-   *
-   * @param width - 幅（正規化座標）
-   * @param height - 高さ（正規化座標）
-   * @returns 制約適用後の幅と高さ
-   */
-  const applyShiftConstraint = useCallback(
-    (width: number, height: number): { width: number; height: number } => {
-      if (!isShiftPressed) {
-        return { width, height }
-      }
-      const absWidth = Math.abs(width)
-      const absHeight = Math.abs(height)
-
-      // ピクセル相当サイズで比較（imageHeightを基準に正規化）
-      const pixelWidthRelative = absWidth * imageAspectRatio
-      const pixelHeightRelative = absHeight
-
-      if (pixelWidthRelative <= pixelHeightRelative) {
-        const constrainedHeight = absWidth * imageAspectRatio
-        return {
-          width: width >= 0 ? absWidth : -absWidth,
-          height: height >= 0 ? constrainedHeight : -constrainedHeight,
-        }
-      } else {
-        const constrainedWidth = absHeight / imageAspectRatio
-        return {
-          width: width >= 0 ? constrainedWidth : -constrainedWidth,
-          height: height >= 0 ? absHeight : -absHeight,
-        }
-      }
-    },
-    [isShiftPressed, imageAspectRatio]
-  )
 
   /**
    * Shift制約を適用（水平・垂直線）
@@ -291,9 +253,12 @@ export function useDrawingCreation({
         let width = imageCoords.x - startX
         let height = imageCoords.y - startY
 
-        const constrained = applyShiftConstraint(width, height)
-        width = constrained.width
-        height = constrained.height
+        // Shift制約を適用（正方形/正円）
+        if (isShiftPressed) {
+          const constrained = constrainToSquare(width, height, imageAspectRatio)
+          width = constrained.width
+          height = constrained.height
+        }
 
         setDrawingElements((prev) =>
           prev.map((element) =>
@@ -308,7 +273,8 @@ export function useDrawingCreation({
     [
       isDrawing,
       applyLineShiftConstraint,
-      applyShiftConstraint,
+      isShiftPressed,
+      imageAspectRatio,
       setDrawingElements,
     ]
   )

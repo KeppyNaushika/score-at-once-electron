@@ -6,6 +6,8 @@ import { useCallback } from "react"
 
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
+import { constrainToSquare } from "./squareConstraint"
+
 /** リサイズの元の境界 */
 export interface ResizeOriginalBounds {
   x: number
@@ -136,44 +138,6 @@ export function useElementResize({
   )
 
   /**
-   * Shift制約を適用（正方形/正円）
-   *
-   * @description
-   * ピクセル単位で同じサイズになるよう変換する。
-   *
-   * @param width - 幅（正規化座標）
-   * @param height - 高さ（正規化座標）
-   * @returns 制約適用後の幅と高さ
-   */
-  const applyShiftConstraint = useCallback(
-    (width: number, height: number): { width: number; height: number } => {
-      if (!isShiftPressed) {
-        return { width, height }
-      }
-      const absWidth = Math.abs(width)
-      const absHeight = Math.abs(height)
-
-      const pixelWidthRelative = absWidth * imageAspectRatio
-      const pixelHeightRelative = absHeight
-
-      if (pixelWidthRelative <= pixelHeightRelative) {
-        const constrainedHeight = absWidth * imageAspectRatio
-        return {
-          width: width >= 0 ? absWidth : -absWidth,
-          height: height >= 0 ? constrainedHeight : -constrainedHeight,
-        }
-      } else {
-        const constrainedWidth = absHeight / imageAspectRatio
-        return {
-          width: width >= 0 ? constrainedWidth : -constrainedWidth,
-          height: height >= 0 ? absHeight : -absHeight,
-        }
-      }
-    },
-    [isShiftPressed, imageAspectRatio]
-  )
-
-  /**
    * リサイズハンドルを取得
    *
    * @description
@@ -253,7 +217,11 @@ export function useElementResize({
 
       // Shift制約を適用
       if (isShiftPressed) {
-        const constrained = applyShiftConstraint(newWidth, newHeight)
+        const constrained = constrainToSquare(
+          newWidth,
+          newHeight,
+          imageAspectRatio
+        )
         if (handle === "top-left") {
           newX =
             originalBounds.x +
@@ -305,7 +273,7 @@ export function useElementResize({
         })
       )
     },
-    [isShiftPressed, applyShiftConstraint, clampNormalized, setDrawingElements]
+    [isShiftPressed, imageAspectRatio, clampNormalized, setDrawingElements]
   )
 
   return {

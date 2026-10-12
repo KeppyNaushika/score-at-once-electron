@@ -20,13 +20,18 @@
  */
 
 import AdmZip from "adm-zip"
-import * as crypto from "crypto"
-import * as fs from "fs"
-import * as os from "os"
-import * as path from "path"
 
-import type { ArchiveExamData } from "../../../../../src/types/examArchive.types"
-import { EXAM_CURRENT_VERSION } from "../../../../../src/types/examArchive.types"
+import type {
+  ConvertedCropRegion,
+  ConvertedExamPage,
+  ConvertedSubtotalData,
+} from "../templateScoreArchive"
+import {
+  appendSubtotalGroup,
+  createEmptySubtotalData,
+  generateUuid,
+  writeTemplateScoreArchive,
+} from "../templateScoreArchive"
 import type {
   DatAbcData,
   DatAngle,
@@ -44,15 +49,6 @@ import {
 } from "./types"
 
 /**
- * 書き出す .score の中の CropRegion 1件。
- *
- * ここが作るのは DB の行ではなく**アーカイブの中身**なので、Prisma の型ではなく
- * アーカイブの型（版ごとに凍結された wire format）から導く。手写しにしておくと、
- * アーカイブ側に列が増えても .dat 変換だけが古い形を書き続ける。
- */
-type CropRegionData = ArchiveExamData["cropRegions"][number]
-
-/**
  * .datファイルを.score形式に変換
  */
 export async function convertDatToScore(
@@ -63,104 +59,10 @@ export async function convertDatToScore(
     const datZip = new AdmZip(datPath)
     const entries = datZip.getEntries()
 
-    // 2. RealtendantAppVersion.txt で検証
-    const versionEntry = entries.find((entry) =>
-      entry.entryName.endsWith("RealtendantAppVersion.txt")
-    )
-    if (!versionEntry) {
-      throw new Error(
-        "リアテンダントのデータファイルではありません（RealtendantAppVersion.txt が見つかりません）"
-      )
-    }
-
-    // 3. contents.json → image_scale取得
-    const contentsEntry = entries.find((entry) =>
-      entry.entryName.endsWith("contents.json")
-    )
-    if (!contentsEntry) {
-      throw new Error("contents.json が見つかりません")
-    }
-    const contentsArray: DatContents[] = JSON.parse(
-      contentsEntry.getData().toString("utf8")
-    )
-    const contents = contentsArray[0]
-    if (!contents) {
-      throw new Error("contents.json が空です")
-    }
-    const imageScale = contents.image_scale || 0.5
-
-    // 4. workbooks.json → 試験名・教科取得
-    const workbooksEntry = entries.find((entry) =>
-      entry.entryName.endsWith("workbooks.json")
-    )
-    if (!workbooksEntry) {
-      throw new Error("workbooks.json が見つかりません")
-    }
-    const workbooks: DatWorkbook[] = JSON.parse(
-      workbooksEntry.getData().toString("utf8")
-    )
-    const workbook = workbooks[0]
-    if (!workbook) {
-      throw new Error("workbooks.json が空です")
-    }
-
-    // 5. .jsファイルを発見し、abcDataをパース
-    const jsEntry = entries.find(
-      (entry) =>
-        entry.entryName.endsWith(".js") &&
-        !entry.entryName.endsWith("_answer.js")
-    )
-    if (!jsEntry) {
-      throw new Error("座標データの .js ファイルが見つかりません")
-    }
-    const jsContent = jsEntry.getData().toString("utf8")
-    const jsonStr = jsContent.replace(/^var\s+abcData\s*=\s*/, "")
-    let abcData: DatAbcData
-    try {
-      abcData = JSON.parse(jsonStr)
-    } catch {
-      throw new Error("座標データのパースに失敗しました")
-    }
-
-    // 6. workbook_infoes.json → abc_xml（スコア印字エリア情報）
-    const workbookInfoEntry = entries.find((entry) =>
-      entry.entryName.endsWith("workbook_infoes.json")
-    )
-    let abcXml: string | null = null
-    if (workbookInfoEntry) {
-      try {
-        const infoes: Array<{ abc_xml?: string | null }> = JSON.parse(
-          workbookInfoEntry.getData().toString("utf8")
-        )
-        abcXml = infoes[0]?.abc_xml ?? null
-      } catch {
-        // パース失敗時はスコアエリア無しで続行
-      }
-    }
-
-    // 7. 模範解答画像を発見し、PNGヘッダーから画像サイズを取得
-    const masterImageEntries = entries
-      .filter(
-        (entry) =>
-          entry.entryName.includes("/Correct/abc_m") &&
-          entry.entryName.endsWith(".png")
-      )
-      .sort((entryA, entryB) =>
-        entryA.entryName.localeCompare(entryB.entryName)
-      )
-
-    if (masterImageEntries.length === 0) {
-      throw new Error("模範解答画像が見つかりません")
-    }
-
-    // ページ番号 → 画像サイズ（フルスケール）
-    const pageImageSizes = new Map<number, { w: number; h: number }>()
-    for (let i = 0; i < masterImageEntries.length; i++) {
-      const imgBuffer = masterImageEntries[i].getData()
-      const width = imgBuffer.readUInt32BE(16)
-      const height = imgBuffer.readUInt32BE(20)
-      pageImageSizes.set(i + 1, { w: width, h: height })
-    }
+    // 2〜7. 試験の定義・座標・模範解答画像を読む
+    const { contents, workbook, abcData, abcXml, masterImageEntries } =
+      readDatExamSource(entries)
+    const pageImageSizes = readPageImageSizes(masterImageEntries)
 
     // 8. UUID生成と試験構築
     const examId = generateUuid()
@@ -172,66 +74,26 @@ export async function convertDatToScore(
       pageUuidMap.set(pageNo, generateUuid())
     }
 
-    // ExamPages 生成（模範解答画像はページが持つ）。
-    // 画像は abc_m01.png … の連番で、ページ番号と1対1に対応する
-    const examPages = Array.from(pageUuidMap.entries()).map(([pageNo, id]) => ({
-      id,
+    const examPages = buildExamPages(
+      pageUuidMap,
+      masterImageEntries.length,
       examId,
-      pageNumber: pageNo,
-      imagePath:
-        pageNo <= masterImageEntries.length
-          ? `abc_m${String(pageNo).padStart(2, "0")}.png`
-          : "",
-      pageSize: "A4",
-      createdAt: now,
-      updatedAt: now,
-    }))
+      now
+    )
 
     // 9. questions.json, angles.json, question_angles.json 読み込み
-    const questionsEntry = entries.find((entry) =>
-      entry.entryName.endsWith("questions.json")
-    )
-    const questions: DatQuestion[] = questionsEntry
-      ? JSON.parse(questionsEntry.getData().toString("utf8"))
-      : []
+    const { questions, angles, questionAngles } = readDatSubtotalSource(entries)
 
-    const anglesEntry = entries.find((entry) =>
-      entry.entryName.endsWith("angles.json")
-    )
-    const angles: DatAngle[] = anglesEntry
-      ? JSON.parse(anglesEntry.getData().toString("utf8"))
-      : []
-
-    const questionAnglesEntry = entries.find((entry) =>
-      entry.entryName.endsWith("question_angles.json")
-    )
-    const questionAngles: DatQuestionAngle[] = questionAnglesEntry
-      ? JSON.parse(questionAnglesEntry.getData().toString("utf8"))
-      : []
-
-    // 10. CropRegions 生成（設問 + 出席番号/氏名）
-    const { regions: questionRegions, quizNameToCropIds } =
-      convertPageBlocksToCropRegions(
+    // 10〜11. CropRegions 生成（設問 + 出席番号/氏名 + スコア印字エリア）
+    const { cropRegions, quizNameToCropIds, largeQuestionToCropId } =
+      buildCropRegions(
         abcData.PageBlock,
-        pageUuidMap,
-        pageImageSizes,
-        imageScale,
-        now
-      )
-    const cropRegions = [...questionRegions]
-
-    // 11. abc_xml からスコア印字エリアを抽出してCropRegionsに追加
-    let largeQuestionToCropId = new Map<string, string>()
-    if (abcXml) {
-      const scoreAreaResult = extractScoreAreasFromAbcXml(
         abcXml,
         pageUuidMap,
         pageImageSizes,
+        contents.image_scale || 0.5,
         now
       )
-      cropRegions.push(...scoreAreaResult.regions)
-      largeQuestionToCropId = scoreAreaResult.largeQuestionToCropId
-    }
 
     // 12. SubtotalGroup / Subtotal / CropSubtotal 生成
     const subtotalData = generateSubtotalData(
@@ -244,122 +106,27 @@ export async function convertDatToScore(
       now
     )
 
-    // 13. 試験データ構築
+    // 13. .score ZIP ファイルを生成（模範解答画像は master-images/ にコピー）
     const subjectName =
       DAT_SUBJECT_MAP[workbook.subject_id] || `教科${workbook.subject_id}`
     const examTitle = `${contents.contents_name} ${workbook.workbook_name}`
 
-    const examData = {
-      exam: {
-        id: examId,
-        examName: examTitle,
-        referenceDate: null,
-        description: `リアテンダントからインポート（${subjectName}）`,
-        createdAt: now,
-        updatedAt: now,
-      },
-      examPages,
-      cropRegions,
-      pageImages: [],
-      studentAnswerImages: [],
-      examStudents: [],
-      userExams: [],
-      examSubtotalGroups: subtotalData.examSubtotalGroups,
-      examClassrooms: [],
-      examMarkingFormats: [],
-    }
-
-    // 14. manifest 生成
-    const manifest = {
-      version: EXAM_CURRENT_VERSION,
-      schemaVersion: "dat-import",
-      appVersion: "0.0.0",
-      exportedAt: now,
-      sourceDbId: `dat:${contents.contents_uid}`,
+    const scorePath = writeTemplateScoreArchive({
       examId,
       examName: examTitle,
-      exportMode: "template_with_subtotals",
-      counts: {
-        students: 0,
-        classes: 0,
-        users: 0,
-        pages: examPages.length,
-        regions: cropRegions.length,
-        scores: 0,
-        annotations: 0,
-        subtotalGroups: subtotalData.subtotalGroups.length,
-        masterImages: examPages.filter((page) => page.imagePath).length,
-        answerSheetImages: 0,
-      },
-    }
-
-    // 15. .score ZIP ファイルを生成
-    const scoreZip = new AdmZip()
-
-    scoreZip.addFile(
-      "manifest.json",
-      Buffer.from(JSON.stringify(manifest, null, 2))
-    )
-    scoreZip.addFile(
-      "exam.json",
-      Buffer.from(JSON.stringify(examData, null, 2))
-    )
-    scoreZip.addFile(
-      "students.json",
-      Buffer.from(JSON.stringify({ students: [] }, null, 2))
-    )
-    scoreZip.addFile(
-      "classes.json",
-      Buffer.from(JSON.stringify({ classes: [], memberships: [] }, null, 2))
-    )
-    scoreZip.addFile(
-      "users.json",
-      Buffer.from(JSON.stringify({ users: [] }, null, 2))
-    )
-    scoreZip.addFile(
-      "subtotals.json",
-      Buffer.from(
-        JSON.stringify(
-          {
-            subtotalGroups: subtotalData.subtotalGroups,
-            subtotals: subtotalData.subtotals,
-            cropSubtotals: subtotalData.cropSubtotals,
-          },
-          null,
-          2
-        )
-      )
-    )
-    scoreZip.addFile(
-      "scores.json",
-      Buffer.from(
-        JSON.stringify({ questionScores: [], drawingAnnotations: [] }, null, 2)
-      )
-    )
-    scoreZip.addFile(
-      "tags.json",
-      Buffer.from(
-        JSON.stringify(
-          { tags: [], tagSubtotalGroups: [], examTags: [] },
-          null,
-          2
-        )
-      )
-    )
-
-    // 模範解答画像をmaster-images/にコピー
-    for (let i = 0; i < masterImageEntries.length; i++) {
-      const fileName = `abc_m${String(i + 1).padStart(2, "0")}.png`
-      scoreZip.addFile(
-        `master-images/${fileName}`,
-        masterImageEntries[i].getData()
-      )
-    }
-
-    // 一時ファイルに書き出し
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dat-convert-"))
-    const scorePath = path.join(tempDir, "converted.score")
-    scoreZip.writeZip(scorePath)
+      description: `リアテンダントからインポート（${subjectName}）`,
+      schemaVersion: "dat-import",
+      sourceDbId: `dat:${contents.contents_uid}`,
+      examPages,
+      cropRegions,
+      subtotalData,
+      masterImages: masterImageEntries.map((masterImageEntry, index) => ({
+        fileName: masterImageFileName(index + 1),
+        image: masterImageEntry.getData(),
+      })),
+      tempDirPrefix: "dat-convert-",
+      now,
+    })
 
     return {
       scorePath,
@@ -371,9 +138,228 @@ export async function convertDatToScore(
   }
 }
 
+/** 名前が suffix で終わる最初のエントリ */
+function findEntryBySuffix(
+  entries: AdmZip.IZipEntry[],
+  suffix: string
+): AdmZip.IZipEntry | undefined {
+  return entries.find((entry) => entry.entryName.endsWith(suffix))
+}
+
+/**
+ * 試験の定義・座標・模範解答画像のエントリを読む
+ *
+ * どれかが欠けていれば .dat として読めないので投げる。
+ * workbook_infoes.json（スコア印字エリア）だけは無くても続行する。
+ */
+function readDatExamSource(entries: AdmZip.IZipEntry[]): {
+  contents: DatContents
+  workbook: DatWorkbook
+  abcData: DatAbcData
+  abcXml: string | null
+  masterImageEntries: AdmZip.IZipEntry[]
+} {
+  // 2. RealtendantAppVersion.txt で検証
+  const versionEntry = findEntryBySuffix(entries, "RealtendantAppVersion.txt")
+  if (!versionEntry) {
+    throw new Error(
+      "リアテンダントのデータファイルではありません（RealtendantAppVersion.txt が見つかりません）"
+    )
+  }
+
+  // 3. contents.json → image_scale取得
+  const contentsEntry = findEntryBySuffix(entries, "contents.json")
+  if (!contentsEntry) {
+    throw new Error("contents.json が見つかりません")
+  }
+  const contentsArray: DatContents[] = JSON.parse(
+    contentsEntry.getData().toString("utf8")
+  )
+  const contents = contentsArray[0]
+  if (!contents) {
+    throw new Error("contents.json が空です")
+  }
+
+  // 4. workbooks.json → 試験名・教科取得
+  const workbooksEntry = findEntryBySuffix(entries, "workbooks.json")
+  if (!workbooksEntry) {
+    throw new Error("workbooks.json が見つかりません")
+  }
+  const workbooks: DatWorkbook[] = JSON.parse(
+    workbooksEntry.getData().toString("utf8")
+  )
+  const workbook = workbooks[0]
+  if (!workbook) {
+    throw new Error("workbooks.json が空です")
+  }
+
+  // 5. .jsファイルを発見し、abcDataをパース
+  const jsEntry = entries.find(
+    (entry) =>
+      entry.entryName.endsWith(".js") && !entry.entryName.endsWith("_answer.js")
+  )
+  if (!jsEntry) {
+    throw new Error("座標データの .js ファイルが見つかりません")
+  }
+  const jsContent = jsEntry.getData().toString("utf8")
+  const jsonStr = jsContent.replace(/^var\s+abcData\s*=\s*/, "")
+  let abcData: DatAbcData
+  try {
+    abcData = JSON.parse(jsonStr)
+  } catch {
+    throw new Error("座標データのパースに失敗しました")
+  }
+
+  // 6. workbook_infoes.json → abc_xml（スコア印字エリア情報）
+  const workbookInfoEntry = findEntryBySuffix(entries, "workbook_infoes.json")
+  let abcXml: string | null = null
+  if (workbookInfoEntry) {
+    try {
+      const infoes: Array<{ abc_xml?: string | null }> = JSON.parse(
+        workbookInfoEntry.getData().toString("utf8")
+      )
+      abcXml = infoes[0]?.abc_xml ?? null
+    } catch {
+      // パース失敗時はスコアエリア無しで続行
+    }
+  }
+
+  // 7. 模範解答画像を発見（ファイル名順 = ページ順）
+  const masterImageEntries = entries
+    .filter(
+      (entry) =>
+        entry.entryName.includes("/Correct/abc_m") &&
+        entry.entryName.endsWith(".png")
+    )
+    .sort((entryA, entryB) => entryA.entryName.localeCompare(entryB.entryName))
+
+  if (masterImageEntries.length === 0) {
+    throw new Error("模範解答画像が見つかりません")
+  }
+
+  return { contents, workbook, abcData, abcXml, masterImageEntries }
+}
+
+/**
+ * 模範解答画像の PNG ヘッダー（IHDR）から、ページ番号 → 画像サイズ（フルスケール）を読む
+ *
+ * ページ番号は模範解答画像のファイル名順の連番（1始まり）。
+ */
+function readPageImageSizes(
+  masterImageEntries: AdmZip.IZipEntry[]
+): Map<number, { w: number; h: number }> {
+  const pageImageSizes = new Map<number, { w: number; h: number }>()
+  masterImageEntries.forEach((masterImageEntry, index) => {
+    const imgBuffer = masterImageEntry.getData()
+    const width = imgBuffer.readUInt32BE(16)
+    const height = imgBuffer.readUInt32BE(20)
+    pageImageSizes.set(index + 1, { w: width, h: height })
+  })
+  return pageImageSizes
+}
+
+/** ページ番号に対応する、.score 内の模範解答画像のファイル名（abc_m01.png …） */
+function masterImageFileName(pageNo: number): string {
+  return `abc_m${String(pageNo).padStart(2, "0")}.png`
+}
+
+/**
+ * ExamPages 生成（模範解答画像はページが持つ）。
+ * 画像は abc_m01.png … の連番で、ページ番号と1対1に対応する
+ */
+function buildExamPages(
+  pageUuidMap: Map<number, string>,
+  masterImageCount: number,
+  examId: string,
+  now: string
+): ConvertedExamPage[] {
+  return Array.from(pageUuidMap.entries()).map(([pageNo, id]) => ({
+    id,
+    examId,
+    pageNumber: pageNo,
+    imagePath: pageNo <= masterImageCount ? masterImageFileName(pageNo) : "",
+    pageSize: "A4",
+    createdAt: now,
+    updatedAt: now,
+  }))
+}
+
+/**
+ * 小計の生成に使う questions.json, angles.json, question_angles.json を読む
+ *
+ * どれも無ければ空として扱う。
+ */
+function readDatSubtotalSource(entries: AdmZip.IZipEntry[]): {
+  questions: DatQuestion[]
+  angles: DatAngle[]
+  questionAngles: DatQuestionAngle[]
+} {
+  const questionsEntry = findEntryBySuffix(entries, "questions.json")
+  const questions: DatQuestion[] = questionsEntry
+    ? JSON.parse(questionsEntry.getData().toString("utf8"))
+    : []
+
+  const anglesEntry = findEntryBySuffix(entries, "angles.json")
+  const angles: DatAngle[] = anglesEntry
+    ? JSON.parse(anglesEntry.getData().toString("utf8"))
+    : []
+
+  const questionAnglesEntry = findEntryBySuffix(entries, "question_angles.json")
+  const questionAngles: DatQuestionAngle[] = questionAnglesEntry
+    ? JSON.parse(questionAnglesEntry.getData().toString("utf8"))
+    : []
+
+  return { questions, angles, questionAngles }
+}
+
+/**
+ * CropRegions 生成
+ *
+ * PageBlock から設問・出席番号・氏名を、abc_xml からスコア印字エリアを作る。
+ * 並びは PageBlock 由来のものが先、スコア印字エリアが後。
+ */
+function buildCropRegions(
+  pageBlocks: DatPageBlock[],
+  abcXml: string | null,
+  pageUuidMap: Map<number, string>,
+  pageImageSizes: Map<number, { w: number; h: number }>,
+  imageScale: number,
+  now: string
+): {
+  cropRegions: ConvertedCropRegion[]
+  quizNameToCropIds: Map<string, string[]>
+  largeQuestionToCropId: Map<string, string>
+} {
+  // 設問 + 出席番号/氏名
+  const { regions: questionRegions, quizNameToCropIds } =
+    convertPageBlocksToCropRegions(
+      pageBlocks,
+      pageUuidMap,
+      pageImageSizes,
+      imageScale,
+      now
+    )
+  const cropRegions = [...questionRegions]
+
+  // abc_xml からスコア印字エリアを抽出してCropRegionsに追加
+  let largeQuestionToCropId = new Map<string, string>()
+  if (abcXml) {
+    const scoreAreaResult = extractScoreAreasFromAbcXml(
+      abcXml,
+      pageUuidMap,
+      pageImageSizes,
+      now
+    )
+    cropRegions.push(...scoreAreaResult.regions)
+    largeQuestionToCropId = scoreAreaResult.largeQuestionToCropId
+  }
+
+  return { cropRegions, quizNameToCropIds, largeQuestionToCropId }
+}
+
 /** extractScoreAreasFromAbcXml の結果 */
 interface ScoreAreasResult {
-  regions: CropRegionData[]
+  regions: ConvertedCropRegion[]
   /** LargeQuestionNumber → CropRegion ID（大問小計の紐付け用） */
   largeQuestionToCropId: Map<string, string>
 }
@@ -394,7 +380,7 @@ function extractScoreAreasFromAbcXml(
   pageImageSizes: Map<number, { w: number; h: number }>,
   now: string
 ): ScoreAreasResult {
-  const regions: CropRegionData[] = []
+  const regions: ConvertedCropRegion[] = []
   const largeQuestionToCropId = new Map<string, string>()
 
   // 簡易XMLパース（DOMParser不要、正規表現で自己完結型要素を抽出）
@@ -478,7 +464,7 @@ function parseXmlAttributes(attrString: string): Record<string, string> {
 }
 
 /**
- * スコアエリア属性からCropRegionDataを生成
+ * スコアエリア属性からConvertedCropRegionを生成
  *
  * abc_xmlの座標はフルスケール（PageSize基準）
  * 正規化: フル画像サイズで割る
@@ -491,7 +477,7 @@ function createScoreRegion(
   pageUuidMap: Map<number, string>,
   pageImageSizes: Map<number, { w: number; h: number }>,
   now: string
-): CropRegionData | null {
+): ConvertedCropRegion | null {
   const examPageId = pageUuidMap.get(page)
   if (!examPageId) return null
 
@@ -522,7 +508,7 @@ function createScoreRegion(
 
 /** convertPageBlocksToCropRegions の結果 */
 interface CropRegionsResult {
-  regions: CropRegionData[]
+  regions: ConvertedCropRegion[]
   /** QuizName → CropRegion ID（小計グループ紐付け用） */
   quizNameToCropIds: Map<string, string[]>
 }
@@ -540,7 +526,7 @@ function convertPageBlocksToCropRegions(
   imageScale: number,
   now: string
 ): CropRegionsResult {
-  const regions: CropRegionData[] = []
+  const regions: ConvertedCropRegion[] = []
   const quizNameToCropIds = new Map<string, string[]>()
 
   // 全ページを通した設問の連番
@@ -667,37 +653,6 @@ function convertPageBlocksToCropRegions(
   return { regions, quizNameToCropIds }
 }
 
-/** SubtotalGroup/Subtotal/CropSubtotal/ExamSubtotalGroup の生成結果 */
-interface SubtotalGenerationResult {
-  subtotalGroups: Array<{
-    id: string
-    name: string
-    createdAt: string
-    updatedAt: string
-  }>
-  subtotals: Array<{
-    id: string
-    name: string
-    subtotalGroupId: string
-    order: number
-    createdAt: string
-    updatedAt: string
-  }>
-  cropSubtotals: Array<{
-    id: string
-    cropRegionId: string
-    subtotalId: string
-    assignmentType: string
-    createdAt: string
-    updatedAt: string
-  }>
-  examSubtotalGroups: Array<{
-    id: string
-    examId: string
-    subtotalGroupId: string
-  }>
-}
-
 /**
  * リアテンダントのデータから SubtotalGroup/Subtotal/CropSubtotal を生成
  *
@@ -716,11 +671,8 @@ function generateSubtotalData(
   largeQuestionToCropId: Map<string, string>,
   examId: string,
   now: string
-): SubtotalGenerationResult {
-  const subtotalGroups: SubtotalGenerationResult["subtotalGroups"] = []
-  const subtotals: SubtotalGenerationResult["subtotals"] = []
-  const cropSubtotals: SubtotalGenerationResult["cropSubtotals"] = []
-  const examSubtotalGroups: SubtotalGenerationResult["examSubtotalGroups"] = []
+): ConvertedSubtotalData {
+  const subtotalData = createEmptySubtotalData()
 
   // question_name → question_id マッピング
   const questionNameToId = new Map<string, number>()
@@ -746,72 +698,33 @@ function generateSubtotalData(
   }
 
   if (prefixSet.size > 0) {
-    const daimonGroupId = generateUuid()
-    subtotalGroups.push({
-      id: daimonGroupId,
-      name: "大問",
-      createdAt: now,
-      updatedAt: now,
-    })
-    examSubtotalGroups.push({
-      id: generateUuid(),
+    appendSubtotalGroup(
+      subtotalData,
+      {
+        groupName: "大問",
+        // プレフィックスを数値順に並べる
+        subtotals: Array.from(prefixSet)
+          .sort(
+            (prefixA, prefixB) => parseInt(prefixA, 10) - parseInt(prefixB, 10)
+          )
+          .map((prefix) => ({ key: prefix, name: `大問${prefix}` })),
+        // QUESTION_ASSIGNMENT: 各設問CropRegion → 大問Subtotal
+        questionAssignments: Array.from(
+          quizNameToCropIds,
+          ([quizName, cropRegionIds]) => ({
+            key: quizName.split("-")[0],
+            cropRegionIds,
+          })
+        ),
+        // SUBTOTAL_DEFINITION: 小計N CropRegion → 大問N Subtotal
+        definitionAssignments: Array.from(
+          largeQuestionToCropId,
+          ([lqNum, cropRegionId]) => ({ key: lqNum, cropRegionId })
+        ),
+      },
       examId,
-      subtotalGroupId: daimonGroupId,
-    })
-
-    // プレフィックスをソートしてSubtotalを作成
-    const sortedPrefixes = Array.from(prefixSet).sort(
-      (a, b) => parseInt(a, 10) - parseInt(b, 10)
+      now
     )
-    const prefixToSubtotalId = new Map<string, string>()
-
-    for (let i = 0; i < sortedPrefixes.length; i++) {
-      const prefix = sortedPrefixes[i]
-      const subtotalId = generateUuid()
-      prefixToSubtotalId.set(prefix, subtotalId)
-
-      subtotals.push({
-        id: subtotalId,
-        name: `大問${prefix}`,
-        subtotalGroupId: daimonGroupId,
-        order: i,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
-
-    // QUESTION_ASSIGNMENT: 各設問CropRegion → 大問Subtotal
-    for (const [quizName, cropIds] of quizNameToCropIds) {
-      const prefix = quizName.split("-")[0]
-      const subtotalId = prefixToSubtotalId.get(prefix)
-      if (!subtotalId) continue
-
-      for (const cropId of cropIds) {
-        cropSubtotals.push({
-          id: generateUuid(),
-          cropRegionId: cropId,
-          subtotalId,
-          assignmentType: "QUESTION_ASSIGNMENT",
-          createdAt: now,
-          updatedAt: now,
-        })
-      }
-    }
-
-    // SUBTOTAL_DEFINITION: 小計N CropRegion → 大問N Subtotal
-    for (const [lqNum, cropId] of largeQuestionToCropId) {
-      const subtotalId = prefixToSubtotalId.get(lqNum)
-      if (!subtotalId) continue
-
-      cropSubtotals.push({
-        id: generateUuid(),
-        cropRegionId: cropId,
-        subtotalId,
-        assignmentType: "SUBTOTAL_DEFINITION",
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
   }
 
   // ========================================
@@ -823,68 +736,36 @@ function generateSubtotalData(
     .sort((angleA, angleB) => angleA.angle_sort_no - angleB.angle_sort_no)
 
   if (activeAngles.length > 0 && questionAngles.length > 0) {
-    const kantenGroupId = generateUuid()
-    subtotalGroups.push({
-      id: kantenGroupId,
-      name: "観点",
-      createdAt: now,
-      updatedAt: now,
-    })
-    examSubtotalGroups.push({
-      id: generateUuid(),
-      examId,
-      subtotalGroupId: kantenGroupId,
-    })
-
-    // angle_id → Subtotal ID マッピング
-    const angleIdToSubtotalId = new Map<number, string>()
-
-    for (let i = 0; i < activeAngles.length; i++) {
-      const angle = activeAngles[i]
-      const subtotalId = generateUuid()
-      angleIdToSubtotalId.set(angle.id, subtotalId)
-
-      subtotals.push({
-        id: subtotalId,
-        name: angle.angle_name,
-        subtotalGroupId: kantenGroupId,
-        order: i,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
-
     // QUESTION_ASSIGNMENT: 各設問CropRegion → 観点Subtotal
     // QuizName → question_id → angle_id → Subtotal
-    for (const [quizName, cropIds] of quizNameToCropIds) {
-      const questionId = questionNameToId.get(quizName)
-      if (questionId === undefined) continue
+    const angleAssignments = Array.from(quizNameToCropIds).flatMap(
+      ([quizName, cropRegionIds]) => {
+        const questionId = questionNameToId.get(quizName)
+        if (questionId === undefined) return []
 
-      const angleId = questionIdToAngleId.get(questionId)
-      if (angleId === undefined) continue
+        const angleId = questionIdToAngleId.get(questionId)
+        if (angleId === undefined) return []
 
-      const subtotalId = angleIdToSubtotalId.get(angleId)
-      if (!subtotalId) continue
-
-      for (const cropId of cropIds) {
-        cropSubtotals.push({
-          id: generateUuid(),
-          cropRegionId: cropId,
-          subtotalId,
-          assignmentType: "QUESTION_ASSIGNMENT",
-          createdAt: now,
-          updatedAt: now,
-        })
+        return [{ key: angleId, cropRegionIds }]
       }
-    }
+    )
+
+    appendSubtotalGroup(
+      subtotalData,
+      {
+        groupName: "観点",
+        subtotals: activeAngles.map((angle) => ({
+          key: angle.id,
+          name: angle.angle_name,
+        })),
+        questionAssignments: angleAssignments,
+        // 観点の印字欄（AngleScoreArea）はどの観点か分からないので紐付けない
+        definitionAssignments: [],
+      },
+      examId,
+      now
+    )
   }
 
-  return { subtotalGroups, subtotals, cropSubtotals, examSubtotalGroups }
-}
-
-/**
- * UUID v4 生成
- */
-function generateUuid(): string {
-  return crypto.randomUUID()
+  return subtotalData
 }

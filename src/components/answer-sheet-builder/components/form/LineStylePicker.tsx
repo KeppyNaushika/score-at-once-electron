@@ -1,7 +1,5 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
-
 import { Slider } from "@/components/ui/slider"
 import {
   Tooltip,
@@ -16,6 +14,7 @@ import type {
 
 import { useAsbGesture } from "../../AsbGestureContext"
 import { DEFAULT_DASH_RATIO, DEFAULT_GAP_RATIO } from "../../constants"
+import { EditableNumber } from "./EditableNumber"
 
 interface LineStylePickerProps {
   borderConfig: BorderConfig
@@ -161,75 +160,6 @@ function LineIcon({ style }: { style: BorderLineStyle }) {
   )
 }
 
-function EditableValue({
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  value: number
-  min: number
-  max: number
-  step: number
-  onChange: (v: number) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [editValue, setEditValue] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus()
-      inputRef.current?.select()
-    }
-  }, [editing])
-
-  const handleChange = useCallback(
-    (raw: string) => {
-      setEditValue(raw)
-      const parsed = parseFloat(raw)
-      if (!isNaN(parsed) && parsed >= min && parsed <= max) {
-        onChange(parsed)
-      }
-    },
-    [min, max, onChange]
-  )
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        type="number"
-        aria-label="線の太さ"
-        className="box-border h-5 w-8 shrink-0 rounded border border-input bg-background text-center text-[10px] outline-none"
-        value={editValue}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) => handleChange(e.target.value)}
-        onBlur={() => setEditing(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === "Escape") setEditing(false)
-        }}
-      />
-    )
-  }
-
-  return (
-    <span
-      className="inline-flex h-5 w-8 shrink-0 cursor-pointer items-center justify-end text-[10px] text-muted-foreground select-none hover:underline"
-      onDoubleClick={() => {
-        setEditValue(value.toFixed(1))
-        setEditing(true)
-      }}
-      title="ダブルクリックで直接入力"
-    >
-      {value.toFixed(1)}
-    </span>
-  )
-}
-
 function BorderFieldRow({
   field,
   borderConfig,
@@ -297,12 +227,15 @@ function BorderFieldRow({
           }
           onValueCommit={gesture.end}
         />
-        <EditableValue
+        <EditableNumber
           value={width}
           min={0.1}
           max={1.5}
           step={0.1}
-          onChange={(v) => onUpdate({ [field.widthKey]: v })}
+          decimals={1}
+          ariaLabel={`${field.label}の線の太さ`}
+          widthClassName="w-8"
+          onChange={(typedWidth) => onUpdate({ [field.widthKey]: typedWidth })}
         />
       </div>
       {showGap && (
@@ -327,12 +260,17 @@ function BorderFieldRow({
                 }
                 onValueCommit={gesture.end}
               />
-              <EditableValue
+              <EditableNumber
                 value={dashRatio}
                 min={0.5}
                 max={10}
                 step={0.5}
-                onChange={(v) => onUpdate({ [field.dashRatioKey]: v })}
+                decimals={1}
+                ariaLabel={`${field.label}の破線の長さ`}
+                widthClassName="w-8"
+                onChange={(typedDashRatio) =>
+                  onUpdate({ [field.dashRatioKey]: typedDashRatio })
+                }
               />
             </div>
           )}
@@ -355,12 +293,17 @@ function BorderFieldRow({
               }
               onValueCommit={gesture.end}
             />
-            <EditableValue
+            <EditableNumber
               value={gapRatio}
               min={0.5}
               max={10}
               step={0.5}
-              onChange={(v) => onUpdate({ [field.gapRatioKey]: v })}
+              decimals={1}
+              ariaLabel={`${field.label}の間隔`}
+              widthClassName="w-8"
+              onChange={(typedGapRatio) =>
+                onUpdate({ [field.gapRatioKey]: typedGapRatio })
+              }
             />
           </div>
         </div>

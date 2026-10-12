@@ -1,13 +1,11 @@
 "use client"
 
 import { TriangleAlert } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
 
-import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import type { OMRMarkerConfig } from "@/types/answerSheetDefinition.types"
 
-import { useAsbGesture } from "../../AsbGestureContext"
+import { SliderWithInput } from "./SliderWithInput"
 
 interface OMRMarkerSettingsProps {
   config: OMRMarkerConfig
@@ -16,83 +14,11 @@ interface OMRMarkerSettingsProps {
   warnings: string[]
 }
 
-function EditableValue({
-  value,
-  min,
-  max,
-  step,
-  decimals = 1,
-  onChange,
-}: {
-  value: number
-  min: number
-  max: number
-  step: number
-  decimals?: number
-  onChange: (v: number) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [editValue, setEditValue] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus()
-      inputRef.current?.select()
-    }
-  }, [editing])
-
-  const handleChange = useCallback(
-    (raw: string) => {
-      setEditValue(raw)
-      const parsed = parseFloat(raw)
-      if (!isNaN(parsed) && parsed >= min && parsed <= max) {
-        onChange(parsed)
-      }
-    },
-    [min, max, onChange]
-  )
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        type="number"
-        aria-label="値を入力"
-        className="box-border h-5 w-10 shrink-0 rounded border border-input bg-background text-center text-[10px] outline-none"
-        value={editValue}
-        min={min}
-        max={max}
-        step={step}
-        onChange={(e) => handleChange(e.target.value)}
-        onBlur={() => setEditing(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === "Escape") setEditing(false)
-        }}
-      />
-    )
-  }
-
-  return (
-    <span
-      className="inline-flex h-5 w-10 shrink-0 cursor-pointer items-center justify-end text-[10px] text-muted-foreground select-none hover:underline"
-      onDoubleClick={() => {
-        setEditValue(value.toFixed(decimals))
-        setEditing(true)
-      }}
-      title="ダブルクリックで直接入力"
-    >
-      {value.toFixed(decimals)}
-    </span>
-  )
-}
-
 export function OMRMarkerSettings({
   config,
   onUpdate,
   warnings,
 }: OMRMarkerSettingsProps) {
-  const gesture = useAsbGesture()
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -101,60 +27,33 @@ export function OMRMarkerSettings({
         </h3>
         <Switch
           checked={config.enabled}
-          onCheckedChange={(v) => onUpdate({ enabled: v })}
+          onCheckedChange={(enabled) => onUpdate({ enabled })}
         />
       </div>
 
       {config.enabled && (
         <div className="space-y-1.5">
-          <div className="flex min-h-6 items-center gap-2">
-            <span className="w-8 shrink-0 text-[10px] text-muted-foreground">
-              サイズ
-            </span>
-            <Slider
-              className="min-w-12 flex-1"
-              value={[config.sizeMm]}
-              min={1.5}
-              max={15}
-              step={0.5}
-              onPointerDown={gesture.begin}
-              onValueChange={([slidingValue]) =>
-                onUpdate({ sizeMm: slidingValue })
-              }
-              onValueCommit={gesture.end}
-            />
-            <EditableValue
-              value={config.sizeMm}
-              min={0.5}
-              max={15}
-              step={0.5}
-              onChange={(v) => onUpdate({ sizeMm: v })}
-            />
-          </div>
-          <div className="flex min-h-6 items-center gap-2">
-            <span className="w-8 shrink-0 text-[10px] text-muted-foreground">
-              余白
-            </span>
-            <Slider
-              className="min-w-12 flex-1"
-              value={[config.offsetMm]}
-              min={5}
-              max={20}
-              step={0.5}
-              onPointerDown={gesture.begin}
-              onValueChange={([slidingValue]) =>
-                onUpdate({ offsetMm: slidingValue })
-              }
-              onValueCommit={gesture.end}
-            />
-            <EditableValue
-              value={config.offsetMm}
-              min={0}
-              max={20}
-              step={0.5}
-              onChange={(v) => onUpdate({ offsetMm: v })}
-            />
-          </div>
+          {/* 入力欄の下限はスライダーより低い（スライダーで届かない値も打てる） */}
+          <SliderWithInput
+            label="サイズ"
+            labelWidthClassName="w-8"
+            value={config.sizeMm}
+            min={1.5}
+            max={15}
+            step={0.5}
+            inputMin={0.5}
+            onChange={(sizeMm) => onUpdate({ sizeMm })}
+          />
+          <SliderWithInput
+            label="余白"
+            labelWidthClassName="w-8"
+            value={config.offsetMm}
+            min={5}
+            max={20}
+            step={0.5}
+            inputMin={0}
+            onChange={(offsetMm) => onUpdate({ offsetMm })}
+          />
         </div>
       )}
 

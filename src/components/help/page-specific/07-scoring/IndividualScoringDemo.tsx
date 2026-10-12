@@ -1,17 +1,17 @@
 "use client"
 
-import { RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback } from "react"
 
-import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
 import { KeyCap } from "@/components/help/common/DocComponents"
-import { Button } from "@/components/ui/button"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 
-import { MAX_SCORE } from "./constants"
+import { DemoPartialScoreModal } from "./DemoPartialScoreModal"
+import { DemoScoringHeader } from "./DemoScoringHeader"
 import { IndividualSheet } from "./IndividualSheet"
 import { ScoringButtonRow } from "./ScoringButtonRow"
-import type { DemoCell, DemoStatus, NavKeys, PartialInput } from "./types"
+import type { DemoCell, DemoStatus, NavKeys } from "./types"
+import type { DemoCursor } from "./useDemoScoring"
+import { useDemoScoring } from "./useDemoScoring"
 import { formatKey, scoreText } from "./utils"
 
 /** 個別表示の体験用：3人の答案を1人ずつ大きく表示して採点する */
@@ -58,198 +58,32 @@ export function IndividualScoringDemo({
   isActive: boolean
 }) {
   const colors = useScoringStatusColors()
-  const [cells, setCells] = useState<DemoCell[]>(INDIV_CELLS)
-  const [selected, setSelected] = useState(0)
-  const [partial, setPartial] = useState<PartialInput>({
-    active: false,
-    value: "",
-  })
 
-  const cellsRef = useRef(INDIV_CELLS)
-  const selectedRef = useRef(0)
-  const partialRef = useRef(partial)
-  const isActiveRef = useRef(isActive)
-  useEffect(() => {
-    isActiveRef.current = isActive
-  }, [isActive])
-
-  const setCellsSynced = (next: DemoCell[]) => {
-    cellsRef.current = next
-    setCells(next)
-  }
-  const setSelectedSynced = (n: number) => {
-    selectedRef.current = n
-    setSelected(n)
-  }
-  const setPartialSynced = (partialInput: PartialInput) => {
-    partialRef.current = partialInput
-    setPartial(partialInput)
-  }
-
-  const applyStatus = useCallback((status: DemoStatus, score?: number) => {
-    const selectedIndex = selectedRef.current
-    const updated = cellsRef.current.map((cell, i) =>
-      i === selectedIndex ? { ...cell, status, score } : cell
-    )
-    setCellsSynced(updated)
-    // 採点したら次の未採点の生徒へ自動で進む
-    const after = updated.findIndex(
-      (cell, i) => i > selectedIndex && cell.status === "unscored"
-    )
-    const wrap =
-      after === -1
-        ? updated.findIndex((cell) => cell.status === "unscored")
-        : after
-    if (wrap !== -1) setSelectedSynced(wrap)
-  }, [])
-
-  const moveStudent = useCallback((dir: "prev" | "next") => {
-    const n = cellsRef.current.length
-    const i =
-      dir === "next"
-        ? Math.min(n - 1, selectedRef.current + 1)
-        : Math.max(0, selectedRef.current - 1)
-    setSelectedSynced(i)
-  }, [])
-
-  const openPartial = useCallback((initial: string) => {
-    setPartialSynced({ active: true, value: initial })
-  }, [])
-
-  const editPartial = useCallback((char: string) => {
-    const cur = partialRef.current.value
-    if (char === "⌫") {
-      setPartialSynced({ active: true, value: cur.slice(0, -1) })
-      return
-    }
-    if (char === "." && cur.includes(".")) return
-    const next = cur + char
-    if (Number(next) > MAX_SCORE) return
-    if (next.replace(".", "").length > 3) return
-    setPartialSynced({ active: true, value: next })
-  }, [])
-
-  const setPartialValue = useCallback((value: string) => {
-    if (!/^\d*\.?\d*$/.test(value)) return
-    if (Number(value) > MAX_SCORE) return
-    if (value.replace(".", "").length > 3) return
-    setPartialSynced({ active: true, value: value })
-  }, [])
-
-  const confirmPartial = useCallback(() => {
-    const value = partialRef.current.value
-    if (value === "" || value === ".") {
-      setPartialSynced({ active: false, value: "" })
-      return
-    }
-    const clampedScore = Math.min(MAX_SCORE, Math.max(0, Number(value)))
-    setPartialSynced({ active: false, value: "" })
-    applyStatus("partial", clampedScore)
-  }, [applyStatus])
-
-  const confirmPending = useCallback(() => {
-    setPartialSynced({ active: false, value: "" })
-    applyStatus("pending")
-  }, [applyStatus])
-
-  const cancelPartial = useCallback(() => {
-    setPartialSynced({ active: false, value: "" })
-  }, [])
-
-  const keyToStatus = useMemo(() => {
-    const map: Record<string, DemoStatus> = {}
-    INDIV_MARK_ORDER.forEach((status) => {
-      const k = rawKeys[status]
-      if (k) map[k.toLowerCase()] = status
-    })
-    return map
-  }, [rawKeys])
-
-  useEffect(() => {
-    const partialKey = (rawKeys.partial || "").toLowerCase()
-    const pendingKey = (rawKeys.pending || "").toLowerCase()
-    const handler = (e: KeyboardEvent) => {
-      if (!isActiveRef.current && !partialRef.current.active) return
-      if (e.ctrlKey || e.metaKey || e.altKey) return
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
-      const block = () => {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-      }
-
-      if (partialRef.current.active) {
-        if (/^[0-9.]$/.test(key)) {
-          block()
-          editPartial(key)
-        } else if (key === "Backspace") {
-          block()
-          editPartial("⌫")
-        } else if (key === partialKey || key === "Enter") {
-          block()
-          confirmPartial()
-        } else if (key === pendingKey) {
-          block()
-          confirmPending()
-        } else if (key === "Escape") {
-          block()
-          cancelPartial()
-        } else if (keyToStatus[key]) {
-          block()
-        }
-        return
-      }
-
-      // 前後の生徒へ移動（W/A=前、S/D=次）
+  // 前後の生徒へ移動（W/A=前、S/D=次）
+  const handleNavigationKey = useCallback(
+    (key: string, cursor: DemoCursor) => {
       if (key === navKeys.up || key === navKeys.left) {
-        block()
-        moveStudent("prev")
-        return
+        cursor.select(Math.max(0, cursor.selectedIndex - 1))
+        return true
       }
       if (key === navKeys.down || key === navKeys.right) {
-        block()
-        moveStudent("next")
-        return
+        cursor.select(Math.min(cursor.cellCount - 1, cursor.selectedIndex + 1))
+        return true
       }
+      return false
+    },
+    [navKeys]
+  )
 
-      // 部分点（数字キー or 部分点キー）
-      if (/^[0-9]$/.test(key)) {
-        block()
-        openPartial(key)
-        return
-      }
-      if (key === partialKey) {
-        block()
-        openPartial("")
-        return
-      }
-
-      const status = keyToStatus[key]
-      if (status && status !== "partial") {
-        block()
-        applyStatus(status)
-      }
-    }
-    window.addEventListener("keydown", handler, true)
-    return () => window.removeEventListener("keydown", handler, true)
-  }, [
-    keyToStatus,
-    rawKeys.partial,
-    rawKeys.pending,
-    navKeys,
-    moveStudent,
-    applyStatus,
-    openPartial,
-    editPartial,
-    confirmPartial,
-    confirmPending,
-    cancelPartial,
-  ])
-
-  const reset = () => {
-    setCellsSynced(INDIV_CELLS)
-    setSelectedSynced(0)
-    setPartialSynced({ active: false, value: "" })
-  }
+  const scoring = useDemoScoring({
+    initialCells: INDIV_CELLS,
+    markOrder: INDIV_MARK_ORDER,
+    rawKeys,
+    allowPartial: true,
+    isActive,
+    onNavigationKey: handleNavigationKey,
+  })
+  const { cells, selected } = scoring
 
   const cell = cells[selected]
   const scoreDisplay = scoreText(cell)
@@ -258,19 +92,10 @@ export function IndividualScoringDemo({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs text-gray-500">設問例「『きぼう』を漢字で」</p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={reset}
-          className="h-7 gap-1 text-xs"
-        >
-          <RotateCcw className="h-3 w-3" />
-          やり直す
-        </Button>
-      </div>
+      <DemoScoringHeader
+        questionExample="『きぼう』を漢字で"
+        onReset={scoring.reset}
+      />
 
       {/* 本番の「左右分割」と同じく、生徒の答案用紙（左）と模範解答の答案用紙（右）を
           同じサイズ・同じレイアウトで並べて見くらべる。 */}
@@ -303,9 +128,7 @@ export function IndividualScoringDemo({
       <ScoringButtonRow
         markOrder={INDIV_MARK_ORDER}
         rawKeys={rawKeys}
-        onScore={(status) =>
-          status === "partial" ? openPartial("") : applyStatus(status)
-        }
+        onScore={scoring.scoreByButton}
       />
 
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
@@ -319,23 +142,7 @@ export function IndividualScoringDemo({
         </span>
       </p>
 
-      <PartialScoreModal
-        isOpen={partial.active}
-        value={partial.value}
-        maxPoints={MAX_SCORE}
-        questionLabel="1"
-        onClose={cancelPartial}
-        onChange={setPartialValue}
-        onConfirmPartial={confirmPartial}
-        onConfirmPending={confirmPending}
-        onDigit={(k) => editPartial(k)}
-        onBackspace={() => editPartial("⌫")}
-        keyBindings={{
-          partialKey: rawKeys.partial,
-          pendingKey: rawKeys.pending,
-          cancelKey: "Escape",
-        }}
-      />
+      <DemoPartialScoreModal scoring={scoring} rawKeys={rawKeys} />
     </div>
   )
 }

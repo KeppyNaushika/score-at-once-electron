@@ -17,12 +17,17 @@
  */
 
 import AdmZip from "adm-zip"
-import * as crypto from "crypto"
-import * as fs from "fs"
-import * as os from "os"
-import * as path from "path"
 
-import { EXAM_CURRENT_VERSION } from "../../../../../src/types/examArchive.types"
+import type {
+  ConvertedCropRegion,
+  ConvertedSubtotalData,
+} from "../templateScoreArchive"
+import {
+  appendSubtotalGroup,
+  createEmptySubtotalData,
+  generateUuid,
+  writeTemplateScoreArchive,
+} from "../templateScoreArchive"
 import type { HszDbInfo, HszSheetField } from "./types"
 import { HSZ_KIND_TO_CROP_TYPE, HSZ_SKIP_KINDS, HSZ_SUBJECT_MAP } from "./types"
 
@@ -107,118 +112,28 @@ export async function convertHszToScore(
     const subjectName =
       HSZ_SUBJECT_MAP[sheets.subject_id] || `教科${sheets.subject_id}`
 
-    const examData = {
-      exam: {
-        id: examId,
-        examName: sheets.title_name,
-        referenceDate: null,
-        description: `百問繚乱からインポート（${subjectName}・${sheets.course}）`,
-        createdAt: now,
-        updatedAt: now,
-      },
-      examPages,
-      cropRegions,
-      pageImages: [], // v1.2.0以降は使用しない
-      studentAnswerImages: [],
-      examStudents: [],
-      userExams: [],
-      examSubtotalGroups: subtotalData.examSubtotalGroups,
-      examClassrooms: [],
-      examMarkingFormats: [],
-    }
-
-    // 9. manifest 生成
-    const manifest = {
-      version: EXAM_CURRENT_VERSION,
-      schemaVersion: "hsz-import",
-      appVersion: "0.0.0",
-      exportedAt: now,
-      sourceDbId: `hsz:${sheets.id}`,
-      examId,
-      examName: sheets.title_name,
-      exportMode: "template_with_subtotals",
-      counts: {
-        students: 0,
-        classes: 0,
-        users: 0,
-        pages: examPages.length,
-        regions: cropRegions.length,
-        scores: 0,
-        annotations: 0,
-        subtotalGroups: subtotalData.subtotalGroups.length,
-        masterImages: examPages.filter((page) => page.imagePath).length,
-        answerSheetImages: 0,
-      },
-    }
-
-    // 10. .score ZIP ファイルを生成
-    const scoreZip = new AdmZip()
-
-    // JSON ファイル追加
-    scoreZip.addFile(
-      "manifest.json",
-      Buffer.from(JSON.stringify(manifest, null, 2))
-    )
-    scoreZip.addFile(
-      "exam.json",
-      Buffer.from(JSON.stringify(examData, null, 2))
-    )
-    scoreZip.addFile(
-      "students.json",
-      Buffer.from(JSON.stringify({ students: [] }, null, 2))
-    )
-    scoreZip.addFile(
-      "classes.json",
-      Buffer.from(JSON.stringify({ classes: [], memberships: [] }, null, 2))
-    )
-    scoreZip.addFile(
-      "users.json",
-      Buffer.from(JSON.stringify({ users: [] }, null, 2))
-    )
-    scoreZip.addFile(
-      "subtotals.json",
-      Buffer.from(
-        JSON.stringify(
-          {
-            subtotalGroups: subtotalData.subtotalGroups,
-            subtotals: subtotalData.subtotals,
-            cropSubtotals: subtotalData.cropSubtotals,
-          },
-          null,
-          2
-        )
-      )
-    )
-    scoreZip.addFile(
-      "scores.json",
-      Buffer.from(
-        JSON.stringify({ questionScores: [], drawingAnnotations: [] }, null, 2)
-      )
-    )
-    scoreZip.addFile(
-      "tags.json",
-      Buffer.from(
-        JSON.stringify(
-          { tags: [], tagSubtotalGroups: [], examTags: [] },
-          null,
-          2
-        )
-      )
-    )
-
-    // 模範解答画像をmaster-images/にコピー
-    for (const sheetPage of sheet_pages) {
+    // 9. .score ZIP ファイルを生成（模範解答画像は master-images/ にコピー）
+    const masterImages = sheet_pages.flatMap((sheetPage) => {
       const imgFileName = `correct_${sheetPage.page}.png`
       const imgEntry = entries.find((entry) => entry.entryName === imgFileName)
-      if (imgEntry) {
-        scoreZip.addFile(`master-images/${imgFileName}`, imgEntry.getData())
-      }
-    }
+      return imgEntry
+        ? [{ fileName: imgFileName, image: imgEntry.getData() }]
+        : []
+    })
 
-    // 一時ファイルに書き出し
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "hsz-convert-"))
-    const scorePath = path.join(tempDir, "converted.score")
-    scoreZip.writeZip(scorePath)
+    const scorePath = writeTemplateScoreArchive({
+      examId,
+      examName: sheets.title_name,
+      description: `百問繚乱からインポート（${subjectName}・${sheets.course}）`,
+      schemaVersion: "hsz-import",
+      sourceDbId: `hsz:${sheets.id}`,
+      examPages,
+      cropRegions,
+      subtotalData,
+      masterImages,
+      tempDirPrefix: "hsz-convert-",
+      now,
+    })
 
     return {
       scorePath,
@@ -232,20 +147,7 @@ export async function convertHszToScore(
 
 /** convertFieldsToCropRegions の結果 */
 interface HszCropRegionsResult {
-  regions: Array<{
-    id: string
-    examPageId: string
-    label: string
-    type: string
-    x: number
-    y: number
-    width: number
-    height: number
-    points: number | null
-    orderIndex: number | null
-    createdAt: string
-    updatedAt: string
-  }>
+  regions: ConvertedCropRegion[]
   /** part1 → QUESTION_ANSWER CropRegion ID（大問グループ紐付け用） */
   part1ToCropIds: Map<string, string[]>
   /** region → QUESTION_ANSWER CropRegion ID（観点グループ紐付け用） */
@@ -381,37 +283,6 @@ function buildLabel(field: HszSheetField): string {
   }
 }
 
-/** SubtotalGroup/Subtotal/CropSubtotal/ExamSubtotalGroup の生成結果 */
-interface HszSubtotalResult {
-  subtotalGroups: Array<{
-    id: string
-    name: string
-    createdAt: string
-    updatedAt: string
-  }>
-  subtotals: Array<{
-    id: string
-    name: string
-    subtotalGroupId: string
-    order: number
-    createdAt: string
-    updatedAt: string
-  }>
-  cropSubtotals: Array<{
-    id: string
-    cropRegionId: string
-    subtotalId: string
-    assignmentType: string
-    createdAt: string
-    updatedAt: string
-  }>
-  examSubtotalGroups: Array<{
-    id: string
-    examId: string
-    subtotalGroupId: string
-  }>
-}
-
 /**
  * 百問繚乱のフィールドデータから SubtotalGroup/Subtotal/CropSubtotal を生成
  *
@@ -430,162 +301,56 @@ function generateHszSubtotalData(
   scoreRCropIdByRegion: Map<string, string>,
   examId: string,
   now: string
-): HszSubtotalResult {
-  const subtotalGroups: HszSubtotalResult["subtotalGroups"] = []
-  const subtotals: HszSubtotalResult["subtotals"] = []
-  const cropSubtotals: HszSubtotalResult["cropSubtotals"] = []
-  const examSubtotalGroups: HszSubtotalResult["examSubtotalGroups"] = []
+): ConvertedSubtotalData {
+  const subtotalData = createEmptySubtotalData()
 
-  // ========================================
-  // 1. 「大問」SubtotalGroup
-  // ========================================
-
+  // 1. 「大問」SubtotalGroup（part1を数値順に並べる）
   if (part1ToCropIds.size > 0) {
-    const daimonGroupId = generateUuid()
-    subtotalGroups.push({
-      id: daimonGroupId,
-      name: "大問",
-      createdAt: now,
-      updatedAt: now,
-    })
-    examSubtotalGroups.push({
-      id: generateUuid(),
+    appendSubtotalGroup(
+      subtotalData,
+      {
+        groupName: "大問",
+        subtotals: Array.from(part1ToCropIds.keys())
+          .sort((part1A, part1B) => parseInt(part1A, 10) - parseInt(part1B, 10))
+          .map((part1) => ({ key: part1, name: `大問${part1}` })),
+        questionAssignments: Array.from(
+          part1ToCropIds,
+          ([part1, cropRegionIds]) => ({ key: part1, cropRegionIds })
+        ),
+        definitionAssignments: Array.from(
+          scorePCropIdByPart1,
+          ([part1, cropRegionId]) => ({ key: part1, cropRegionId })
+        ),
+      },
       examId,
-      subtotalGroupId: daimonGroupId,
-    })
-
-    // part1をソートしてSubtotalを作成
-    const sortedPart1s = Array.from(part1ToCropIds.keys()).sort(
-      (part1A, part1B) => parseInt(part1A, 10) - parseInt(part1B, 10)
+      now
     )
-    const part1ToSubtotalId = new Map<string, string>()
-
-    for (let i = 0; i < sortedPart1s.length; i++) {
-      const part1 = sortedPart1s[i]
-      const subtotalId = generateUuid()
-      part1ToSubtotalId.set(part1, subtotalId)
-
-      subtotals.push({
-        id: subtotalId,
-        name: `大問${part1}`,
-        subtotalGroupId: daimonGroupId,
-        order: i,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
-
-    // QUESTION_ASSIGNMENT: 各設問CropRegion → 大問Subtotal
-    for (const [part1, cropIds] of part1ToCropIds) {
-      const subtotalId = part1ToSubtotalId.get(part1)
-      if (!subtotalId) continue
-
-      for (const cropId of cropIds) {
-        cropSubtotals.push({
-          id: generateUuid(),
-          cropRegionId: cropId,
-          subtotalId,
-          assignmentType: "QUESTION_ASSIGNMENT",
-          createdAt: now,
-          updatedAt: now,
-        })
-      }
-    }
-
-    // SUBTOTAL_DEFINITION: score_p CropRegion → 大問Subtotal
-    for (const [part1, cropId] of scorePCropIdByPart1) {
-      const subtotalId = part1ToSubtotalId.get(part1)
-      if (!subtotalId) continue
-
-      cropSubtotals.push({
-        id: generateUuid(),
-        cropRegionId: cropId,
-        subtotalId,
-        assignmentType: "SUBTOTAL_DEFINITION",
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
   }
 
-  // ========================================
-  // 2. 「観点」SubtotalGroup
-  // ========================================
-
+  // 2. 「観点」SubtotalGroup（regionを数値順に並べる）
   if (regionToCropIds.size > 0) {
-    const kantenGroupId = generateUuid()
-    subtotalGroups.push({
-      id: kantenGroupId,
-      name: "観点",
-      createdAt: now,
-      updatedAt: now,
-    })
-    examSubtotalGroups.push({
-      id: generateUuid(),
+    appendSubtotalGroup(
+      subtotalData,
+      {
+        groupName: "観点",
+        subtotals: Array.from(regionToCropIds.keys())
+          .sort(
+            (regionA, regionB) => parseInt(regionA, 10) - parseInt(regionB, 10)
+          )
+          .map((region) => ({ key: region, name: `観点${region}` })),
+        questionAssignments: Array.from(
+          regionToCropIds,
+          ([region, cropRegionIds]) => ({ key: region, cropRegionIds })
+        ),
+        definitionAssignments: Array.from(
+          scoreRCropIdByRegion,
+          ([region, cropRegionId]) => ({ key: region, cropRegionId })
+        ),
+      },
       examId,
-      subtotalGroupId: kantenGroupId,
-    })
-
-    // regionをソートしてSubtotalを作成
-    const sortedRegions = Array.from(regionToCropIds.keys()).sort(
-      (regionA, regionB) => parseInt(regionA, 10) - parseInt(regionB, 10)
+      now
     )
-    const regionToSubtotalId = new Map<string, string>()
-
-    for (let i = 0; i < sortedRegions.length; i++) {
-      const region = sortedRegions[i]
-      const subtotalId = generateUuid()
-      regionToSubtotalId.set(region, subtotalId)
-
-      subtotals.push({
-        id: subtotalId,
-        name: `観点${region}`,
-        subtotalGroupId: kantenGroupId,
-        order: i,
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
-
-    // QUESTION_ASSIGNMENT: 各設問CropRegion → 観点Subtotal
-    for (const [region, cropIds] of regionToCropIds) {
-      const subtotalId = regionToSubtotalId.get(region)
-      if (!subtotalId) continue
-
-      for (const cropId of cropIds) {
-        cropSubtotals.push({
-          id: generateUuid(),
-          cropRegionId: cropId,
-          subtotalId,
-          assignmentType: "QUESTION_ASSIGNMENT",
-          createdAt: now,
-          updatedAt: now,
-        })
-      }
-    }
-
-    // SUBTOTAL_DEFINITION: score_r CropRegion → 観点Subtotal
-    for (const [region, cropId] of scoreRCropIdByRegion) {
-      const subtotalId = regionToSubtotalId.get(region)
-      if (!subtotalId) continue
-
-      cropSubtotals.push({
-        id: generateUuid(),
-        cropRegionId: cropId,
-        subtotalId,
-        assignmentType: "SUBTOTAL_DEFINITION",
-        createdAt: now,
-        updatedAt: now,
-      })
-    }
   }
 
-  return { subtotalGroups, subtotals, cropSubtotals, examSubtotalGroups }
-}
-
-/**
- * UUID v4 生成
- */
-function generateUuid(): string {
-  return crypto.randomUUID()
+  return subtotalData
 }

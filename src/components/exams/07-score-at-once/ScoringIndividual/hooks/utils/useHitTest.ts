@@ -73,6 +73,95 @@ function getTextBoundsFromAnchor(
  */
 type HitTestResult = string | null
 
+/**
+ * 2点間の距離を計算
+ */
+function distance(x1: number, y1: number, x2: number, y2: number): number {
+  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+}
+
+/**
+ * 点が円内にあるかチェック
+ */
+function isPointInCircle(
+  testX: number,
+  testY: number,
+  centerX: number,
+  centerY: number,
+  radius: number
+): boolean {
+  return distance(testX, testY, centerX, centerY) <= radius
+}
+
+/**
+ * 点から線分への最短距離を計算
+ */
+function distanceToLineSegment(
+  testX: number,
+  testY: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): number {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const lengthSquared = dx * dx + dy * dy
+
+  if (lengthSquared === 0) {
+    return distance(testX, testY, x1, y1)
+  }
+
+  // 線分上の最近点のパラメータ t (0-1にクランプ)
+  const ratio = Math.max(
+    0,
+    Math.min(1, ((testX - x1) * dx + (testY - y1) * dy) / lengthSquared)
+  )
+
+  // 最近点の座標
+  const nearestX = x1 + ratio * dx
+  const nearestY = y1 + ratio * dy
+
+  return distance(testX, testY, nearestX, nearestY)
+}
+
+/** 矩形・楕円の外接枠（幅・高さが負でも left < right, top < bottom にそろえる） */
+function boxEdges(box: {
+  x: number
+  y: number
+  width: number
+  height: number
+}) {
+  return {
+    left: Math.min(box.x, box.x + box.width),
+    right: Math.max(box.x, box.x + box.width),
+    top: Math.min(box.y, box.y + box.height),
+    bottom: Math.max(box.y, box.y + box.height),
+  }
+}
+
+/** 外接枠の4角のハンドル判定（矩形・楕円で共通） */
+function hitTestCornerHandle(
+  edges: { left: number; right: number; top: number; bottom: number },
+  testX: number,
+  testY: number,
+  handleRadius: number
+): HitTestResult {
+  const corners = [
+    { x: edges.left, y: edges.top, handle: "handle:top-left" },
+    { x: edges.right, y: edges.top, handle: "handle:top-right" },
+    { x: edges.left, y: edges.bottom, handle: "handle:bottom-left" },
+    { x: edges.right, y: edges.bottom, handle: "handle:bottom-right" },
+  ]
+
+  for (const corner of corners) {
+    if (isPointInCircle(testX, testY, corner.x, corner.y, handleRadius)) {
+      return corner.handle
+    }
+  }
+  return null
+}
+
 interface UseHitTestUtilsProps {
   /** 現在のズーム倍率（画面上のピクセルサイズを一定にするため） */
   zoom?: number
@@ -101,67 +190,6 @@ export function useHitTestUtils({
 
   // 線の幅（当たり判定用、ズーム調整済み）
   const LINE_WIDTH = lineWidth
-
-  /**
-   * 2点間の距離を計算
-   */
-  const distance = useCallback(
-    (x1: number, y1: number, x2: number, y2: number): number => {
-      return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    },
-    []
-  )
-
-  /**
-   * 点が円内にあるかチェック
-   */
-  const isPointInCircle = useCallback(
-    (
-      testX: number,
-      testY: number,
-      centerX: number,
-      centerY: number,
-      radius: number
-    ): boolean => {
-      return distance(testX, testY, centerX, centerY) <= radius
-    },
-    [distance]
-  )
-
-  /**
-   * 点から線分への最短距離を計算
-   */
-  const distanceToLineSegment = useCallback(
-    (
-      testX: number,
-      testY: number,
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number
-    ): number => {
-      const dx = x2 - x1
-      const dy = y2 - y1
-      const lengthSquared = dx * dx + dy * dy
-
-      if (lengthSquared === 0) {
-        return distance(testX, testY, x1, y1)
-      }
-
-      // 線分上の最近点のパラメータ t (0-1にクランプ)
-      const ratio = Math.max(
-        0,
-        Math.min(1, ((testX - x1) * dx + (testY - y1) * dy) / lengthSquared)
-      )
-
-      // 最近点の座標
-      const nearestX = x1 + ratio * dx
-      const nearestY = y1 + ratio * dy
-
-      return distance(testX, testY, nearestX, nearestY)
-    },
-    [distance]
-  )
 
   /**
    * 統合ヒットテスト: 端点ハンドル優先、次に本体
@@ -210,33 +238,25 @@ export function useHitTestUtils({
         }
 
         case "rectangle": {
-          const left = Math.min(element.x, element.x + element.width)
-          const right = Math.max(element.x, element.x + element.width)
-          const top = Math.min(element.y, element.y + element.height)
-          const bottom = Math.max(element.y, element.y + element.height)
+          const edges = boxEdges(element)
 
           // 1. 4角のハンドル判定（優先）
-          const corners = [
-            { x: left, y: top, handle: "handle:top-left" },
-            { x: right, y: top, handle: "handle:top-right" },
-            { x: left, y: bottom, handle: "handle:bottom-left" },
-            { x: right, y: bottom, handle: "handle:bottom-right" },
-          ]
-
-          for (const corner of corners) {
-            if (
-              isPointInCircle(testX, testY, corner.x, corner.y, HANDLE_RADIUS)
-            ) {
-              return corner.handle
-            }
+          const cornerHandle = hitTestCornerHandle(
+            edges,
+            testX,
+            testY,
+            HANDLE_RADIUS
+          )
+          if (cornerHandle) {
+            return cornerHandle
           }
 
           // 2. 内部判定
           if (
-            testX >= left &&
-            testX <= right &&
-            testY >= top &&
-            testY <= bottom
+            testX >= edges.left &&
+            testX <= edges.right &&
+            testY >= edges.top &&
+            testY <= edges.bottom
           ) {
             return "body"
           }
@@ -245,25 +265,15 @@ export function useHitTestUtils({
         }
 
         case "ellipse": {
-          const left = Math.min(element.x, element.x + element.width)
-          const right = Math.max(element.x, element.x + element.width)
-          const top = Math.min(element.y, element.y + element.height)
-          const bottom = Math.max(element.y, element.y + element.height)
-
           // 1. 4角のハンドル判定（優先）
-          const corners = [
-            { x: left, y: top, handle: "handle:top-left" },
-            { x: right, y: top, handle: "handle:top-right" },
-            { x: left, y: bottom, handle: "handle:bottom-left" },
-            { x: right, y: bottom, handle: "handle:bottom-right" },
-          ]
-
-          for (const corner of corners) {
-            if (
-              isPointInCircle(testX, testY, corner.x, corner.y, HANDLE_RADIUS)
-            ) {
-              return corner.handle
-            }
+          const cornerHandle = hitTestCornerHandle(
+            boxEdges(element),
+            testX,
+            testY,
+            HANDLE_RADIUS
+          )
+          if (cornerHandle) {
+            return cornerHandle
           }
 
           // 2. 楕円内部判定
@@ -361,13 +371,7 @@ export function useHitTestUtils({
           return null
       }
     },
-    [
-      isPointInCircle,
-      distanceToLineSegment,
-      HANDLE_RADIUS,
-      LINE_WIDTH,
-      textBoundsCacheRef,
-    ]
+    [HANDLE_RADIUS, LINE_WIDTH, textBoundsCacheRef]
   )
 
   /**

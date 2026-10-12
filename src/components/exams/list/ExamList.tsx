@@ -5,15 +5,15 @@ import { FileArchive, PencilSparkles, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
-import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
+import {
+  entityListCreateAction,
+  entityListToolbarActions,
+} from "@/components/common/entity-list/entityListToolbarActions"
 import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
 import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import {
-  type ToolbarAction,
-  toolbarButtonAction,
-} from "@/components/common/OverflowToolbar"
+import { toolbarButtonAction } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
@@ -55,8 +55,10 @@ const ExamList = () => {
     examListQuery(currentUser.id)
   )
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const findOrCreateTag = useMutation(findOrCreateTagMutation())
-  const addTagToExams = useMutation(addTagToExamsMutation())
+  const { mutateAsync: findOrCreateTag } = useMutation(
+    findOrCreateTagMutation()
+  )
+  const { mutateAsync: addTagToExams } = useMutation(addTagToExamsMutation())
   const archive = useEntityListArchive()
   const { importToolbarAction, openUnifiedExport } = archive
 
@@ -83,66 +85,55 @@ const ExamList = () => {
     }
   }, [createExam, router])
 
-  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+  /** 選んだ試験へ、既存のタグを保ったまま同じタグを足す */
+  const assignTagToExams = useCallback(
+    async (tagName: string, examIds: string[]) => {
+      const tag = await findOrCreateTag(tagName)
+      await addTagToExams({ examIds, tagId: tag.id })
+    },
+    [findOrCreateTag, addTagToExams]
+  )
+
+  const { selectedIds, bulkTagAction, listProps } = useEntityListControls(
     exams,
     EXAM_FILTER_ACCESSORS,
     {
       rowNoun: "試験",
       searchPlaceholder: "試験名・タグで検索",
       tagOptions: allTags,
+      assignTag: assignTagToExams,
     }
   )
 
-  const handleBulkAddTag = useCallback(
-    (tagName: string) =>
-      addTagToSelection(tagName, async (trimmedTagName, examIds) => {
-        const tag = await findOrCreateTag.mutateAsync(trimmedTagName)
-        await addTagToExams.mutateAsync({ examIds, tagId: tag.id })
-      }),
-    [addTagToSelection, findOrCreateTag, addTagToExams]
-  )
-
-  const actions = useMemo<ToolbarAction[]>(() => {
-    const toolbarActions: ToolbarAction[] = [
-      toolbarButtonAction({
-        id: "create",
-        priority: 80,
-        icon: Plus,
-        label: "新規試験作成",
-        onClick: () => void handleCreate(),
-      }),
-      importToolbarAction,
-    ]
-
-    if (selectedIds.size > 0) {
-      // 選択中だけ現れる操作。幅が急に増えるが、畳みは実測なので自然に吸収される
-      toolbarActions.push(
-        bulkTagToolbarAction({
-          priority: 60,
-          selectedCount: selectedIds.size,
-          allTags,
-          onAssign: handleBulkAddTag,
+  const actions = useMemo(
+    () =>
+      entityListToolbarActions({
+        create: entityListCreateAction({
+          label: "新規試験作成",
+          onClick: () => void handleCreate(),
         }),
-        toolbarButtonAction({
-          id: "bulk-unified-export",
-          priority: 50,
-          icon: FileArchive,
-          label: `.sao 書き出し（${selectedIds.size}件）`,
-          onClick: () =>
-            openUnifiedExport({ roots: { Exam: [...selectedIds] } }),
-        })
-      )
-    }
-
-    return toolbarActions
-  }, [
-    allTags,
-    handleBulkAddTag,
-    handleCreate,
-    importToolbarAction,
-    openUnifiedExport,
-    selectedIds,
-  ])
+        archiveImport: importToolbarAction,
+        bulkTag: bulkTagAction,
+        // 選択中だけ現れる。幅が急に増えるが、畳みは実測なので自然に吸収される
+        bulk: [
+          toolbarButtonAction({
+            id: "bulk-unified-export",
+            priority: 50,
+            icon: FileArchive,
+            label: `.sao 書き出し（${selectedIds.size}件）`,
+            onClick: () =>
+              openUnifiedExport({ roots: { Exam: [...selectedIds] } }),
+          }),
+        ],
+      }),
+    [
+      bulkTagAction,
+      handleCreate,
+      importToolbarAction,
+      openUnifiedExport,
+      selectedIds,
+    ]
+  )
 
   return (
     <>
