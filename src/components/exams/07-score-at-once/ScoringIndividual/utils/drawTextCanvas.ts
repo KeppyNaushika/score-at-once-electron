@@ -4,6 +4,10 @@
  * 数式のレンダリングが非同期なので、テキストだけを別のキャンバスに描く。
  * 描いたついでに、現在設問のテキストの外接矩形（ページ内の正規化座標）を
  * textBoundsCache へ書き戻す（当たり判定が使う）。
+ *
+ * 座標と文字の大きさは、図形（useDrawingRenderer）と同じく**そのページの画像の幅と高さ**
+ * で換算し、幅の狭いページは中央へ寄せる。キャンバスの幅（＝1ページ目の幅）で換算すると、
+ * ページごとに画像の大きさが違う答案でテキストだけが図形や PDF からずれる。
  */
 import { mmToPixels } from "@/lib/paperSize"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -16,6 +20,7 @@ import type { CropRegionWithStatus } from "../hooks/core/types"
 import {
   pageIndexByCropRegionId,
   pageIndexOfCropRegion,
+  pageOffsetX,
   pageOffsetY,
   stackedCanvasSize,
 } from "./canvasPageLayout"
@@ -79,7 +84,9 @@ export async function drawTextCanvas(
     loadedImages.length
   )
   const currentPageImg = loadedImages[currentPageIndex] || loadedImages[0]
+  const currentPageWidth = currentPageImg.naturalWidth
   const currentPageHeight = currentPageImg.naturalHeight
+  const currentPageOffsetX = pageOffsetX(canvasWidth, currentPageImg)
   const currentPageOffsetY = pageOffsetY(
     loadedImages,
     currentPageIndex,
@@ -116,7 +123,9 @@ export async function drawTextCanvas(
       const annotCropRegionId = annotation.questionScore?.cropRegionId || ""
       const annotPageIndex = textCropRegionPageMap.get(annotCropRegionId) ?? 0
       const annotPageImg = loadedImages[annotPageIndex] || loadedImages[0]
+      const annotPageWidth = annotPageImg.naturalWidth
       const annotPageHeight = annotPageImg.naturalHeight
+      const annotPageOffsetX = pageOffsetX(canvasWidth, annotPageImg)
       const annotPageOffsetY = pageOffsetY(
         loadedImages,
         annotPageIndex,
@@ -124,20 +133,20 @@ export async function drawTextCanvas(
       )
 
       try {
-        // ページオフセット分だけコンテキストを平行移動して描画
+        // ページの左上までコンテキストを平行移動して描画
         ctx.save()
-        ctx.translate(0, annotPageOffsetY)
+        ctx.translate(annotPageOffsetX, annotPageOffsetY)
         const fontSizePx = mmToPixels(
           element.fontSize,
           pageSize,
-          canvasWidth,
+          annotPageWidth,
           annotPageHeight
         )
         const pxElement = { ...element, fontSize: fontSizePx }
         const result = await renderTextElement(
           ctx,
           pxElement,
-          canvasWidth,
+          annotPageWidth,
           annotPageHeight,
           isSelected,
           isCurrentQuestion,
@@ -148,6 +157,7 @@ export async function drawTextCanvas(
           element,
           result,
           isCurrentQuestion,
+          pageWidth: annotPageWidth,
           pageHeight: annotPageHeight,
         }
       } catch {
@@ -161,9 +171,9 @@ export async function drawTextCanvas(
   for (const item of annotationResults) {
     if (item && item.isCurrentQuestion && item.result.success) {
       textBoundsCache.set(item.element.id, {
-        x: item.result.textBounds.x / canvasWidth,
+        x: item.result.textBounds.x / item.pageWidth,
         y: item.result.textBounds.y / item.pageHeight,
-        width: item.result.textBounds.width / canvasWidth,
+        width: item.result.textBounds.width / item.pageWidth,
         height: item.result.textBounds.height / item.pageHeight,
       })
     }
@@ -181,18 +191,18 @@ export async function drawTextCanvas(
         const isSelected = selectedElementIds.includes(element.id)
         try {
           ctx.save()
-          ctx.translate(0, currentPageOffsetY)
+          ctx.translate(currentPageOffsetX, currentPageOffsetY)
           const fontSizePx = mmToPixels(
             element.fontSize,
             pageSize,
-            canvasWidth,
+            currentPageWidth,
             currentPageHeight
           )
           const pxElement = { ...element, fontSize: fontSizePx }
           const result = await renderTextElement(
             ctx,
             pxElement,
-            canvasWidth,
+            currentPageWidth,
             currentPageHeight,
             isSelected,
             true,
@@ -210,9 +220,9 @@ export async function drawTextCanvas(
     for (const item of newResults) {
       if (item && item.result.success) {
         textBoundsCache.set(item.element.id, {
-          x: item.result.textBounds.x / canvasWidth,
+          x: item.result.textBounds.x / currentPageWidth,
           y: item.result.textBounds.y / currentPageHeight,
-          width: item.result.textBounds.width / canvasWidth,
+          width: item.result.textBounds.width / currentPageWidth,
           height: item.result.textBounds.height / currentPageHeight,
         })
       }

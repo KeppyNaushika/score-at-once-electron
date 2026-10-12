@@ -1,8 +1,13 @@
+import {
+  OptionCard,
+  OptionCardWithChildren,
+  OptionField,
+} from "@/components/common/ReportOptionControls"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useEditingInput } from "@/hooks/useEditingInput"
+import { parseClampedNumber } from "@/lib/clampedNumber"
 
 import { SubtotalGroupSelector } from "../individual-report/SubtotalGroupSelector"
-import { OptionCard, OptionCardWithChildren } from "./ReportOptionControls"
 import type { ReportSettingsSectionProps } from "./types"
 
 interface BoxPlotSettingsProps extends ReportSettingsSectionProps {
@@ -15,6 +20,8 @@ export function BoxPlotSettings({
   options,
   updateOption,
 }: BoxPlotSettingsProps) {
+  const editing = useEditingInput()
+
   return (
     <OptionCardWithChildren
       label="箱ひげ図"
@@ -134,52 +141,56 @@ export function BoxPlotSettings({
           </div>
           {/* サイズ調整 */}
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-              <Label className="text-xs whitespace-nowrap">文字</Label>
+            <OptionField label="文字">
               <Input
                 type="number"
                 min={6}
                 max={16}
                 className="h-6 w-16 text-xs"
-                value={options.graphOptions.boxPlotFontSize ?? 11}
-                onChange={(e) => {
-                  const value = Math.min(
-                    16,
-                    Math.max(6, Number(e.target.value))
-                  )
-                  if (!isNaN(value)) {
-                    updateOption("graphOptions", {
-                      ...options.graphOptions,
-                      boxPlotFontSize: value,
+                {...editing(
+                  "boxPlotFontSize",
+                  String(options.graphOptions.boxPlotFontSize ?? 11),
+                  (text) => {
+                    const boxPlotFontSize = parseClampedNumber(text, {
+                      min: 6,
+                      max: 16,
                     })
+                    if (boxPlotFontSize !== null) {
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        boxPlotFontSize,
+                      })
+                    }
                   }
-                }}
+                )}
               />
               <span className="text-xs text-muted-foreground">px</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-              <Label className="text-xs whitespace-nowrap">間隔</Label>
+            </OptionField>
+            <OptionField label="間隔">
               <Input
                 type="number"
                 min={0}
                 max={40}
                 className="h-6 w-16 text-xs"
-                value={options.graphOptions.boxPlotItemHeight ?? 20}
-                onChange={(e) => {
-                  const value = Math.min(
-                    40,
-                    Math.max(0, Number(e.target.value))
-                  )
-                  if (!isNaN(value)) {
-                    updateOption("graphOptions", {
-                      ...options.graphOptions,
-                      boxPlotItemHeight: value,
+                {...editing(
+                  "boxPlotItemHeight",
+                  String(options.graphOptions.boxPlotItemHeight ?? 20),
+                  (text) => {
+                    const boxPlotItemHeight = parseClampedNumber(text, {
+                      min: 0,
+                      max: 40,
                     })
+                    if (boxPlotItemHeight !== null) {
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        boxPlotItemHeight,
+                      })
+                    }
                   }
-                }}
+                )}
               />
               <span className="text-xs text-muted-foreground">px</span>
-            </div>
+            </OptionField>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
+import { UserProfileFields } from "@/components/auth/UserProfileFields"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,8 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { type PublicUser, updateUserMutation } from "@/queries/user"
 
 interface UserEditModalProps {
@@ -76,31 +75,14 @@ export function UserEditModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">ユーザー名</Label>
-            <Input
-              id="username"
-              value={formData.username}
-              onChange={(e) =>
-                setFormData({ ...formData, username: e.target.value })
-              }
-              placeholder="ユーザー名を入力"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="name">表示名</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="表示名を入力"
-              required
-            />
-          </div>
+          <UserProfileFields
+            username={formData.username}
+            name={formData.name}
+            onUsernameChange={(username) =>
+              setFormData({ ...formData, username })
+            }
+            onNameChange={(name) => setFormData({ ...formData, name })}
+          />
 
           {error && <div className="text-sm text-red-500">{error}</div>}
 

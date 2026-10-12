@@ -87,3 +87,19 @@ export function OptionCardWithChildren({
     </div>
   )
 }
+
+/** 灰色の枠に見出しと入力欄を横に並べる行（列数・文字の大きさ・表示名など） */
+export function OptionField({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
+      <Label className="text-xs whitespace-nowrap">{label}</Label>
+      {children}
+    </div>
+  )
+}

@@ -1,3 +1,4 @@
+import { OptionCard, Section } from "@/components/common/ReportOptionControls"
 import { Label } from "@/components/ui/label"
 import type {
   StatisticKind,
@@ -8,7 +9,6 @@ import {
   STATISTIC_SCOPES,
 } from "@/types/individualReport.types"
 
-import { OptionCard, Section } from "./ReportOptionControls"
 import type { ReportSettingsSectionProps } from "./types"
 
 /** 統計種別の見出し */

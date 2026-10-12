@@ -9,7 +9,6 @@
 import type {
   FileOverviewData,
   IdIntegrationConfig,
-  IdIntegrationDecision,
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type { ImportValuePolicy } from "../importValuePolicy"
@@ -20,6 +19,7 @@ import type {
   ImportCounts,
   PrismaTransaction,
 } from "../types"
+import { runIdIntegration } from "./idIntegrationRunner"
 
 /** アーカイブ側の学級1行 */
 type ArchiveClassroom =
@@ -82,131 +82,54 @@ export async function processClassroomIdIntegration(
   tx: PrismaTransaction
 ): Promise<void> {
   const classroomPreMatch = preMatchResult.classroom
-  const importClassroomById = new Map(
-    data.classesData.classrooms.map((classroom) => [classroom.id, classroom])
-  )
 
-  // ID一致したもの。同じ学級なので値も規則に従って書き込む
-  for (const match of classroomPreMatch.byId) {
-    idMappings.classroom[match.importId] = match.existingId
-    const importClassroom = importClassroomById.get(match.importId)
-    if (importClassroom) {
-      await applyClassroomColumns(
-        importClassroom,
-        match.existingId,
-        policy,
-        counts,
-        tx
-      )
-    }
-  }
-
-  const processDecision = async (
-    importId: string,
-    decision: IdIntegrationDecision | undefined,
-    defaultExistingId: string | undefined
-  ) => {
-    const importClassroom = importClassroomById.get(importId)
-    if (!importClassroom) return
-
-    if (!decision || decision.decisionType === "create_new") {
+  await runIdIntegration({
+    category: "classroom",
+    countKey: "classrooms",
+    importRowById: new Map(
+      data.classesData.classrooms.map((classroom) => [classroom.id, classroom])
+    ),
+    idMatchedItems: classroomPreMatch.byId,
+    matchedItemGroups: [
+      // 名前一致
+      {
+        matchedItems: classroomPreMatch.byName,
+        sameRowStrategy: "by_name",
+        skipAlreadyMapped: false,
+      },
+    ],
+    noMatchItems: classroomPreMatch.noMatch,
+    config,
+    idMappings,
+    idChangeTargets,
+    counts,
+    warnings,
+    describeRow: (importClassroom) => `学級「${importClassroom.name}」`,
+    applyColumns: (importClassroom, existingId) =>
+      applyClassroomColumns(importClassroom, existingId, policy, counts, tx),
+    createNewRow: async (importClassroom, importId) => {
       const existingById = await tx.classroom.findUnique({
         where: { id: importId },
       })
       if (existingById) {
         idMappings.classroom[importId] = importId
-      } else {
-        await tx.classroom.create({
-          data: {
-            id: importId,
-            name: importClassroom.name,
-            classroomCode: importClassroom.classroomCode ?? null,
-            grade: importClassroom.grade ?? null,
-            description: importClassroom.description ?? null,
-            // 表示設定もアーカイブに書かれた通りにする（規則の対象。
-            // applyClassroomColumns の説明を参照）
-            isVisible: importClassroom.isVisible ?? true,
-            ...policy.createdTimestamps(importClassroom),
-          },
-        })
-        idMappings.classroom[importId] = importId
-        counts.created.classrooms++
-      }
-    } else if (decision.decisionType === "same_person") {
-      const existingId = decision.existingId || defaultExistingId
-      if (!existingId) {
-        warnings.push(`学級「${importClassroom.name}」の既存IDが見つかりません`)
         return
       }
-
-      idMappings.classroom[importId] = existingId
-      await applyClassroomColumns(
-        importClassroom,
-        existingId,
-        policy,
-        counts,
-        tx
-      )
-
-      if (decision.idChoice === "use_import_id") {
-        idChangeTargets.push({
-          category: "classroom",
-          existingId: existingId,
-          newId: importId,
-        })
-      }
-    } else if (decision.decisionType === "skip") {
-      counts.skipped.classrooms++
-    }
-  }
-
-  // 名前一致
-  if (classroomPreMatch.byName) {
-    for (const match of classroomPreMatch.byName) {
-      const decision = config.decisions.find(
-        (decision) => decision.importId === match.importId
-      )
-
-      if (config.strategy === "by_name") {
-        await processDecision(
-          match.importId,
-          decision || {
-            importId: match.importId,
-            decisionType: "same_person",
-            existingId: match.existingId,
-            idChoice: "use_existing_id",
-          },
-          match.existingId
-        )
-      } else if (config.strategy === "all_new") {
-        await processDecision(
-          match.importId,
-          decision || {
-            importId: match.importId,
-            decisionType: "create_new",
-          },
-          undefined
-        )
-      } else {
-        await processDecision(match.importId, decision, match.existingId)
-      }
-    }
-  }
-
-  // どれにも一致しない
-  for (const item of classroomPreMatch.noMatch) {
-    if (idMappings.classroom[item.importId]) continue
-
-    const decision = config.decisions.find(
-      (decision) => decision.importId === item.importId
-    )
-    await processDecision(
-      item.importId,
-      decision || {
-        importId: item.importId,
-        decisionType: "create_new",
-      },
-      undefined
-    )
-  }
+      await tx.classroom.create({
+        data: {
+          id: importId,
+          name: importClassroom.name,
+          classroomCode: importClassroom.classroomCode ?? null,
+          grade: importClassroom.grade ?? null,
+          description: importClassroom.description ?? null,
+          // 表示設定もアーカイブに書かれた通りにする（規則の対象。
+          // applyClassroomColumns の説明を参照）
+          isVisible: importClassroom.isVisible ?? true,
+          ...policy.createdTimestamps(importClassroom),
+        },
+      })
+      idMappings.classroom[importId] = importId
+      counts.created.classrooms++
+    },
+  })
 }
