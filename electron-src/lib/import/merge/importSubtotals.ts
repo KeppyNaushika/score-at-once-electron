@@ -122,11 +122,11 @@ export async function processSubtotals(
 }
 
 /**
- * 小計項目を新規作成（名前重複時はサフィックス付き）。
+ * 小計項目を新規作成する。
  *
- * 名前をずらすのは、取り込みが「同名＝同一」と決めていないことを利用者が画面の上で
- * 見分けられるようにするためで、制約を満たすためではない（`(subtotalGroupId, name)` の
- * unique は 2026-08-23 に外した）。有無を見るだけなので findFirst でよい。
+ * 同じグループに同名の小計があっても、名前はアーカイブの値のまま作る（id で区別する）。
+ * 同名の2つを見分ける材料は画面が出す（#1452）。`(subtotalGroupId, name)` の unique は
+ * 2026-08-23 に外した。
  */
 async function createNewSubtotal(
   subtotal: ExtractedArchiveData["subtotalsData"]["subtotals"][0],
@@ -135,26 +135,6 @@ async function createNewSubtotal(
   policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
-  // 同名の小計が既にあるかチェック
-  const existingWithName = await tx.subtotal.findFirst({
-    where: { subtotalGroupId: newGroupId, name: subtotal.name },
-  })
-
-  let finalName = subtotal.name
-  if (existingWithName) {
-    // サフィックス付きで新規作成
-    for (let i = 2; i <= 100; i++) {
-      const candidate = `${subtotal.name} (${i})`
-      const dup = await tx.subtotal.findFirst({
-        where: { subtotalGroupId: newGroupId, name: candidate },
-      })
-      if (!dup) {
-        finalName = candidate
-        break
-      }
-    }
-  }
-
   const existingById = await tx.subtotal.findUnique({
     where: { id: subtotal.id },
   })
@@ -163,7 +143,7 @@ async function createNewSubtotal(
   await tx.subtotal.create({
     data: {
       id: newId,
-      name: finalName,
+      name: subtotal.name,
       subtotalGroupId: newGroupId,
       order: subtotal.order,
       ...policy.createdTimestamps(subtotal),

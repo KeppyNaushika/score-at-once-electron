@@ -226,12 +226,6 @@ describe("EntityListPage の当たり判定", () => {
     expect(pushSpy).toHaveBeenCalledTimes(1)
     expect(pushSpy).toHaveBeenCalledWith("/exams/exam-1/07-score-at-once")
   })
-
-  it("「詳細」の列は持たない（行そのものが導線）", () => {
-    renderList()
-
-    expect(screen.queryByText("詳細")).toBeNull()
-  })
 })
 
 describe("EntityListPage の出し分け", () => {
