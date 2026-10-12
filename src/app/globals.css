@@ -142,38 +142,53 @@
   }
 }
 
-/* カスタムスクロールバー設定 */
-* {
-  /* Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+/*
+ * スクロールバー：track は透明、thumb は細く薄く。
+ *
+ * ブラウザごとに効く指定が違うので、2系統を書き分ける。
+ * - Chromium・Safari: `::-webkit-scrollbar` で幅・角丸まで決める
+ * - Firefox: `::-webkit-scrollbar` を持たないので、標準の `scrollbar-width` / `scrollbar-color` で近づける
+ *
+ * 標準の2つを Chromium にも当ててはいけない。Chromium 121 以降は、どちらかが付いた要素の
+ * `::-webkit-scrollbar` を丸ごと無視するので、細さも角丸も消える。そこで標準側は
+ * `::-webkit-scrollbar` を知らないブラウザにだけ当てる。
+ */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
 }
 
-/* Webkit系ブラウザ */
 *::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
 
-*::-webkit-scrollbar-track {
-  background: transparent; /* ガイドは透明 */
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 2px;
-  transition: all 0.2s ease;
-  border: none;
 }
 
 *::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
-  width: 8px; /* ホバー時に幅拡張 */
-  border-radius: 4px;
 }
 
-*::-webkit-scrollbar-corner {
-  background: transparent;
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* 振動アニメーション */
@@ -188,17 +203,4 @@
   75% {
     transform: translateX(4px);
   }
-}
-
-/* ダークモード対応 */
-.dark * {
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
-}
-
-.dark *::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.dark *::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
 }

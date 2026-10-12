@@ -26,9 +26,7 @@ import { Fragment } from "react"
 
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import { GuardedLink } from "@/components/common/GuardedLink"
-import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
@@ -86,6 +84,78 @@ interface NavigationProps {
   setIsSidebarMinimized: (isMinimized: boolean) => void
 }
 
+/**
+ * サイドバーの行のボタン。アイコンは開いていても畳んでいても左端から同じ位置に置く。
+ *
+ * 畳んだ幅（`w-16` = 64px）から帯の余白（`px-2`）とボタンの外余白（`mx-1.5`）を引くと、
+ * 左端から 14px。そこに 36px（`w-9`）のボタンを置き、内余白 10px（`px-2.5`）で 16px の
+ * アイコンを入れると、アイコンは畳んだ幅のちょうど中央に来る（アイコンの大きさは Button が
+ * `size-4` に揃えるので、ここで `h-5 w-5` などを付けても効かない）。開いたときはボタンを
+ * 行いっぱいに伸ばすだけで、左余白は変えないので、幅が動いている間もアイコンは動かない。
+ * 畳んだときにボタンを正方形まで縮めるのは、ホバーや今いるページの色をアイコンの周りに
+ * だけ付けるため（行いっぱいのままだと、細い帯に横長の色が付く）。
+ *
+ * 以前は開閉で「中央寄せのアイコンだけのボタン」と「左寄せの文字付きボタン」を
+ * 差し替えていたため、切り替わった瞬間にアイコンが中央へ飛んでいた。
+ */
+function sidebarRowClassName(isSidebarMinimized: boolean): string {
+  return cn(
+    "mx-1.5 justify-start overflow-hidden has-[>svg]:px-2.5",
+    isSidebarMinimized ? "w-9" : "w-[calc(100%-0.75rem)]"
+  )
+}
+
+/** 名前は畳むと薄れて消える（幅の変化と同じ時間で）。読み上げには残る */
+function SidebarLabel({
+  isSidebarMinimized,
+  className,
+  children,
+}: {
+  isSidebarMinimized: boolean
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <span
+      className={cn(
+        "transition-opacity duration-300 ease-in-out",
+        isSidebarMinimized && "opacity-0",
+        className
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+/**
+ * 畳んでいる間だけ名前をツールチップで出す。
+ *
+ * 開閉で Tooltip を付け外しすると中のボタンが作り直されるので、Tooltip は常に
+ * 置いて中身だけ出し分ける（`open` を開閉で切り替えると Radix が制御／非制御の
+ * 切り替えを警告する）。
+ */
+function CollapsedTooltip({
+  isSidebarMinimized,
+  label,
+  children,
+}: {
+  isSidebarMinimized: boolean
+  label: string
+  children: React.ReactElement
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      {isSidebarMinimized && (
+        <TooltipContent side="right" sideOffset={5}>
+          {label}
+        </TooltipContent>
+      )}
+    </Tooltip>
+  )
+}
+
 export default function Navigation({
   isSidebarMinimized,
   toggleSidebar,
@@ -94,188 +164,144 @@ export default function Navigation({
   const { user, logout } = useAuth()
 
   return (
+    // 右の境界線は border でなく内側の影で引く。border だと 64px のうち 1px を取って中身が
+    // 63px になり、アイコンのボタンの左右の余白が 14px と 13px に食い違う
     <aside
       className={cn(
-        "fixed top-0 left-0 z-40 flex h-screen flex-col border-r bg-background transition-[width] duration-300 ease-in-out",
+        "fixed top-0 left-0 z-40 flex h-screen flex-col bg-background shadow-[inset_-1px_0_0_var(--color-border)] transition-[width] duration-300 ease-in-out",
         isSidebarMinimized ? "w-16" : "w-64"
       )}
     >
-      <div
-        className={cn(
-          "flex h-16 items-center border-b px-2",
-          isSidebarMinimized ? "justify-center" : "justify-between px-4"
-        )}
-      >
-        {!isSidebarMinimized && (
-          // 戻る/進むはここに置いていたが、詳細画面のヘッダー（WorkflowTabHeader）の
-          // クイックアクセスツールバーへ移した。同じ導線を2か所から出さない
-          <GuardedLink href="/exams" className="truncate text-lg font-semibold">
-            一括採点
-          </GuardedLink>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          className={cn(isSidebarMinimized ? "mx-auto" : "")}
+      {/* 開閉ボタンは右端から 14px に置く。畳んだ幅 64px ではそれがちょうど中央になる */}
+      <div className="flex h-16 items-center border-b px-3.5">
+        {/* 戻る/進むはここに置いていたが、詳細画面のヘッダー（WorkflowTabHeader）の
+            クイックアクセスツールバーへ移した。同じ導線を2か所から出さない */}
+        <SidebarLabel
+          isSidebarMinimized={isSidebarMinimized}
+          className="min-w-0 flex-1 truncate"
         >
-          {isSidebarMinimized ? (
-            <PanelLeftOpen className="h-5 w-5" />
-          ) : (
-            <PanelLeftClose className="h-5 w-5" />
-          )}
+          <span inert={isSidebarMinimized}>
+            <GuardedLink href="/exams" className="text-lg font-semibold">
+              一括採点
+            </GuardedLink>
+          </span>
+        </SidebarLabel>
+        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+          {isSidebarMinimized ? <PanelLeftOpen /> : <PanelLeftClose />}
           <span className="sr-only">
             {isSidebarMinimized ? "サイドバーを開く" : "サイドバーを閉じる"}
           </span>
         </Button>
       </div>
-      <ScrollArea className="flex-1 py-4">
+      {/* 窓が低いとメニューが溢れるので、この帯だけ縦に流す。min-h-0 が無いと flex の子は
+          中身の高さまで伸びて溢れ、流れない。横は流さない（開閉の途中は名前が帯より長く、
+          横にスクロールできてしまう）。スクロールバーは globals.css の共通の細い見た目を使う */}
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-4">
         <TooltipProvider delayDuration={0}>
           <nav className="grid items-start gap-1 px-2">
             {navGroups.map((group, groupIndex) => (
               <Fragment key={groupIndex}>
                 {groupIndex > 0 && <Separator className="my-1" />}
-                {group.map((navItem) =>
-                  isSidebarMinimized ? (
-                    <Tooltip key={navItem.label}>
-                      <TooltipTrigger asChild>
-                        <GuardedLink href={navItem.href} passHref>
-                          <Button
-                            variant={
-                              pathname === navItem.href ? "secondary" : "ghost"
-                            }
-                            size="icon"
-                            className="w-full justify-center"
-                            aria-label={navItemAccessibleName(navItem)}
-                          >
-                            <navItem.icon className="h-5 w-5" />
-                          </Button>
-                        </GuardedLink>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" sideOffset={5}>
-                        {navItemAccessibleName(navItem)}
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <GuardedLink
-                      key={navItem.label}
-                      href={navItem.href}
-                      passHref
-                    >
+                {group.map((navItem) => (
+                  <CollapsedTooltip
+                    key={navItem.label}
+                    isSidebarMinimized={isSidebarMinimized}
+                    label={navItemAccessibleName(navItem)}
+                  >
+                    <GuardedLink href={navItem.href} passHref>
                       <Button
                         variant={
                           pathname === navItem.href ? "secondary" : "ghost"
                         }
-                        className="w-full justify-start"
+                        className={sidebarRowClassName(isSidebarMinimized)}
                         aria-label={
                           navItem.isExperimental
                             ? navItemAccessibleName(navItem)
                             : undefined
                         }
                       >
-                        <navItem.icon className="mr-3 h-5 w-5" />
-                        {navItem.label}
+                        <navItem.icon className="mr-3" />
+                        <SidebarLabel isSidebarMinimized={isSidebarMinimized}>
+                          {navItem.label}
+                        </SidebarLabel>
                         {navItem.isExperimental && (
                           <ExperimentalBadge
                             label="実験的"
                             tone={
                               pathname === navItem.href ? "default" : "muted"
                             }
-                            className="ml-auto px-1.5 py-0 text-[10px]"
+                            className={cn(
+                              "ml-auto px-1.5 py-0 text-[10px] transition-opacity duration-300 ease-in-out",
+                              isSidebarMinimized && "opacity-0"
+                            )}
                           />
                         )}
                       </Button>
                     </GuardedLink>
-                  )
-                )}
+                  </CollapsedTooltip>
+                ))}
               </Fragment>
             ))}
           </nav>
         </TooltipProvider>
-      </ScrollArea>
-      <div
-        className={cn("mt-auto border-t p-2", isSidebarMinimized ? "" : "p-4")}
-      >
+      </div>
+      <div className="mt-auto border-t p-2">
         {user ? (
-          <>
-            {isSidebarMinimized ? (
-              <div className="space-y-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex justify-center">
-                      <User className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={5}>
-                    {user.name} ({user.username})
-                  </TooltipContent>
-                </Tooltip>
-                <TooltipButton
-                  label="ログアウト"
-                  tooltipSide="right"
-                  tooltipSideOffset={5}
-                  variant="ghost"
-                  size="icon"
-                  className="w-full justify-center"
-                  onClick={logout}
+          <div className="space-y-2">
+            {/* 名前は畳んでも消さずに薄めるだけ。消すと行の高さが変わり、下のボタンが跳ねる */}
+            <CollapsedTooltip
+              isSidebarMinimized={isSidebarMinimized}
+              label={`${user.name} (${user.username})`}
+            >
+              {/* ボタンではないので、アイコンの大きさと余白はボタンの行に手で合わせる */}
+              <div className="flex items-center overflow-hidden px-4 py-1">
+                <User className="mr-3 size-4 shrink-0 text-muted-foreground" />
+                <SidebarLabel
+                  isSidebarMinimized={isSidebarMinimized}
+                  className="min-w-0 flex-1 truncate text-sm"
                 >
-                  <LogOut className="h-5 w-5" />
-                </TooltipButton>
+                  <span className="block truncate font-medium">
+                    {user.name}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {user.username}
+                  </span>
+                </SidebarLabel>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-2 py-1">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1 truncate text-sm">
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {user.username}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={logout}
-                >
-                  <LogOut className="mr-3 h-5 w-5" />
+            </CollapsedTooltip>
+            <CollapsedTooltip
+              isSidebarMinimized={isSidebarMinimized}
+              label="ログアウト"
+            >
+              <Button
+                variant="ghost"
+                className={sidebarRowClassName(isSidebarMinimized)}
+                onClick={logout}
+              >
+                <LogOut className="mr-3" />
+                <SidebarLabel isSidebarMinimized={isSidebarMinimized}>
                   ログアウト
-                </Button>
-              </div>
-            )}
-          </>
+                </SidebarLabel>
+              </Button>
+            </CollapsedTooltip>
+          </div>
         ) : (
-          <>
-            {isSidebarMinimized ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <GuardedLink href="/" passHref>
-                    <Button
-                      variant={pathname === "/" ? "secondary" : "ghost"}
-                      size="icon"
-                      className="w-full justify-center"
-                      aria-label="ログイン"
-                    >
-                      <LogIn className="h-5 w-5" />
-                    </Button>
-                  </GuardedLink>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={5}>
+          <CollapsedTooltip
+            isSidebarMinimized={isSidebarMinimized}
+            label="ログイン"
+          >
+            <GuardedLink href="/" passHref>
+              <Button
+                variant={pathname === "/" ? "secondary" : "ghost"}
+                className={sidebarRowClassName(isSidebarMinimized)}
+              >
+                <LogIn className="mr-3" />
+                <SidebarLabel isSidebarMinimized={isSidebarMinimized}>
                   ログイン
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <GuardedLink href="/" passHref>
-                <Button
-                  variant={pathname === "/" ? "secondary" : "ghost"}
-                  className="w-full justify-start"
-                >
-                  <LogIn className="mr-3 h-5 w-5" />
-                  ログイン
-                </Button>
-              </GuardedLink>
-            )}
-          </>
+                </SidebarLabel>
+              </Button>
+            </GuardedLink>
+          </CollapsedTooltip>
         )}
       </div>
     </aside>

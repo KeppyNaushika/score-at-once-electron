@@ -235,10 +235,6 @@ export function StudentGraderAssignmentTable({
       <div className="rounded-lg border">
         <div
           className="relative max-h-[60vh] w-full overflow-auto"
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
-          }}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >

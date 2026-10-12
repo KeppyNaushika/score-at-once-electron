@@ -242,10 +242,6 @@ export function CropSubtotalAssignmentTable({
         </div>
         <div
           className="relative min-h-96 w-full overflow-auto"
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
-          }}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >
