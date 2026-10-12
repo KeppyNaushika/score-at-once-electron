@@ -5,6 +5,8 @@
  * - 行の作成：採点指示を作るときに、渡した順のまま画像の行を作る。取り込み先の外は受け付けない
  * - 引き継ぎ：直した版・項目の一覧が変わって作り直した版にも、並び順のまま画像の行を作る
  * - 送信：1段目の固定部に並び順で入り、見積もりの材料にも並び順で出る
+ * - 後始末：名指しした画像のうち、どの行からも指されていないファイルだけを消す（取り込み先の外は触らない）。
+ *   採点枠を消すと、その採点指示の画像のファイルも消える
  *
  * 画像は合成したもの。外部へは何も送らない（偽の事業者）。
  */
@@ -14,7 +16,16 @@ import * as path from "path"
 import sharp from "sharp"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type * as DataManagerModule from "@/electron-src/lib/dataManager"
+
 const TEST_DB_PATH = path.resolve(__dirname, "../../data/test-database.db")
+
+/** 共有するファイルの根（採点枠を消すときに画像を消す先）。テストごとの一時ディレクトリにする */
+let sharedFilesDirectory = ""
+vi.mock("../../electron-src/lib/dataManager", async (importOriginal) => ({
+  ...(await importOriginal<typeof DataManagerModule>()),
+  getSharedFilesDirectory: () => sharedFilesDirectory,
+}))
 
 vi.mock("../../electron-src/lib/prisma/client", async () => {
   const { getTestPrismaClient } = await import("../helpers/testPrismaClient")
@@ -32,6 +43,8 @@ import {
   ensurePromptRendersRubricItems,
   getAiPrompt,
 } from "@/electron-src/lib/prisma/aiPrompt"
+import { removeUnreferencedQuestionImages } from "@/electron-src/lib/prisma/aiQuestionImageCleanup"
+import { deleteCropRegion } from "@/electron-src/lib/prisma/cropRegion"
 
 import {
   cleanupTestDatabase,
@@ -55,6 +68,7 @@ beforeEach(async () => {
   await cleanupTestDatabase()
   fixture = await createAiGradingFixture(testPrisma, { studentCount: 1 })
   dataDirectories.push(fixture.dataDirectory)
+  sharedFilesDirectory = fixture.dataDirectory
 })
 
 afterAll(async () => {
@@ -261,6 +275,72 @@ describe("問題の画像の行", () => {
         where: { promptId: prompt.id },
       })
     ).toBe(0)
+  })
+})
+
+describe("使われなくなった問題の画像の後始末", () => {
+  const existsInData = (relativePath: string) =>
+    fs.existsSync(path.join(fixture.dataDirectory, relativePath))
+
+  it("名指しした画像のうち、どの行からも指されていないファイルだけを消す", async () => {
+    const savedPath = await importImage(
+      await solidImage(10, 10, { r: 10, g: 0, b: 0 })
+    )
+    const unsavedPath = await importImage(
+      await solidImage(10, 10, { r: 20, g: 0, b: 0 })
+    )
+    await createAiPrompt(
+      { cropRegionId: fixture.cropRegion.id, questionImagePaths: [savedPath] },
+      fixture.exam.user.id
+    )
+
+    expect(
+      await removeUnreferencedQuestionImages(
+        [savedPath, unsavedPath, unsavedPath],
+        fixture.dataDirectory
+      )
+    ).toBe(1)
+    expect(existsInData(savedPath)).toBe(true)
+    expect(existsInData(unsavedPath)).toBe(false)
+    // もう無いファイルを名指ししても失敗しない
+    expect(
+      await removeUnreferencedQuestionImages(
+        [unsavedPath],
+        fixture.dataDirectory
+      )
+    ).toBe(0)
+  })
+
+  it("取り込み先の外を指すパスは消さない", async () => {
+    const outsidePath = `exams/${examId()}/answers/synthetic.png`
+    const outsideAbsolutePath = path.join(fixture.dataDirectory, outsidePath)
+    fs.mkdirSync(path.dirname(outsideAbsolutePath), { recursive: true })
+    fs.writeFileSync(outsideAbsolutePath, "synthetic")
+
+    expect(
+      await removeUnreferencedQuestionImages(
+        [
+          outsidePath,
+          `exams/${examId()}/ai-question-images/../answers/synthetic.png`,
+        ],
+        fixture.dataDirectory
+      )
+    ).toBe(0)
+    expect(existsInData(outsidePath)).toBe(true)
+  })
+
+  it("採点枠を消すと、その採点指示の画像のファイルも消える", async () => {
+    const imagePath = await importImage(
+      await solidImage(10, 10, { r: 30, g: 0, b: 0 })
+    )
+    await createAiPrompt(
+      { cropRegionId: fixture.cropRegion.id, questionImagePaths: [imagePath] },
+      fixture.exam.user.id
+    )
+
+    await deleteCropRegion(fixture.cropRegion.id)
+
+    expect(existsInData(imagePath)).toBe(false)
   })
 })
 

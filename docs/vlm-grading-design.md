@@ -418,11 +418,11 @@ A/B/C のような段階評価（#836 の `SCALE`）は、採点方式に `scale
 
 **既存の表（実装済み）と、その変更**
 
-| 表                                         | 列（変更点は太字）                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 関係・削除                                              |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| `AiPrompt`（採点指示）                     | `cropRegionId`、`parentPromptId?`、`createdByUserId?`、`questionText`、`modelAnswerText`、`sendModelAnswerImage`、`rubricText`（採点基準の自由文）、`annotationInstruction`（助言の文案の指示）、**`renderedRubricItems`（送った時点の項目の一覧の文。足す）**。**`questionImagePath`（値は `AiPromptQuestionImage` へ写した）・`revisionInstruction`・`revisionMessage` は落とした**                                                                                    | CropRegion とともに消える。親・作成者が消えたら SetNull |
-| `AiGradingRun`（1回の実行）                | `userId`、`promptId`、`purpose`（**`grade` / `group` / `check`（AI チェック。§3-10）/ `advice`。`revise` は廃止**）、`templateVersion`、`provider`、`model`、`effort`、`mode`（realtime / batch / **cli**）、`status`、`externalBatchId?`、`submittedClientId`、`imageScale`、`points`、**`notes`（2段目の気づいた点。足す）**、**`questioningScoringMethod`（問いかけの前に決めた採点方式の下書き。足す）**、トークン数4列、`endedAt?`。**`resultPromptId` は落とした** | 利用者・採点指示とともに消える                          |
-| `AiGradingAttempt`（答案1件への1回の判定） | `runId`、`examStudentId`、`state`、`status`、`partialScore`、`transcription`、**`observation`（所見。足す）**、`confidence`、`errorMessage`、トークン数4列。**`comment`・`annotationText`・`adoptedQuestionScoreId`・`adoptedDrawingAnnotationId`・`adoptedAt` は落とした**                                                                                                                                                                                              | run・ExamStudent とともに消える                         |
+| 表                                         | 列（変更点は太字）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | 関係・削除                                              |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `AiPrompt`（採点指示）                     | `cropRegionId`、`parentPromptId?`、`createdByUserId?`、`questionText`、`modelAnswerText`、`sendModelAnswerImage`、`rubricText`（採点基準の自由文）、`annotationInstruction`（助言の文案の指示）、**`renderedRubricItems`（送った時点の項目の一覧の文。足す）**。**`questionImagePath`（値は `AiPromptQuestionImage` へ写した）・`revisionInstruction`・`revisionMessage` は落とした**                                                                                                                                                                             | CropRegion とともに消える。親・作成者が消えたら SetNull |
+| `AiGradingRun`（1回の実行）                | `userId`、`promptId`、`purpose`（**`grade` / `group` / `check`（AI チェック。§3-10）。`revise` は廃止（過去の行を読むためだけに値を残す）。まとめた一文の `advice` は R6 で足す**）、`templateVersion`、`provider`、`model`、`effort`、`mode`（realtime / batch。**CLI 経由の `cli` は R7 で足す**）、`status`、`externalBatchId?`、`submittedClientId`、`imageScale`、`points`、**`notes`（2段目の気づいた点。足す）**、**`questioningScoringMethod`（問いかけの前に決めた採点方式の下書き。足す）**、トークン数4列、`endedAt?`。**`resultPromptId` は落とした** | 利用者・採点指示とともに消える                          |
+| `AiGradingAttempt`（答案1件への1回の判定） | `runId`、`examStudentId`、`state`、`status`、`partialScore`、`transcription`、**`observation`（所見。足す）**、`confidence`、`errorMessage`、トークン数4列。**`comment`・`annotationText`・`adoptedQuestionScoreId`・`adoptedDrawingAnnotationId`・`adoptedAt` は落とした**                                                                                                                                                                                                                                                                                       | run・ExamStudent とともに消える                         |
 
 - 1段目が既存の項目に当たると返したもの（`matchedRubricItemIds`）は、次の表に持つ
 - 試行の「採用」（判定をそのまま自分の採点として書く）の画面と口は廃止した。点は問いかけの確定で入る。`adopted*` の列も落とした
@@ -430,22 +430,22 @@ A/B/C のような段階評価（#836 の `SCALE`）は、採点方式に `scale
 
 **新しい表**
 
-| 表                                                             | 列                                                                                                                                                                             | 関係・削除                                                                         |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `AiPromptQuestionImage`（採点指示の問題の画像）                | `promptId`、`imagePath`（data ディレクトリからの相対パス）、`sortOrder`（送る順）                                                                                              | 採点指示とともに消える。書き換えない（採点指示を作るときに一緒に作る）             |
-| `AiAttemptRubricMatch`（1段目の当てはまり）                    | `attemptId`、`rubricItemId`                                                                                                                                                    | 試行とともに消える。項目が消えたら一緒に消える                                     |
-| `AiRubricProposal`（項目の案）                                 | `runId`（2段目の run。CLI では1段目と同じ run）、`label`、`description`、`adviceDraft`（助言の文案）、`matchedRubricItemId?`（既存の項目に当たる特徴のとき）、`sortOrder`      | run とともに消える。項目が消えたら SetNull                                         |
-| `AiRubricProposalOption`（案の選択肢）                         | `proposalId`、`effectKind`・`pointDelta?`・`setStatus?`・`setScore?`（RubricItem と同じ形）、`rationale`、`recommended` Boolean、`sortOrder`                                   | 案とともに消える                                                                   |
-| `AiRubricProposalMember`（案に入る答案）                       | `proposalId`、`attemptId`                                                                                                                                                      | 案・試行とともに消える                                                             |
-| `AiRubricProposalResponse`（教員の答え）                       | `proposalId`、`optionId?`（「その他」・自分で採点なら null）、`freeText`、`resultRubricItemId?`（確定でできた・結び付けた項目）、`committedAt?`（確定した日時。下書きは null） | 案とともに消える。選択肢・項目が消えたら SetNull。答え直しは新しい行（最新が効く） |
-| `AiRubricProposalResponseScore`（自分で採点した点）            | `responseId`、`attemptId`、`status`、`partialScore?`                                                                                                                           | 答え・試行とともに消える                                                           |
-| `AiAttemptResponse`（案の外の問いへの答え）                    | `attemptId`、`choice`（`rescore` / `keep` / `manual`）、`status?`・`partialScore?`（直す点・付けた点）、`committedAt?`                                                         | 試行とともに消える。答え直しは新しい行（答案ごとに最新が効く）                     |
-| `AiRubricProposalAdviceDraft`（直している助言）                | `proposalId`、`userId`、`adviceText`（1打鍵ごとに同じ行を書き換える。同じ案・教員の行が複数あれば updatedAt の新しい方）                                                       | 案・教員とともに消える。最後の確定より前の行は効かない                             |
-| `AiRubricProposalInstructionDraft`（書いている再採点への指示） | `proposalId`、`userId`、`instructionText`（「その他」の欄の文。1打鍵ごとに同じ行を書き換える。同じ案・教員の行が複数あれば updatedAt の新しい方）                              | 案・教員とともに消える。確定で「その他」を選んでいない案の行は消す                 |
-| `AiAdviceDraft`（まとめた一文の案）                            | `runId`（`advice` の run）、`text`                                                                                                                                             | run とともに消える                                                                 |
-| `AiAdviceDraftItem`                                            | `draftId`、`rubricItemId`（どの組み合わせの案か）                                                                                                                              | 案・項目とともに消える                                                             |
+| 表                                                             | 列                                                                                                                                                                                         | 関係・削除                                                                         |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `AiPromptQuestionImage`（採点指示の問題の画像）                | `promptId`、`imagePath`（data ディレクトリからの相対パス）、`sortOrder`（送る順）                                                                                                          | 採点指示とともに消える。書き換えない（採点指示を作るときに一緒に作る）             |
+| `AiAttemptRubricMatch`（1段目の当てはまり）                    | `attemptId`、`rubricItemId`                                                                                                                                                                | 試行とともに消える。項目が消えたら一緒に消える                                     |
+| `AiRubricProposal`（項目の案）                                 | `runId`（2段目の run。R7 の CLI 経由では1段目と同じ run にする）、`label`、`description`、`adviceDraft`（助言の文案）、`matchedRubricItemId?`（既存の項目に当たる特徴のとき）、`sortOrder` | run とともに消える。項目が消えたら SetNull                                         |
+| `AiRubricProposalOption`（案の選択肢）                         | `proposalId`、`effectKind`・`pointDelta?`・`setStatus?`・`setScore?`（RubricItem と同じ形）、`rationale`、`recommended` Boolean、`sortOrder`                                               | 案とともに消える                                                                   |
+| `AiRubricProposalMember`（案に入る答案）                       | `proposalId`、`attemptId`                                                                                                                                                                  | 案・試行とともに消える                                                             |
+| `AiRubricProposalResponse`（教員の答え）                       | `proposalId`、`optionId?`（「その他」・自分で採点なら null）、`freeText`、`resultRubricItemId?`（確定でできた・結び付けた項目）、`committedAt?`（確定した日時。下書きは null）             | 案とともに消える。選択肢・項目が消えたら SetNull。答え直しは新しい行（最新が効く） |
+| `AiRubricProposalResponseScore`（自分で採点した点）            | `responseId`、`attemptId`、`status`、`partialScore?`                                                                                                                                       | 答え・試行とともに消える                                                           |
+| `AiAttemptResponse`（案の外の問いへの答え）                    | `attemptId`、`choice`（`rescore` / `keep` / `manual`）、`status?`・`partialScore?`（直す点・付けた点）、`committedAt?`                                                                     | 試行とともに消える。答え直しは新しい行（答案ごとに最新が効く）                     |
+| `AiRubricProposalAdviceDraft`（直している助言）                | `proposalId`、`userId`、`adviceText`（1打鍵ごとに同じ行を書き換える。同じ案・教員の行が複数あれば updatedAt の新しい方）                                                                   | 案・教員とともに消える。最後の確定より前の行は効かない                             |
+| `AiRubricProposalInstructionDraft`（書いている再採点への指示） | `proposalId`、`userId`、`instructionText`（「その他」の欄の文。1打鍵ごとに同じ行を書き換える。同じ案・教員の行が複数あれば updatedAt の新しい方）                                          | 案・教員とともに消える。確定で「その他」を選んでいない案の行は消す                 |
 
 - 答えた教員の列は持たない。問いかけは run を実行した教員にだけ出すので、run の `userId` で分かる
+- **まだ作っていない表（R6）。** まとめた一文の案 `AiAdviceDraft`（`runId`（`advice` の run）、`text`。run とともに消える）と
+  `AiAdviceDraftItem`（`draftId`、`rubricItemId`。どの組み合わせの案か。案・項目とともに消える）
 - 送った全文は保存しない。採点指示の行（`renderedRubricItems` を含む）・アプリ共通の指示の版・run の `points` から組み立て直せる
 
 ### 5-4. 状態の導き方（renderer で求め、列には持たない）
@@ -465,6 +465,8 @@ A/B/C のような段階評価（#836 の `SCALE`）は、採点方式に `scale
 ### 5-5. 規模と後始末
 
 1設問100名程度を5往復しても、attempt は数百行、項目の案は数十行で済む。古い試行を消す操作は廃止した（試行は run・ExamStudent とともに消える）。
+
+採点指示の問題の画像は、取り込んだ時点でファイルだけができ、行（`AiPromptQuestionImage`）は保存したときに作る。行の無いファイルは名指しで消す（`aiQuestionImageCleanup.ts`）：採点指示の画面を閉じるとき、そこで取り込んで保存しなかったもの（やめたなら全部、保存したなら保存前に外したもの）と、採点枠・模範解答のページを消したときにその採点指示の画像。どれかの行がまだ指していれば残す。フォルダを見回して掃除はしない（共有フォルダでは、別の端末が取り込んだ画像の行がまだ同期で届いていないことがある）。
 
 ---
 
@@ -623,7 +625,7 @@ Claude Code・Codex のサブスクリプションで採点するための送り
    （`fitsAnnotationAt`・`replaceAdviceAnnotationText`）。測れなかった答案は枠全体を空きとして判定する
 9. **その答案（同じ採点行）のほかの文字の注釈も、手書きと同じく埋まっている場所として扱う**（置く・書き換える朱書きそのものと、
    同期で重複して消す朱書きは除く）。注釈の箱は、文・文字の大きさ・`anchorDirection` から 2. と同じ数え方で見積もる。
-   ほかの注釈は動かさず、書き換えもしない（`withOccupiedRectangles`・`annotationBoxesOf`）
+   ほかの注釈は動かさず、書き換えもしない（`withOccupiedRectangles`・`textAnnotationRectangleOf`）
 
 ---
 
@@ -639,7 +641,8 @@ Claude Code・Codex のサブスクリプションで採点するための送り
 
 1. **これは研究・実験のための機能であること。** 学校の実運用での利用は想定していない。
    実際の生徒の答案で使う場合は、所属する学校・設置者の規程と承認、必要に応じて保護者への説明が要ること
-2. **何が送られるか。** 設問枠の切り出し画像（氏名欄は含まない）、問題文・模範解答・採点基準・項目の一覧、指示文、1段目の読み取りと所見（2段目）。
+2. **何が送られるか。** 設問枠の切り出し画像（氏名欄は含まない）、採点指示（問題文・問題の画像・模範解答とその画像・採点基準・助言の文案の指示）、
+   項目の一覧、教員の再採点への指示、1段目の読み取り・所見・判定（2段目）。教員の点は送らない。
    答案の本文に生徒が氏名などを書いている場合、それも画像に写ること
 3. **どこへ送られるか。** 利用者が選んだ事業者（Anthropic / OpenAI / …）。送った内容の保持期間・学習への利用・所在国は
    事業者ごと・契約ごとの規約に従うこと。**サブスクリプションの CLI 経由では、その契約の設定（学習への利用など）に従い、API とは扱いが違うことがある。**
@@ -648,10 +651,13 @@ Claude Code・Codex のサブスクリプションで採点するための送り
 5. **API キーと費用。** キー・サブスクリプションは利用者が自分で用意する。費用は利用者の契約で発生し、このアプリは負担も保証もしないこと
 6. **サブスクリプションの CLI をアプリから自動で実行する使い方が、各事業者の規約で認められるかは、利用者が確かめること。**
    CLI はファイル操作などの道具を持ち、答案に書かれた指示がその実行につながる危険があること
-7. **AI の判定は候補にすぎないこと。** 採点の責任は教員にある。AI の判定は、教員が選ばない限り採点に入らない
+7. **AI の判定は参考情報であること。** 採点の責任は教員にある。AI の判定は、教員が問いかけで確かめて確定しない限り採点に入らない
 8. **利用の責任は利用者にあること。** このソフトウェアは AGPLv3 で提供され、無保証である（同ライセンス第15条・第16条）。
    開発者はこの機能を通じて何のデータも受け取らず、送信は利用者と事業者の間で直接行われる
-9. **無効にしても、すでに送信したデータは取り消せないこと。** 無効にすると、この端末で機能が表示されなくなり、保存した API キーは削除され、以後は送信されない
+9. **無効にしても、すでに送信したデータは取り消せないこと。** 無効にすると、この端末で機能が表示されなくなり、保存した API キーは削除され、以後は送信されない。
+   アプリ内の AI の判定・利用量・費用の記録は残り、試験を消すときに一緒に消える
+
+3 の CLI 経由の一文と 6 は、CLI 経由（R7）を実装するときに同意文へ足して版を上げる（今の同意文は 6 を除く8項目）。
 
 **同意の記録**
 
@@ -720,6 +726,8 @@ Claude Code・Codex のサブスクリプションで採点するための送り
     重なった助言の問いかけ（§3-7）は、一覧表示・個別表示のルーブリックのパネルに出す
 - **中央：** どのタブでも答案の一覧（白さ順の並べ替えができる）。問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる
 - **右端：固定のパネル。** 設問の移動・表示。この試験の AI の費用の概算は、採点モードの行の左端に出す
+- **設問一覧の印。** 自分の AI の判定があるのに自分がまだ採点していない答案のある設問は、設問一覧の印をオレンジにする
+  （採点のどのモードでも同じ。AI 採点を解放していなければ出さない。`useUnreflectedAiQuestionIds`）
 - **採点指示の編集の「問題の画像」。** サムネイルを送る順に並べる。「ファイルから追加」「貼り付け」（Ctrl/⌘+V でも）→（PDF ならページを選ぶ）→ 切り出し
   （ドラッグ。矢印で動かし Alt＋矢印で広げ・狭める、Enter で取り込む）。サムネイルの上で Enter で拡大（← → で前後）、Alt＋← → で並べ替え、
   Delete で外す。同じことをボタンでもできる。採点指示の中身と実行ダイアログの見積もりにも、送る問題の画像の枚数を出す

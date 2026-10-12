@@ -11,7 +11,7 @@ import { aiProviderStatusesQuery } from "@/queries/aiProvider"
 /**
  * その事業者への同意が「今の同意」か。
  *
- * 同意は「その端末で、その利用者が、その版の同意文に」行うもの（設計 §9-1）。
+ * 同意は「その端末で、その利用者が、その版の同意文に」行うもの（設計 §10-1）。
  * 版が今の同意文と違えば同意し直し、別の利用者の同意は今の利用者の同意にならない。
  */
 export function isAiProviderConsentCurrent(

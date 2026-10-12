@@ -37,7 +37,7 @@ export function AiGradingSettingsTab() {
         <p className="text-sm text-muted-foreground">
           答案の切り出し画像を、利用者が選んだ AI
           の事業者へ送り、採点の候補を受け取る研究・実験のための機能です。AI
-          の判定は候補にすぎず、教員が確かめて採用しない限り採点には入りません。
+          の判定は参考情報であり、教員が問いかけの画面で確認して確定しない限り、採点結果には反映されません。
         </p>
         <p className="text-sm text-muted-foreground">
           ご利用には、事業者ごとの同意が必要です。同意は、この端末で、ログイン中の利用者として記録されます。

@@ -35,7 +35,7 @@ interface AiGradingTabsProps {
 /**
  * 「設定」「既定値」「料金」「使用トークン」のタブ。
  *
- * 機能は同意するまで存在しないものとして扱う（設計 §9-1）。今の利用者の今の同意が
+ * 機能は同意するまで存在しないものとして扱う（設計 §10-1）。今の利用者の今の同意が
  * 1つも無いうちは「設定」（同意の入口と説明）だけを使え、他のタブは押せない
  */
 export function AiGradingTabs({ initialTab }: AiGradingTabsProps) {
