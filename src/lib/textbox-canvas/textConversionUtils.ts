@@ -3,6 +3,7 @@
  * @description Discord Markdownスタイル記法とMathJaxを使用したテキスト→SVG変換機能を提供
  */
 
+import { parseTextWithMath, sanitizeCssColor } from "./annotationMarkup"
 import { FONT_SETTINGS, SVG_SETTINGS } from "./constants"
 import {
   cleanupElementStyles,
@@ -10,181 +11,6 @@ import {
   processMathJax,
   waitForRenderingComplete,
 } from "./mathJaxUtils"
-
-/**
- * セキュリティチェック: 危険なパターンを検出
- * @param text チェック対象のテキスト
- * @returns boolean 危険なパターンが含まれている場合はtrue
- */
-function isDangerous(text: string): boolean {
-  const dangerousPatterns = [
-    /javascript:/i,
-    /<script/i,
-    /on\w+\s*=/i,
-    /eval\s*\(/i,
-    /<iframe/i,
-    /<object/i,
-    /<embed/i,
-  ]
-  return dangerousPatterns.some((pattern) => pattern.test(text))
-}
-
-/**
- * 数式内容のサニタイゼーション（LaTeX記法用）
- * @param content サニタイゼーション対象の数式内容
- * @returns string サニタイゼーション済みの内容
- */
-function sanitizeMathContent(content: string): string {
-  // 数学記号、英数字、基本的なLaTeX記号のみ許可
-  return content.replace(
-    /[^a-zA-Z0-9\s+\-*/=(){}[\]^_\\{|}.,\u03B1-\u03C9\u0391-\u03A9]/g,
-    ""
-  )
-}
-
-/**
- * LaTeX記法を$記法に正規化（\( \) → $...$, \[ \] → $$...$$）
- * @param text 変換対象のテキスト
- * @returns string 正規化されたテキスト
- */
-function preprocessMathSyntax(text: string): string {
-  // セキュリティチェック
-  if (isDangerous(text)) {
-    return text
-  }
-
-  // \( \) → $...$ 変換（インライン数式）
-  text = text.replace(/\\[(]\s*(.*?)\s*\\[)]/g, (_match, content) => {
-    const safeContent = sanitizeMathContent(content)
-    return `$${safeContent}$`
-  })
-
-  // \[ \] → $$...$$ 変換（ディスプレイ数式）
-  text = text.replace(/\\\[\s*(.*?)\s*\\\]/g, (_match, content) => {
-    const safeContent = sanitizeMathContent(content)
-    return `$$${safeContent}$$`
-  })
-
-  return text
-}
-
-/**
- * 指定された位置が数式コンテキスト内にあるかチェック
- * @param text 全体のテキスト
- * @param position チェックする位置
- * @returns boolean 数式内の場合はtrue
- */
-function isInMathContext(text: string, position: number): boolean {
-  // 数式区切り文字のパターン
-  const mathPatterns = [
-    /\$\$[\s\S]*?\$\$/g, // $$...$$
-    /\$[^$\n]*?\$/g, // $...$
-    /\\\[([\s\S]*?)\\\]/g, // \[...\]
-    /\\\(([\s\S]*?)\\\)/g, // \(...\)
-  ]
-
-  for (const pattern of mathPatterns) {
-    let match
-    pattern.lastIndex = 0 // Reset regex state
-    while ((match = pattern.exec(text)) !== null) {
-      if (position >= match.index && position < match.index + match[0].length) {
-        return true
-      }
-    }
-  }
-
-  return false
-}
-
-/**
- * 数式コンテキストを考慮した安全な文字列置換
- * @param text 対象テキスト
- * @param searchRegex 検索パターン
- * @param replacement 置換文字列または関数
- * @returns string 置換後のテキスト
- */
-function safeReplace(
-  text: string,
-  searchRegex: RegExp,
-  replacement: string | ((match: string, ...args: unknown[]) => string)
-): string {
-  let result = text
-  let match
-  let offset = 0
-
-  // グローバルフラグを確保
-  const globalRegex = new RegExp(
-    searchRegex.source,
-    searchRegex.flags.includes("g")
-      ? searchRegex.flags
-      : searchRegex.flags + "g"
-  )
-
-  while ((match = globalRegex.exec(text)) !== null) {
-    const matchPosition = match.index
-
-    // 数式コンテキスト内でない場合のみ置換
-    if (!isInMathContext(text, matchPosition)) {
-      const replacementText =
-        typeof replacement === "function"
-          ? replacement(match[0], ...match.slice(1))
-          : replacement
-
-      // 実際の置換位置を計算（これまでの置換によるオフセットを考慮）
-      const actualPosition = matchPosition + offset
-      const actualLength = match[0].length
-
-      result =
-        result.slice(0, actualPosition) +
-        replacementText +
-        result.slice(actualPosition + actualLength)
-
-      // オフセットを更新
-      offset += replacementText.length - match[0].length
-    }
-  }
-
-  return result
-}
-
-/**
- * Discord Markdown記法をHTMLに変換（数式保護機能付き）
- * @param text 変換対象のテキスト
- * @returns string HTML変換されたテキスト
- */
-function parseDiscordMarkdown(text: string): string {
-  let result = text
-
-  // Discord Markdown → HTML変換（数式コンテキストを考慮）
-  // 注意: safeReplaceの文字列置換では$1がリテラル扱いされるため、関数置換を使用
-  result = safeReplace(
-    result,
-    /\*\*(.+?)\*\*/g,
-    (_m, p1) => `<strong>${p1}</strong>`
-  ) // 太字
-  result = safeReplace(
-    result,
-    /(?<!\*)\*([^*\n]+?)\*(?!\*)/g,
-    (_m, p1) => `<em>${p1}</em>`
-  ) // 斜体
-  result = safeReplace(result, /__(.+?)__/g, (_m, p1) => `<u>${p1}</u>`) // 下線
-  result = safeReplace(result, /~~(.+?)~~/g, (_m, p1) => `<del>${p1}</del>`) // 取り消し線
-
-  return result
-}
-
-/**
- * テキストをDiscord Markdown + LaTeX記法で解析してHTMLに変換
- * @param text 変換対象のテキスト
- * @returns string 変換されたHTML
- */
-function parseTextWithMath(text: string): string {
-  // 1. LaTeX記法を$記法に正規化
-  const normalizedText = preprocessMathSyntax(text)
-
-  // 2. Discord Markdown処理
-  return parseDiscordMarkdown(normalizedText)
-}
 
 /**
  * MathJax処理用の一時的なDOM容器を作成する
@@ -347,7 +173,7 @@ async function convertSingleLineToSvg(
   const container = createMathJaxContainer(fontSize)
 
   try {
-    // 1. テキストをHTMLに変換
+    // 1. テキストをHTMLに変換（本文はエスケープされ、タグは記法から作るものだけ）
     const htmlContent = parseTextWithMath(lineText)
 
     // 2. MathJax処理を実行（単一行、overflow: hidden）
@@ -458,7 +284,7 @@ function combineLineSvgs(
             <div style="
               font-size: ${fontSize}px;
               line-height: 1;
-              color: ${textColor};
+              color: ${sanitizeCssColor(textColor, FONT_SETTINGS.DEFAULT_COLOR)};
               text-align: left;
               text-justify: none;
               word-break: normal;

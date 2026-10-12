@@ -15,7 +15,7 @@ export interface WhitenessTargetRegion {
 /** 白さの測定対象となる答案画像 */
 export interface WhitenessTargetAnswerImage {
   studentAnswerImageId: string
-  /** データディレクトリからの相対パス、または絶対パス */
+  /** データディレクトリからの相対パス（根の外を指すものは測らない） */
   imagePath: string
 }
 

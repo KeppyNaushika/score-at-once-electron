@@ -20,6 +20,7 @@ import {
   getRelativePathFromSharedFiles,
   getSharedFilesDirectory,
 } from "../dataManager"
+import { isRelativePathInside } from "../pathContainment"
 import {
   questionImagePathsOfCropRegions,
   removeUnreferencedQuestionImages,
@@ -49,9 +50,11 @@ async function saveMasterAnswerFile(
   const examAnswerDir = getMasterAnswersDirectory(examId)
   await fsPromises.mkdir(examAnswerDir, { recursive: true })
 
+  // 画面から来たファイル名は区切りを含みうるので、1区切りの名前にしてから置く
+  const fileName = fileData.name.replace(/[/\\\0]/g, "_")
   const destinationPath = path.join(
     examAnswerDir,
-    `${Date.now()}-${uniqueSuffix}-${fileData.name}`
+    `${Date.now()}-${uniqueSuffix}-${fileName}`
   )
   await fsPromises.writeFile(destinationPath, Buffer.from(fileData.buffer))
 
@@ -61,18 +64,27 @@ async function saveMasterAnswerFile(
 /**
  * 画像ファイルを消す。既に無い場合は黙って通す。
  * DB 側は消えているので、ここで失敗しても操作自体は成立している。
+ *
+ * 消すのは試験の画像の置き場（`exams/` の下）のファイルだけ。DB の値がそれ以外
+ * （根の直下の DB・根の外など）を指していたら消さずに警告する。
  */
 async function removeImageFile(relativePath: string | null): Promise<void> {
   if (!relativePath) return
+  if (!isRelativePathInside(relativePath, ["exams"])) {
+    console.warn(
+      `Skipped deleting image outside the exam directories: ${JSON.stringify(relativePath)}`
+    )
+    return
+  }
   try {
     await fsPromises.unlink(getAbsolutePathFromSharedFiles(relativePath))
   } catch (fileError: unknown) {
-    if (
+    if (!(
       fileError &&
       typeof fileError === "object" &&
       "code" in fileError &&
-      fileError.code !== "ENOENT"
-    ) {
+      fileError.code === "ENOENT"
+    )) {
       console.warn(`Failed to delete image file ${relativePath}:`, fileError)
     }
   }

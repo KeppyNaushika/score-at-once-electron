@@ -19,11 +19,19 @@ import type {
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
 import {
   getAbsolutePathFromSharedFiles,
+  getAsbDefinitionDirectory,
   getAsbImagesDirectory,
   getRelativePathFromSharedFiles,
+  getSharedFilesDirectory,
+  removeDirectoryUnderSharedFiles,
 } from "../lib/dataManager"
 import { encodePng } from "../lib/imageOps"
 import { importAsbDefinition } from "../lib/import/asb-archive"
+import {
+  isSafePathSegment,
+  PathOutsideRootError,
+  resolveUnderRoot,
+} from "../lib/pathContainment"
 import { pathExists } from "../lib/pathExists"
 import {
   deleteAsbDefinition,
@@ -34,6 +42,25 @@ import {
 } from "../lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../lib/prisma/asbDefinitionReplace"
 import { type HandlerMap } from "./ipcHandlerUtils"
+
+/**
+ * 解答用紙の画像の置き場（`answer-sheet-builder/<定義>/images/<ファイル>`）を指す相対パスか。
+ * 画像は取り込み・複製・.asb の読み込みのどれでもこの形に置かれる（`getAsbImagesDirectory`）。
+ * 画面から消せと言われたファイルがこの形でなければ消さない（DB など別のファイルを守る）
+ */
+function isAsbImagePath(imagePath: string): boolean {
+  const segments = imagePath.split("/")
+  return (
+    segments.length === 4 &&
+    segments[0] === "answer-sheet-builder" &&
+    isSafePathSegment(segments[1]) &&
+    segments[2] === "images" &&
+    segments[3] !== "" &&
+    segments[3] !== "." &&
+    segments[3] !== ".." &&
+    !imagePath.includes("\\")
+  )
+}
 
 /** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
 export const answerSheetBuilderHandlers = {
@@ -81,12 +108,10 @@ export const answerSheetBuilderHandlers = {
   "asb:delete-definition": async (id: string, userId: string) => {
     const deleted = await deleteAsbDefinition(id, userId)
     if (deleted) {
-      // 画像ディレクトリの削除
-      const imagesDir = getAsbImagesDirectory(id)
+      // 画像ディレクトリの親（definitionId ディレクトリ）ごと削除。
+      // id が安全な1区切りでない・消す先が共有するファイルの根の下でないなら消さない
       try {
-        // ディレクトリの親（definitionId ディレクトリ）ごと削除
-        const definitionDir = path.dirname(imagesDir)
-        await fsPromises.rm(definitionDir, { recursive: true, force: true })
+        await removeDirectoryUnderSharedFiles(getAsbDefinitionDirectory(id))
       } catch (cleanupError) {
         console.warn(
           "asb:delete-definition image cleanup warning:",
@@ -120,6 +145,11 @@ export const answerSheetBuilderHandlers = {
 
   // 画像削除
   "asb:delete-image": async (args: ASBDeleteImageArgs) => {
+    if (!isAsbImagePath(args.imagePath)) {
+      throw new PathOutsideRootError(
+        `解答用紙の画像でないファイルは消せません: ${JSON.stringify(args.imagePath)}`
+      )
+    }
     const absolutePath = getAbsolutePathFromSharedFiles(args.imagePath)
     await fsPromises.rm(absolutePath, { force: true })
   },
@@ -220,11 +250,17 @@ export const answerSheetBuilderHandlers = {
         .filter((imagePath) => imagePath !== "")
     )
     const copiedImagePaths = new Map<string, string>()
+    // 共有するファイルの根の外を指すパスは写さない（ファイルの無い画像と同じく元のパスのまま）
     for (const imagePath of sourceImagePaths) {
-      const absoluteSrc = getAbsolutePathFromSharedFiles(imagePath)
-      if (!(await pathExists(absoluteSrc))) continue
-      const destPath = path.join(newImagesDir, path.basename(imagePath))
-      await fsPromises.copyFile(absoluteSrc, destPath)
+      const source = resolveUnderRoot(getSharedFilesDirectory(), imagePath)
+      if (source.kind !== "ok" || !(await pathExists(source.absolutePath))) {
+        continue
+      }
+      const destPath = path.join(
+        newImagesDir,
+        path.posix.basename(source.normalizedRelativePath)
+      )
+      await fsPromises.copyFile(source.absolutePath, destPath)
       copiedImagePaths.set(imagePath, getRelativePathFromSharedFiles(destPath))
     }
 

@@ -1,12 +1,11 @@
-import * as path from "path"
-
 import type {
   WhitenessTargetAnswerImage,
   WhitenessTargetRegion,
 } from "../../src/types/answerWhiteness.types"
 import type { SerializedQuestionScore } from "../../src/types/prismaExtensions"
 import { toScoringStatus } from "../../src/types/scoringStatus.types"
-import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
+import { getSharedFilesDirectory } from "../lib/dataManager"
+import { resolveUnderRoot } from "../lib/pathContainment"
 import { getCurrentActorUserId } from "../lib/prisma/auditActor"
 import {
   assignCropRegion,
@@ -174,12 +173,20 @@ export const scoringHandlers = {
     answerImages: WhitenessTargetAnswerImage[]
     regions: WhitenessTargetRegion[]
   }) => {
-    const answerImages = args.answerImages.map((answerImage) => ({
-      studentAnswerImageId: answerImage.studentAnswerImageId,
-      imagePath: path.isAbsolute(answerImage.imagePath)
-        ? answerImage.imagePath
-        : getAbsolutePathFromSharedFiles(answerImage.imagePath),
-    }))
+    // 共有するファイルの根の外を指す・空のパスは、読めない画像と同じく結果に含めない
+    const answerImages = args.answerImages.flatMap((answerImage) => {
+      const resolved = resolveUnderRoot(
+        getSharedFilesDirectory(),
+        answerImage.imagePath
+      )
+      if (resolved.kind !== "ok") return []
+      return [
+        {
+          studentAnswerImageId: answerImage.studentAnswerImageId,
+          imagePath: resolved.absolutePath,
+        },
+      ]
+    })
 
     return {
       answers: await measureAnswerWhiteness(answerImages, args.regions),

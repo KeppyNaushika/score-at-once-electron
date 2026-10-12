@@ -36,7 +36,10 @@ export function createMainWindow(): BrowserWindow {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      // 既定でも有効だが、既定に頼らず明示する（preload は scripts/buildPreload.js で1ファイルに束ねてある）
+      sandbox: true,
       webSecurity: true, // セキュリティ有効化（ローカルファイルアクセスはappimg://プロトコルで対応）
+      webviewTag: false,
       backgroundThrottling: false,
     },
   })
@@ -44,6 +47,8 @@ export function createMainWindow(): BrowserWindow {
   const url = rendererOrigin
 
   Menu.setApplicationMenu(menu(app, mainWindow, "home"))
+
+  restrictNavigation(mainWindow)
 
   // DevToolsは手動で開く（自動開放はクラッシュの原因）
   // 必要な場合: mainWindow.webContents.openDevTools()
@@ -142,6 +147,43 @@ export function createMainWindow(): BrowserWindow {
   loadWhenReady()
 
   return mainWindow
+}
+
+/** URL がアプリの画面（開発時は next dev、パッケージ版は同梱サーバー）のものか */
+function isAppUrl(url: string): boolean {
+  try {
+    return new URL(url).origin === new URL(rendererOrigin).origin
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 画面がアプリの外へ出ないようにする。
+ * - 新しいウィンドウは開かない。アプリは `window.open` を使っておらず、外部のページは
+ *   main が持つ URL だけを main から既定のブラウザで開く（`aiProvider:openTermsLink`）。
+ *   画面から届く任意の URL を外へ渡すと、それ自体が抜け道になるので回さない
+ * - アプリの画面以外への遷移は止める（preload を持った窓に外のページを読ませない）
+ */
+function restrictNavigation(mainWindow: BrowserWindow): void {
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.warn("新しいウィンドウを開く要求を断りました:", url)
+    return { action: "deny" }
+  })
+  const blockForeignNavigation = (event: Event, url: string) => {
+    if (isAppUrl(url)) return
+    event.preventDefault()
+    console.warn("アプリの外への遷移を止めました:", url)
+  }
+  mainWindow.webContents.on("will-navigate", (event) =>
+    blockForeignNavigation(event, event.url)
+  )
+  mainWindow.webContents.on("will-redirect", (event) =>
+    blockForeignNavigation(event, event.url)
+  )
+  mainWindow.webContents.on("will-attach-webview", (event) =>
+    event.preventDefault()
+  )
 }
 
 /** ウィンドウのフォーカス・ブラー時のイベントハンドラを設定する（ブラー時にforce-saveを送信） */

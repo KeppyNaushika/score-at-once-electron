@@ -6,7 +6,12 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { getSharedFilesDirectory } from "../../dataManager"
+import {
+  isStrictlyUnderRoot,
+  requireSafePathSegment,
+} from "../../pathContainment"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { answerSheetRelativePathOf } from "../exam-archive/archiveValueValidator"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, PrismaTransaction } from "./types"
@@ -20,7 +25,7 @@ export async function copyImportImages(
   newExamId: string
 ): Promise<void> {
   const dataDir = getSharedFilesDirectory()
-  const examDir = path.join(dataDir, "exams", newExamId)
+  const examDir = path.join(dataDir, "exams", requireSafePathSegment(newExamId))
 
   const masterImagesDir = path.join(examDir, "master-images")
   const answerSheetsDir = path.join(examDir, "answer-sheets")
@@ -41,6 +46,8 @@ export async function copyImportImages(
       srcPath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const destPath = path.join(answerSheetsDir, relativePath)
+    // 展開した一時ディレクトリの中のファイルだが、写す先が答案の置き場の外に出ないことも確かめる
+    if (!isStrictlyUnderRoot(answerSheetsDir, destPath)) continue
     fs.mkdirSync(path.dirname(destPath), { recursive: true })
     // 既存ファイルがない場合のみコピー
     if (!fs.existsSync(destPath)) {
@@ -106,16 +113,10 @@ async function createStudentAnswerImageRecords(
       },
     })
 
-    const archiveRelativePath = studentAnswerImage.imagePath.substring(
-      studentAnswerImage.imagePath.lastIndexOf("answer-sheets") +
-        "answer-sheets".length +
-        1
-    )
-    const newImagePath =
-      `exams/${newExamId}/answer-sheets/${archiveRelativePath}`.replace(
-        /\\/g,
-        "/"
-      )
+    // answer-sheets/ より下の形は展開時に確かめてある（archiveValueValidator.ts）
+    const archiveRelativePath =
+      answerSheetRelativePathOf(studentAnswerImage.imagePath) ?? ""
+    const newImagePath = `exams/${newExamId}/answer-sheets/${archiveRelativePath}`
 
     const existingImage =
       existing ??
@@ -187,13 +188,8 @@ async function createLegacyImageRecords(
       })
       if (existingAnswer) continue
 
-      const relativePath = pageImage.imagePath.substring(
-        pageImage.imagePath.lastIndexOf("answer-sheets") +
-          "answer-sheets".length +
-          1
-      )
-      const newImagePath =
-        `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
+      const relativePath = answerSheetRelativePathOf(pageImage.imagePath) ?? ""
+      const newImagePath = `exams/${newExamId}/answer-sheets/${relativePath}`
 
       const existingById = await tx.studentAnswerImage.findUnique({
         where: { id: pageImage.id },

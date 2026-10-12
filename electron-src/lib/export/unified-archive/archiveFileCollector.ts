@@ -5,9 +5,8 @@
  * `files/` の下に置く（docs/unified-archive-design.md §4）。取り込みはパスを組み直さずに済む。
  */
 
-import * as path from "path"
-
 import { UNIFIED_ARCHIVE_FILES_DIR } from "../../../../src/types/unifiedArchive.types"
+import { resolveUnderRoot } from "../../pathContainment"
 import type { SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 
 /**
@@ -62,35 +61,12 @@ export function resolveArchiveFile(
   dataDirectory: string,
   relativePath: string
 ): ResolvedArchiveFile {
-  const slashPath = relativePath.replaceAll("\\", "/")
-  if (
-    path.isAbsolute(relativePath) ||
-    path.posix.isAbsolute(slashPath) ||
-    /^[A-Za-z]:/.test(slashPath)
-  ) {
-    return { kind: "outsideDataDirectory" }
-  }
-  const normalizedPath = path.posix.normalize(slashPath)
-  if (
-    normalizedPath === "." ||
-    normalizedPath === ".." ||
-    normalizedPath.startsWith("../")
-  ) {
-    return { kind: "outsideDataDirectory" }
-  }
-  const absolutePath = path.join(dataDirectory, ...normalizedPath.split("/"))
-  const fromDataDirectory = path.relative(dataDirectory, absolutePath)
-  if (
-    fromDataDirectory === "" ||
-    fromDataDirectory === ".." ||
-    fromDataDirectory.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(fromDataDirectory)
-  ) {
-    return { kind: "outsideDataDirectory" }
-  }
+  // 規則はデータフォルダからのパスの解決すべてと同じ（pathContainment.ts）
+  const resolved = resolveUnderRoot(dataDirectory, relativePath)
+  if (resolved.kind !== "ok") return { kind: "outsideDataDirectory" }
   return {
     kind: "ok",
-    absolutePath,
-    zipPath: `${UNIFIED_ARCHIVE_FILES_DIR}/${normalizedPath}`,
+    absolutePath: resolved.absolutePath,
+    zipPath: `${UNIFIED_ARCHIVE_FILES_DIR}/${resolved.normalizedRelativePath}`,
   }
 }

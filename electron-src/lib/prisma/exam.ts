@@ -1,5 +1,4 @@
 import type { Prisma } from "@prisma/client"
-import * as fsPromises from "fs/promises"
 
 import type { ExamProgressSource } from "../../../src/lib/examStatus"
 import { DELETION_COUNT_NAME } from "../../../src/lib/shared/deletionCountNames"
@@ -9,7 +8,10 @@ import {
 } from "../../../src/lib/shared/gradeReferenceMessages"
 import type { ConfirmedDeletionCount } from "../../../src/types/deletionConfirmation.types"
 import { toScoringStatus } from "../../../src/types/scoringStatus.types"
-import { getExamDirectory } from "../dataManager"
+import {
+  getExamDirectory,
+  removeDirectoryUnderSharedFiles,
+} from "../dataManager"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { deleteAfterRecount } from "./deleteAfterRecount"
@@ -357,8 +359,9 @@ export const deleteExam = async (
 
   // 模範解答・答案の画像はDBのcascadeでは消えないため、試験ディレクトリごと削除する。
   // ファイル削除の失敗で試験削除自体を巻き戻さない（DBは既に削除済み）。
+  // id がパスの1区切りとして安全でない・消す先が根の下でないなら消さない（dataManager.ts）。
   try {
-    await fsPromises.rm(getExamDirectory(id), { recursive: true, force: true })
+    await removeDirectoryUnderSharedFiles(getExamDirectory(id))
   } catch (fileError) {
     console.warn(`Failed to delete exam directory for ${id}:`, fileError)
   }

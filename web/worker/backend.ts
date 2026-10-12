@@ -7,7 +7,8 @@
  *
  * 1. 端末ごとの設定ファイル（auth.json・AI の事業者設定）を読む
  * 2. データの根を決める（ローカルモードの根を `/opfs/data` に。共有モードは無い）
- * 3. アプリの DB を開く（`appDatabase.ts`）
+ * 3. アプリの DB を開く（`appDatabase.ts`）。開けたら、前の起動の一時ファイルとダウンロードの
+ *    置き場を消して作り直す
  * 4. データディレクトリを作る（`initializeDataDirectory`）
  * 5. 初期スキーマ・マイグレーション・見本のデータ（`DatabaseSetup`。新規 DB の `_prisma_migrations` も
  *    デスクトップ版と同じになる）
@@ -67,13 +68,15 @@ async function boot(): Promise<void> {
     { getProviderCredentialStore },
     { computeLocalRoots, fixStorageRoots, getStorageRoots },
     { openAppDatabaseHost },
-    { mkdir },
+    { mkdir, rm },
+    { prepareDownloadStaging },
   ] = await Promise.all([
     import("../../electron-src/lib/authStore"),
     import("../../electron-src/lib/aiGrading/providerCredentialStore"),
     import("../../electron-src/lib/storageRoots"),
     import("./appDatabase"),
     import("./opfsFs"),
+    import("./downloadArea"),
   ])
 
   await Promise.all([
@@ -82,10 +85,19 @@ async function boot(): Promise<void> {
   ])
 
   fixStorageRoots(computeLocalRoots(WEB_DATA_DIRECTORY))
-  // os.tmpdir() / app.getPath("temp")。mkdtemp は親が要る
-  await mkdir(WEB_TEMP_DIRECTORY, { recursive: true })
   const { sqlite3 } = await openAppDatabaseHost(getStorageRoots().databasePath)
   console.info(`[web] SQLite ${sqlite3.version.libVersion} (opfs-sahpool)`)
+
+  // 前に起こしたとき（やタブを閉じて途中で終わったとき）の一時ファイルを丸ごと消してから作り直す。
+  // 展開した統合アーカイブ・書き出し途中のファイル・復号した PDF の複製が残りうる（デスクトップ版が
+  // 起動時に復号した PDF の複製を消し、終了時に取り込みの作業ディレクトリを消すのと同じ意味）。
+  // DB を開けた＝このタブがデータを専有している（`web/page/entry.ts` のロックと sahpool）ので、
+  // 別のタブの Worker が使っている途中のものを消すことはない。ハンドラの登録より前なので、
+  // この Worker の処理もまだ何も置いていない
+  await rm(WEB_TEMP_DIRECTORY, { recursive: true, force: true })
+  // os.tmpdir() / app.getPath("temp")。mkdtemp は親が要る
+  await mkdir(WEB_TEMP_DIRECTORY, { recursive: true })
+  await prepareDownloadStaging()
 
   const [
     { getAbsolutePathFromSharedFiles, initializeDataDirectory },

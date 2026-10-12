@@ -25,6 +25,8 @@ export const ARCHIVE_REJECTION_MESSAGES: Record<
     "アーカイブのデータベースに想定外の仕掛け（トリガー・ビュー）があるため、開きませんでした。",
   schemaMismatch:
     "アーカイブのデータベースを、このアプリのデータの形に揃えられませんでした。",
+  unsafeValues:
+    "アーカイブの中に、このアプリが書き出さない形の id かファイルの場所があるため、開きませんでした。書き出し直したファイルで試してください。",
 }
 
 /** 解けない衝突の種類（`unresolvable` の reasons） */

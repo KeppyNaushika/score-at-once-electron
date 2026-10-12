@@ -280,7 +280,7 @@ async function convertExams(
 /**
  * アプリの DB の "px" の行を mm へ変換する（起動時）。
  *
- * @param resolveImagePath DB の imagePath（データディレクトリからの相対）を絶対パスへ
+ * @param resolveImagePath DB の imagePath（データディレクトリからの相対）を絶対パスへ（解決できなければ例外）
  */
 export async function convertPendingAnswerOverlayLengths(
   prisma: PrismaClient,
@@ -303,9 +303,15 @@ export async function convertPendingAnswerOverlayLengths(
       return {
         pageSize: resolveExamPaperSize(examPages),
         answerImagePaths: examPages.flatMap((examPage) =>
-          examPage.studentAnswerImages.map((studentAnswerImage) =>
-            resolveImagePath(studentAnswerImage.imagePath)
-          )
+          examPage.studentAnswerImages.map((studentAnswerImage) => {
+            // 解決できないパス（データフォルダの外を指すなど）は読めない画像として扱い、
+            // この試験だけを次の起動へ回す（他の試験の変換は止めない）
+            try {
+              return resolveImagePath(studentAnswerImage.imagePath)
+            } catch {
+              return null
+            }
+          })
         ),
       }
     },

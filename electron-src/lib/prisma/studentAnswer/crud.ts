@@ -9,6 +9,7 @@ import { DELETION_COUNT_NAME } from "../../../../src/lib/shared/deletionCountNam
 import type { ConfirmedDeletionCount } from "../../../../src/types/deletionConfirmation.types"
 import { toExamStudentStatus } from "../../../../src/types/examStudentStatus.types"
 import { getAbsolutePathFromSharedFiles } from "../../dataManager"
+import { isRelativePathInside } from "../../pathContainment"
 import { recordAuditLog } from "../auditLog"
 import { resolveExamScopeByPage } from "../auditScope"
 import prisma from "../client"
@@ -358,7 +359,13 @@ export async function deleteStudentAnswer(
 
   // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
   // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
+  // 消すのは試験の画像の置き場（`exams/` の下）のファイルだけ。
   try {
+    if (!isRelativePathInside(answerSheet.imagePath, ["exams"])) {
+      throw new Error(
+        `Refused to delete a file outside the exam directories: ${JSON.stringify(answerSheet.imagePath)}`
+      )
+    }
     await fsPromises.unlink(
       getAbsolutePathFromSharedFiles(answerSheet.imagePath)
     )

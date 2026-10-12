@@ -15,15 +15,20 @@
  *   `remapArchiveFilePath` で書き換えるので、3択に関わらず同じ写しを当てる（写しが空なら何もしない）
  *
  * 展開した `files/` は外から来たものなので信用しない。写す先がデータディレクトリの外に
- * 出るものと、普通のファイルでないもの（シンボリックリンクなど）は写さない。
+ * 出るものと、普通のファイルでないもの（シンボリックリンクなど）は写さない。DB のパスの値は
+ * 開く側が列ごとの形（`archiveValueGuards.ts`）で確かめてあるが、写す直前にも、写す先が
+ * どれかの列の形であること（データディレクトリ直下の `database.db` などは当たらない）と、
+ * 読む元が展開した `files/` の中であることを確かめる。
  */
 
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import { resolveArchiveFile } from "../../export/unified-archive/archiveFileCollector"
+import { isStrictlyUnderRoot } from "../../pathContainment"
 import { pathExists } from "../../pathExists"
 import type { UnifiedArchiveImportResult } from "./archiveRowImporter"
+import { isAcceptableArchiveFilePathShape } from "./archiveValueGuards"
 import type { OpenedUnifiedArchive } from "./types"
 
 /** アーカイブの id と違う id で書いた行（表 → アーカイブの id → 取り込み先の id） */
@@ -134,6 +139,24 @@ export async function importUnifiedArchiveFiles(
       result.unreferenced.push(targetPath)
       continue
     }
+    if (!isAcceptableArchiveFilePathShape(targetPath)) {
+      result.failed.push({
+        path: targetPath,
+        message: "アプリが画像を置く場所ではないため写しません",
+      })
+      continue
+    }
+    const sourcePath = path.join(
+      archive.filesDirectory,
+      ...archivePath.split("/")
+    )
+    if (!isStrictlyUnderRoot(archive.filesDirectory, sourcePath)) {
+      result.failed.push({
+        path: targetPath,
+        message: "アーカイブの files/ の外を指すため写しません",
+      })
+      continue
+    }
     const resolved = resolveArchiveFile(dataDirectory, targetPath)
     if (resolved.kind === "outsideDataDirectory") {
       result.failed.push({
@@ -152,10 +175,7 @@ export async function importUnifiedArchiveFiles(
       await fsPromises.mkdir(path.dirname(resolved.absolutePath), {
         recursive: true,
       })
-      await fsPromises.copyFile(
-        path.join(archive.filesDirectory, ...archivePath.split("/")),
-        resolved.absolutePath
-      )
+      await fsPromises.copyFile(sourcePath, resolved.absolutePath)
       if (exists) result.replaced.push(targetPath)
       else result.copied.push(targetPath)
     } catch (error) {

@@ -4,7 +4,6 @@
 
 import { BrowserWindow } from "electron"
 import * as fsPromises from "fs/promises"
-import * as path from "path"
 
 import type { ComputedCell } from "../../src/types/answerSheetLayout.types"
 import type {
@@ -23,6 +22,7 @@ import {
 import { correctImage } from "../lib/omr/imageCorrector"
 import { loadImageRaw } from "../lib/omr/imageProcessor"
 import { recognizeCells } from "../lib/omr/markRecognizer"
+import { requireUnderRoot, resolveUnderRoot } from "../lib/pathContainment"
 import prisma from "../lib/prisma/client"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
@@ -111,10 +111,11 @@ export const omrHandlers = {
       }
 
       try {
-        // 相対パスを絶対パスに解決
-        const absolutePath = path.isAbsolute(entry.path)
-          ? entry.path
-          : path.join(getSharedFilesDirectory(), entry.path)
+        // DB の相対パスを絶対パスに解決（共有するファイルの根の外を指すなら、この答案は失敗）
+        const absolutePath = requireUnderRoot(
+          getSharedFilesDirectory(),
+          entry.path
+        )
 
         const markerResult = await detectCornerMarkers(
           absolutePath,
@@ -238,7 +239,10 @@ export const omrHandlers = {
       const examPageId = examPage.id
       const pageNumber = examPage.pageNumber
       const cacheKey = markerCacheKey(examPageId, colorThreshold)
-      const imagePath = path.join(dataDir, examPage.imagePath)
+      // 共有するファイルの根の外を指すパスは読まない（画像の無いページと同じく飛ばす）
+      const masterImage = resolveUnderRoot(dataDir, examPage.imagePath)
+      if (masterImage.kind !== "ok") continue
+      const imagePath = masterImage.absolutePath
       const mtimeMs = await getMtimeMs(imagePath)
 
       // キャッシュチェック（ファイル差し替えを検知したら再検出）
@@ -285,8 +289,14 @@ export const omrHandlers = {
     if (!examPage?.imagePath) {
       return { status: "skipped", reason: "マスター画像が見つかりません" }
     }
-    const dataDir = getSharedFilesDirectory()
-    const imagePath = path.join(dataDir, examPage.imagePath)
+    const masterImage = resolveUnderRoot(
+      getSharedFilesDirectory(),
+      examPage.imagePath
+    )
+    if (masterImage.kind !== "ok") {
+      return { status: "skipped", reason: "マスター画像が見つかりません" }
+    }
+    const imagePath = masterImage.absolutePath
     const mtimeMs = await getMtimeMs(imagePath)
 
     let masterResult = getCachedMarkerResult(cacheKey, mtimeMs)
