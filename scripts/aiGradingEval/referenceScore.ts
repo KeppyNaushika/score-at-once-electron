@@ -44,7 +44,11 @@ function toVerdict(
     score:
       maxPoints === null
         ? null
-        : calculateActualScore({ status, partialScore }, maxPoints),
+        : calculateActualScore(
+            { status, partialScore, scaleLevel: null },
+            // AI 採点を評価するのは点の採点の設問だけ（類型評価の設問では AI 採点を開かない）
+            { points: maxPoints, scoringMethod: "points" }
+          ),
   }
 }
 

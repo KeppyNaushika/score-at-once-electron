@@ -20,7 +20,6 @@ import {
   calculateEffectiveScoreValue,
   resolveEffectiveScores,
 } from "../../shared/calculations/scoreResolution"
-import type { QuestionScoreForSubtotal } from "../../shared/calculations/subtotalCalculator"
 import { computeSubtotalScore } from "../../shared/calculations/subtotalCalculator"
 import type {
   ScoreDetail,
@@ -266,7 +265,7 @@ function buildScoreDetails(
       (score) => score.cropRegionId === region.id
     )
     const actualScore = scoreRecord
-      ? calculateEffectiveScoreValue(scoreRecord, region.points || 0)
+      ? calculateEffectiveScoreValue(scoreRecord, region)
       : null
 
     return {
@@ -298,22 +297,12 @@ function buildSubtotalScores(
   subtotalGroups: SubtotalGroupForScoring[],
   allQuestionScores: EffectiveScore[]
 ): SubtotalScore[] {
-  // 設問スコアデータを変換
-  const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
-    (score) => ({
-      examStudentId: score.examStudentId,
-      cropRegionId: score.cropRegionId,
-      status: score.status,
-      partialScore: score.partialScore,
-    })
-  )
-
   return subtotalGroups.flatMap((subtotalGroup) =>
     subtotalGroup.subtotals.map((subtotal) => {
       const scoreResult = computeSubtotalScore(
         examStudentId,
         examId,
-        questionScoreData,
+        allQuestionScores,
         subtotal.cropSubtotals
       )
 

@@ -30,6 +30,7 @@ function questionAssignment(
       id: cropRegionId,
       type: "QUESTION_ANSWER",
       points,
+      scoringMethod: "points",
       examPage: { examId },
     },
   }
@@ -98,6 +99,7 @@ describe("満点と得点が同じ割り当て集合を見る", () => {
           cropRegionId: "q1",
           status: "correct",
           partialScore: null,
+          scaleLevel: null,
         },
       ],
       duplicatedAssignments

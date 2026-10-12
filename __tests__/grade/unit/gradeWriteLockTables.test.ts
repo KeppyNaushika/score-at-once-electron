@@ -30,6 +30,8 @@ describe("成績算出のロックが止めるテーブル", () => {
       "ExamStudent",
       "QuestionScore",
       "ScoreDecision",
+      // 類型評価の点は類型の点数から引く
+      "ScoreScaleLevel",
       "Subtotal",
       "CropSubtotal",
       "Coursework",

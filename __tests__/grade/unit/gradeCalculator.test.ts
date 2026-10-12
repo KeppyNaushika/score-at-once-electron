@@ -1565,8 +1565,10 @@ describe("calculateGrades - subtotal 型データソース", () => {
       },
     ])
     mockCalculateActualScore.mockImplementation(
-      (questionScore: { status: string }, maxScore: number) =>
-        questionScore.status === "correct" ? maxScore : 0
+      (
+        questionScore: { status: string },
+        cropRegion: { points: number | null }
+      ) => (questionScore.status === "correct" ? (cropRegion.points ?? 0) : 0)
     )
   }
 

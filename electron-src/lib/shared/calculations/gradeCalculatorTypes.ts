@@ -3,7 +3,7 @@
  * gradeCalculator / rawScoreCalculator / examScoreCalculator / absentEstimation で共有する。
  */
 
-import type { Prisma } from "@prisma/client"
+import type { CropRegion, Prisma } from "@prisma/client"
 
 import type { AbsentMethod } from "../../../../src/types/grade.types"
 import { subtotalWithQuestionAssignmentsInclude } from "../../prisma/cropSubtotal"
@@ -98,9 +98,10 @@ export const gradeCalculationReads = {
   grade: gradeForCalcInclude,
   gradeStudent: gradeStudentForCalcInclude,
   // 起点は ExamStudent（その試験の受験者）で、採点行はその子として引く
+  // 類型評価の点は類型の点数から引くので、付けた類型を同梱する
   examStudent: {
-    questionScores: true,
-    scoreDecisions: true,
+    questionScores: { include: { scaleLevel: true } },
+    scoreDecisions: { include: { scaleLevel: true } },
   } satisfies Prisma.ExamStudentInclude,
   examPage: { cropRegions: true } satisfies Prisma.ExamPageInclude,
 }
@@ -131,7 +132,8 @@ export interface ExamStudentScores {
  */
 export interface ExamDataCache {
   examStudents: ExamStudentScores[]
-  cropRegions: { id: string; type: string; points: number | null }[]
+  /** 試験の設問領域（行のまま。得点化は配点と方式を読む） */
+  cropRegions: CropRegion[]
 }
 
 /**

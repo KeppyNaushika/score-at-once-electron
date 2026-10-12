@@ -266,16 +266,8 @@ export async function getPdfExportData(options: {
             resolvedScore.examStudentId === examStudent.id
         )
         if (score) {
-          const maxScore = region.points !== null ? Number(region.points) : 0
-          totalMaxScore += maxScore
-          const actualScore = calculateActualScore(
-            {
-              status: score.status,
-              partialScore:
-                score.partialScore !== null ? Number(score.partialScore) : null,
-            },
-            maxScore
-          )
+          totalMaxScore += region.points ?? 0
+          const actualScore = calculateActualScore(score, region)
           if (actualScore !== null) {
             hasScoredQuestion = true
             totalScore += actualScore

@@ -18,7 +18,7 @@
  * 解決ルール（決定的）:
  * 1. ScoreDecision があればそれを採用（確定後に新しい提案があれば isStale を立てる）
  * 2. 提案のうち unscored 以外が1つならそれを採用
- * 3. unscored 以外の提案が複数でも、判定と点数が全行一致していれば合意として採用
+ * 3. unscored 以外の提案が複数でも、判定と点数（類型評価なら類型）が全行一致していれば合意として採用
  *    （参加採点者が1人の試験では常にここで解決される = 個人利用と同一挙動）
  * 4. 一致しなければ競合 — 値を出さず conflicts に記録する
  *
@@ -28,6 +28,8 @@
  * 提案ではない、という状態はこれからも正しく起こる。
  */
 
+import type { CropRegion } from "@prisma/client"
+
 import type {
   SerializedQuestionScore,
   SerializedScoreDecision,
@@ -36,6 +38,24 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { calculateActualScore } from "./actualScore"
 
+/**
+ * 類型評価で付けた類型（採点行・確定行の include で同梱する `scaleLevel`）。
+ * 得点化に要るのは点数だけなので、読む側が同梱した行をそのまま渡せる形で受ける
+ */
+interface ScaleLevelForScore {
+  score: number
+}
+
+/** リゾルバに渡す採点行。類型を同梱して読む（類型評価の点は類型の点数から引く） */
+export type ResolvableQuestionScore = SerializedQuestionScore & {
+  scaleLevel: ScaleLevelForScore | null
+}
+
+/** リゾルバに渡す確定行。採点行と同じく類型を同梱して読む */
+export type ResolvableScoreDecision = SerializedScoreDecision & {
+  scaleLevel: ScaleLevelForScore | null
+}
+
 /** 受験者×設問ごとに解決された有効スコア */
 export interface EffectiveScore {
   examStudentId: string
@@ -43,6 +63,9 @@ export interface EffectiveScore {
   /** 採点判定 */
   status: ScoringStatus
   partialScore: number | null
+  /** 類型評価で付けた類型（評価済みのときだけ値がある） */
+  scaleLevelId: string | null
+  scaleLevel: ScaleLevelForScore | null
   /**
    * このセルで描画注釈を印刷する QuestionScore 行の id。
    *
@@ -74,8 +97,8 @@ interface ResolveResult {
 
 /** updatedAt 降順 → id 降順の決定的な「最新」選択 */
 const pickLatest = (
-  group: SerializedQuestionScore[]
-): SerializedQuestionScore =>
+  group: ResolvableQuestionScore[]
+): ResolvableQuestionScore =>
   group.reduce((latest, current) => {
     const latestTime = latest.updatedAt.getTime()
     const currentTime = current.updatedAt.getTime()
@@ -88,23 +111,25 @@ const cellKey = (examStudentId: string, cropRegionId: string): string =>
   `${examStudentId} ${cropRegionId}`
 
 const proposalToEffective = (
-  proposal: SerializedQuestionScore,
+  proposal: ResolvableQuestionScore,
   isStale = false
 ): EffectiveScore => ({
   examStudentId: proposal.examStudentId,
   cropRegionId: proposal.cropRegionId,
   status: proposal.status,
   partialScore: proposal.partialScore,
+  scaleLevelId: proposal.scaleLevelId,
+  scaleLevel: proposal.scaleLevel,
   annotationQuestionScoreIds: [proposal.id],
   source: "proposal",
   isStale,
 })
 
 export function resolveEffectiveScores(
-  scores: SerializedQuestionScore[],
-  decisions: SerializedScoreDecision[] = []
+  scores: ResolvableQuestionScore[],
+  decisions: ResolvableScoreDecision[] = []
 ): ResolveResult {
-  const groups = new Map<string, SerializedQuestionScore[]>()
+  const groups = new Map<string, ResolvableQuestionScore[]>()
   for (const score of scores) {
     const key = cellKey(score.examStudentId, score.cropRegionId)
     const group = groups.get(key)
@@ -138,6 +163,8 @@ export function resolveEffectiveScores(
       cropRegionId: decision.cropRegionId,
       status: decision.verdict,
       partialScore: decision.score,
+      scaleLevelId: decision.scaleLevelId,
+      scaleLevel: decision.scaleLevel,
       annotationQuestionScoreIds: proposals.map((proposal) => proposal.id),
       source: "decision",
       isStale,
@@ -162,7 +189,9 @@ export function resolveEffectiveScores(
     const allAgree = candidates.every(
       (proposal) =>
         proposal.status === first.status &&
-        proposal.partialScore === first.partialScore
+        proposal.partialScore === first.partialScore &&
+        // 類型評価では類型が違えば食い違い（点数が同じ類型でも、評価としては別）
+        proposal.scaleLevelId === first.scaleLevelId
     )
 
     if (allAgree) {
@@ -187,6 +216,6 @@ export function resolveEffectiveScores(
  * 判定を union で受けるようにしたときに、その食い違いが表に出た。
  */
 export const calculateEffectiveScoreValue = (
-  effective: Pick<EffectiveScore, "status" | "partialScore">,
-  maxScore: number
-): number | null => calculateActualScore(effective, maxScore)
+  effective: Pick<EffectiveScore, "status" | "partialScore" | "scaleLevel">,
+  cropRegion: Pick<CropRegion, "points" | "scoringMethod">
+): number | null => calculateActualScore(effective, cropRegion)
