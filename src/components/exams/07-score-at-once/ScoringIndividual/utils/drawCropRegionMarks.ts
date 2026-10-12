@@ -50,9 +50,21 @@ export function drawCropRegionMarks(
   }
 ): void {
   // 他の設問を先に描画（半透明）
-  for (const { cropRegion, status, actualScore } of allCropRegionsWithStatus) {
+  for (const {
+    cropRegion,
+    status,
+    actualScore,
+    scaleLevelLabel,
+  } of allCropRegionsWithStatus) {
     if (cropRegion.id === currentCropRegion?.id) continue
-    drawCropRegionMark(params, cropRegion, status, false, actualScore)
+    drawCropRegionMark(
+      params,
+      cropRegion,
+      status,
+      false,
+      actualScore,
+      scaleLevelLabel
+    )
   }
 
   // 現在の設問を最後に描画（前面に表示）
@@ -68,12 +80,16 @@ export function drawCropRegionMarks(
       currentCropRegion,
       currentStatus,
       true,
-      currentRegionData?.actualScore ?? null
+      currentRegionData?.actualScore ?? null,
+      currentRegionData?.scaleLevelLabel ?? null
     )
   }
 }
 
-/** 1設問分の枠・ラベル・採点記号・点数 */
+/**
+ * 1設問分の枠・ラベル・採点記号・点数。
+ * 類型評価の評価済みは採点記号の代わりに類型の記号（scaleLevelLabel）を文字で描く
+ */
 function drawCropRegionMark(
   {
     ctx,
@@ -88,7 +104,8 @@ function drawCropRegionMark(
   region: QuestionAnswerRegionRow,
   status: ScoringStatus,
   isCurrent: boolean,
-  actualScore: number | null
+  actualScore: number | null,
+  scaleLevelLabel: string | null
 ): void {
   const regionPageNumber = region.examPage?.pageNumber || 1
   const regionPageIndex = regionPageNumber - 1
@@ -142,7 +159,33 @@ function drawCropRegionMark(
     ? scoringMarkConfig.visibility[status].showMark
     : status !== "unscored"
 
-  if (shouldShowMark) {
+  // 類型の記号は評価済みのときだけ（今の設問は表示中の採点データの状態で描くため）
+  const markLabel = status === "evaluated" ? scaleLevelLabel : null
+
+  if (shouldShowMark && markLabel !== null) {
+    // 類型の記号を、採点記号と同じ位置・スタイルで文字として描く
+    const markStyle =
+      scoringMarkConfig?.styles.mark ??
+      DEFAULT_ANSWER_OVERLAY_SETTINGS.styles.mark
+    const markLengths = resolveOverlayPixelLengths(markStyle, pixelsPerMm)
+    const labelPos = resolveAnchorPoint(
+      regionRect,
+      markStyle.position,
+      markLengths.offsetX,
+      markLengths.offsetY,
+      markLengths.imageEdgePadding
+    )
+    const { textAlign, textBaseline } = resolveTextAnchor(markStyle.anchor)
+
+    ctx.save()
+    ctx.font = `bold ${markLengths.size}px sans-serif`
+    ctx.fillStyle = markStyle.color
+    ctx.globalAlpha = opacity
+    ctx.textAlign = textAlign
+    ctx.textBaseline = textBaseline
+    ctx.fillText(markLabel, labelPos.x, labelPos.y)
+    ctx.restore()
+  } else if (shouldShowMark) {
     const markKey = getScoringMarkKey(status)
     const markImage = markKey ? scoringMarkImages.get(markKey) : null
 

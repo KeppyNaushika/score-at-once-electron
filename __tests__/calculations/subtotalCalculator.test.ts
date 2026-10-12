@@ -22,7 +22,7 @@ vi.mock("@/electron-src/lib/prisma/cropSubtotal", () => ({
     mockGetCropSubtotalsForScoring(...args),
 }))
 
-vi.mock("@/electron-src/lib/shared/calculations/actualScore", () => ({
+vi.mock("@/lib/shared/actualScore", () => ({
   calculateActualScore: (...args: unknown[]) =>
     mockCalculateActualScore(...args),
 }))

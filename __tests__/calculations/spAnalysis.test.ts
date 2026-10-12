@@ -24,6 +24,7 @@ function makeStudent(
       label: `q${i + 1}`,
       isCorrect: value === 1,
       isScored: value !== null,
+      isScale: false,
     })),
   }
 }
@@ -121,6 +122,55 @@ describe("computeSpTable", () => {
   it("有効生徒が居なければ null", () => {
     expect(computeSpTable([])).toBeNull()
     expect(computeSpTable([makeStudent("S1", [null, null])])).toBeNull()
+  })
+})
+
+// ================== S-P表: 類型評価の設問 ==================
+
+describe("computeSpTable - 類型評価の設問", () => {
+  /** 二値パターンの末尾に類型評価の設問を1問足す（採点済みかどうかだけ指定） */
+  const withScale = (
+    student: SpInputStudent,
+    scaleScored: boolean
+  ): SpInputStudent => ({
+    ...student,
+    items: [
+      ...student.items,
+      {
+        questionId: "q_scale",
+        label: "q_scale",
+        isCorrect: false,
+        isScored: scaleScored,
+        isScale: true,
+      },
+    ],
+  })
+
+  it("類型評価の設問は列に入れない", () => {
+    const result = computeSpTable([
+      withScale(makeStudent("S1", [1, 1]), true),
+      withScale(makeStudent("S2", [1, 0]), true),
+    ])!
+    expect(result.problemCount).toBe(2)
+    expect(result.problems.map((problem) => problem.questionId)).not.toContain(
+      "q_scale"
+    )
+    expect(result.students.every((student) => student.cells.length === 2)).toBe(
+      true
+    )
+  })
+
+  it("類型評価の設問だけを採点済みの生徒は母集団に入れない", () => {
+    const result = computeSpTable([
+      withScale(makeStudent("S1", [1, 0]), true),
+      withScale(makeStudent("S2", [null, null]), true),
+    ])!
+    expect(result.studentCount).toBe(1)
+    expect(result.students[0].examStudentId).toBe("S1")
+  })
+
+  it("設問が類型評価だけなら null", () => {
+    expect(computeSpTable([withScale(makeStudent("S1", []), true)])).toBeNull()
   })
 })
 

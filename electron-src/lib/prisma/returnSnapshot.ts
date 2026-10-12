@@ -45,6 +45,8 @@ interface SnapshotScoreCell {
    */
   l?: string
   lp?: number
+  /** 記録した時点の類型の記号（答案に印刷するので、記号を直しても再印刷が要る） */
+  ll?: string
 }
 
 // 捕捉する注釈フィールドは「実際にPDF印刷で使われるもの」に限定する
@@ -82,6 +84,8 @@ interface SnapshotContent {
 export interface ReturnScoreCellState {
   status: string
   partialScore: number | null
+  /** 類型評価で付けた類型の記号（評価済みのときだけ） */
+  scaleLabel: string | null
   /** 配点に基づく実得点（unscored は null） */
   value: number | null
 }
@@ -219,6 +223,7 @@ const buildContent = (
       }),
       ...(effectiveScore.scaleLevel !== null && {
         lp: effectiveScore.scaleLevel.score,
+        ll: effectiveScore.scaleLevel.label,
       }),
     }))
     .sort((cellA, cellB) =>
@@ -340,6 +345,7 @@ const toCellState = (
   return {
     status,
     partialScore: cell.p,
+    scaleLabel: cell.ll ?? null,
     value: cropRegion
       ? calculateEffectiveScoreValue(
           {
@@ -437,7 +443,8 @@ export const getReturnDiff = async (
         before.s === after.s &&
         before.p === after.p &&
         before.l === after.l &&
-        before.lp === after.lp
+        before.lp === after.lp &&
+        before.ll === after.ll
       if (same) continue
       const cropRegion = state.regions.get(cropRegionId)
       scoreChanges.push({

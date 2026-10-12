@@ -4,7 +4,11 @@ import type {
   ReportPopulation,
 } from "@/types/individualReport.types"
 
-import { getMarkInfo } from "./questionMark"
+import {
+  formatQuestionCorrectRateText,
+  formatQuestionScoreText,
+  getMarkInfo,
+} from "./questionMark"
 import { ScoreDisplay } from "./ScoreDisplay"
 
 /**
@@ -110,12 +114,10 @@ export function SingleColumnScoreTable({
               backgroundColor: isAlt ? "#fafafa" : "transparent",
             }
 
-            const correctRate =
-              population.questionCorrectRates[questionScore.questionId] ?? 0
             const scoreRate =
               population.questionScoreRates[questionScore.questionId] ?? 0
 
-            const { mark, markColor } = getMarkInfo(questionScore.status)
+            const { mark, markColor } = getMarkInfo(questionScore)
 
             return (
               <tr key={index} style={rowStyle}>
@@ -126,7 +128,10 @@ export function SingleColumnScoreTable({
                 </td>
                 <td style={{ ...cellStyle, textAlign: "center" }}>
                   <ScoreDisplay
-                    score={questionScore.score}
+                    score={formatQuestionScoreText(
+                      questionScore,
+                      options.scaleValueDisplay
+                    )}
                     maxScore={questionScore.maxScore}
                     fontSize={baseFontSize}
                   />
@@ -145,7 +150,10 @@ export function SingleColumnScoreTable({
                 )}
                 {options.showCorrectRate && (
                   <td style={{ ...cellStyle, textAlign: "center" }}>
-                    {Math.round(correctRate)}%
+                    {formatQuestionCorrectRateText(
+                      questionScore,
+                      population.questionCorrectRates
+                    )}
                   </td>
                 )}
                 {options.showScoreRate && (

@@ -16,6 +16,8 @@ interface SpInputItem {
   isCorrect: boolean
   /** 採点済み（unscored でない）なら true */
   isScored: boolean
+  /** 類型評価の設問なら true。正誤がないので S-P 表には入れない（docs/vlm-grading-design.md §4-8-5） */
+  isScale: boolean
 }
 
 /** 生徒1人分の入力 */
@@ -59,7 +61,9 @@ export interface SpTableResult {
 /**
  * S-P表（佐藤の注意係数つき）を計算
  *
- * - 母集団は「採点済みの設問を1問以上持つ生徒」（全問未採点・欠席は除外）。
+ * - 類型評価の設問（isScale）は正誤がないので列に入れない。
+ * - 母集団は「採点済みの設問を1問以上持つ生徒」（全問未採点・欠席は除外）。類型評価の設問だけを
+ *   採点済みの生徒も入れない。
  * - 注意係数（Sato 1975）:
  *   CS_i = 1 − (実際 − 期待) / (理想 − 期待)
  *     実際 = Σ_j x_ij · m_j（正答した設問の正答者数の総和）
@@ -70,9 +74,12 @@ export interface SpTableResult {
  * - 設問数0、または有効生徒0なら null。
  */
 export function computeSpTable(input: SpInputStudent[]): SpTableResult | null {
-  const students = input.filter((student) =>
-    student.items.some((item) => item.isScored)
-  )
+  const students = input
+    .map((student) => ({
+      ...student,
+      items: student.items.filter((item) => !item.isScale),
+    }))
+    .filter((student) => student.items.some((item) => item.isScored))
   if (students.length === 0) return null
 
   const problemIds = students[0].items.map((item) => item.questionId)

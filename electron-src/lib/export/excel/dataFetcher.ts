@@ -1,6 +1,7 @@
 import type { CropRegion, Exam } from "@prisma/client"
 
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+import { toScoringMethod } from "@/types/rubric.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
@@ -8,6 +9,7 @@ import { getExamById } from "../../prisma/exam"
 import { getStudentsForExam } from "../../prisma/examStudent"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
 import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
+import { getScoreScalesForExam } from "../../prisma/scoreScale"
 import {
   getActiveSubtotalGroupsForExam,
   type SubtotalGroupForScoring,
@@ -48,6 +50,11 @@ export interface SubtotalColumn {
   label: string
 }
 
+/** 試験の設問が使っている類型評価の組（類型を並び順で同梱・serialize 済み） */
+export type ExportScoreScale = Awaited<
+  ReturnType<typeof getScoreScalesForExam>
+>[number]
+
 /**
  * 出力用データ
  */
@@ -57,6 +64,8 @@ interface ExportData {
   questionRegions: CropRegion[]
   subtotalRegions: CropRegion[]
   subtotalColumns: SubtotalColumn[]
+  /** 設問が使っている類型評価の組。問題分析の類型ごとの人数に、0 人の類型も並べるために持つ */
+  scoreScales: ExportScoreScale[]
   scoringData: ScoringData[]
   /** 複数採点者の値が食い違い解決できなかった生徒×設問（出力上は未採点扱い） */
   scoreConflicts: ScoreConflict[]
@@ -85,6 +94,7 @@ export async function fetchExportData(
   const cropRegions = await getCropRegionsByExamId(examId)
   const questionScoresResult = await getQuestionScoresForExam(examId)
   const decisionsResult = await getScoreDecisionsForExam(examId)
+  const scoreScales = await getScoreScalesForExam(examId)
 
   // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
   const { resolved: questionScores, conflicts: scoreConflicts } =
@@ -190,6 +200,7 @@ export async function fetchExportData(
     questionRegions,
     subtotalRegions,
     subtotalColumns,
+    scoreScales,
     scoringData,
     scoreConflicts,
   }
@@ -276,6 +287,18 @@ function buildScoreDetails(
       // 行が無ければ未採点。`toScoringStatus` が undefined も想定外値も
       // `unscored` へ倒すので、ここで既定値を書き足さない
       status: toScoringStatus(scoreRecord?.status),
+      scoringMethod: toScoringMethod(region.scoringMethod),
+      // 方式と合わない評価済み（点にならない）には類型を見せない
+      scaleLevel:
+        scoreRecord?.scaleLevel &&
+        scoreRecord.scaleLevelId !== null &&
+        actualScore !== null
+          ? {
+              id: scoreRecord.scaleLevelId,
+              label: scoreRecord.scaleLevel.label,
+              score: scoreRecord.scaleLevel.score,
+            }
+          : null,
     }
   })
 }

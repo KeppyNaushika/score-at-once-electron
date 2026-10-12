@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   computeItemAnalysis,
+  formatLevelCounts,
   type ItemAnalysisInputStudent,
 } from "@/lib/shared/itemAnalysis"
 
@@ -34,6 +35,7 @@ function makeStudent(
         value !== null &&
         value === (opts?.maxScores?.[i] ?? 1) &&
         !(opts?.partialAt ?? []).includes(i),
+      scale: null,
     })),
   }
 }
@@ -166,6 +168,7 @@ function makeBandStudents(
         maxScore: 300,
         score: rankScore,
         isCorrect: rankScore === 300,
+        scale: null,
       },
       {
         questionId: "q_target",
@@ -173,6 +176,7 @@ function makeBandStudents(
         maxScore: 100,
         score: targetScores[studentIndex],
         isCorrect: targetScores[studentIndex] === 100,
+        scale: null,
       },
     ],
   }))
@@ -218,5 +222,84 @@ describe("computeItemAnalysis - 識別力の判定帯", () => {
     expect(dValueLevelOf(makeBandStudents(40, 0).slice(0, 1))).toBe(
       "insufficient"
     )
+  })
+})
+
+// ================== 類型評価の設問 ==================
+
+const LEVELS = [
+  { id: "level-a", label: "A" },
+  { id: "level-b", label: "B" },
+  { id: "level-c", label: "C" },
+]
+
+/** 点の設問1問（1点満点）と類型評価の設問1問（10点）の生徒 */
+function makeScaleStudent(
+  pointScore: number | null,
+  scaleLevel: { id: string; score: number } | null
+): ItemAnalysisInputStudent {
+  return {
+    items: [
+      {
+        questionId: "q_point",
+        label: "q_point",
+        maxScore: 1,
+        score: pointScore,
+        isCorrect: pointScore === 1,
+        scale: null,
+      },
+      {
+        questionId: "q_scale",
+        label: "q_scale",
+        maxScore: 10,
+        score: scaleLevel?.score ?? null,
+        isCorrect: false,
+        scale: { levels: LEVELS, scaleLevelId: scaleLevel?.id ?? null },
+      },
+    ],
+  }
+}
+
+describe("computeItemAnalysis - 類型評価の設問", () => {
+  const students = [
+    makeScaleStudent(1, { id: "level-a", score: 10 }),
+    makeScaleStudent(0, { id: "level-a", score: 10 }),
+    makeScaleStudent(1, { id: "level-c", score: 2 }),
+    makeScaleStudent(null, null),
+  ]
+
+  it("正答率を出さず（null）、点の設問の正答率は今まで通り", () => {
+    const result = computeItemAnalysis(students)!
+    const scaleItem = result.items.find(
+      (item) => item.questionId === "q_scale"
+    )!
+    const pointItem = result.items.find(
+      (item) => item.questionId === "q_point"
+    )!
+    expect(scaleItem.correctRate).toBeNull()
+    expect(pointItem.correctRate).toBeCloseTo((2 / 3) * 100, 6)
+    expect(pointItem.levelCounts).toBeNull()
+  })
+
+  it("類型ごとの人数を組の並び順で出し、付けられていない類型も 0 人で並べる", () => {
+    const result = computeItemAnalysis(students)!
+    const scaleItem = result.items.find(
+      (item) => item.questionId === "q_scale"
+    )!
+    expect(scaleItem.levelCounts).toEqual([
+      { levelId: "level-a", label: "A", count: 2 },
+      { levelId: "level-b", label: "B", count: 0 },
+      { levelId: "level-c", label: "C", count: 1 },
+    ])
+    expect(formatLevelCounts(scaleItem.levelCounts!)).toBe("A 2・B 0・C 1")
+  })
+
+  it("得点率は類型の点数から出す（採点済みの生徒が母数）", () => {
+    const result = computeItemAnalysis(students)!
+    const scaleItem = result.items.find(
+      (item) => item.questionId === "q_scale"
+    )!
+    // (10 + 10 + 2) / 10 / 3
+    expect(scaleItem.scoreRate).toBeCloseTo((22 / 30) * 100, 6)
   })
 })

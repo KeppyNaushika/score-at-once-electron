@@ -6,6 +6,7 @@
  * （decided）も載せる — 確定はキー1つで書くので、一覧から消えると直す口が無くなる。
  * 出力の解決ルール自体には一切手を入れない — ここは表示のための派生計算に徹する。
  */
+import { calculateActualScore } from "@/lib/shared/actualScore"
 import type {
   AssignedGrader,
   ExamDecisionSummary,
@@ -15,7 +16,6 @@ import type {
   ScoreProposal,
 } from "@/types/scoreDecision.types"
 
-import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import prisma from "./client"
 import { PUBLIC_USER_OMIT } from "./publicUser"

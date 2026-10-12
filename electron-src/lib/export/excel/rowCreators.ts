@@ -1,14 +1,21 @@
 import type * as ExcelJS from "exceljs"
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { ScaleValueDisplay } from "@/types/rubric.types"
 
 import type { ScoringData } from "../../shared/types"
 import {
   applyCellStyle,
   getExcelColumnLetter,
-  getStatusSymbol,
+  getScoreCellSymbol,
 } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"
+
+/**
+ * どちらのシートの行か。正誤一覧は類型評価の設問に類型を出すので、その見せ方を連れてくる
+ */
+export type DataRowSheet =
+  { kind: "score" } | { kind: "result"; scaleValueDisplay: ScaleValueDisplay }
 
 /**
  * データ行を作成する
@@ -16,14 +23,16 @@ import type { SubtotalColumn } from "./dataFetcher"
  * @param worksheet - 対象のワークシート
  * @param scoringData - 採点データ配列
  * @param subtotalColumns - 小計列情報配列（SubtotalGroupから構築）
- * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
+ * @param sheet - 点数一覧か正誤一覧か（正誤一覧は類型の見せ方つき）
  */
 export async function createDataRows(
   worksheet: ExcelJS.Worksheet,
   scoringData: ScoringData[],
   subtotalColumns: SubtotalColumn[],
-  isScoreSheet: boolean
+  sheet: DataRowSheet
 ) {
+  const isScoreSheet = sheet.kind === "score"
+
   // 事前に順位を計算（総合点の降順でソート、null は最下位扱い）
   const scoringDataWithRank = scoringData
     .map((student, index) => ({
@@ -74,7 +83,7 @@ export async function createDataRows(
     setSubtotalCells(row, student, subtotalColumns, isScoreSheet)
 
     // 設問別データの設定
-    setQuestionCells(row, student, subtotalColumns.length, isScoreSheet)
+    setQuestionCells(row, student, subtotalColumns.length, sheet)
 
     // 行スタイルの適用
     row.eachCell((cell) => applyCellStyle(cell, "data"))
@@ -136,13 +145,13 @@ function setSubtotalCells(
  * @param row - 対象の行
  * @param student - 生徒の採点データ
  * @param subtotalCount - 小計列の数
- * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
+ * @param sheet - 点数一覧か正誤一覧か（正誤一覧は類型の見せ方つき）
  */
 function setQuestionCells(
   row: ExcelJS.Row,
   student: ScoringData,
   subtotalCount: number,
-  isScoreSheet: boolean
+  sheet: DataRowSheet
 ) {
   let scoreColIndex = 9 + subtotalCount // 1つ右にシフト
 
@@ -150,10 +159,13 @@ function setQuestionCells(
     const columnLetter = getExcelColumnLetter(scoreColIndex)
     const cell = row.getCell(columnLetter)
 
-    if (isScoreSheet) {
+    if (sheet.kind === "score") {
       // 点数一覧
       if (score.status === "unscored") {
         // 未採点の場合は空欄
+        cell.value = ""
+      } else if (score.scoringMethod === "scale" && score.score === null) {
+        // 類型評価で点にならない採点（類型が無い・方式と合わない）は 0 点ではなく空欄
         cell.value = ""
       } else {
         // 採点済みの場合は0点でも表示
@@ -170,12 +182,8 @@ function setQuestionCells(
         // 未採点の場合は空欄
         cell.value = ""
       } else {
-        // 採点済みの場合は記号を表示
-        const statusSymbol = getStatusSymbol(
-          score.status,
-          score.score ?? undefined
-        )
-        cell.value = statusSymbol || ""
+        // 採点済みの場合は記号を表示（類型評価は類型を見せ方に従って出す）
+        cell.value = getScoreCellSymbol(score, sheet.scaleValueDisplay)
       }
       // 部分点・保留の場合は赤色に設定
       if (score.status === "partial" || score.status === "pending") {

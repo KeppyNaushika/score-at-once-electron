@@ -9,7 +9,7 @@
  * - 費用（定価換算の目安）と時間
  */
 
-import { calculateActualScore } from "../../electron-src/lib/shared/calculations/actualScore"
+import { calculateActualScore } from "../../src/lib/shared/actualScore"
 
 import type { ClaudeCliUsage } from "./claudeCli"
 import type { ReferenceScore, ReferenceVerdict } from "./referenceScore"

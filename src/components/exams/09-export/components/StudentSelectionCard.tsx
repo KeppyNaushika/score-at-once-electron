@@ -27,10 +27,11 @@ import {
 } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ReturnStudentDiff } from "@/electron-src/lib/prisma/returnSnapshot"
-import type {
-  IndividualReportData,
-  IndividualReportOptions,
-  ReportPopulation,
+import {
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+  type IndividualReportData,
+  type IndividualReportOptions,
+  type ReportPopulation,
 } from "@/types/individualReport.types"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
@@ -442,7 +443,13 @@ export function StudentSelectionCard({
                 <p className="text-sm text-destructive">{excelPreviewError}</p>
               </div>
             ) : excelPreviewData ? (
-              <ExcelPreview data={excelPreviewData} />
+              <ExcelPreview
+                data={excelPreviewData}
+                scaleValueDisplay={
+                  individualReportOptions?.scaleValueDisplay ??
+                  DEFAULT_INDIVIDUAL_REPORT_OPTIONS.scaleValueDisplay
+                }
+              />
             ) : (
               <div className="flex flex-1 items-center justify-center">
                 <p className="text-sm text-muted-foreground">

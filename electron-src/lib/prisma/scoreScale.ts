@@ -55,6 +55,19 @@ const scoreScaleInclude = {
 } satisfies Prisma.ScoreScaleInclude
 
 /**
+ * 試験の設問が使っている組（類型を並び順で同梱）。出力の問題分析が、類型ごとの人数を
+ * 付けられていない類型も 0 人として組の並び順で並べるために読む（docs/vlm-grading-design.md §4-8-5）
+ */
+export async function getScoreScalesForExam(examId: string) {
+  const scoreScales = await prisma.scoreScale.findMany({
+    where: { cropRegions: { some: { examPage: { examId } } } },
+    include: { levels: { orderBy: levelOrder } },
+    orderBy: scaleOrder,
+  })
+  return serializePrisma(scoreScales)
+}
+
+/**
  * 組の一覧。試験を渡せば、その試験で選べるもの（その試験のものと共通のもの）だけ。
  * 渡さなければ全部（類型評価管理の画面）
  */

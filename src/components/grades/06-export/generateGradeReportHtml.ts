@@ -1,12 +1,14 @@
 /**
  * 成績算出試験の個人成績通知書HTML生成
  */
+import { formatScaleValue } from "@/lib/shared/scaleValueDisplay"
 import type {
   GradeCalculationResult,
   GradeItemResult,
   StudentGradeResult,
 } from "@/types/grade.types"
 import type { GradeReportSettings } from "@/types/gradeReport.types"
+import { toScaleValueDisplay } from "@/types/rubric.types"
 
 import { joinComparisonSymbols } from "../comparison-marks/comparisonSymbols"
 import type {
@@ -326,6 +328,7 @@ function renderSourceBreakdownSection(
     comment: options.sourceBreakdownColumnComment,
   }
   const label = options.dataSourceLabel || "成績資料"
+  const scaleValueDisplay = toScaleValueDisplay(options.scaleValueDisplay)
   const fontSize = options.sourceBreakdownFontSize
   const columns = Math.max(
     1,
@@ -398,13 +401,23 @@ function renderSourceBreakdownSection(
       `<td style="text-align:left">${escapeHtml(row.dataSourceName)}</td>`
     )
     if (srcCols.score) {
-      // 文字評価は「記号(換算点)」、数値はそのまま。加減点があれば併記。
+      // 文字評価は見せ方（scaleValueDisplay）に従って「8」「A (8)」「A」のどれか、数値はそのまま。
+      // 換算表に当てはまる記号が無い（換算点が無い）ときは記号だけを出す。加減点があれば併記。
       const scoreText =
-        row.rawScore !== null
-          ? row.letterValue !== null
-            ? `${escapeHtml(row.letterValue)} (${row.rawScore.toFixed(1)})`
-            : row.rawScore.toFixed(1)
-          : "-"
+        row.letterValue !== null
+          ? escapeHtml(
+              formatScaleValue(
+                {
+                  label: row.letterValue,
+                  pointsText:
+                    row.rawScore !== null ? row.rawScore.toFixed(1) : null,
+                },
+                scaleValueDisplay
+              )
+            )
+          : row.rawScore !== null
+            ? row.rawScore.toFixed(1)
+            : "-"
       const estimated = row.isEstimated ? " (推定)" : ""
       const adj =
         row.adjustment !== null && row.adjustment !== 0

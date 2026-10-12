@@ -9,6 +9,7 @@ import {
   OptionField,
   Section,
 } from "@/components/common/ReportOptionControls"
+import { ScaleValueDisplayField } from "@/components/common/ScaleValueDisplayField"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +19,7 @@ import { parseClampedNumber } from "@/lib/clampedNumber"
 import { openPrintDialogMutation } from "@/queries/export"
 import type { GradeCalculationResult } from "@/types/grade.types"
 import type { GradeReportSettings } from "@/types/gradeReport.types"
+import { toScaleValueDisplay } from "@/types/rubric.types"
 
 import type { ComparisonMarksByCell } from "../comparison-marks/types"
 import {
@@ -236,6 +238,14 @@ export function IndividualReportTab({
                     variant="sub"
                   />
                 </div>
+                {options.sourceBreakdownColumnScore && (
+                  <ScaleValueDisplayField
+                    display={toScaleValueDisplay(options.scaleValueDisplay)}
+                    onDisplayChange={(scaleValueDisplay) =>
+                      updateOption("scaleValueDisplay", scaleValueDisplay)
+                    }
+                  />
+                )}
                 <div className="flex flex-wrap gap-2">
                   <OptionField label="列数">
                     <Input

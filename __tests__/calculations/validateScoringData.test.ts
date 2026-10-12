@@ -28,6 +28,8 @@ function scoreDetail(
     score,
     maxScore: 5,
     status,
+    scoringMethod: "points" as const,
+    scaleLevel: null,
   }
 }
 

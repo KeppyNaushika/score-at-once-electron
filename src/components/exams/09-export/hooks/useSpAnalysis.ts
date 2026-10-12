@@ -32,6 +32,7 @@ export function useSpAnalysis(
         label: questionScore.questionLabel,
         isCorrect: questionScore.status === "correct",
         isScored: questionScore.status !== "unscored",
+        isScale: questionScore.scoringMethod === "scale",
       })),
     }))
 

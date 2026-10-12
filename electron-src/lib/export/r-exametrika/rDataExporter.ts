@@ -8,7 +8,7 @@
 import { dialog } from "electron"
 import * as fsPromises from "fs/promises"
 
-import type { FileExportResult } from "../../shared/types"
+import type { FileExportResult, ScoreDetail } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
 
 export interface ExportRDataOptions {
@@ -26,11 +26,16 @@ function sanitizeFileName(name: string): string {
 /**
  * 設問の正誤を二値（1=正答, 0=誤答）へ。
  * 未採点・欠席は欠測（null）として扱う。無回答は誤答(0)。
+ * 類型評価の設問は正誤がないので、S-P 表と同じく入れない（null。docs/vlm-grading-design.md §4-8-5）。
  */
-function toBinary(status: string, studentAbsent: boolean): number | null {
+function toBinary(
+  questionScore: Pick<ScoreDetail, "status" | "scoringMethod">,
+  studentAbsent: boolean
+): number | null {
   if (studentAbsent) return null
-  if (status === "unscored") return null
-  if (status === "correct") return 1
+  if (questionScore.scoringMethod === "scale") return null
+  if (questionScore.status === "unscored") return null
+  if (questionScore.status === "correct") return 1
   return 0
 }
 
@@ -84,7 +89,7 @@ export async function exportRData(
               questionId: questionScore.questionId,
               status: questionScore.status,
               score: questionScore.score,
-              binary: toBinary(questionScore.status, absent),
+              binary: toBinary(questionScore, absent),
             })),
           }
         }),
@@ -106,7 +111,7 @@ export async function exportRData(
         csvCell(scoringDatum.studentNumber),
         csvCell(scoringDatum.studentName),
         ...scoringDatum.scores.map((questionScore) => {
-          const binary = toBinary(questionScore.status, absent)
+          const binary = toBinary(questionScore, absent)
           return binary === null ? "" : String(binary)
         }),
       ]

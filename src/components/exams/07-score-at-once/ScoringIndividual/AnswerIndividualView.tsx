@@ -93,6 +93,7 @@ export default function AnswerIndividualView({
     questionScoresByCropRegionId,
     currentScoringData,
     currentUserId,
+    examId: examId ?? "",
   })
 
   /**

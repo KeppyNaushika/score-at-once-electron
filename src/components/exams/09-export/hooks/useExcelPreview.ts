@@ -8,6 +8,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { useInvalidateOnSignal } from "@/hooks/useInvalidateOnSignal"
 import { excelPreviewDataQuery } from "@/queries/export"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import { type ScoringMethod, toScoringMethod } from "@/types/rubric.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface ExcelPreviewScore {
@@ -16,6 +17,9 @@ interface ExcelPreviewScore {
   score: number | null
   maxScore: number
   status: ScoringStatus
+  scoringMethod: ScoringMethod
+  /** 類型評価で付けた類型（点になるときだけ） */
+  scaleLevel: { id: string; label: string; score: number } | null
 }
 
 interface ExcelPreviewSubtotalScore {
@@ -42,6 +46,11 @@ interface ExcelPreviewRow {
 interface ExcelPreviewHeader {
   questionLabels: string[]
   questionMaxScores: number[]
+  /**
+   * 設問ごとの類型評価の組の類型（並び順）。点の設問は null。問題分析の類型ごとの人数に、
+   * 付けられていない類型も 0 人で並べるために持つ
+   */
+  questionScaleLevels: ({ id: string; label: string }[] | null)[]
   subtotalLabels: string[]
 }
 
@@ -112,6 +121,9 @@ export function useExcelPreview({
   // 表に出す形へ畳むのは計算。キャッシュには main が返した行がそのまま載っている
   const previewData: ExcelPreviewData | null = useMemo(() => {
     if (!result) return null
+    const levelsByScaleId = new Map(
+      result.scoreScales.map((scoreScale) => [scoreScale.id, scoreScale.levels])
+    )
     return {
       headers: {
         questionLabels: result.questionRegions.map(
@@ -120,6 +132,13 @@ export function useExcelPreview({
         ),
         questionMaxScores: result.questionRegions.map(
           (questionRegion) => questionRegion.points ?? 0
+        ),
+        questionScaleLevels: result.questionRegions.map((questionRegion) =>
+          toScoringMethod(questionRegion.scoringMethod) === "scale"
+            ? ((questionRegion.scoreScaleId !== null
+                ? levelsByScaleId.get(questionRegion.scoreScaleId)
+                : undefined) ?? [])
+            : null
         ),
         subtotalLabels: result.subtotalColumns.map(
           (subtotalColumn) => subtotalColumn.label

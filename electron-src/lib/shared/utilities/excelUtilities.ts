@@ -1,6 +1,14 @@
 // Excel操作で共通的に使用されるユーティリティ関数
 import type * as ExcelJS from "exceljs"
 
+import { formatScaleValue } from "@/lib/shared/scaleValueDisplay"
+import {
+  isStatusCompatibleWithScoringMethod,
+  type ScaleValueDisplay,
+} from "@/types/rubric.types"
+
+import type { ScoreDetail } from "../types"
+
 /**
  * Excel列番号を列文字に変換する関数
  * 例: 1 -> 'A', 26 -> 'Z', 27 -> 'AA'
@@ -34,6 +42,31 @@ export function getStatusSymbol(status: string, score?: number): string {
     default:
       return "-"
   }
+}
+
+/**
+ * 正誤一覧の設問セルの記号。類型評価で類型を付けた設問は、正誤の記号ではなく類型を見せ方
+ * （`scaleValueDisplay`）に従って出す（docs/vlm-grading-design.md §4-8-8）。類型評価の設問の
+ * 方式と合わない採点（正答・誤答・部分点）は点にならないので、正誤の記号も出さず「-」にする。
+ * それ以外（保留・無答・Wマーク・点の設問）は正誤の記号
+ */
+export function getScoreCellSymbol(
+  score: Pick<ScoreDetail, "status" | "score" | "scoringMethod" | "scaleLevel">,
+  scaleValueDisplay: ScaleValueDisplay
+): string {
+  if (score.scaleLevel) {
+    return formatScaleValue(
+      {
+        label: score.scaleLevel.label,
+        pointsText: String(score.scaleLevel.score),
+      },
+      scaleValueDisplay
+    )
+  }
+  if (!isStatusCompatibleWithScoringMethod(score.scoringMethod, score.status)) {
+    return "-"
+  }
+  return getStatusSymbol(score.status, score.score ?? undefined)
 }
 
 /**

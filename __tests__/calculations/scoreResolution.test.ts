@@ -272,7 +272,7 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
 // ================== resolveEffectiveScores: 類型評価 ==================
 
 describe("resolveEffectiveScores - 類型評価", () => {
-  const levelA = { score: 10 }
+  const levelA = { label: "A", score: 10 }
 
   it("付けた類型を有効スコアへ運ぶ", () => {
     const scoreRow = score({
@@ -313,7 +313,7 @@ describe("resolveEffectiveScores - 類型評価", () => {
       score({
         status: "evaluated",
         scaleLevelId: "level-s",
-        scaleLevel: { score: 10 },
+        scaleLevel: { label: "S", score: 10 },
       }),
     ])
     expect(disagreed.resolved).toEqual([])

@@ -1,7 +1,10 @@
 "use client"
 
 import type { DiscriminationLevel } from "@/electron-src/lib/shared/types"
-import type { ItemAnalysisResult } from "@/lib/shared/itemAnalysis"
+import {
+  formatLevelCounts,
+  type ItemAnalysisResult,
+} from "@/lib/shared/itemAnalysis"
 
 const LEVEL_CONFIG: Record<
   DiscriminationLevel,
@@ -32,6 +35,8 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
     items.length > 0
       ? items.reduce((sum, item) => sum + selector(item), 0) / items.length
       : 0
+  // 類型評価の設問があるときだけ、類型ごとの人数の列を足す
+  const hasScaleQuestion = items.some((item) => item.levelCounts !== null)
   const avgValid = (
     selector: (i: (typeof items)[number]) => number | null
   ): number | null => {
@@ -43,7 +48,8 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
       : null
   }
 
-  const avgCorrectRate = avg((item) => item.correctRate)
+  // 類型評価の設問は正答率が無い（null）ので平均に入れない
+  const avgCorrectRate = avgValid((item) => item.correctRate)
   const avgScoreRate = avg((item) => item.scoreRate)
   const avgDiscrim = avgValid((item) => item.discriminationIndex)
   const avgDValue = avgValid((item) => item.dValue)
@@ -69,6 +75,9 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
             <th className="border px-1 py-0.5 text-right">得点率(%)</th>
             <th className="border px-1 py-0.5 text-right">識別係数</th>
             <th className="border px-1 py-0.5 text-right">D値</th>
+            {hasScaleQuestion && (
+              <th className="border px-1 py-0.5 text-left">類型の分布（人）</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -77,7 +86,7 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
               <td className="border px-1 py-0.5">{row.label}</td>
               <td className="border px-1 py-0.5 text-right">{row.maxScore}</td>
               <td className="border px-1 py-0.5 text-right">
-                {row.correctRate.toFixed(1)}
+                {row.correctRate !== null ? row.correctRate.toFixed(1) : "—"}
               </td>
               <td className="border px-1 py-0.5 text-right">
                 {row.scoreRate.toFixed(1)}
@@ -90,13 +99,20 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
               <td className={levelCellClass(row.dValueLevel)}>
                 {row.dValue !== null ? row.dValue.toFixed(3) : "---"}
               </td>
+              {hasScaleQuestion && (
+                <td className="border px-1 py-0.5 whitespace-nowrap">
+                  {row.levelCounts !== null
+                    ? formatLevelCounts(row.levelCounts)
+                    : ""}
+                </td>
+              )}
             </tr>
           ))}
           <tr className="bg-muted/70 font-medium">
             <td className="border px-1 py-0.5">平均</td>
             <td className="border px-1 py-0.5"></td>
             <td className="border px-1 py-0.5 text-right">
-              {avgCorrectRate.toFixed(1)}
+              {avgCorrectRate !== null ? avgCorrectRate.toFixed(1) : "—"}
             </td>
             <td className="border px-1 py-0.5 text-right">
               {avgScoreRate.toFixed(1)}
@@ -107,6 +123,7 @@ export function ItemAnalysisPreview({ data }: ItemAnalysisPreviewProps) {
             <td className="border px-1 py-0.5 text-right">
               {avgDValue !== null ? avgDValue.toFixed(3) : "---"}
             </td>
+            {hasScaleQuestion && <td className="border px-1 py-0.5"></td>}
           </tr>
         </tbody>
       </table>

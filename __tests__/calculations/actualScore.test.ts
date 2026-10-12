@@ -1,5 +1,5 @@
 /**
- * 得点化の単一実装 calculateActualScore（electron-src/lib/shared/calculations/actualScore.ts）。
+ * 得点化の単一実装 calculateActualScore（src/lib/shared/actualScore.ts）。
  *
  * - 正答は配点、誤答・無答・Wマークは 0、未採点は欠測（null）
  * - 部分点・保留は部分点そのもの（無ければ欠測）
@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { calculateActualScore } from "@/electron-src/lib/shared/calculations/actualScore"
+import { calculateActualScore } from "@/lib/shared/actualScore"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 const pointsRegion = { points: 10, scoringMethod: "points" }

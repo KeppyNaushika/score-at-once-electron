@@ -5,7 +5,11 @@ import type {
   TableColumns,
 } from "@/types/individualReport.types"
 
-import { getMarkInfo } from "./questionMark"
+import {
+  formatQuestionCorrectRateText,
+  formatQuestionScoreText,
+  getMarkInfo,
+} from "./questionMark"
 import { ScoreDisplay } from "./ScoreDisplay"
 
 /**
@@ -52,6 +56,12 @@ export function MultiColumnScoreTable({
   }
 
   const columnWidth = `${100 / columns}%`
+  // 類型評価の設問があれば、マークの欄には類型の記号も並ぶので「○×」と呼ばない
+  const markHeader = questionScores.some(
+    (questionScore) => questionScore.scoringMethod === "scale"
+  )
+    ? "評価"
+    : "○×"
 
   return (
     <section style={{ marginBottom: "6mm" }}>
@@ -105,7 +115,7 @@ export function MultiColumnScoreTable({
                         width: "10%",
                       }}
                     >
-                      ○×
+                      {markHeader}
                     </th>
                   )}
                   {options.showCorrectRate && (
@@ -139,7 +149,7 @@ export function MultiColumnScoreTable({
                     backgroundColor: isAlt ? "#fafafa" : "transparent",
                   }
 
-                  const { mark, markColor } = getMarkInfo(questionScore.status)
+                  const { mark, markColor } = getMarkInfo(questionScore)
 
                   // ラベルを短縮
                   const shortLabel =
@@ -164,7 +174,10 @@ export function MultiColumnScoreTable({
                       </td>
                       <td style={{ ...cellStyle, textAlign: "center" }}>
                         <ScoreDisplay
-                          score={questionScore.score}
+                          score={formatQuestionScoreText(
+                            questionScore,
+                            options.scaleValueDisplay
+                          )}
                           maxScore={questionScore.maxScore}
                           fontSize={baseFontSize}
                         />
@@ -183,12 +196,10 @@ export function MultiColumnScoreTable({
                       )}
                       {options.showCorrectRate && (
                         <td style={{ ...cellStyle, textAlign: "center" }}>
-                          {Math.round(
-                            population.questionCorrectRates[
-                              questionScore.questionId
-                            ] ?? 0
+                          {formatQuestionCorrectRateText(
+                            questionScore,
+                            population.questionCorrectRates
                           )}
-                          %
                         </td>
                       )}
                       {options.showScoreRate && (

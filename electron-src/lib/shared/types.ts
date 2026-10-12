@@ -1,6 +1,7 @@
 // Excel・PDF出力で共通的に使用される型定義
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type { ScoringMethod } from "@/types/rubric.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
@@ -71,6 +72,13 @@ export interface ScoreDetail {
   score: number | null
   maxScore: number
   status: ScoringStatus
+  /** 設問の採点方式。類型評価（scale）の設問は正答率・S-P 表に入れず、類型の分布を出す */
+  scoringMethod: ScoringMethod
+  /**
+   * 類型評価で付けた類型（評価済みで、方式と合うときだけ）。出力は記号と点数を見せ方
+   * （`scaleValueDisplay`）に従って出す（docs/vlm-grading-design.md §4-8-8）
+   */
+  scaleLevel: { id: string; label: string; score: number } | null
 }
 
 /**

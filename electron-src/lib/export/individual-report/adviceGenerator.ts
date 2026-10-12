@@ -13,9 +13,13 @@ import type { ScoreDetail } from "../../shared/types"
 
 /**
  * 正答以外の問題かどうかを判定
- * correct以外の全てのステータス（incorrect, partial, no_answer, hold, unscored）が対象
+ * correct以外の全てのステータス（incorrect, partial, no_answer, pending, unscored）が対象。
+ *
+ * 類型評価（scale）の設問は正誤も正答率も無い（正答率は main が載せない）ので、
+ * 正答率で選ぶ復習の候補に入れない（docs/vlm-grading-design.md §4-8-5）
  */
 function isNotCorrectAnswer(score: ScoreDetail): boolean {
+  if (score.scoringMethod === "scale") return false
   return score.status !== "correct"
 }
 

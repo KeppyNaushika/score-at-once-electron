@@ -30,19 +30,19 @@
 
 import type { CropRegion } from "@prisma/client"
 
+import { calculateActualScore } from "@/lib/shared/actualScore"
 import type {
   SerializedQuestionScore,
   SerializedScoreDecision,
 } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-import { calculateActualScore } from "./actualScore"
-
 /**
  * 類型評価で付けた類型（採点行・確定行の include で同梱する `scaleLevel`）。
- * 得点化に要るのは点数だけなので、読む側が同梱した行をそのまま渡せる形で受ける
+ * 得点化に要るのは点数、出力が見せるのは記号なので、その2つを受ける。読む側が同梱した行をそのまま渡せる
  */
 interface ScaleLevelForScore {
+  label: string
   score: number
 }
 
@@ -216,6 +216,6 @@ export function resolveEffectiveScores(
  * 判定を union で受けるようにしたときに、その食い違いが表に出た。
  */
 export const calculateEffectiveScoreValue = (
-  effective: Pick<EffectiveScore, "status" | "partialScore" | "scaleLevel">,
+  effective: Parameters<typeof calculateActualScore>[0],
   cropRegion: Pick<CropRegion, "points" | "scoringMethod">
 ): number | null => calculateActualScore(effective, cropRegion)

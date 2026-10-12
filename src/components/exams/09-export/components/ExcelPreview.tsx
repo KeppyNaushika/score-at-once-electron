@@ -3,7 +3,12 @@
 import { type ReactNode, useState } from "react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { formatScaleValue } from "@/lib/shared/scaleValueDisplay"
 import { cn } from "@/lib/utils"
+import {
+  isStatusCompatibleWithScoringMethod,
+  type ScaleValueDisplay,
+} from "@/types/rubric.types"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
 import { useItemAnalysis } from "../hooks/useItemAnalysis"
@@ -45,6 +50,39 @@ function getStatusColor(status: string): string {
 }
 
 type ExcelPreviewScore = ExcelPreviewData["rows"][number]["scores"][number]
+
+/**
+ * 正誤一覧のマスの中身。類型評価で類型を付けた設問は、正誤の記号ではなく類型を見せ方に従って出す
+ * （Excel の `getScoreCellSymbol` と同じ。docs/vlm-grading-design.md §4-8-8）。方式と合わない採点は
+ * 点にならないので「-」
+ */
+function getResultCellText(
+  score: ExcelPreviewScore,
+  scaleValueDisplay: ScaleValueDisplay
+): string {
+  if (score.scaleLevel) {
+    return formatScaleValue(
+      {
+        label: score.scaleLevel.label,
+        pointsText: String(score.scaleLevel.score),
+      },
+      scaleValueDisplay
+    )
+  }
+  if (!isStatusCompatibleWithScoringMethod(score.scoringMethod, score.status)) {
+    return "-"
+  }
+  return getStatusSymbol(score.status, score.score)
+}
+
+/** 正誤一覧のマスの色。類型は正誤ではないので記号の色を付けず、方式と合わない採点は無答と同じ灰色 */
+function getResultCellColor(score: ExcelPreviewScore): string {
+  if (score.scaleLevel) return "text-foreground"
+  if (!isStatusCompatibleWithScoringMethod(score.scoringMethod, score.status)) {
+    return "text-gray-400"
+  }
+  return getStatusColor(score.status)
+}
 
 /** 設問の列だけが表ごとに違う。見出しと各マスの中身・寄せをここで渡す */
 interface QuestionColumnView {
@@ -130,12 +168,14 @@ function StudentScoreTable({
 
 interface ExcelPreviewProps {
   data: ExcelPreviewData
+  /** 類型評価の設問の値の見せ方（試験の個人成績表設定。Excel 出力と同じもの） */
+  scaleValueDisplay: ScaleValueDisplay
 }
 
 type SheetTab =
   "scores" | "results" | "item-analysis" | "sp-table" | "frequency"
 
-export function ExcelPreview({ data }: ExcelPreviewProps) {
+export function ExcelPreview({ data, scaleValueDisplay }: ExcelPreviewProps) {
   const [sheetTab, setSheetTab] = useState<SheetTab>("scores")
   const itemAnalysisData = useItemAnalysis(data)
   const spAnalysis = useSpAnalysis(data)
@@ -189,8 +229,9 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
             questionColumn={{
               alignClassName: "text-center",
               renderHeader: (label) => label,
-              cellClassName: (score) => getStatusColor(score.status),
-              renderCell: (score) => getStatusSymbol(score.status, score.score),
+              cellClassName: (score) => getResultCellColor(score),
+              renderCell: (score) =>
+                getResultCellText(score, scaleValueDisplay),
             }}
           />
         </TabsContent>

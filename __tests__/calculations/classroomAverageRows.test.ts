@@ -54,6 +54,8 @@ function makeStudent(
         score: q1,
         maxScore: 10,
         status: q1 === null ? "unscored" : "correct",
+        scoringMethod: "points",
+        scaleLevel: null,
       },
     ],
     totalScore,

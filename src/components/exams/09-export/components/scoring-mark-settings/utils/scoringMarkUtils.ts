@@ -1,7 +1,11 @@
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-/** 採点状態から対応するマーク画像のパスを返す */
-export function getMarkImagePath(status: ScoringStatus): string {
+/**
+ * 採点状態から対応するマーク画像のパスを返す。
+ * 類型評価（evaluated）は画像を持たず、類型の記号を文字で印刷するので null
+ * （docs/vlm-grading-design.md §4-8-5）
+ */
+export function getMarkImagePath(status: ScoringStatus): string | null {
   switch (status) {
     case "unscored":
       return `/score-assets/unscored.png`
@@ -17,7 +21,7 @@ export function getMarkImagePath(status: ScoringStatus): string {
       return `/score-assets/incorrect.png` // 無答も誤答マークを使用
     case "double_mark":
       return `/score-assets/incorrect.png` // Wマークも誤答マークを使用
-    default:
-      return `/score-assets/unscored.png`
+    case "evaluated":
+      return null
   }
 }

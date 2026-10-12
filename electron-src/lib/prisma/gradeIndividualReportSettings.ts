@@ -46,7 +46,7 @@ const REPORT_SETTINGS_FIELD_LABELS: Record<keyof GradeReportSettings, string> =
     footerLeft: "フッター（左）",
     footerCenter: "フッター（中）",
     footerRight: "フッター（右）",
-    scaleValueDisplay: "段階の見せ方",
+    scaleValueDisplay: "類型評価の見せ方",
   }
 
 /** 比べる項目（`diffFields` の形）。項目名の表から作る */

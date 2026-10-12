@@ -1,26 +1,38 @@
 /**
  * @fileoverview 全設問の採点ステータスと点数（全設問マーク・点数描画用）
  */
+import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
+import {
+  findScaleLevels,
+  type ScaleLevelChoice,
+} from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleLevelAppearance"
 import {
   findQuestionScore,
   getScoringStatus,
   type ScoringData,
 } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import { examScoreScalesQuery } from "@/queries/scoreScale"
 import type { QuestionScoreRow } from "@/queries/scoring"
+import { toScoringMethod } from "@/types/rubric.types"
 
+import { cropRegionScoreDisplayOf } from "../../utils/cropRegionScoreDisplay"
 import type { CropRegionWithStatus } from "../core/types"
 
 /** 採点行がまだ1つも無い設問のための空値 */
 const EMPTY_SCORES: QuestionScoreRow[] = []
+
+/** 類型評価でない設問の類型（毎回作り直さない） */
+const NO_SCALE_LEVELS: readonly ScaleLevelChoice[] = []
 
 interface UseCropRegionsWithStatusParams {
   cropRegions: QuestionAnswerRegionRow[] | undefined
   questionScoresByCropRegionId: Map<string, QuestionScoreRow[]> | undefined
   currentScoringData: ScoringData | null
   currentUserId: string
+  examId: string
 }
 
 /**
@@ -33,7 +45,18 @@ export function useCropRegionsWithStatus({
   questionScoresByCropRegionId,
   currentScoringData,
   currentUserId,
+  examId,
 }: UseCropRegionsWithStatusParams): CropRegionWithStatus[] {
+  // 類型の組は類型評価の設問があるときだけ読む
+  const hasScaleQuestion =
+    cropRegions?.some(
+      (cropRegion) => toScoringMethod(cropRegion.scoringMethod) === "scale"
+    ) ?? false
+  const { data: scoreScales } = useQuery({
+    ...examScoreScalesQuery(examId),
+    enabled: hasScaleQuestion && examId !== "",
+  })
+
   return useMemo(() => {
     if (!cropRegions || !currentScoringData) return []
     const examStudentId = currentScoringData.examStudentId
@@ -50,30 +73,24 @@ export function useCropRegionsWithStatus({
         examStudentId,
         currentUserId
       )
-      const maxScore = cropRegion.points ?? 0
-      let actualScore: number | null = null
-      switch (status) {
-        case "correct":
-          actualScore = maxScore
-          break
-        case "incorrect":
-        case "no_answer":
-          actualScore = 0
-          break
-        case "partial":
-        case "pending":
-          actualScore =
-            questionScore?.partialScore != null
-              ? Number(questionScore.partialScore)
-              : null
-          break
-      }
-      return { cropRegion, status, actualScore }
+      // 点数は出力と同じ得点化で求める。類型評価の評価済みは類型の記号と点数を出す
+      const scaleLevels =
+        toScoringMethod(cropRegion.scoringMethod) === "scale" && scoreScales
+          ? findScaleLevels(scoreScales, cropRegion.scoreScaleId)
+          : NO_SCALE_LEVELS
+      const { actualScore, scaleLevelLabel } = cropRegionScoreDisplayOf({
+        cropRegion,
+        status,
+        questionScore: questionScore ?? null,
+        scaleLevels,
+      })
+      return { cropRegion, status, actualScore, scaleLevelLabel }
     })
   }, [
     cropRegions,
     questionScoresByCropRegionId,
     currentUserId,
     currentScoringData,
+    scoreScales,
   ])
 }

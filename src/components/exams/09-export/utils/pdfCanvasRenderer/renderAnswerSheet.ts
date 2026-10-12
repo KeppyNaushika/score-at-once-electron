@@ -11,11 +11,17 @@ import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import { drawElement } from "./annotationRenderer"
 import {
+  drawScaleLevelLabel,
   drawScoreText,
   drawScoringMark,
   drawSubtotalScoreText,
   drawTotalScoreText,
 } from "./scoreDrawing"
+import {
+  markImageKeyOf,
+  scaleLevelLabelOf,
+  scoreToDisplayOf,
+} from "./scoringDataPrint"
 import type {
   ScoringDataForPdf,
   SubtotalDataForPdf,
@@ -88,15 +94,22 @@ export async function renderAnswerSheetToCanvas(
     if (!shouldShowMark) {
       // マークは非表示でも点数テキストは別途判定するため、マーク描画だけスキップ
     } else {
-      // 採点マーク画像の取得
-      const markKey =
-        scoringData.status === "no_answer" ||
-        scoringData.status === "double_mark"
-          ? "incorrect"
-          : scoringData.status
-      const markImage = scoringMarkImages.get(markKey)
+      // 類型評価は採点マークの代わりに類型の記号を印刷する
+      const scaleLevelLabel = scaleLevelLabelOf(scoringData)
+      const markKey = markImageKeyOf(scoringData)
+      const markImage = markKey ? scoringMarkImages.get(markKey) : undefined
 
-      if (markImage) {
+      if (scaleLevelLabel !== null) {
+        drawScaleLevelLabel(
+          ctx,
+          scaleLevelLabel,
+          scoringData.cropRegion,
+          config,
+          imageWidth,
+          imageHeight,
+          pixelsPerMm
+        )
+      } else if (markImage) {
         drawScoringMark(
           ctx,
           markImage,
@@ -115,22 +128,7 @@ export async function renderAnswerSheetToCanvas(
 
     if (shouldShowScore) {
       // ステータスに応じた点数を決定
-      let scoreToDisplay: number | null = null
-      if (scoringData.status === "correct") {
-        // 正解: 配点を表示
-        scoreToDisplay = scoringData.cropRegion.maxScore ?? null
-      } else if (scoringData.status === "partial") {
-        // 部分点: 部分点を表示
-        scoreToDisplay = scoringData.partialScore ?? null
-      } else if (
-        scoringData.status === "incorrect" ||
-        scoringData.status === "no_answer" ||
-        scoringData.status === "double_mark"
-      ) {
-        // 誤答/無答/Wマーク: 0点を表示
-        scoreToDisplay = 0
-      }
-
+      const scoreToDisplay = scoreToDisplayOf(scoringData)
       if (scoreToDisplay !== null) {
         drawScoreText(
           ctx,

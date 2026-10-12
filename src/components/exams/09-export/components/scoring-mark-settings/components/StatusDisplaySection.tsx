@@ -26,33 +26,46 @@ export function StatusDisplaySection({
       <div className="space-y-3">
         <Label className="text-sm font-medium">📌 採点マーク表示対象</Label>
         <div className="space-y-2">
-          {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => (
-            <div key={`mark-${status}`} className="flex items-center space-x-3">
-              <Checkbox
-                id={`mark-${status}`}
-                checked={visibility[status].showMark}
-                onCheckedChange={(checked) =>
-                  onMarkStatusChange(status, checked === true)
-                }
-              />
-              <div className="flex items-center space-x-2">
-                <Image
-                  src={getMarkImagePath(status)}
-                  alt={statusLabels[status]}
-                  className="h-6 w-6"
-                  width={24}
-                  height={24}
-                  unoptimized
+          {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => {
+            const markImagePath = getMarkImagePath(status)
+            return (
+              <div
+                key={`mark-${status}`}
+                className="flex items-center space-x-3"
+              >
+                <Checkbox
+                  id={`mark-${status}`}
+                  checked={visibility[status].showMark}
+                  onCheckedChange={(checked) =>
+                    onMarkStatusChange(status, checked === true)
+                  }
                 />
-                <Label
-                  htmlFor={`mark-${status}`}
-                  className="cursor-pointer text-sm"
-                >
-                  {statusLabels[status]}
-                </Label>
+                <div className="flex items-center space-x-2">
+                  {markImagePath === null ? (
+                    // 類型評価は記号（A/B/C など）を文字で印刷する。見本は記号の例
+                    <span className="flex h-6 w-6 items-center justify-center text-base font-bold text-red-600">
+                      A
+                    </span>
+                  ) : (
+                    <Image
+                      src={markImagePath}
+                      alt={statusLabels[status]}
+                      className="h-6 w-6"
+                      width={24}
+                      height={24}
+                      unoptimized
+                    />
+                  )}
+                  <Label
+                    htmlFor={`mark-${status}`}
+                    className="cursor-pointer text-sm"
+                  >
+                    {statusLabels[status]}
+                  </Label>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
