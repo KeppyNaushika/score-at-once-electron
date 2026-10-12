@@ -3,11 +3,15 @@ import { type RefObject, useEffect, useState } from "react"
 import type { GlossaryTermId } from "./glossaryTerms"
 import { isGlossaryTermId } from "./glossaryTerms"
 
+/** 流れる枠の上端から、上に固定した絞り込みの欄の下あたりまでの距離 */
+const READING_LINE_OFFSET = 112
+
 /**
- * 本文で、いま読んでいる語（流れる枠の上端に最も近い語）を返す。索引の印に使う。
+ * 本文で、いま読んでいる語を返す。索引の印に使う。
  *
- * 枠の上から3割の帯に入っている語を見張り、そのうち最も上のものを採る。
- * 絞り込みで並ぶ語が変わったら見張り直す（`termIdsKey`）。
+ * **上端が読み始めの線（絞り込みの欄のすぐ下）を越えた語のうち、最後のもの**を採る。
+ * 「見えている語のうち一番上」で決めると、前の語の下端が少し見えているだけでそちらを
+ * 指してしまう。絞り込みで並ぶ語が変わったら測り直す（`termIdsKey`）。
  */
 export function useActiveGlossaryTerm(
   scrollContainerRef: RefObject<HTMLElement | null>,
@@ -19,32 +23,35 @@ export function useActiveGlossaryTerm(
     const scrollContainer = scrollContainerRef.current
     if (scrollContainer === null) return
 
-    const visibleTermIds = new Set<string>()
-    const termElements = Array.from(
-      scrollContainer.querySelectorAll<HTMLElement>("[data-glossary-term-id]")
-    )
-    const observer = new IntersectionObserver(
-      (observerEntries) => {
-        observerEntries.forEach((observerEntry) => {
-          const termId = observerEntry.target.getAttribute(
-            "data-glossary-term-id"
-          )
-          if (termId === null) return
-          if (observerEntry.isIntersecting) visibleTermIds.add(termId)
-          else visibleTermIds.delete(termId)
-        })
-        // 並び順（文書の順）で最初に見えている語
-        const topTermId = termElements
-          .map((termElement) => termElement.dataset.glossaryTermId)
-          .find((termId) => termId !== undefined && visibleTermIds.has(termId))
-        if (topTermId !== undefined && isGlossaryTermId(topTermId)) {
-          setActiveTermId(topTermId)
-        }
-      },
-      { root: scrollContainer, rootMargin: "0px 0px -70% 0px" }
-    )
-    termElements.forEach((termElement) => observer.observe(termElement))
-    return () => observer.disconnect()
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      const readingLine =
+        scrollContainer.getBoundingClientRect().top + READING_LINE_OFFSET
+      const termElements = Array.from(
+        scrollContainer.querySelectorAll<HTMLElement>("[data-glossary-term-id]")
+      )
+      const passedElements = termElements.filter(
+        (termElement) => termElement.getBoundingClientRect().top <= readingLine
+      )
+      const currentElement = passedElements.at(-1) ?? termElements.at(0)
+      const termId = currentElement?.dataset.glossaryTermId
+      if (termId !== undefined && isGlossaryTermId(termId)) {
+        setActiveTermId(termId)
+      }
+    }
+    const scheduleMeasure = () => {
+      if (frame === 0) frame = requestAnimationFrame(measure)
+    }
+
+    measure()
+    scrollContainer.addEventListener("scroll", scheduleMeasure, {
+      passive: true,
+    })
+    return () => {
+      scrollContainer.removeEventListener("scroll", scheduleMeasure)
+      cancelAnimationFrame(frame)
+    }
   }, [scrollContainerRef, termIdsKey])
 
   return activeTermId
