@@ -12,7 +12,8 @@ import { TableCell, TableRow } from "@/components/ui/table"
 interface RosterTableRowProps {
   row: RosterRow
   isSelected: boolean
-  onToggleSelection: (studentId: string, event?: React.MouseEvent) => void
+  /** 行・チェックボックスのクリック（Shift の範囲選択に使うのでイベントごと渡す） */
+  onToggleSelection: (studentId: string, event: React.MouseEvent) => void
   additionalColumns: RosterColumn[]
   rowActionButtons?: RosterTableSlots["rowActionButtons"]
 }
@@ -39,6 +40,10 @@ export function RosterTableRow({
       ref={setNodeRef}
       style={style}
       className={`${isDragging ? "bg-muted/50 shadow-lg" : ""} cursor-pointer`}
+      // Shift+クリックで範囲を選ぶとき、文字列の選択が伸びないようにする
+      onMouseDown={(event) => {
+        if (event.shiftKey) event.preventDefault()
+      }}
       onClick={(event) => {
         if (!event.defaultPrevented) {
           onToggleSelection(row.id, event)
@@ -50,9 +55,14 @@ export function RosterTableRow({
           <DragHandle dragHandleProps={dragHandleProps} />
           <Checkbox
             checked={isSelected}
-            onCheckedChange={() => {
-              onToggleSelection(row.id)
+            // 選択は呼び手が持つ（制御）。トグルはクリックのイベントから行い、
+            // Shift を範囲選択へ届ける。Space キーもボタンのクリックとしてここへ来る。
+            // 行の onClick へ泡立つと同じトグルが2回走るので止める
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggleSelection(row.id, event)
             }}
+            aria-label={`${row.lastName} ${row.firstName}を選択`}
           />
         </div>
       </TableCell>
@@ -64,7 +74,7 @@ export function RosterTableRow({
         {row.lastName} {row.firstName}
       </TableCell>
       <TableCell className="text-muted-foreground">{row.kana}</TableCell>
-      <TableCell>{row.classroomInfo.className ?? "-"}</TableCell>
+      <TableCell>{row.classroomInfo.classroom?.name ?? "-"}</TableCell>
       {additionalColumns.map((column) => (
         <TableCell key={column.key} className={column.cellClassName}>
           {column.cell(row)}

@@ -2,10 +2,9 @@
 
 import type { Classroom } from "@prisma/client"
 import { Search } from "lucide-react"
-import { useMemo } from "react"
+import { type ReactNode, useMemo } from "react"
 
 import { Combobox } from "@/components/common/Combobox"
-import type { RosterFilter } from "@/components/common/roster-table/types"
 import { Input } from "@/components/ui/input"
 import { classroomFilterOptions } from "@/lib/searchKeywords"
 
@@ -15,17 +14,21 @@ interface RosterTableFiltersProps {
   selectedClassroomId: string
   onClassroomChange: (value: string) => void
   classrooms: Classroom[]
-  additionalFilters: RosterFilter[]
+  /**
+   * 学級の後ろに並べる追加の絞り込みの UI（表示だけ）。
+   * ここでは行を絞らない。絞り込みは行を持つ呼び手が済ませてから渡す
+   */
+  extraFilterControls?: ReactNode
 }
 
-/** 検索 + 学級セレクト + 追加フィルタ（スロット）を描画する共通フィルタ行 */
+/** 検索 + 学級セレクト + 追加の絞り込み UI を描画する共通フィルタ行 */
 export function RosterTableFilters({
   searchTerm,
   onSearchChange,
   selectedClassroomId,
   onClassroomChange,
   classrooms,
-  additionalFilters,
+  extraFilterControls,
 }: RosterTableFiltersProps) {
   const classroomOptions = useMemo(
     () => classroomFilterOptions(classrooms),
@@ -55,9 +58,7 @@ export function RosterTableFilters({
         className="w-40"
       />
 
-      {additionalFilters.map((filter, index) => (
-        <div key={index}>{filter.render()}</div>
-      ))}
+      {extraFilterControls}
     </div>
   )
 }

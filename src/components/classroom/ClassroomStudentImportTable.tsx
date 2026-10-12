@@ -1,16 +1,10 @@
 "use client"
 
+import type { ClassroomStudentImportRow } from "@/components/classroom/classroomStudentImportValidation"
 import {
   type EditableColumnDef,
   EditableTable,
 } from "@/components/common/EditableTable"
-
-interface ClassroomStudentImportRow {
-  studentId: string
-  attendanceNumber: string
-  startDate: string
-  endDate: string
-}
 
 /** 行を足したときの空の行 */
 const createEmptyClassroomStudentImportRow = (): ClassroomStudentImportRow => ({

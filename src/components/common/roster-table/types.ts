@@ -10,9 +10,11 @@ import type { ReactNode } from "react"
 
 /** 正規化された学級情報 */
 interface RosterClassroomInfo {
-  className: string | null
-  classroomCode?: string | null
-  grade?: number | null
+  /**
+   * 表示する学級（Prisma の Classroom の行そのもの。未所属なら null）。
+   * 学級フィルタはこの id で照合し、名前は表示するときに読む（同名の学級を取り違えない）
+   */
+  classroom: Classroom | null
   attendanceNumber: number | null
   /** 学級（ExamClassroom/GradeClassroom 等）の並び順 */
   classroomOrder?: number | null
@@ -43,14 +45,6 @@ export interface RosterColumn {
   headerClassName?: string
   /** データセルに付与する className */
   cellClassName?: string
-}
-
-/** 追加フィルタの定義（フィルタ行に差し込む UI と行への適用判定） */
-export interface RosterFilter {
-  /** フィルタ行に描画する UI */
-  render: () => ReactNode
-  /** 行がこのフィルタに合致するか（false で除外） */
-  predicate: (row: RosterRow) => boolean
 }
 
 /**
@@ -95,8 +89,6 @@ export interface RosterTableAdapter {
 export interface RosterTableSlots {
   /** 追加列（例: 答案枚数・受験状態） */
   additionalColumns?: RosterColumn[]
-  /** 追加フィルタ（例: 受験状態フィルタ） */
-  additionalFilters?: RosterFilter[]
   /**
    * 行アクションボタン列（例: 受験状態ボタン）。
    * 指定時は専用列としてテーブル末尾に追加される。

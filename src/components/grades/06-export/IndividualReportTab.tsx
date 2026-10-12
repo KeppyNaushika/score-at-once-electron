@@ -20,7 +20,10 @@ import type { GradeCalculationResult } from "@/types/grade.types"
 import type { GradeReportSettings } from "@/types/gradeReport.types"
 
 import type { ComparisonMarksByCell } from "../comparison-marks/types"
-import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
+import {
+  generateGradeReportBatchHtml,
+  MAX_TABLE_COLUMNS,
+} from "./generateGradeReportHtml"
 
 interface IndividualReportTabProps {
   result: GradeCalculationResult
@@ -146,7 +149,7 @@ export function IndividualReportTab({
                     <Input
                       type="number"
                       min={1}
-                      max={5}
+                      max={MAX_TABLE_COLUMNS}
                       className="h-6 w-16 text-xs"
                       {...editing(
                         "itemGradeTableColumns",
@@ -154,7 +157,7 @@ export function IndividualReportTab({
                         (text) => {
                           const columns = parseClampedNumber(text, {
                             min: 1,
-                            max: 5,
+                            max: MAX_TABLE_COLUMNS,
                             integer: true,
                           })
                           if (columns !== null) {
@@ -238,7 +241,7 @@ export function IndividualReportTab({
                     <Input
                       type="number"
                       min={1}
-                      max={5}
+                      max={MAX_TABLE_COLUMNS}
                       className="h-6 w-16 text-xs"
                       {...editing(
                         "sourceBreakdownTableColumns",
@@ -246,7 +249,7 @@ export function IndividualReportTab({
                         (text) => {
                           const columns = parseClampedNumber(text, {
                             min: 1,
-                            max: 5,
+                            max: MAX_TABLE_COLUMNS,
                             integer: true,
                           })
                           if (columns !== null) {

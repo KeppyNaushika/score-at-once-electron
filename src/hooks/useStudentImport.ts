@@ -22,6 +22,14 @@ interface ValidationResult {
   valid: number
   errors: string[]
   warnings: string[]
+  /** 検証を通った行。取り込むのはこの行だけ（表示の件数と取り込む行を一致させる） */
+  validRows: StudentImportRow[]
+}
+
+interface StudentImportOutcome {
+  importedStudents: StudentWithMemberships[]
+  /** 書き込みに失敗した行の学籍番号（1件の失敗で残りを止めず、最後にまとめて知らせる） */
+  failedStudentNumbers: string[]
 }
 
 /**
@@ -49,6 +57,7 @@ export function useStudentImport(existingStudents: StudentWithMemberships[]) {
     valid: 0,
     errors: [],
     warnings: [],
+    validRows: [],
   })
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -71,7 +80,7 @@ export function useStudentImport(existingStudents: StudentWithMemberships[]) {
     const errors: string[] = []
     const warnings: string[] = []
     const seenStudentNumbers = new Set<string>()
-    let validCount = 0
+    const validRows: StudentImportRow[] = []
 
     const filteredData = data.filter(
       (row) =>
@@ -118,37 +127,44 @@ export function useStudentImport(existingStudents: StudentWithMemberships[]) {
         warnings.push(`行${rowNum}: 名カナが入力されていません`)
       }
 
-      validCount++
+      validRows.push(row)
     })
 
-    setStudentValidation({ valid: validCount, errors, warnings })
+    setStudentValidation({
+      valid: validRows.length,
+      errors,
+      warnings,
+      validRows,
+    })
   }
 
-  const handleImportStudents = async () => {
-    if (studentValidation.errors.length > 0) return
+  const handleImportStudents = async (): Promise<
+    StudentImportOutcome | undefined
+  > => {
+    if (
+      studentValidation.errors.length > 0 ||
+      studentValidation.validRows.length === 0
+    ) {
+      return undefined
+    }
 
     setIsProcessing(true)
 
     try {
-      const imported: StudentWithMemberships[] = []
+      const importedStudents: StudentWithMemberships[] = []
+      const failedStudentNumbers: string[] = []
 
-      // 既存の生徒データを取得
-      const existingStudents = await queryClient.fetchQuery(studentListQuery())
-      const existingStudentNumbers = new Set(
-        existingStudents.map((student) => student.studentNumber)
+      // 書き込む直前の生徒一覧で上書きか新規かを決める（画面の読み込み後に増えた分も拾う）
+      const latestStudents = await queryClient.fetchQuery(studentListQuery())
+      const latestStudentByNumber = new Map(
+        latestStudents.map((student) => [student.studentNumber, student])
       )
 
-      const validStudentData = studentData.filter(
-        (row) =>
-          row.studentNumber?.trim() &&
-          row.lastName?.trim() &&
-          row.firstName?.trim()
-      )
-
-      for (const row of validStudentData) {
+      // 検証を通った行だけを取り込む（表示した件数と一致させる）
+      for (const row of studentValidation.validRows) {
         const studentNumber = row.studentNumber.trim()
 
-        const studentData = {
+        const studentInput = {
           studentNumber,
           lastName: row.lastName.trim(),
           firstName: row.firstName.trim(),
@@ -159,27 +175,27 @@ export function useStudentImport(existingStudents: StudentWithMemberships[]) {
             : undefined,
         }
 
-        // 既存チェック - 上書きまたは新規作成
-        if (existingStudentNumbers.has(studentNumber)) {
-          const existingStudent = existingStudents.find(
-            (student) => student.studentNumber === studentNumber
-          )
+        try {
+          // 既存チェック - 上書きまたは新規作成
+          const existingStudent = latestStudentByNumber.get(studentNumber)
           if (existingStudent) {
-            // 既存生徒を更新
             const updatedStudent = await updateStudent.mutateAsync({
               id: existingStudent.id,
-              student: studentData,
+              student: studentInput,
             })
-            imported.push(updatedStudent)
+            importedStudents.push(updatedStudent)
+          } else {
+            const newStudent = await createStudent.mutateAsync(studentInput)
+            importedStudents.push(newStudent)
           }
-        } else {
-          // 新規生徒を作成
-          const newStudent = await createStudent.mutateAsync(studentData)
-          imported.push(newStudent)
+        } catch (error) {
+          // 1件ごとの失敗は書き込みの共通のトーストが知らせる。ここでは番号を集めて最後にまとめる
+          console.error(`学籍番号 ${studentNumber} の登録に失敗:`, error)
+          failedStudentNumbers.push(studentNumber)
         }
       }
 
-      return imported
+      return { importedStudents, failedStudentNumbers }
     } catch (error) {
       console.error("Student import failed:", error)
       throw error

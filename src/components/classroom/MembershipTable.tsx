@@ -4,12 +4,15 @@ import { Calendar, SquarePen, Trash, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
+import {
+  type ColumnHeadDefinition,
+  SortableColumnHeads,
+} from "@/components/common/SortableColumnHeads"
 import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
@@ -50,6 +53,19 @@ interface ClassroomMembershipSortable {
   phase: MembershipPhase
   original: ClassroomMembership
 }
+
+/** 先頭のチェックボックス列より後ろの見出し */
+const MEMBERSHIP_COLUMNS: ColumnHeadDefinition<
+  keyof ClassroomMembershipSortable
+>[] = [
+  { label: "学籍番号", sortKey: "studentId" },
+  { label: "出席番号", sortKey: "attendanceNumber" },
+  { label: "氏名", sortKey: "fullName" },
+  { label: "開始日", sortKey: "startDate" },
+  { label: "終了日", sortKey: "endDate" },
+  { label: "備考" },
+  { label: "操作", className: "text-right" },
+]
 
 export default function ClassroomMembershipTable({
   memberships,
@@ -112,6 +128,9 @@ export default function ClassroomMembershipTable({
       ),
     [displayData, checkedIds]
   )
+
+  const allSelected =
+    displayData.length > 0 && selectedIds.size === displayData.length
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -181,54 +200,24 @@ export default function ClassroomMembershipTable({
                     <TableHead className="w-14 px-4">
                       <Checkbox
                         checked={
-                          selectedIds.size === displayData.length &&
-                          displayData.length > 0
+                          allSelected
+                            ? true
+                            : selectedIds.size > 0
+                              ? "indeterminate"
+                              : false
                         }
-                        onCheckedChange={handleSelectAll}
+                        onCheckedChange={(checked) =>
+                          handleSelectAll(checked === true)
+                        }
+                        aria-label="全選択"
                       />
                     </TableHead>
-                    <SortableTableHead
-                      sortKey="studentId"
+                    <SortableColumnHeads
+                      columns={MEMBERSHIP_COLUMNS}
                       currentSortKey={sortConfig.key}
                       currentDirection={sortConfig.direction}
-                      onSort={(key) => requestSort(key)}
-                    >
-                      学籍番号
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="attendanceNumber"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={(key) => requestSort(key)}
-                    >
-                      出席番号
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="fullName"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={(key) => requestSort(key)}
-                    >
-                      氏名
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="startDate"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={(key) => requestSort(key)}
-                    >
-                      開始日
-                    </SortableTableHead>
-                    <SortableTableHead
-                      sortKey="endDate"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={(key) => requestSort(key)}
-                    >
-                      終了日
-                    </SortableTableHead>
-                    <TableHead>備考</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
+                      onSort={requestSort}
+                    />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -246,6 +235,7 @@ export default function ClassroomMembershipTable({
                           onCheckedChange={(checked) =>
                             handleSelectOne(membership.id, checked === true)
                           }
+                          aria-label={`${membership.student.lastName} ${membership.student.firstName}を選択`}
                         />
                       </TableCell>
                       <TableCell className="font-mono text-sm">
@@ -303,7 +293,6 @@ export default function ClassroomMembershipTable({
                         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
                           <TooltipButton
                             label="個人ページを開く"
-
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
@@ -313,7 +302,6 @@ export default function ClassroomMembershipTable({
                           </TooltipButton>
                           <TooltipButton
                             label="所属を編集"
-
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
@@ -323,7 +311,6 @@ export default function ClassroomMembershipTable({
                           </TooltipButton>
                           <TooltipButton
                             label="所属を削除"
-
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -340,7 +327,10 @@ export default function ClassroomMembershipTable({
             </div>
           ) : (
             <div className="py-12 text-center text-muted-foreground">
-              所属している生徒はいません
+              {/* 所属がそもそも無いのか、状態の絞り込みで隠れただけなのかを分けて言う */}
+              {memberships.length === 0
+                ? "所属している生徒はいません"
+                : "条件に一致する所属がありません"}
             </div>
           )}
         </CardContent>

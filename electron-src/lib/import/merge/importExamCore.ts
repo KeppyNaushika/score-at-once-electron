@@ -133,6 +133,110 @@ async function applyExamPageColumns(
   })
 }
 
+/**
+ * アーカイブのページ1枚を、既にある行があれば規則に従って書き換え、無ければ新しく作る。
+ *
+ * 既にある行の探し方は呼び出し側で違う（試験ID一致なら試験のページを先にまとめて引く）
+ * ので、探した結果を受け取る。
+ */
+async function importExamPage(
+  archivePage: ExtractedArchiveData["examData"]["examPages"][number],
+  existingPage: {
+    id: string
+    imagePath: string | null
+    updatedAt: Date
+  } | null,
+  newExamId: string,
+  idMappings: IdMappings,
+  counts: ImportCounts,
+  policy: ImportValuePolicy,
+  tx: PrismaTransaction
+): Promise<void> {
+  if (existingPage) {
+    await applyExamPageColumns(existingPage, archivePage, newExamId, policy, tx)
+    idMappings.examPage[archivePage.id] = archivePage.id
+    counts.unchanged.pages++
+    return
+  }
+
+  await tx.examPage.create({
+    data: {
+      id: archivePage.id,
+      examId: newExamId,
+      pageNumber: archivePage.pageNumber,
+      imagePath: toImportedMasterImagePath(newExamId, archivePage.imagePath),
+      pageSize: archivePage.pageSize,
+      ...policy.createdTimestamps(archivePage),
+    },
+  })
+  idMappings.examPage[archivePage.id] = archivePage.id
+  counts.created.pages++
+}
+
+/**
+ * アーカイブの採点領域1つを、既にある行があれば規則に従って書き換え、無ければ新しく作る。
+ *
+ * 既にある行の探し方は呼び出し側で違う（試験ID一致なら試験の領域を先にまとめて引く）
+ * ので、探した結果を受け取る。
+ */
+async function importCropRegion(
+  region: ExtractedArchiveData["examData"]["cropRegions"][number],
+  existingRegion: { id: string; updatedAt: Date } | null,
+  newExamPageId: string,
+  idMappings: IdMappings,
+  counts: ImportCounts,
+  policy: ImportValuePolicy,
+  tx: PrismaTransaction
+): Promise<void> {
+  if (existingRegion) {
+    const updatedAt = replacementUpdatedAt(
+      policy,
+      region.updatedAt,
+      existingRegion.updatedAt
+    )
+    if (updatedAt) {
+      await tx.cropRegion.update({
+        where: { id: existingRegion.id },
+        data: {
+          examPageId: newExamPageId,
+          label: region.label,
+          type: region.type,
+          x: region.x,
+          y: region.y,
+          width: region.width,
+          height: region.height,
+          points: region.points,
+          orderIndex: region.orderIndex,
+          updatedAt,
+        },
+      })
+      counts.updated.regions++
+    } else {
+      counts.unchanged.regions++
+    }
+    idMappings.cropRegion[region.id] = region.id
+    return
+  }
+
+  await tx.cropRegion.create({
+    data: {
+      id: region.id,
+      examPageId: newExamPageId,
+      label: region.label,
+      type: region.type,
+      x: region.x,
+      y: region.y,
+      width: region.width,
+      height: region.height,
+      points: region.points,
+      orderIndex: region.orderIndex,
+      ...policy.createdTimestamps(region),
+    },
+  })
+  idMappings.cropRegion[region.id] = region.id
+  counts.created.regions++
+}
+
 export async function processExam(
   data: ExtractedArchiveData,
   preMatchResult: FileOverviewData,
@@ -223,25 +327,15 @@ async function mapExistingExamPages(
       existingPageById.get(page.id) ??
       (await tx.examPage.findUnique({ where: { id: page.id } }))
 
-    if (existingPage) {
-      await applyExamPageColumns(existingPage, page, newExamId, policy, tx)
-      idMappings.examPage[page.id] = page.id
-      counts.unchanged.pages++
-      continue
-    }
-
-    await tx.examPage.create({
-      data: {
-        id: page.id,
-        examId: newExamId,
-        pageNumber: page.pageNumber,
-        imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
-        pageSize: page.pageSize,
-        ...policy.createdTimestamps(page),
-      },
-    })
-    idMappings.examPage[page.id] = page.id
-    counts.created.pages++
+    await importExamPage(
+      page,
+      existingPage,
+      newExamId,
+      idMappings,
+      counts,
+      policy,
+      tx
+    )
   }
 }
 
@@ -270,53 +364,15 @@ async function mapExistingCropRegions(
       existingRegionById.get(region.id) ??
       (await tx.cropRegion.findUnique({ where: { id: region.id } }))
 
-    if (existingRegion) {
-      const updatedAt = replacementUpdatedAt(
-        policy,
-        region.updatedAt,
-        existingRegion.updatedAt
-      )
-      if (updatedAt) {
-        await tx.cropRegion.update({
-          where: { id: existingRegion.id },
-          data: {
-            examPageId: mappedPageId,
-            label: region.label,
-            type: region.type,
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            points: region.points,
-            orderIndex: region.orderIndex,
-            updatedAt,
-          },
-        })
-        counts.updated.regions++
-      } else {
-        counts.unchanged.regions++
-      }
-      idMappings.cropRegion[region.id] = region.id
-      continue
-    }
-
-    await tx.cropRegion.create({
-      data: {
-        id: region.id,
-        examPageId: mappedPageId,
-        label: region.label,
-        type: region.type,
-        x: region.x,
-        y: region.y,
-        width: region.width,
-        height: region.height,
-        points: region.points,
-        orderIndex: region.orderIndex,
-        ...policy.createdTimestamps(region),
-      },
-    })
-    idMappings.cropRegion[region.id] = region.id
-    counts.created.regions++
+    await importCropRegion(
+      region,
+      existingRegion,
+      mappedPageId,
+      idMappings,
+      counts,
+      policy,
+      tx
+    )
   }
 }
 
@@ -494,24 +550,15 @@ export async function processExamPages(
     const existingById = await tx.examPage.findUnique({
       where: { id: page.id },
     })
-    if (existingById) {
-      await applyExamPageColumns(existingById, page, newExamId, policy, tx)
-      idMappings.examPage[page.id] = page.id
-      counts.unchanged.pages++
-    } else {
-      await tx.examPage.create({
-        data: {
-          id: page.id,
-          examId: newExamId,
-          pageNumber: page.pageNumber,
-          imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
-          pageSize: page.pageSize,
-          ...policy.createdTimestamps(page),
-        },
-      })
-      idMappings.examPage[page.id] = page.id
-      counts.created.pages++
-    }
+    await importExamPage(
+      page,
+      existingById,
+      newExamId,
+      idMappings,
+      counts,
+      policy,
+      tx
+    )
   }
 }
 
@@ -529,52 +576,14 @@ export async function processCropRegions(
     const existingById = await tx.cropRegion.findUnique({
       where: { id: region.id },
     })
-    if (existingById) {
-      const updatedAt = replacementUpdatedAt(
-        policy,
-        region.updatedAt,
-        existingById.updatedAt
-      )
-      if (updatedAt) {
-        await tx.cropRegion.update({
-          where: { id: existingById.id },
-          data: {
-            examPageId: newPageId,
-            label: region.label,
-            type: region.type,
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            points: region.points,
-            orderIndex: region.orderIndex,
-            updatedAt,
-          },
-        })
-        counts.updated.regions++
-      } else {
-        counts.unchanged.regions++
-      }
-      idMappings.cropRegion[region.id] = region.id
-      continue
-    }
-
-    await tx.cropRegion.create({
-      data: {
-        id: region.id,
-        examPageId: newPageId,
-        label: region.label,
-        type: region.type,
-        x: region.x,
-        y: region.y,
-        width: region.width,
-        height: region.height,
-        points: region.points,
-        orderIndex: region.orderIndex,
-        ...policy.createdTimestamps(region),
-      },
-    })
-    idMappings.cropRegion[region.id] = region.id
-    counts.created.regions++
+    await importCropRegion(
+      region,
+      existingById,
+      newPageId,
+      idMappings,
+      counts,
+      policy,
+      tx
+    )
   }
 }

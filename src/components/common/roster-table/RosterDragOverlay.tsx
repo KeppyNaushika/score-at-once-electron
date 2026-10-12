@@ -19,7 +19,7 @@ export function RosterDragOverlay({
         {activeRow.lastName} {activeRow.firstName}
       </div>
       <div className="text-sm text-muted-foreground">
-        {activeRow.classroomInfo.className ?? "-"}
+        {activeRow.classroomInfo.classroom?.name ?? "-"}
         {selectedIds.size > 1 && ` (+${selectedIds.size - 1}名)`}
       </div>
     </div>

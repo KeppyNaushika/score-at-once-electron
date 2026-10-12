@@ -25,6 +25,14 @@ export function RosterTableHeader({
   additionalColumns,
   rowActionButtons,
 }: RosterTableHeaderProps) {
+  // 全部・一部・なしの3状態（学級管理・生徒管理の `SelectableListTable` と同じ表し方）
+  const selectedRowCount = sortedRows.filter((row) =>
+    selectedIds.has(row.id)
+  ).length
+  const allSelected =
+    sortedRows.length > 0 && selectedRowCount === sortedRows.length
+  const someSelected = selectedRowCount > 0 && !allSelected
+
   return (
     <TableHeader className="sticky top-0 z-10 bg-background">
       <TableRow>
@@ -33,10 +41,10 @@ export function RosterTableHeader({
             <GripVertical className="h-4 w-4 text-muted-foreground" />
             <Checkbox
               checked={
-                sortedRows.length > 0 &&
-                sortedRows.every((row) => selectedIds.has(row.id))
+                allSelected ? true : someSelected ? "indeterminate" : false
               }
-              onCheckedChange={onSelectAll}
+              onCheckedChange={(checked) => onSelectAll(checked === true)}
+              aria-label="全選択"
             />
           </div>
         </TableHead>

@@ -4,6 +4,7 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useMemo, useState } from "react"
 
+import { rosterRowIdsInRange } from "@/components/common/roster-table/rosterRangeSelection"
 import type { RosterRow } from "@/components/common/roster-table/types"
 
 /** customOrder 優先・なければ classroomOrder→attendanceNumber でソート */
@@ -88,9 +89,8 @@ export function useRosterTable({
    */
   const [droppedRowIds, setDroppedRowIds] = useState<string[] | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
-    null
-  )
+  /** Shift+クリックの範囲の起点（最後に単独でトグルした行の studentId） */
+  const [anchorRowId, setAnchorRowId] = useState<string | null>(null)
 
   const sortedRows = useMemo(() => {
     const sorted = filteredRows.slice().sort(compareByCustomOrder)
@@ -170,39 +170,35 @@ export function useRosterTable({
     [sortedRows, selectedIds, onOrderUpdate]
   )
 
-  // チェックボックスのトグル（Shiftキー対応）
+  // 行・チェックボックスのトグル。Shift+クリックは起点の行から押した行までを
+  // 押した行の新しい状態に揃える。キーボード（Space）は Shift を伴わないので単独のトグル
   const handleToggleSelection = useCallback(
-    (studentId: string, event?: React.MouseEvent) => {
-      const currentIndex = sortedRows.findIndex((row) => row.id === studentId)
+    (studentId: string, event: React.MouseEvent) => {
+      const isTargetSelected = selectedIds.has(studentId)
+      const rangeRowIds = event.shiftKey
+        ? rosterRowIdsInRange(
+            sortedRows.map((row) => row.id),
+            anchorRowId,
+            studentId
+          )
+        : null
 
-      if (
-        event?.shiftKey &&
-        lastSelectedIndex !== null &&
-        currentIndex !== -1
-      ) {
-        const start = Math.min(lastSelectedIndex, currentIndex)
-        const end = Math.max(lastSelectedIndex, currentIndex)
-        const isCurrentSelected = selectedIds.has(studentId)
-
-        for (let i = start; i <= end; i++) {
-          const row = sortedRows[i]
-          if (row) {
-            onSelectionChange(row.id, !isCurrentSelected)
-          }
-        }
-      } else {
-        const isSelected = selectedIds.has(studentId)
-        onSelectionChange(studentId, !isSelected)
-        setLastSelectedIndex(currentIndex)
+      if (rangeRowIds) {
+        rangeRowIds.forEach((rangeRowId) =>
+          onSelectionChange(rangeRowId, !isTargetSelected)
+        )
+        return
       }
+      onSelectionChange(studentId, !isTargetSelected)
+      setAnchorRowId(studentId)
     },
-    [sortedRows, selectedIds, onSelectionChange, lastSelectedIndex]
+    [sortedRows, selectedIds, onSelectionChange, anchorRowId]
   )
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
       onSelectAll(checked)
-      setLastSelectedIndex(null)
+      setAnchorRowId(null)
     },
     [onSelectAll]
   )

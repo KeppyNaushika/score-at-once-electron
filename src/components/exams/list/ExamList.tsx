@@ -3,25 +3,21 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { FileArchive, PencilSparkles, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useMemo } from "react"
 
-import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
-import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
-import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
+import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
+import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
+import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
-import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
-import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
-import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
-import { useRowSelection } from "@/hooks/useRowSelection"
+import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import {
   type ExamSummary,
   getExamProgress,
@@ -61,12 +57,8 @@ const ExamList = () => {
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToExams = useMutation(addTagToExamsMutation())
-  const archiveImport = useArchiveImportLauncher()
-  const { start: startArchiveImport, isOpening: isOpeningArchive } =
-    archiveImport
-  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
-  const [unifiedExportSelection, setUnifiedExportSelection] =
-    useState<UnifiedArchiveExportInitialSelection | null>(null)
+  const archive = useEntityListArchive()
+  const { importToolbarAction, openUnifiedExport } = archive
 
   const createExam = useMutation(createExamMutation(currentUser.id))
   const router = useRouter()
@@ -91,55 +83,23 @@ const ExamList = () => {
     }
   }, [createExam, router])
 
-  const {
-    filteredItems: filteredExams,
-    searchTerm,
-    setSearchTerm,
-    filterTagIds,
-    toggleTagId,
-    clearTagIds,
-    dateFrom,
-    setDateFrom,
-    dateTo,
-    setDateTo,
-    updatedFrom,
-    setUpdatedFrom,
-    updatedTo,
-    setUpdatedTo,
-  } = useListFilter(exams, EXAM_FILTER_ACCESSORS)
-
-  const {
-    selectedIds,
-    toggleSelect,
-    toggleSelectAll,
-    allSelected,
-    clearSelection,
-  } = useRowSelection(filteredExams)
-
-  const handleBulkAddTag = useCallback(
-    async (tagName: string) => {
-      if (!tagName.trim() || selectedIds.size === 0) return
-      const tag = await findOrCreateTag.mutateAsync(tagName.trim())
-      await addTagToExams.mutateAsync({
-        examIds: [...selectedIds],
-        tagId: tag.id,
-      })
-      toast.success("タグを追加しました", {
-        description: `${selectedIds.size}件の試験に「${tagName.trim()}」を追加`,
-      })
-      clearSelection()
-    },
-    [selectedIds, clearSelection, findOrCreateTag, addTagToExams]
+  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+    exams,
+    EXAM_FILTER_ACCESSORS,
+    {
+      rowNoun: "試験",
+      searchPlaceholder: "試験名・タグで検索",
+      tagOptions: allTags,
+    }
   )
 
-  const tagFilterConfig = useMemo(
-    () => ({
-      options: allTags,
-      selectedIds: filterTagIds,
-      onToggle: toggleTagId,
-      onClear: clearTagIds,
-    }),
-    [allTags, filterTagIds, toggleTagId, clearTagIds]
+  const handleBulkAddTag = useCallback(
+    (tagName: string) =>
+      addTagToSelection(tagName, async (trimmedTagName, examIds) => {
+        const tag = await findOrCreateTag.mutateAsync(trimmedTagName)
+        await addTagToExams.mutateAsync({ examIds, tagId: tag.id })
+      }),
+    [addTagToSelection, findOrCreateTag, addTagToExams]
   )
 
   const actions = useMemo<ToolbarAction[]>(() => {
@@ -151,11 +111,7 @@ const ExamList = () => {
         label: "新規試験作成",
         onClick: () => void handleCreate(),
       }),
-      archiveImportToolbarAction({
-        priority: 70,
-        isOpening: isOpeningArchive,
-        onClick: () => void startArchiveImport(),
-      }),
+      importToolbarAction,
     ]
 
     if (selectedIds.size > 0) {
@@ -173,7 +129,7 @@ const ExamList = () => {
           icon: FileArchive,
           label: `.sao 書き出し（${selectedIds.size}件）`,
           onClick: () =>
-            setUnifiedExportSelection({ roots: { Exam: [...selectedIds] } }),
+            openUnifiedExport({ roots: { Exam: [...selectedIds] } }),
         })
       )
     }
@@ -183,24 +139,16 @@ const ExamList = () => {
     allTags,
     handleBulkAddTag,
     handleCreate,
-    isOpeningArchive,
+    importToolbarAction,
+    openUnifiedExport,
     selectedIds,
-    startArchiveImport,
   ])
 
   return (
     <>
-      <ArchiveImportScreens launcher={archiveImport} />
-      <UnifiedArchiveExportDialog
-        open={unifiedExportSelection !== null}
-        onOpenChange={(open) => {
-          if (!open) setUnifiedExportSelection(null)
-        }}
-        initialSelection={unifiedExportSelection ?? {}}
-      />
       <EntityListPage<ExamSummary>
+        {...listProps}
         title="試験一覧"
-        rows={filteredExams}
         totalCount={exams.length}
         isLoading={isLoading}
         name={(exam) => exam.examName}
@@ -217,33 +165,11 @@ const ExamList = () => {
           <ExamRowMenu
             exam={exam}
             onUnifiedExport={() =>
-              setUnifiedExportSelection({ roots: { Exam: [exam.id] } })
+              openUnifiedExport({ roots: { Exam: [exam.id] } })
             }
           />
         )}
         actions={actions}
-        search={{
-          term: searchTerm,
-          onChange: setSearchTerm,
-          placeholder: "試験名・タグで検索",
-        }}
-        tagFilter={tagFilterConfig}
-        dateFilter={{
-          from: dateFrom,
-          to: dateTo,
-          onFromChange: setDateFrom,
-          onToChange: setDateTo,
-        }}
-        updatedAtFilter={{
-          from: updatedFrom,
-          to: updatedTo,
-          onFromChange: setUpdatedFrom,
-          onToChange: setUpdatedTo,
-        }}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        allSelected={allSelected}
         empty={{
           icon: PencilSparkles,
           message: "まだ試験がありません",
@@ -257,6 +183,8 @@ const ExamList = () => {
         noMatchMessage="条件に一致する試験がありません"
         sortStorageKey="examList-sort"
       />
+
+      <EntityListArchiveDialogs archive={archive} />
     </>
   )
 }

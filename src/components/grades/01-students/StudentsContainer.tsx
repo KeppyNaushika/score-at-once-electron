@@ -103,7 +103,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             firstName: examStudent.student.firstName,
             kana: "",
             classroomInfo: {
-              className: membership?.classroom.name ?? null,
+              classroom: membership?.classroom ?? null,
               attendanceNumber: membership?.attendanceNumber ?? null,
               classroomOrder: membership
                 ? (classroomOrderMap.get(membership.classroomId) ?? null)

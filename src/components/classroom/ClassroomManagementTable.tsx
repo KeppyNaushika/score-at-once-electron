@@ -9,19 +9,13 @@ import { toast } from "sonner"
 import ClassroomModal from "@/components/classroom/ClassroomModal"
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { ListSearchInput } from "@/components/common/ListFilterControls"
-import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
+import { SelectableListTable } from "@/components/common/SelectableListTable"
+import type { ColumnHeadDefinition } from "@/components/common/SortableColumnHeads"
 import PageHeader from "@/components/layout/PageHeader"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 import {
   Select,
   SelectContent,
@@ -29,17 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { SortableTableHead } from "@/components/ui/SortableTableHead"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { useListPagination } from "@/hooks/useListPagination"
+import { useRowSelection } from "@/hooks/useRowSelection"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import { matchesSearchTerm } from "@/lib/searchText"
@@ -72,11 +57,15 @@ const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 const VISIBILITY_FILTERS = ["visible", "hidden", "all"] as const
 type VisibilityFilter = (typeof VISIBILITY_FILTERS)[number]
 
-/** 1行の高さの見積もり（px）。「自動」の件数はこれで割る。はみ出すより余らせる */
-const CLASSROOM_TABLE_ROW_HEIGHT = 60
-
-/** 行の上に居座る見出し行の高さ（`h-12`） */
-const CLASSROOM_TABLE_HEADER_HEIGHT = 48
+/** 先頭のチェックボックス列より後ろの見出し */
+const CLASSROOM_COLUMNS: ColumnHeadDefinition<keyof ClassroomSortable>[] = [
+  { label: "学級名", sortKey: "name" },
+  { label: "コード", sortKey: "classroomCode" },
+  { label: "学年", sortKey: "grade" },
+  { label: "説明" },
+  { label: "所属数", sortKey: "memberCount" },
+  { label: "操作", className: "text-right" },
+]
 
 export default function ClassroomManagementTable() {
   const router = useRouter()
@@ -89,11 +78,6 @@ export default function ClassroomManagementTable() {
   const [classroomToEdit, setClassroomToEdit] =
     useState<ClassroomWithMemberships | null>(null)
   const classroomDeletion = useDialogTarget<ClassroomWithMemberships>()
-
-  // Selection states
-  const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
-    new Set()
-  )
 
   // Filter classrooms
   const filteredClassrooms = useMemo(() => {
@@ -134,57 +118,17 @@ export default function ClassroomManagementTable() {
     sortConfig.key ?? "",
     sortConfig.direction ?? "",
   ].join("|")
+
+  // 全選択・全解除は、表示中のものだけを対象にする
   const {
-    pageRows,
-    pageNumber,
-    pageSize,
-    pageSizeChoice,
-    setPageSizeChoice,
-    pageCount,
-    setPageNumber,
-    firstRowNumber,
-    lastRowNumber,
-    viewportRef,
-  } = useListPagination(sortedData, {
-    rowHeight: CLASSROOM_TABLE_ROW_HEIGHT,
-    reservedHeight: CLASSROOM_TABLE_HEADER_HEIGHT,
-    resetKey: paginationResetKey,
-  })
-
-  // Selection handlers
-  const filteredIds = useMemo(
-    () => sortedData.map((row) => row.id),
-    [sortedData]
-  )
-
-  const isAllSelected =
-    filteredIds.length > 0 &&
-    filteredIds.every((id) => selectedClassroomIds.has(id))
+    selectedIds: selectedClassroomIds,
+    toggleSelect: setClassroomSelected,
+    toggleSelectAll,
+    allSelected: isAllSelected,
+  } = useRowSelection(sortedData)
 
   const isSomeSelected =
-    !isAllSelected && filteredIds.some((id) => selectedClassroomIds.has(id))
-
-  const toggleSelectAll = () => {
-    if (isAllSelected) {
-      const newSet = new Set(selectedClassroomIds)
-      filteredIds.forEach((id) => newSet.delete(id))
-      setSelectedClassroomIds(newSet)
-    } else {
-      const newSet = new Set(selectedClassroomIds)
-      filteredIds.forEach((id) => newSet.add(id))
-      setSelectedClassroomIds(newSet)
-    }
-  }
-
-  const toggleSelectClassroom = (classroomId: string) => {
-    const newSet = new Set(selectedClassroomIds)
-    if (newSet.has(classroomId)) {
-      newSet.delete(classroomId)
-    } else {
-      newSet.add(classroomId)
-    }
-    setSelectedClassroomIds(newSet)
-  }
+    !isAllSelected && sortedData.some((row) => selectedClassroomIds.has(row.id))
 
   const createClassroom = useMutation(createClassroomMutation())
   const updateClassroom = useMutation(updateClassroomMutation())
@@ -207,12 +151,7 @@ export default function ClassroomManagementTable() {
     const classroomId = classroomDeletion.target.id
     classroomDeletion.close()
     deleteClassroom.mutate(classroomId, {
-      onSuccess: () =>
-        setSelectedClassroomIds((prev) => {
-          const remaining = new Set(prev)
-          remaining.delete(classroomId)
-          return remaining
-        }),
+      onSuccess: () => setClassroomSelected(classroomId, false),
     })
   }
 
@@ -323,110 +262,36 @@ export default function ClassroomManagementTable() {
         actions={toolbarActions}
       />
 
-      {/* Classes Table */}
-      <div className="min-h-0 flex-1 p-4">
-        <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/50 shadow-sm">
-          {/* 「自動」はこの箱の高さを1行の高さで割る。縦に流すのは中の Table の側 */}
-          <div ref={viewportRef} className="min-h-0 flex-1">
-            <Table wrapperClassName="h-full">
-              <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={
-                        isAllSelected
-                          ? true
-                          : isSomeSelected
-                            ? "indeterminate"
-                            : false
-                      }
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="全選択"
-                    />
-                  </TableHead>
-                  <SortableTableHead
-                    sortKey="name"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    学級名
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="classroomCode"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    コード
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="grade"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    学年
-                  </SortableTableHead>
-                  <TableHead>説明</TableHead>
-                  <SortableTableHead
-                    sortKey="memberCount"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    所属数
-                  </SortableTableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageRows.map(({ original: classroomItem, memberCount }) => (
-                  <ClassroomManagementRow
-                    key={classroomItem.id}
-                    classroom={classroomItem}
-                    memberCount={memberCount}
-                    isSelected={selectedClassroomIds.has(classroomItem.id)}
-                    onOpen={() =>
-                      router.push(`/classrooms/${classroomItem.id}`)
-                    }
-                    onToggleSelect={() =>
-                      toggleSelectClassroom(classroomItem.id)
-                    }
-                    onEdit={() => handleEditClassroom(classroomItem)}
-                    onDelete={() => classroomDeletion.openWith(classroomItem)}
-                  />
-                ))}
-                {sortedData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <Empty>
-                        <EmptyHeader>
-                          <EmptyMedia variant="icon">
-                            <School />
-                          </EmptyMedia>
-                          <EmptyTitle>該当する学級が見つかりません</EmptyTitle>
-                        </EmptyHeader>
-                      </Empty>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <ListPaginationFooter
-            total={sortedData.length}
-            firstRowNumber={firstRowNumber}
-            lastRowNumber={lastRowNumber}
-            pageSize={pageSize}
-            pageSizeChoice={pageSizeChoice}
-            onPageSizeChoiceChange={setPageSizeChoice}
-            pageNumber={pageNumber}
-            pageCount={pageCount}
-            onPageChange={setPageNumber}
+      <SelectableListTable
+        rows={sortedData}
+        renderRow={({ original: classroomItem, memberCount }) => (
+          <ClassroomManagementRow
+            key={classroomItem.id}
+            classroom={classroomItem}
+            memberCount={memberCount}
+            isSelected={selectedClassroomIds.has(classroomItem.id)}
+            onOpen={() => router.push(`/classrooms/${classroomItem.id}`)}
+            onToggleSelect={() =>
+              setClassroomSelected(
+                classroomItem.id,
+                !selectedClassroomIds.has(classroomItem.id)
+              )
+            }
+            onEdit={() => handleEditClassroom(classroomItem)}
+            onDelete={() => classroomDeletion.openWith(classroomItem)}
           />
-        </div>
-      </div>
+        )}
+        columns={CLASSROOM_COLUMNS}
+        currentSortKey={sortConfig.key}
+        currentDirection={sortConfig.direction}
+        onSort={requestSort}
+        allSelected={isAllSelected}
+        someSelected={isSomeSelected}
+        onToggleSelectAll={toggleSelectAll}
+        paginationResetKey={paginationResetKey}
+        emptyIcon={School}
+        emptyMessage="該当する学級が見つかりません"
+      />
 
       {/* Modals */}
       {isClassroomModalOpen && (

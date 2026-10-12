@@ -1,7 +1,9 @@
 "use client"
 
-import { CircleAlert, ClipboardPaste, TriangleAlert } from "lucide-react"
+import { ClipboardPaste } from "lucide-react"
+import { toast } from "sonner"
 
+import ImportValidationMessages from "@/components/common/ImportValidationMessages"
 import StudentImportTable from "@/components/student/StudentImportTable"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,61 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useStudentImport } from "@/hooks/useStudentImport"
+import { summarizeStudentNumbers } from "@/lib/studentNumberSummary"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
-
-function ValidationMessages({
-  validation,
-}: {
-  validation: { valid: number; errors: string[]; warnings: string[] }
-}) {
-  return (
-    <div className="space-y-2">
-      {validation.errors.length > 0 && (
-        <div className="rounded-md bg-red-50 p-3">
-          <div className="flex">
-            <CircleAlert className="h-5 w-5 text-red-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">エラー</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <ul className="list-disc space-y-1 pl-5">
-                  {validation.errors.map((error, index) => (
-                    <li key={index}>{error}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {validation.warnings.length > 0 && (
-        <div className="rounded-md bg-yellow-50 p-3">
-          <div className="flex">
-            <TriangleAlert className="h-5 w-5 text-yellow-400" />
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">警告</h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <ul className="list-disc space-y-1 pl-5">
-                  {validation.warnings.map((warning, index) => (
-                    <li key={index}>{warning}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {validation.valid > 0 && (
-        <div className="rounded-md bg-green-50 p-3">
-          <div className="text-sm text-green-700">
-            ✅ {validation.valid}件のデータが有効です
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 interface SpreadsheetImportModalProps {
   isOpen: boolean
@@ -93,13 +42,25 @@ export default function SpreadsheetImportModal({
 
   const handleStudentImport = async () => {
     try {
-      const imported = await handleImportStudents()
-      if (imported) {
-        onImportSuccess(imported)
+      const outcome = await handleImportStudents()
+      if (!outcome) return
+      const { importedStudents, failedStudentNumbers } = outcome
+
+      if (failedStudentNumbers.length > 0) {
+        toast.error(
+          `${failedStudentNumbers.length}名の生徒を登録できませんでした`,
+          { description: summarizeStudentNumbers(failedStudentNumbers) }
+        )
+      }
+
+      if (importedStudents.length > 0) {
+        toast.success(`${importedStudents.length}名の生徒を登録しました`)
+        onImportSuccess(importedStudents)
         onClose()
       }
-    } catch {
-      alert("生徒のインポートに失敗しました。")
+    } catch (error) {
+      console.error("生徒の登録に失敗:", error)
+      toast.error("生徒を登録できませんでした")
     }
   }
 
@@ -123,7 +84,10 @@ export default function SpreadsheetImportModal({
               onDataChange={handleStudentDataChange}
             />
           </div>
-          <ValidationMessages validation={studentValidation} />
+          <ImportValidationMessages
+            validation={studentValidation}
+            validRowNoun="データ"
+          />
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4">
@@ -134,7 +98,7 @@ export default function SpreadsheetImportModal({
             onClick={handleStudentImport}
             disabled={
               studentValidation.errors.length > 0 ||
-              studentData.length === 0 ||
+              studentValidation.valid === 0 ||
               isProcessing
             }
           >

@@ -2,21 +2,15 @@
 
 import type { Classroom } from "@prisma/client"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
-import { RosterDragOverlay } from "@/components/common/roster-table/RosterDragOverlay"
-import { RosterTableFilters } from "@/components/common/roster-table/RosterTableFilters"
-import { RosterTableHeader } from "@/components/common/roster-table/RosterTableHeader"
-import { RosterTableRow } from "@/components/common/roster-table/RosterTableRow"
+import { RosterTableView } from "@/components/common/roster-table/RosterTableView"
 import type {
   RosterRow,
   RosterTableAdapter,
   RosterTableSlots,
 } from "@/components/common/roster-table/types"
-import { useRosterTable } from "@/components/common/roster-table/useRosterTable"
-import { SortableTableProvider } from "@/components/common/sortable-table"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +22,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { Table, TableBody } from "@/components/ui/table"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { queryKeys } from "@/lib/queryKeys"
 import { matchesSearchTerm } from "@/lib/searchText"
@@ -81,8 +74,6 @@ export function RosterTable({
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassroomId, setSelectedClassroomId] = useState("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [showResetDialog, setShowResetDialog] = useState(false)
-  const [isResetting, setIsResetting] = useState(false)
   /** 削除確認の対象（確認を開いた時点の選択） */
   const rowRemoval = useDialogTarget<string[]>()
   const [isRemoving, setIsRemoving] = useState(false)
@@ -91,10 +82,6 @@ export function RosterTable({
   const additionalColumns = useMemo(
     () => slots?.additionalColumns ?? [],
     [slots?.additionalColumns]
-  )
-  const additionalFilters = useMemo(
-    () => slots?.additionalFilters ?? [],
-    [slots?.additionalFilters]
   )
 
   // 行と学級の選択肢は必ず対で使う（学級で絞るので）ので1つの取得にまとめる
@@ -137,19 +124,14 @@ export function RosterTable({
         row.studentNumber,
       ])
 
+      // 学級は id で照合する（名前で比べると同名の学級が一緒に絞り込まれる）
       const matchesClassroom =
         selectedClassroomId === "all" ||
-        row.classroomInfo.className ===
-          classrooms.find((classroom) => classroom.id === selectedClassroomId)
-            ?.name
+        row.classroomInfo.classroom?.id === selectedClassroomId
 
-      const matchesAdditional = additionalFilters.every((filter) =>
-        filter.predicate(row)
-      )
-
-      return matchesSearch && matchesClassroom && matchesAdditional
+      return matchesSearch && matchesClassroom
     })
-  }, [rows, searchTerm, selectedClassroomId, classrooms, additionalFilters])
+  }, [rows, searchTerm, selectedClassroomId])
 
   const handleSelectionChange = useCallback(
     (studentId: string, isSelected: boolean) => {
@@ -195,33 +177,6 @@ export function RosterTable({
     [adapter, loadData]
   )
 
-  const {
-    sortedRows,
-    activeRow,
-    handleDragStart,
-    handleDragEnd,
-    handleToggleSelection,
-    handleSelectAll,
-    handleResetOrder,
-  } = useRosterTable({
-    allRows: rows,
-    filteredRows,
-    selectedIds,
-    onSelectionChange: handleSelectionChange,
-    onSelectAll: handleSelectAllRows,
-    onOrderUpdate: handleOrderUpdate,
-  })
-
-  const handleConfirmReset = async () => {
-    setIsResetting(true)
-    try {
-      await handleResetOrder()
-    } finally {
-      setIsResetting(false)
-      setShowResetDialog(false)
-    }
-  }
-
   const handleConfirmRemove = async () => {
     if (!rowRemoval.target) return
     setIsRemoving(true)
@@ -245,104 +200,34 @@ export function RosterTable({
 
   return (
     <div className="space-y-4">
-      {/* フィルター行 */}
-      <div className="flex items-center gap-3">
-        <RosterTableFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedClassroomId={selectedClassroomId}
-          onClassroomChange={setSelectedClassroomId}
-          classrooms={classrooms}
-          additionalFilters={additionalFilters}
-        />
-        {enableRemove && selectedIds.size > 0 && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => rowRemoval.openWith(Array.from(selectedIds))}
-          >
-            選択した生徒を削除 ({selectedIds.size})
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowResetDialog(true)}
-        >
-          <RotateCcw className="mr-1 h-3 w-3" />
-          並び順をリセット
-        </Button>
-      </div>
-
-      {/* テーブル */}
-      <div className="min-h-96 rounded-md border">
-        <SortableTableProvider
-          items={sortedRows.map((row) => row.id)}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          dragOverlay={
-            <RosterDragOverlay
-              activeRow={activeRow}
-              selectedIds={selectedIds}
-            />
-          }
-        >
-          <Table>
-            <RosterTableHeader
-              sortedRows={sortedRows}
-              selectedIds={selectedIds}
-              onSelectAll={handleSelectAll}
-              additionalColumns={additionalColumns}
-              rowActionButtons={slots?.rowActionButtons}
-            />
-            <TableBody>
-              {sortedRows.map((row) => (
-                <RosterTableRow
-                  key={row.id}
-                  row={row}
-                  isSelected={selectedIds.has(row.id)}
-                  onToggleSelection={(studentId) =>
-                    handleToggleSelection(studentId)
-                  }
-                  additionalColumns={additionalColumns}
-                  rowActionButtons={slots?.rowActionButtons}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </SortableTableProvider>
-      </div>
-
-      {/* 並び順リセット確認ダイアログ */}
-      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>並び順をリセットしますか？</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                手動で設定した並び順を、学級の関連付け設定に基づいて再設定します（検索・フィルタ中でも全生徒が対象になります）。
-              </span>
-              <span className="block font-medium">リセット後の並び順：</span>
-              <span className="block pl-4 text-muted-foreground">
-                1. 学級の関連付け順（上から順）
-                <br />
-                2. 学級内の出席番号順
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isResetting}>
-              キャンセル
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmReset}
-              disabled={isResetting}
+      <RosterTableView
+        allRows={rows}
+        filteredRows={filteredRows}
+        selectedIds={selectedIds}
+        onSelectionChange={handleSelectionChange}
+        onSelectAll={handleSelectAllRows}
+        onOrderUpdate={handleOrderUpdate}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        selectedClassroomId={selectedClassroomId}
+        onClassroomChange={setSelectedClassroomId}
+        classrooms={classrooms}
+        additionalColumns={additionalColumns}
+        rowActionButtons={slots?.rowActionButtons}
+        toolbarActions={
+          enableRemove &&
+          selectedIds.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => rowRemoval.openWith(Array.from(selectedIds))}
             >
-              {isResetting ? "リセット中..." : "リセット"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              選択した生徒を削除 ({selectedIds.size})
+            </Button>
+          )
+        }
+        showResetButtonIcon
+      />
 
       {/* 生徒削除の確認ダイアログ。名簿から外すと子データも cascade で消えるため、
           何が失われるかを事前に明示する（試験05の削除確認と同じ扱い） */}

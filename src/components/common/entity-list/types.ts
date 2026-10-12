@@ -1,3 +1,5 @@
+import type { MultiSelectFilterConfig } from "@/components/common/ListFilterControls"
+
 /**
  * 日付列に出す値。
  *
@@ -54,3 +56,33 @@ export interface SortableEntityRow<TRow> {
 
 /** 並べ替えに使える列（`EntityListPage` の `SORTABLE_KEYS` と同じ3つ） */
 export type EntityListSortKey = "name" | "referenceDate" | "updatedAt"
+
+/**
+ * 絞り込みと選択にまつわる `EntityListPage` の props。
+ *
+ * 4つの一覧はどれも `useListFilter` と `useRowSelection` の値をこの形へ詰め直して
+ * いたので、詰め直しは `useEntityListControls` が1回だけ持つ。
+ */
+export interface EntityListControlProps<TRow> {
+  /** 絞り込み済みの行（並べ替えとページ分けは部品の中でやる） */
+  rows: TRow[]
+  /** 名前列の popover に入る横断検索 */
+  search: EntityListSearch
+  /** 名前列の popover に入るタグ絞り込み */
+  tagFilter?: MultiSelectFilterConfig
+  /** 名前列の popover に入る学級絞り込み。学級を持たない画面は渡さない */
+  classroomFilter?: MultiSelectFilterConfig
+  /** 日付列の絞り込み */
+  dateFilter: EntityListDateFilter
+  /** 更新日時列の絞り込み */
+  updatedAtFilter: EntityListDateFilter
+  /**
+   * 選択の状態。**呼び手が持つ**（ヘッダーの一括操作が選択を読むため）。
+   * 並べ替えとページ分けは行の集合を変えないので、呼び手は絞り込み済みの行に対して
+   * `useRowSelection` を持てばよい
+   */
+  selectedIds: Set<string>
+  onToggleSelect: (rowId: string, checked: boolean) => void
+  onToggleSelectAll: (checked: boolean) => void
+  allSelected: boolean
+}

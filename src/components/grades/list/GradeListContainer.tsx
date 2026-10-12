@@ -1,27 +1,25 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { ChartColumn, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
-import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
-import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
-import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
+import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
+import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
+import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
+import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
-import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
-import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
-import { useRowSelection } from "@/hooks/useRowSelection"
+import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import {
@@ -72,7 +70,6 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
  */
 export function GradeListContainer() {
   const router = useRouter()
-  const queryClient = useQueryClient()
   const { data: grades = EMPTY_GRADES, isPending: isLoading } =
     useQuery(gradeListQuery())
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
@@ -81,12 +78,8 @@ export function GradeListContainer() {
   const duplicateGrade = useMutation(duplicateGradeMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToGrades = useMutation(addTagToGradesMutation())
-  const archiveImport = useArchiveImportLauncher()
-  const { start: startArchiveImport, isOpening: isOpeningArchive } =
-    archiveImport
-  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
-  const [unifiedExportSelection, setUnifiedExportSelection] =
-    useState<UnifiedArchiveExportInitialSelection | null>(null)
+  const archive = useEntityListArchive()
+  const { importToolbarAction, openUnifiedExport } = archive
   // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
   const gradeDeletion = useDialogTarget<GradeSummary>()
 
@@ -109,18 +102,21 @@ export function GradeListContainer() {
     }
   }, [createGrade, router])
 
-  const handleDelete = async (gradeId: string) => {
-    try {
-      await deleteGrade.mutateAsync(gradeId)
-      gradeDeletion.close()
-    } catch {
-      // 失敗の通知は MutationCache が出す。確認は開いたままにする
-    }
-  }
+  const handleDelete = (grade: GradeSummary) =>
+    deleteFromEntityList({
+      remove: () => deleteGrade.mutateAsync(grade.id),
+      closeDialog: gradeDeletion.close,
+      successMessage: "成績算出を削除しました",
+      entityName: grade.name,
+    })
 
-  const handleDuplicate = async (id: string) => {
-    const duplicated = await duplicateGrade.mutateAsync(id)
-    toast.success(`「${duplicated.name}」を複製しました`)
+  const handleDuplicate = async (gradeId: string) => {
+    try {
+      const duplicated = await duplicateGrade.mutateAsync(gradeId)
+      toast.success(`「${duplicated.name}」を複製しました`)
+    } catch {
+      // 失敗の通知は MutationCache が出す
+    }
   }
 
   // 一覧に出現する学級を集約してフィルタ選択肢にする
@@ -132,72 +128,25 @@ export function GradeListContainer() {
     [grades]
   )
 
-  const {
-    filteredItems: filteredGrades,
-    searchTerm,
-    setSearchTerm,
-    filterTagIds,
-    toggleTagId,
-    clearTagIds,
-    filterClassroomIds,
-    toggleClassroomId,
-    clearClassroomIds,
-    dateFrom,
-    setDateFrom,
-    dateTo,
-    setDateTo,
-    updatedFrom,
-    setUpdatedFrom,
-    updatedTo,
-    setUpdatedTo,
-  } = useListFilter(grades, GRADE_FILTER_ACCESSORS)
-
-  const {
-    selectedIds,
-    toggleSelect,
-    toggleSelectAll,
-    allSelected,
-    clearSelection,
-  } = useRowSelection(filteredGrades)
+  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+    grades,
+    GRADE_FILTER_ACCESSORS,
+    {
+      rowNoun: "成績算出",
+      searchPlaceholder: "成績算出名・タグ・学級で検索",
+      tagOptions: allTags,
+      classroomOptions,
+    }
+  )
 
   /** 選んだ成績算出へ、既存のタグを保ったまま同じタグを足す */
   const handleBulkAddTag = useCallback(
-    async (tagName: string) => {
-      if (selectedIds.size === 0) return
-      const tag = await findOrCreateTag.mutateAsync(tagName)
-      await addTagToGrades.mutateAsync({
-        gradeIds: [...selectedIds],
-        tagId: tag.id,
-      })
-      toast.success("タグを追加しました", {
-        description: `${selectedIds.size}件の成績算出に「${tagName}」を追加`,
-      })
-      clearSelection()
-      await queryClient.invalidateQueries({
-        queryKey: tagListQuery().queryKey,
-      })
-    },
-    [addTagToGrades, clearSelection, findOrCreateTag, queryClient, selectedIds]
-  )
-
-  const tagFilterConfig = useMemo(
-    () => ({
-      options: allTags,
-      selectedIds: filterTagIds,
-      onToggle: toggleTagId,
-      onClear: clearTagIds,
-    }),
-    [allTags, filterTagIds, toggleTagId, clearTagIds]
-  )
-
-  const classroomFilterConfig = useMemo(
-    () => ({
-      options: classroomOptions,
-      selectedIds: filterClassroomIds,
-      onToggle: toggleClassroomId,
-      onClear: clearClassroomIds,
-    }),
-    [classroomOptions, filterClassroomIds, toggleClassroomId, clearClassroomIds]
+    (tagName: string) =>
+      addTagToSelection(tagName, async (trimmedTagName, gradeIds) => {
+        const tag = await findOrCreateTag.mutateAsync(trimmedTagName)
+        await addTagToGrades.mutateAsync({ gradeIds, tagId: tag.id })
+      }),
+    [addTagToSelection, findOrCreateTag, addTagToGrades]
   )
 
   const actions = useMemo<ToolbarAction[]>(() => {
@@ -209,11 +158,7 @@ export function GradeListContainer() {
         label: "新規作成",
         onClick: () => void handleCreate(),
       }),
-      archiveImportToolbarAction({
-        priority: 70,
-        isOpening: isOpeningArchive,
-        onClick: () => void startArchiveImport(),
-      }),
+      importToolbarAction,
     ]
 
     if (selectedIds.size > 0) {
@@ -232,16 +177,15 @@ export function GradeListContainer() {
     allTags,
     handleBulkAddTag,
     handleCreate,
-    isOpeningArchive,
+    importToolbarAction,
     selectedIds,
-    startArchiveImport,
   ])
 
   return (
     <>
       <EntityListPage<GradeSummary>
+        {...listProps}
         title="成績算出"
-        rows={filteredGrades}
         totalCount={grades.length}
         isLoading={isLoading}
         name={(grade) => grade.name}
@@ -259,35 +203,12 @@ export function GradeListContainer() {
             grade={grade}
             onDuplicate={() => handleDuplicate(grade.id)}
             onUnifiedExport={() =>
-              setUnifiedExportSelection({ roots: { Grade: [grade.id] } })
+              openUnifiedExport({ roots: { Grade: [grade.id] } })
             }
             onRequestDelete={() => gradeDeletion.openWith(grade)}
           />
         )}
         actions={actions}
-        search={{
-          term: searchTerm,
-          onChange: setSearchTerm,
-          placeholder: "成績算出名・タグ・学級で検索",
-        }}
-        tagFilter={tagFilterConfig}
-        classroomFilter={classroomFilterConfig}
-        dateFilter={{
-          from: dateFrom,
-          to: dateTo,
-          onFromChange: setDateFrom,
-          onToChange: setDateTo,
-        }}
-        updatedAtFilter={{
-          from: updatedFrom,
-          to: updatedTo,
-          onFromChange: setUpdatedFrom,
-          onToChange: setUpdatedTo,
-        }}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        allSelected={allSelected}
         empty={{
           icon: ChartColumn,
           message: "成績算出がありません",
@@ -306,19 +227,13 @@ export function GradeListContainer() {
         open={gradeDeletion.isOpen}
         target={gradeDeletion.target}
         onClose={gradeDeletion.close}
-        onConfirm={handleDelete}
+        onConfirm={() =>
+          gradeDeletion.target ? handleDelete(gradeDeletion.target) : undefined
+        }
         loading={deleteGrade.isPending}
       />
 
-      <UnifiedArchiveExportDialog
-        open={unifiedExportSelection !== null}
-        onOpenChange={(open) => {
-          if (!open) setUnifiedExportSelection(null)
-        }}
-        initialSelection={unifiedExportSelection ?? {}}
-      />
-
-      <ArchiveImportScreens launcher={archiveImport} />
+      <EntityListArchiveDialogs archive={archive} />
     </>
   )
 }

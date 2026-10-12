@@ -4,22 +4,19 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { FilePen } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
-import { toast } from "sonner"
 
-import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
-import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
-import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
+import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
+import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
+import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
+import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
-import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
-import { useRowSelection } from "@/hooks/useRowSelection"
+import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import { getAnswerSheetStatus } from "@/lib/answerSheetStatus"
 import {
   answerSheetBuilderWorkflowSteps,
@@ -74,12 +71,8 @@ export function AnswerSheetDefinitionList() {
   )
   /** 一覧には全員の解答用紙が載る。既定は自分が担当のものだけを出す */
   const [showAllOwners, setShowAllOwners] = useState(false)
-  const archiveImport = useArchiveImportLauncher()
-  const { start: startArchiveImport, isOpening: isOpeningArchive } =
-    archiveImport
-  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
-  const [unifiedExportSelection, setUnifiedExportSelection] =
-    useState<UnifiedArchiveExportInitialSelection | null>(null)
+  const archive = useEntityListArchive()
+  const { importToolbarAction, openUnifiedExport } = archive
 
   const visibleDefinitions = useMemo(
     () =>
@@ -91,90 +84,39 @@ export function AnswerSheetDefinitionList() {
     [definitions, showAllOwners, currentUser.id]
   )
 
-  const {
-    filteredItems: filteredDefinitions,
-    searchTerm,
-    setSearchTerm,
-    filterTagIds,
-    toggleTagId,
-    clearTagIds,
-    dateFrom,
-    setDateFrom,
-    dateTo,
-    setDateTo,
-    updatedFrom,
-    setUpdatedFrom,
-    updatedTo,
-    setUpdatedTo,
-  } = useListFilter(visibleDefinitions, ASB_FILTER_ACCESSORS)
-
   /**
    * 一括操作の対象にできる行＝**自分が担当のものだけ**。
    *
    * タグ付けは他の編集と同じく担当の確認を通るので、他人の解答用紙を選んでも main が
    * 弾く。しかも一括の書き込みは「既に付いている」を飛ばすために失敗を握り潰すので、
    * **弾かれたことが利用者に伝わらない**。
-   * 押す前に選べなくしておくのが本筋で、それでもすり抜けた分は下で数えて伝える。
+   * 押す前に選べなくしておく。選んだ後に担当が変わったとき（同期で他の端末から届く）は、
+   * `useEntityListControls` がその行を選択から落とす。
    */
-  const taggableDefinitions = useMemo(
-    () =>
-      filteredDefinitions.filter(
-        (definition) => definition.ownerId === currentUser.id
-      ),
-    [filteredDefinitions, currentUser.id]
-  )
   const isTaggable = useCallback(
     (definition: ASBDefinitionListItem) =>
       definition.ownerId === currentUser.id,
     [currentUser.id]
   )
 
-  const {
-    selectedIds,
-    toggleSelect,
-    toggleSelectAll,
-    allSelected,
-    clearSelection,
-  } = useRowSelection(taggableDefinitions)
+  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+    visibleDefinitions,
+    ASB_FILTER_ACCESSORS,
+    {
+      rowNoun: "解答用紙",
+      searchPlaceholder: "名前・タグで検索",
+      tagOptions: allTags,
+      isSelectable: isTaggable,
+    }
+  )
 
   const handleBulkAddTag = useCallback(
-    async (tagName: string) => {
-      // 選んだ後に担当が変わることもある（同期で他の端末から届く）ので、実行時にも見る
-      const targets = filteredDefinitions.filter(
-        (definition) => selectedIds.has(definition.id) && isTaggable(definition)
-      )
-      const skipped = selectedIds.size - targets.length
-      if (targets.length === 0) {
-        toast.error("タグを追加できませんでした", {
-          description: "選んだ解答用紙はどれも担当ではありません。",
-        })
-        return
-      }
-      try {
-        const tag = await findOrCreateTag(tagName)
-        await addTagToDefinitions({
-          definitionIds: targets.map((definition) => definition.id),
-          tagId: tag.id,
-        })
-        toast.success("タグを追加しました", {
-          description:
-            skipped > 0
-              ? `${targets.length}件の解答用紙に「${tagName}」を追加（${skipped}件は担当ではないため対象外）`
-              : `${targets.length}件の解答用紙に「${tagName}」を追加`,
-        })
-        clearSelection()
-      } catch {
-        // 失敗の通知は MutationCache が出す
-      }
-    },
-    [
-      addTagToDefinitions,
-      clearSelection,
-      filteredDefinitions,
-      findOrCreateTag,
-      isTaggable,
-      selectedIds,
-    ]
+    (tagName: string) =>
+      addTagToSelection(tagName, async (trimmedTagName, definitionIds) => {
+        const tag = await findOrCreateTag(trimmedTagName)
+        await addTagToDefinitions({ definitionIds, tagId: tag.id })
+      }),
+    [addTagToSelection, findOrCreateTag, addTagToDefinitions]
   )
 
   // ドロップダウン「編集」: 作成ページ（エディタ）へ直行
@@ -194,21 +136,13 @@ export function AnswerSheetDefinitionList() {
   const confirmDelete = async () => {
     const definition = definitionDeletion.target
     if (!definition) return
-    await deleteDefinition(definition.id)
-    // 削除した定義の id を選択から除く（stale id への一括タグ付与を防ぐ）
-    toggleSelect(definition.id, false)
-    definitionDeletion.close()
+    await deleteFromEntityList({
+      remove: () => deleteDefinition(definition.id),
+      closeDialog: definitionDeletion.close,
+      successMessage: "解答用紙を削除しました",
+      entityName: definition.name,
+    })
   }
-
-  const tagFilterConfig = useMemo(
-    () => ({
-      options: allTags,
-      selectedIds: filterTagIds,
-      onToggle: toggleTagId,
-      onClear: clearTagIds,
-    }),
-    [allTags, filterTagIds, toggleTagId, clearTagIds]
-  )
 
   const actions = useMemo<ToolbarAction[]>(() => {
     // 並びに出す姿と「…」の中の姿が同じもの。作るのは1回にして、幅を測る控えの
@@ -248,11 +182,7 @@ export function AnswerSheetDefinitionList() {
           </CreateDefinitionButton>
         ),
       },
-      archiveImportToolbarAction({
-        priority: 70,
-        isOpening: isOpeningArchive,
-        onClick: () => void startArchiveImport(),
-      }),
+      importToolbarAction,
       {
         // 「誰の解答用紙を見るか」は絞り込みの一種なので、他の絞り込みと同じ側に置く
         id: "owner-scope",
@@ -278,17 +208,16 @@ export function AnswerSheetDefinitionList() {
     allTags,
     currentUser.id,
     handleBulkAddTag,
-    isOpeningArchive,
+    importToolbarAction,
     showAllOwners,
     selectedIds,
-    startArchiveImport,
   ])
 
   return (
     <>
       <EntityListPage<ASBDefinitionListItem>
+        {...listProps}
         title="解答用紙作成"
-        rows={filteredDefinitions}
         totalCount={visibleDefinitions.length}
         isLoading={isLoading}
         name={(definition) => definition.name}
@@ -313,7 +242,7 @@ export function AnswerSheetDefinitionList() {
             onEdit={() => handleOpenEditor(definition.id)}
             onDuplicate={() => duplicateDefinition(definition.id)}
             onUnifiedExport={() =>
-              setUnifiedExportSelection({
+              openUnifiedExport({
                 roots: { AsbDefinition: [definition.id] },
               })
             }
@@ -322,33 +251,11 @@ export function AnswerSheetDefinitionList() {
           />
         )}
         actions={actions}
-        search={{
-          term: searchTerm,
-          onChange: setSearchTerm,
-          placeholder: "名前・タグで検索",
-        }}
-        tagFilter={tagFilterConfig}
-        dateFilter={{
-          from: dateFrom,
-          to: dateTo,
-          onFromChange: setDateFrom,
-          onToChange: setDateTo,
-        }}
-        updatedAtFilter={{
-          from: updatedFrom,
-          to: updatedTo,
-          onFromChange: setUpdatedFrom,
-          onToChange: setUpdatedTo,
-        }}
-        selectedIds={selectedIds}
         selectionDisabledReason={(definition) =>
           isTaggable(definition)
             ? undefined
             : `担当は ${definition.ownerName} さんです`
         }
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        allSelected={allSelected}
         empty={{
           icon: FilePen,
           message: showAllOwners
@@ -364,14 +271,6 @@ export function AnswerSheetDefinitionList() {
         sortStorageKey="answerSheetList-sort"
       />
 
-      <UnifiedArchiveExportDialog
-        open={unifiedExportSelection !== null}
-        onOpenChange={(open) => {
-          if (!open) setUnifiedExportSelection(null)
-        }}
-        initialSelection={unifiedExportSelection ?? {}}
-      />
-
       <TransferOwnerDialog
         definition={transferTarget}
         currentUserId={currentUser.id}
@@ -385,7 +284,7 @@ export function AnswerSheetDefinitionList() {
         onConfirm={confirmDelete}
       />
 
-      <ArchiveImportScreens launcher={archiveImport} />
+      <EntityListArchiveDialogs archive={archive} />
     </>
   )
 }

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import type { ReactNode } from "react"
 import { useMemo } from "react"
 
-import type { MultiSelectFilterConfig } from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
@@ -23,10 +22,9 @@ import { useTableSort } from "@/hooks/useTableSort"
 import { EntityListRow } from "./entity-list/EntityListRow"
 import { EntityListTableHeader } from "./entity-list/EntityListTableHeader"
 import type {
+  EntityListControlProps,
   EntityListDate,
-  EntityListDateFilter,
   EntityListNextStep,
-  EntityListSearch,
   SortableEntityRow,
 } from "./entity-list/types"
 
@@ -40,11 +38,11 @@ interface EntityListEmptyState {
   action?: ReactNode
 }
 
-interface EntityListPageProps<TRow extends { id: string }> {
+interface EntityListPageProps<
+  TRow extends { id: string },
+> extends EntityListControlProps<TRow> {
   /** ヘッダーに出す画面の題（「試験一覧」「解答用紙作成」など） */
   title: string
-  /** 絞り込み済みの行（並べ替えとページ分けは部品の中でやる） */
-  rows: TRow[]
   /**
    * 絞り込む前の総数。`rows` が空でも「1件も無い」と「条件に一致しない」を
    * 分けて言えるようにするために要る
@@ -75,22 +73,6 @@ interface EntityListPageProps<TRow extends { id: string }> {
   rowMenu: (row: TRow) => ReactNode
   /** ヘッダー右の並び。溢れは「…」へ畳む */
   actions: ToolbarAction[]
-  /** 名前列の popover に入る横断検索 */
-  search: EntityListSearch
-  /** 名前列の popover に入るタグ絞り込み */
-  tagFilter?: MultiSelectFilterConfig
-  /** 名前列の popover に入る学級絞り込み。学級を持たない画面は渡さない */
-  classroomFilter?: MultiSelectFilterConfig
-  /** 日付列の絞り込み */
-  dateFilter: EntityListDateFilter
-  /** 更新日時列の絞り込み */
-  updatedAtFilter: EntityListDateFilter
-  /**
-   * 選択の状態。**呼び手が持つ**（ヘッダーの一括操作が選択を読むため）。
-   * 並べ替えとページ分けは行の集合を変えないので、呼び手は絞り込み済みの行に対して
-   * `useRowSelection` を持てばよい
-   */
-  selectedIds: Set<string>
   /**
    * その行を選べない理由。返したら選択を止め、理由を `title` に出す。
    *
@@ -100,9 +82,6 @@ interface EntityListPageProps<TRow extends { id: string }> {
    * 選べなくしておく。他の3画面は行の持ち主で分かれないので渡さない
    */
   selectionDisabledReason?: (row: TRow) => string | undefined
-  onToggleSelect: (rowId: string, checked: boolean) => void
-  onToggleSelectAll: (checked: boolean) => void
-  allSelected: boolean
   empty: EntityListEmptyState
   /** 絞り込みで0件になったときの文言（「条件に一致する試験がありません」など） */
   noMatchMessage: string
