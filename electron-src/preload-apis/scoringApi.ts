@@ -18,6 +18,7 @@ export function createScoringApi() {
     unassignCropRegion: bind("unassign-crop-region"),
     getExamStudentAssignments: bind("get-exam-student-assignments"),
     setExamStudentAssignments: bind("set-exam-student-assignments"),
+    setScaleLevels: bind("set-scale-levels"),
     batchUpdateQuestionScores: bind("batch-update-question-scores"),
     measureAnswerWhiteness: bind("measure-answer-whiteness"),
   }

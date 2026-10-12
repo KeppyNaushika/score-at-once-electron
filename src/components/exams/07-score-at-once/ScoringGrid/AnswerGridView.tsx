@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
+import type { ScaleCellAppearance } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleLevelAppearance"
 import type { ScoreStatusKey } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import { DragSelectionOverlay } from "@/components/exams/07-score-at-once/ScoringGrid/DragSelectionOverlay"
 import { GridCell } from "@/components/exams/07-score-at-once/ScoringGrid/GridCell"
@@ -82,6 +83,8 @@ interface AnswerGridViewProps {
   draftStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
+  /** マスの類型の見せ方（類型評価の設問の類型・方式と合わない採点） */
+  scaleAppearanceOf?: (answer: GridAnswerItem) => ScaleCellAppearance | null
   /**
    * 助言の朱書きの下見（重なった助言の決まりを選ぶとき・AI 採点の問いかけで助言を直すとき）。
    * 配列を返した答案は、保存した助言の朱書き（`isRubricAdvice`）の代わりにこれを描く（空なら助言の
@@ -118,6 +121,7 @@ export default function AnswerGridView({
   proposalStatusOf,
   draftStatusOf,
   renderBeforeStatusMark,
+  scaleAppearanceOf,
   previewRubricAdviceOf,
   className = "",
 }: AnswerGridViewProps) {
@@ -410,6 +414,7 @@ export default function AnswerGridView({
               proposalStatus={proposalStatusOf?.(answer) ?? null}
               draftStatus={draftStatusOf?.(answer) ?? null}
               beforeStatusMark={renderBeforeStatusMark?.(answer)}
+              scaleAppearance={scaleAppearanceOf?.(answer) ?? null}
             />
           )
         })}

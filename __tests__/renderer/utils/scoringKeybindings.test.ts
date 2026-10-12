@@ -154,7 +154,12 @@ describe("既定のキー割り当て", () => {
   })
 
   it("採点状態からコマンドを引ける（no_answer / double_mark を含む）", () => {
-    for (const status of SCORING_STATUSES) {
+    // 評価済み（類型評価）は状態のキーで付けない。類型評価の設問の数字キーが類型を選ぶ
+    // （docs/vlm-grading-design.md §4-8-5）。絞り込みのボタンも類型評価の設問でだけ出し、キーは無い
+    const keyedStatuses = SCORING_STATUSES.filter(
+      (status) => status !== "evaluated"
+    )
+    for (const status of keyedStatuses) {
       expect(
         DEFAULT_KEYBINDINGS[scoringCommandIdOf(status)],
         status

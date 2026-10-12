@@ -3,6 +3,7 @@ import {
   CircleDashed,
   Clock,
   CopyX,
+  Layers,
   Minus,
   Triangle,
   X,
@@ -73,6 +74,15 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
       textStyle: { color: colors.double_mark.text },
       iconStyle: { color: colors.double_mark.icon },
       key: "t",
+    },
+    // 類型評価の評価済み。マスの色は類型ごとの色で塗るので、これは類型を引けないときの既定（キーは無い）
+    evaluated: {
+      icon: Layers,
+      bgStyle: { backgroundColor: colors.evaluated.bg },
+      selectedBgStyle: { backgroundColor: colors.evaluated.bg, opacity: 0.8 },
+      textStyle: { color: colors.evaluated.text },
+      iconStyle: { color: colors.evaluated.icon },
+      key: "",
     },
     master: {
       icon: CircleCheckBig,

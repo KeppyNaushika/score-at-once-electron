@@ -43,15 +43,13 @@ export function useBatchScoringWithProgress({
   handleNextStudent,
   handleNextQuestion,
 }: UseBatchScoringWithProgressParams) {
-  // 自動進行機能付きのhandleBatchScore（ラッパー）
-  const handleBatchScoreWithProgress = useCallback(
-    (
-      statusOrAnswerIds: ScoringStatus | string | string[],
-      statusOrPartialScore?: ScoringStatus | number | null,
-      partialScore?: number | null
-    ) => {
-      // 採点実行開始
-
+  /**
+   * 選んでいる答案へ書き込み、「いま採点した」印を付けてから次の答案・設問へ進む。
+   * 採点キーの書き込み（`handleBatchScore`）と類型の書き込みが同じ進み方をするよう、
+   * 書き込みそのものだけを受け取る
+   */
+  const applyWithProgress = useCallback(
+    (write: (answerIds: Set<string>) => void) => {
       // 最近採点した答案を記録（先に実行）
       const answerIds = Array.from(selectedAnswers)
       setRecentlyScoredAnswers((prev) => {
@@ -61,12 +59,7 @@ export function useBatchScoringWithProgress({
       })
 
       // その後で採点実行（楽観的UI更新のため同期的に完了）
-      handleBatchScore(
-        statusOrAnswerIds,
-        statusOrPartialScore,
-        partialScore,
-        selectedAnswers
-      )
+      write(selectedAnswers)
 
       // 採点後の自動進行
       if (gradingMode === "grid" && selectedAnswers.size >= 1) {
@@ -89,15 +82,12 @@ export function useBatchScoringWithProgress({
           handleNextQuestion()
         }
       }
-
-      // 採点実行完了
     },
     [
       selectedAnswers,
       gradingMode,
       scoringBehavior,
       setRecentlyScoredAnswers,
-      handleBatchScore,
       getGridAnswerData,
       setSelectedAnswers,
       handleNextStudent,
@@ -105,7 +95,27 @@ export function useBatchScoringWithProgress({
     ]
   )
 
+  // 自動進行機能付きのhandleBatchScore（ラッパー）
+  const handleBatchScoreWithProgress = useCallback(
+    (
+      statusOrAnswerIds: ScoringStatus | string | string[],
+      statusOrPartialScore?: ScoringStatus | number | null,
+      partialScore?: number | null
+    ) => {
+      applyWithProgress((answerIds) =>
+        handleBatchScore(
+          statusOrAnswerIds,
+          statusOrPartialScore,
+          partialScore,
+          answerIds
+        )
+      )
+    },
+    [applyWithProgress, handleBatchScore]
+  )
+
   return {
+    applyWithProgress,
     handleBatchScoreWithProgress,
   }
 }

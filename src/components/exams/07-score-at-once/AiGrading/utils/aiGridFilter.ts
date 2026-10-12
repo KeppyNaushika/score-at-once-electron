@@ -40,6 +40,7 @@ export const DEFAULT_AI_GRID_FILTER_SETTINGS: AiGridFilterSettings = {
     incorrect: false,
     no_answer: false,
     double_mark: false,
+    evaluated: false,
   },
   ai: {
     unscored: true,
@@ -49,6 +50,7 @@ export const DEFAULT_AI_GRID_FILTER_SETTINGS: AiGridFilterSettings = {
     incorrect: true,
     no_answer: true,
     double_mark: true,
+    evaluated: true,
   },
 }
 

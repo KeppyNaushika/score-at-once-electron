@@ -1,6 +1,11 @@
 import { useMemo } from "react"
 
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
+import {
+  type ScaleQuestionState,
+  useScaleScoringGate,
+} from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleScoringGate"
+import { scoringStatusOfCall } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleLevelAppearance"
 
 import { useBatchScoringWithProgress } from "./useBatchScoringWithProgress"
 import { useClickAndMouseScoring } from "./useClickAndMouseScoring"
@@ -18,6 +23,8 @@ interface UseGuardedScoringOptions {
     "openPartialScoreModal" | "scoreAnswers"
   >
   currentCropRegion: Parameters<typeof usePartialScore>[0]["currentCropRegion"]
+  /** 今の設問の類型評価（類型評価の設問では、正答・誤答・部分点を付けず数字キーで類型を選ぶ） */
+  scaleQuestion: ScaleQuestionState
 }
 
 /**
@@ -32,6 +39,7 @@ export function useGuardedScoring({
   progress,
   clickScoring,
   currentCropRegion,
+  scaleQuestion,
 }: UseGuardedScoringOptions) {
   const { guard: guardScoring } = useGradeLock()
 
@@ -45,12 +53,38 @@ export function useGuardedScoring({
   )
 
   const {
+    applyWithProgress,
     handleBatchScoreWithProgress: handleBatchScoreWithProgressUnguarded,
   } = useBatchScoringWithProgress({ ...progress, handleBatchScore })
-  // ロック中は採点しないだけでなく、採点の後の自動進行もさせない
+
+  /** 類型評価の設問での口（類型を付ける・正答などを止める） */
+  const {
+    isScaleQuestion,
+    blocksStatusOnScale,
+    applyScaleLevel,
+    applyScaleLevelOfDigit,
+  } = useScaleScoringGate({
+    examId: scoringData.examId,
+    currentCropRegionId: scoringData.currentCropRegionId,
+    studentAnswerImages: scoringData.studentAnswerImages,
+    scaleQuestion,
+    applyWithProgress,
+    guardScoring,
+  })
+
+  // ロック中は採点しないだけでなく、採点の後の自動進行もさせない。
+  // 類型評価の設問の正答・誤答・部分点は、書かず進みもしない
   const handleBatchScoreWithProgress = useMemo(
-    () => guardScoring(handleBatchScoreWithProgressUnguarded),
-    [guardScoring, handleBatchScoreWithProgressUnguarded]
+    () =>
+      guardScoring(
+        (...args: Parameters<typeof handleBatchScoreWithProgressUnguarded>) => {
+          if (blocksStatusOnScale(scoringStatusOfCall(args[0], args[1]))) {
+            return
+          }
+          handleBatchScoreWithProgressUnguarded(...args)
+        }
+      ),
+    [guardScoring, handleBatchScoreWithProgressUnguarded, blocksStatusOnScale]
   )
 
   const {
@@ -67,14 +101,32 @@ export function useGuardedScoring({
     currentCropRegion,
     onBatchScore: handleBatchScoreWithProgress,
   })
-  // 部分点の入力はモーダルを開くところから止める（開いても確定できないため）
+  // 部分点の入力はモーダルを開くところから止める（開いても確定できないため）。
+  // 類型評価の設問は部分点を持たないので開かない
   const openPartialScoreModal = useMemo(
-    () => guardScoring(openPartialScoreModalUnguarded),
-    [guardScoring, openPartialScoreModalUnguarded]
+    () =>
+      guardScoring((targetAnswers?: Set<string>) => {
+        if (blocksStatusOnScale("partial")) return
+        openPartialScoreModalUnguarded(targetAnswers)
+      }),
+    [guardScoring, openPartialScoreModalUnguarded, blocksStatusOnScale]
   )
+  // 数字キーは、類型評価の設問では類型を選び（1 が先頭）、ほかの設問では部分点の入力を始める
   const handlePartialScoreInput = useMemo(
-    () => guardScoring(handlePartialScoreInputUnguarded),
-    [guardScoring, handlePartialScoreInputUnguarded]
+    () =>
+      guardScoring((key: string) => {
+        if (isScaleQuestion) {
+          applyScaleLevelOfDigit(key)
+          return
+        }
+        handlePartialScoreInputUnguarded(key)
+      }),
+    [
+      guardScoring,
+      isScaleQuestion,
+      applyScaleLevelOfDigit,
+      handlePartialScoreInputUnguarded,
+    ]
   )
 
   /**
@@ -91,6 +143,7 @@ export function useGuardedScoring({
           status: Parameters<typeof handleBatchScoreUnguarded>[0],
           answerIds: string[]
         ) => {
+          if (blocksStatusOnScale(scoringStatusOfCall(status))) return
           handleBatchScoreUnguarded(status, null, null, new Set(answerIds))
           setRecentlyScoredAnswers((prev) => {
             const newSet = new Set(prev)
@@ -99,7 +152,12 @@ export function useGuardedScoring({
           })
         }
       ),
-    [guardScoring, handleBatchScoreUnguarded, setRecentlyScoredAnswers]
+    [
+      guardScoring,
+      handleBatchScoreUnguarded,
+      setRecentlyScoredAnswers,
+      blocksStatusOnScale,
+    ]
   )
 
   const {
@@ -118,6 +176,7 @@ export function useGuardedScoring({
     guardScoring,
     calculateQuestionProgress,
     handleBatchScoreWithProgress,
+    applyScaleLevel,
     partialScoreInput,
     showPartialScoreModal,
     openPartialScoreModal,

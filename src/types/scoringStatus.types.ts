@@ -18,6 +18,7 @@ export const SCORING_STATUSES = [
   "pending",
   "no_answer",
   "double_mark",
+  "evaluated",
 ] as const
 
 export type ScoringStatus = (typeof SCORING_STATUSES)[number]

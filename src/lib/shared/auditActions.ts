@@ -302,6 +302,11 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "採点提案を削除しました",
   },
+  "exam.score.evaluate": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価の類型を付けました",
+  },
   "exam.score.batch": {
     category: "exam",
     verb: "update",

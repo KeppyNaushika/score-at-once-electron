@@ -39,6 +39,29 @@ export const computesScoreFromRubricItems = (
   scoringMethod === "deduction" || scoringMethod === "addition"
 
 /**
+ * 正誤の評価（正答・誤答・部分点）。類型評価の設問ではこれを付けず、付いていても得点にしない
+ * （方式と合わない採点。§4-8-2・§4-8-8）
+ */
+const POINT_VERDICT_STATUSES: ReadonlySet<string> = new Set([
+  "correct",
+  "incorrect",
+  "partial",
+])
+
+/**
+ * その採点の状態が設問の方式と合うか。類型評価の設問の正答・誤答・部分点と、点の採点の設問の
+ * 評価済み（`evaluated`）は合わない。進み具合（未採点・保留）と答案の状態（無答・Wマーク）は
+ * どの方式でも合う
+ */
+export const isStatusCompatibleWithScoringMethod = (
+  scoringMethod: ScoringMethod,
+  status: string
+): boolean =>
+  scoringMethod === "scale"
+    ? !POINT_VERDICT_STATUSES.has(status)
+    : status !== "evaluated"
+
+/**
  * 類型評価の値の見せ方（§4-8-8）。points は「8」（点数だけ）、label_points は「A (8)」（記号と点数）、
  * label は「A」（記号だけ）。外部資料の今の表示に合わせて label_points を既定にする
  */

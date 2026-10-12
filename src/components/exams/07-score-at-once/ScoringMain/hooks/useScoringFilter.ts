@@ -28,6 +28,8 @@ interface FilterSettings {
   pending: boolean
   no_answer: boolean
   double_mark: boolean
+  /** 評価済み（類型評価の設問で類型を付けた答案）。絞り込みのボタンは類型評価の設問でだけ出る */
+  evaluated: boolean
 }
 
 interface UseScoringFilterProps {
@@ -73,6 +75,7 @@ export function useScoringFilter({
     pending: false,
     no_answer: false,
     double_mark: false,
+    evaluated: false,
   })
 
   // 設問ごとに採点履歴を管理（設問IDをキーとするMap）

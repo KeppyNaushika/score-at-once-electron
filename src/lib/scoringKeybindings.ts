@@ -435,6 +435,7 @@ const STATUS_COMMAND_NAMES: Record<ScoringStatus, string> = {
   incorrect: "incorrect",
   no_answer: "noAnswer",
   double_mark: "doubleMark",
+  evaluated: "evaluated",
 }
 
 /** その採点状態にするコマンド（例: `double_mark` → `scoring.doubleMark`） */

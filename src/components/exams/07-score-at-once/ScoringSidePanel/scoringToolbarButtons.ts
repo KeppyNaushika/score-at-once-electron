@@ -22,6 +22,7 @@ export const STATUS_MAP: Record<ScoringStatus, ScoringStatus> = {
   incorrect: "incorrect",
   no_answer: "no_answer",
   double_mark: "double_mark",
+  evaluated: "evaluated",
 }
 
 export const SCORING_BUTTONS = [

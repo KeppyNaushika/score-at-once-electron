@@ -66,6 +66,8 @@ interface ScoringContentAreaProps {
   renderBeforeStatusMark?: ComponentProps<
     typeof AnswerGridView
   >["renderBeforeStatusMark"]
+  /** 一覧のマスの類型の見せ方（類型評価の設問の類型・方式と合わない採点） */
+  scaleAppearanceOf?: ComponentProps<typeof AnswerGridView>["scaleAppearanceOf"]
 }
 
 export function ScoringContentArea({
@@ -102,6 +104,7 @@ export function ScoringContentArea({
   mouseBrush,
   onMouseScoring,
   renderBeforeStatusMark,
+  scaleAppearanceOf,
 }: ScoringContentAreaProps) {
   const currentScoringDataId =
     gradingMode === "individual"
@@ -252,6 +255,7 @@ export function ScoringContentArea({
         mouseBrush={mouseBrush}
         onMouseScoring={onMouseScoring}
         renderBeforeStatusMark={renderBeforeStatusMark}
+        scaleAppearanceOf={scaleAppearanceOf}
         className="p-4"
       />
     )
