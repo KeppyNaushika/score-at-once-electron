@@ -5,16 +5,37 @@
  * `appimg:///<相対パス>` にして読む。ここはその逆で、根の下に解決できないもの
  * （`..` で出るもの・絶対パス・エンコードした区切りを戻すと外へ出るもの・根そのもの）は
  * null を返し、ハンドラは何も読まずに断る（`electron-src/index.ts`）。
+ *
+ * 返すのは画面が画像として読む形式（拡張子）のファイルだけ。共有するファイルの根の下にある
+ * DB などの画像でないファイルは、根の下でも返さない。形式の一覧は web 版の
+ * `web/serviceWorker/appImageResponse.ts` と揃える。
  */
+import * as path from "path"
 
 import { resolveUnderRoot } from "./pathContainment"
+
+/** 返してよい拡張子（小文字。web 版の `appImageResponse.ts` のラスター画像と SVG） */
+const APP_IMAGE_EXTENSIONS = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "bmp",
+  "tif",
+  "tiff",
+  "svg",
+])
+
+const isAppImageFile = (filePath: string): boolean =>
+  APP_IMAGE_EXTENSIONS.has(path.extname(filePath).slice(1).toLowerCase())
 
 /** v0.6.x で `projects/` を `exams/` へ改名した。古い URL もそのまま読めるようにする */
 const LEGACY_PROJECTS_PREFIX = "projects/"
 
 /**
  * `appimg://` の要求 URL から、共有するファイルの根の下の絶対パスを返す。
- * 根の下に解決できない・URL のエンコードが壊れているなら null
+ * 根の下に解決できない・URL のエンコードが壊れている・画像の形式でないなら null
  */
 export function resolveAppImageRequestPath(
   requestUrl: string,
@@ -34,5 +55,6 @@ export function resolveAppImageRequestPath(
   }
 
   const resolved = resolveUnderRoot(sharedFilesDirectory, relativePath)
-  return resolved.kind === "ok" ? resolved.absolutePath : null
+  if (resolved.kind !== "ok") return null
+  return isAppImageFile(resolved.absolutePath) ? resolved.absolutePath : null
 }

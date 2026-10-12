@@ -10,6 +10,7 @@ import * as fsPromises from "fs/promises"
 
 import type { FileExportResult, ScoreDetail } from "../../shared/types"
 import { fetchExportData } from "../excel/dataFetcher"
+import { csvCell } from "./csvCell"
 
 export interface ExportRDataOptions {
   examId: string
@@ -37,15 +38,6 @@ function toBinary(
   if (questionScore.status === "unscored") return null
   if (questionScore.status === "correct") return 1
   return 0
-}
-
-/** CSVセルのエスケープ（カンマ・引用符・改行を含む場合は引用） */
-function csvCell(value: string | number): string {
-  const text = String(value)
-  if (/[",\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`
-  }
-  return text
 }
 
 /**

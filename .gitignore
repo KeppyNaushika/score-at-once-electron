@@ -11,8 +11,8 @@ coverage/
 .next-e2e/
 .next-screenshot/
 out/
-# 画面の静的書き出し（next.config.ts の RENDERER_EXPORT_DIR）
-renderer/
+# 画面の静的書き出し（next.config.ts の RENDERER_EXPORT_DIR）。直下だけ（__tests__/renderer/ を巻き込まない）
+/renderer/
 # web 版の書き出し（scripts/web/buildWeb.mjs）
 web-dist/
 

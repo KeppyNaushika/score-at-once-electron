@@ -26,55 +26,11 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.MathJax = {
-                tex: {
-                  inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-                  displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
-                  processEscapes: true,
-                  processEnvironments: true,
-                  packages: {'[+]': ['base', 'ams', 'newcommand']}
-                },
-                svg: {
-                  fontCache: 'global',
-                  scale: 1.0,
-                  minScale: 0.5,
-                  mtextInheritFont: false,
-                  merrorInheritFont: true,
-                  mathmlSpacing: false,
-                  skipAttributes: {},
-                  exFactor: 0.5,
-                  displayAlign: 'left',
-                  displayIndent: '0'
-                },
-                options: {
-                  skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
-                  ignoreHtmlClass: 'no-mathjax',
-                  processHtmlClass: 'mathjax'
-                },
-                loader: {
-                  // ローカル環境用のローダー設定を最小限に
-                  source: {},
-                  dependencies: {},
-                  provides: {},
-                  failed: () => console.warn('MathJax loader failed'),
-                  require: (url) => console.log('MathJax require:', url)
-                },
-                startup: {
-                  ready: () => {
-                    console.log('🔥 MathJax 4 initialized successfully (Offline Mode)');
-
-                    // デフォルトの初期化を実行
-                    MathJax.startup.defaultReady();
-                  }
-                }
-              };
-            `,
-          }}
-        />
-        <script id="MathJax-script" async src="/js/mathjax/tex-svg.js" />
+        {/*
+          MathJax の設定と本体の読み込みは外のファイルに置く（web 版の CSP でインラインの
+          スクリプトを許さないため）。設定を置いてから本体を足す順は、そのファイルが守る
+        */}
+        <script async src="/js/mathJaxConfig.js" />
       </head>
       <body className={inter.className}>
         <QueryProvider>

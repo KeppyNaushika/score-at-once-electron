@@ -50,6 +50,8 @@
 |                                                               |                                                                                                     |
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `archiveOpener.ts`                                            | 開く・守る・現行化（設計 §4.1）。外から来たファイルとして ZIP・manifest・DB を1つずつ確かめる       |
+| `archiveZipReader.ts`                                         | ZIP を読む。項目の数・伸張後の大きさ・縮み方の上限（`DEFAULT_ARCHIVE_ZIP_LIMITS`）と項目の重なり    |
+| `archiveColumnTypes.ts` / `archiveColumnTypeGuards.ts`        | 列の型の一覧（schema.prisma から生成）と、行の値がその型に合うかの守り                              |
 | `archiveManifestParser.ts`                                    | `manifest.json` を `unknown` から実行時に検証して型へ絞る                                           |
 | `archiveImportSessions.ts`                                    | 開いたアーカイブを段（開く → 試し取り込み → 取り込む）をまたいで持つ                                |
 | `archiveRowImporter.ts`                                       | **汎用の書き込み**。表を外部キーの親が先の順に1表ずつ「決めて、書く」。表ごとの手書きの処理は無い   |
@@ -265,3 +267,7 @@ courseworks.json    内包する試験外成績資料（coursework-archive 形�
    （名前・並び順など）を足したら、`src/components/unified-archive/import/archiveGradeInputDiff.ts`
    の `VALUE_NEUTRAL_COLUMNS` に足す（載っていない列は値に効くものとして扱われるので、足し忘れても
    警告が増えるだけで見落としはしない）
+7. **列の型の一覧は手で書かない** — `import/unified-archive/archiveColumnTypes.ts` は
+   `node scripts/bundleMigrations.mjs`（migration を束ねるのと同じスクリプト）が schema.prisma から
+   作り直す。取り込みは、行の値がこの型に合わなければアーカイブごと断る。
+   **規約テスト `__tests__/import-export/unit/unifiedArchiveColumnTypes.test.ts` が一致を縛る**

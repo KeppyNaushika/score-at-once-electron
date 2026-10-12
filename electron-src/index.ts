@@ -82,7 +82,7 @@ app.on("ready", async () => {
     // renderer はこの規則で URL を組み立てる（src/lib/appImageUrl.ts）。変えるときは揃えること
     protocol.handle("appimg", async (request) => {
       try {
-        // 根の下に解決できないもの（`..`・絶対パス・根そのもの）は読まずに断る
+        // 根の下に解決できないもの（`..`・絶対パス・根そのもの）と画像でない形式は読まずに断る
         const filePath = resolveAppImageRequestPath(
           request.url,
           getSharedFilesDirectory()
@@ -102,6 +102,8 @@ app.on("ready", async () => {
         const headers = new Headers(response.headers)
         headers.set("Access-Control-Allow-Origin", rendererOrigin)
         headers.set("Vary", "Origin")
+        // 画像以外として解釈させない（拡張子から決まる Content-Type のとおりに扱わせる）
+        headers.set("X-Content-Type-Options", "nosniff")
         return new Response(response.body, {
           status: response.status,
           statusText: response.statusText,

@@ -24,6 +24,7 @@ import type {
   ArchiveUsersData,
   ExamArchiveData,
 } from "../../../../src/types/examArchive.types"
+import { assertLegacyZipWithinLimits } from "../shared/legacyZipLimits"
 import { transformExamArchiveToLatest } from "../transformers"
 import { describeUnsafeExamArchiveValues } from "./archiveValueValidator"
 
@@ -70,6 +71,7 @@ export async function extractArchive(archivePath: string): Promise<{
 
     // ZIPを展開
     const zip = new AdmZip(archivePath)
+    assertLegacyZipWithinLimits(zip)
     zip.extractAllTo(tempDir, true)
 
     // マニフェストを読み込み
@@ -155,7 +157,7 @@ export async function extractArchive(archivePath: string): Promise<{
       cleanupTempDir(tempDir)
       return {
         success: false,
-        error: `アーカイブに、このアプリが書き出さない形の値があるため読み込めません（${unsafeValues.join(" / ")}）`,
+        error: `アーカイブに、このアプリが書き出さない形の値があるため取り込めません（${unsafeValues.join(" / ")}）`,
       }
     }
 
@@ -275,7 +277,7 @@ function parseArchiveJson(text: string, filename: string): unknown {
     return JSON.parse(text)
   } catch {
     throw new Error(
-      `アーカイブ内の ${filename} が壊れているため読み込めません（JSON として読めません）`
+      `アーカイブ内の ${filename} が壊れているため取り込めません（JSON として読めません）`
     )
   }
 }
@@ -339,6 +341,7 @@ export async function readManifestOnly(archivePath: string): Promise<{
     }
 
     const zip = new AdmZip(archivePath)
+    assertLegacyZipWithinLimits(zip)
     const manifestEntry = zip.getEntry("manifest.json")
 
     if (!manifestEntry) {

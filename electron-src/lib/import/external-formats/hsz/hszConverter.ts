@@ -18,6 +18,7 @@
 
 import AdmZip from "adm-zip"
 
+import { assertLegacyZipWithinLimits } from "../../shared/legacyZipLimits"
 import type {
   ConvertedCropRegion,
   ConvertedSubtotalData,
@@ -40,6 +41,7 @@ export async function convertHszToScore(
   try {
     // 1. .hszをZIPとして開く
     const hszZip = new AdmZip(hszPath)
+    assertLegacyZipWithinLimits(hszZip)
     const entries = hszZip.getEntries()
 
     // 2. db_info.json を取得・パース

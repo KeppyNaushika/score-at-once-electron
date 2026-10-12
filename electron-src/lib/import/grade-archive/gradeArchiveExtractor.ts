@@ -28,6 +28,7 @@ import type {
 } from "../grade-transformers/legacyShape"
 import type { AnyGradeArchiveData } from "../grade-transformers/types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
+import { assertLegacyZipWithinLimits } from "../shared/legacyZipLimits"
 import { newerArchiveVersionError } from "../shared/transformChain"
 
 // archiver で作った ZIP を展開するために unzipper を使用
@@ -36,6 +37,7 @@ async function extractZip(
   archivePath: string
 ): Promise<Record<string, string>> {
   const zip = new AdmZip(archivePath)
+  assertLegacyZipWithinLimits(zip)
   const entries = zip.getEntries()
   const files: Record<string, string> = {}
 

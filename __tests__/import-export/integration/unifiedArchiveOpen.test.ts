@@ -14,11 +14,13 @@ import * as path from "path"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 import { ARCHIVE_TABLES } from "../../../electron-src/lib/export/unified-archive/archiveTableRegistry"
+import { describeMistypedArchiveValues } from "../../../electron-src/lib/import/unified-archive/archiveColumnTypeGuards"
 import {
   openUnifiedArchive,
   UnifiedArchiveOpenError,
   type UnifiedArchiveOpenErrorKind,
 } from "../../../electron-src/lib/import/unified-archive/archiveOpener"
+import { DEFAULT_ARCHIVE_ZIP_LIMITS } from "../../../electron-src/lib/import/unified-archive/archiveZipReader"
 import type { MigrationScript } from "../../../electron-src/lib/prisma/schema/migrationApplier"
 import {
   applyMigrationSql,
@@ -652,5 +654,178 @@ describe("行の値の守り（id とファイルのパス）", () => {
       buildArchive({ manifest: validManifest(), databasePath })
     )
     expect(opened.appliedMigrations).toEqual([])
+  })
+})
+
+describe("ZIP の大きさの守り（上限と空き）", () => {
+  /** 上限か空きの測り方を差し替えて開き、断った理由を返す */
+  const openErrorWith = async (
+    archivePath: string,
+    extra: Pick<
+      Parameters<typeof openUnifiedArchive>[0],
+      "zipLimits" | "measureAvailableBytes"
+    >
+  ): Promise<UnifiedArchiveOpenError> => {
+    try {
+      await openUnifiedArchive({
+        archivePath,
+        workDirectory: workDirectoryOf(),
+        referenceDatabasePath: CURRENT_DB_PATH,
+        ...extra,
+      })
+    } catch (error) {
+      if (error instanceof UnifiedArchiveOpenError) return error
+      throw error
+    }
+    throw new Error("開けてしまった")
+  }
+
+  const sampleArchive = () =>
+    buildArchive({
+      manifest: validManifest(),
+      databasePath: CURRENT_DB_PATH,
+      files: { "exams/e1/master-answers/page-1.png": "png-bytes" },
+    })
+
+  it("項目の数が上限を超えれば tooLarge で、何も書かない", async () => {
+    const error = await openErrorWith(sampleArchive(), {
+      zipLimits: { ...DEFAULT_ARCHIVE_ZIP_LIMITS, maxEntries: 2 },
+    })
+    expect(error.kind).toBe("tooLarge")
+    expect(fs.readdirSync(workDirectoryOf())).toEqual([])
+  })
+
+  it("伸張後の合計が上限を超えれば tooLarge", async () => {
+    const error = await openErrorWith(sampleArchive(), {
+      zipLimits: {
+        ...DEFAULT_ARCHIVE_ZIP_LIMITS,
+        maxTotalUncompressedBytes: 1,
+      },
+    })
+    expect(error.kind).toBe("tooLarge")
+  })
+
+  it("縮み方が上限を超えれば tooLarge", async () => {
+    const error = await openErrorWith(sampleArchive(), {
+      zipLimits: {
+        ...DEFAULT_ARCHIVE_ZIP_LIMITS,
+        maxCompressionRatio: 1,
+        compressionRatioExemptBytes: 0,
+      },
+    })
+    expect(error.kind).toBe("tooLarge")
+  })
+
+  it("展開に要る大きさが空きより大きければ insufficientSpace で、何も書かない", async () => {
+    const error = await openErrorWith(sampleArchive(), {
+      measureAvailableBytes: async () => 10,
+    })
+    expect(error.kind).toBe("insufficientSpace")
+    expect(error.details.join()).toContain("空き")
+    expect(fs.readdirSync(workDirectoryOf())).toEqual([])
+  })
+
+  it("空きが測れなければ、空きでは断らない", async () => {
+    const opened = await openUnifiedArchive({
+      archivePath: sampleArchive(),
+      workDirectory: workDirectoryOf(),
+      referenceDatabasePath: CURRENT_DB_PATH,
+      measureAvailableBytes: async () => null,
+    })
+    expect(opened.appliedMigrations).toEqual([])
+  })
+})
+
+describe("スキーマの守り（仮想テーブル・生成列・登録表に無い表）", () => {
+  it("仮想テーブル入りは unsafeSchema", async () => {
+    const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
+      db.exec(`CREATE VIRTUAL TABLE "peek" USING fts5(body)`)
+    })
+    const error = await expectOpenError(
+      buildArchive({ manifest: validManifest(), databasePath }),
+      "unsafeSchema"
+    )
+    expect(error.details).toContain("virtual table peek")
+  })
+
+  it("生成列のある表は unsafeSchema", async () => {
+    const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
+      db.exec(
+        `ALTER TABLE "Exam" ADD COLUMN "derived" TEXT GENERATED ALWAYS AS ("id") VIRTUAL`
+      )
+    })
+    const error = await expectOpenError(
+      buildArchive({ manifest: validManifest(), databasePath }),
+      "unsafeSchema"
+    )
+    expect(error.details).toEqual(["hidden column Exam.derived"])
+  })
+
+  it("登録表に無い内部の表（_ で始まる）は schemaMismatch", async () => {
+    const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
+      db.exec(`CREATE TABLE "_stash" ("id" TEXT)`)
+    })
+    const error = await expectOpenError(
+      buildArchive({ manifest: validManifest(), databasePath }),
+      "schemaMismatch"
+    )
+    expect(error.details).toEqual(["表 _stash が登録表に無い"])
+  })
+})
+
+describe("行の値の守り（列の型）", () => {
+  /** 表の1行目（id 順）の列を書き換えた archive.db */
+  const withFirstRowValue = (table: string, column: string, valueSql: string) =>
+    databaseCopy(CURRENT_DB_PATH, (db) => {
+      db.exec(
+        `UPDATE "${table}" SET "${column}" = ${valueSql}
+         WHERE "id" = (SELECT "id" FROM "${table}" ORDER BY "id" LIMIT 1)`
+      )
+    })
+
+  it.each([
+    ["文字列の列に BLOB", "Exam", "examName", "X'4142'", "String"],
+    ["真偽の列に文字列", "Exam", "markerCorrectionEnabled", "'yes'", "Boolean"],
+    [
+      "真偽の列に 0・1 以外の整数",
+      "Exam",
+      "markerCorrectionEnabled",
+      "2",
+      "Boolean",
+    ],
+    ["整数の列に文字列", "ExamPage", "pageNumber", "'one'", "Int"],
+    ["整数の列に実数", "ExamPage", "pageNumber", "1.5", "Int"],
+    [
+      "時刻の列に日付でない文字列",
+      "Exam",
+      "createdAt",
+      "'yesterday'",
+      "DateTime",
+    ],
+  ])(
+    "%s は mistypedValues で断る",
+    async (_label, table, column, valueSql, columnType) => {
+      const error = await expectOpenError(
+        buildArchive({
+          manifest: validManifest(),
+          databasePath: withFirstRowValue(table, column, valueSql),
+        }),
+        "mistypedValues"
+      )
+      expect(error.details).toEqual([
+        `${table}.${column}: 列の型（${columnType}）に合わない値 1件`,
+      ])
+    }
+  )
+
+  it("固定データ（古い版から現行化したもの）の値は、全て列の型に合う", () => {
+    for (const databasePath of [CURRENT_DB_PATH, SYNTHETIC_CURRENT_DB_PATH]) {
+      const db = new Database(databasePath, { readonly: true })
+      try {
+        expect(describeMistypedArchiveValues(db)).toEqual([])
+      } finally {
+        db.close()
+      }
+    }
   })
 })

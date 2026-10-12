@@ -13,6 +13,7 @@ import type {
   AsbArchiveManifest,
   AsbDefinitionTagRef,
 } from "../../../../src/types/asbArchive.types"
+import { assertLegacyZipWithinLimits } from "../shared/legacyZipLimits"
 
 interface ExtractedAsbData {
   manifest: AsbArchiveManifest
@@ -44,6 +45,7 @@ export async function extractAsbArchive(archivePath: string): Promise<{
     }
 
     const zip = new AdmZip(archivePath)
+    assertLegacyZipWithinLimits(zip)
     zip.extractAllTo(tempDir, true)
 
     // manifest.json

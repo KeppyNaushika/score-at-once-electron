@@ -37,6 +37,7 @@ import type {
   ScoringContextState,
   ShortcutContextValue,
 } from "../../types"
+import { evaluateWhenClause } from "./whenClause"
 
 // ============================================
 // コンテキスト作成
@@ -70,49 +71,6 @@ function isNativeActivation(event: KeyboardEvent): boolean {
     event.target instanceof HTMLElement &&
     event.target.closest("[data-native-activation]") !== null
   )
-}
-
-/**
- * when句を評価する
- * JavaScript式として安全に評価
- */
-function evaluateWhenClause(
-  when: string,
-  context: ScoringContextState
-): boolean {
-  try {
-    // 簡易的な式評価（セキュリティ上の理由で制限された構文のみ）
-    // コンテキスト変数を直接参照可能
-    // 例: "!inputFocus && gradingMode == 'grid'"
-
-    const evaluateWhen = new Function(
-      "inputFocus",
-      "textEditorActive",
-      "gradingMode",
-      "modalOpen",
-      "partialScoreModalOpen",
-      "hasSelectedAnswers",
-      "scoringOperationMode",
-      "choiceSceneOpen",
-      "aiQuestioningManual",
-      `return ${when}`
-    )
-
-    return evaluateWhen(
-      context.inputFocus,
-      context.textEditorActive,
-      context.gradingMode,
-      context.modalOpen,
-      context.partialScoreModalOpen,
-      context.hasSelectedAnswers,
-      context.scoringOperationMode,
-      context.choiceSceneOpen,
-      context.aiQuestioningManual
-    )
-  } catch (error) {
-    console.error("Failed to evaluate when clause:", when, error)
-    return false
-  }
 }
 
 // ============================================

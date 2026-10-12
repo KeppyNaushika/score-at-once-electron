@@ -10,6 +10,9 @@
  * FileHandle）。メモリに載せるのは、終わりの記録・中央ディレクトリと、`read` を呼んだ項目の中身
  * だけで、ファイル全体は読まない（Node の readFile は 2GiB を超えるファイルを読めない）。
  * 暗号化された項目と、無圧縮・deflate 以外の圧縮は断る。
+ *
+ * 外から来たファイルなので、伸ばす前に大きさの上限（{@link ArchiveZipLimits}）を確かめ、
+ * 項目のデータの範囲が互いに重なるもの（同じ圧縮データを何度も伸ばさせる作り）も断る。
  */
 
 import { inflateSync } from "fflate"
@@ -25,11 +28,129 @@ export class ArchiveZipFormatError extends Error {
   }
 }
 
+/**
+ * 大きさの上限を超える ZIP（伸ばすと大きくなりすぎる・項目が多すぎる・縮み方が不自然）。
+ * 壊れているのではないので、`ArchiveZipFormatError` とは分ける
+ */
+export class ArchiveZipLimitError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ArchiveZipLimitError"
+  }
+}
+
+/**
+ * ZIP を読むときの大きさの上限。既定は {@link DEFAULT_ARCHIVE_ZIP_LIMITS}
+ * （テストは小さくして、大きなファイルを作らずに確かめる）
+ */
+export interface ArchiveZipLimits {
+  /** 項目の数 */
+  readonly maxEntries: number
+  /** 1項目の伸張後の大きさ（`read` は1項目をまるごとメモリに載せる） */
+  readonly maxEntryUncompressedBytes: number
+  /** 全項目の伸張後の大きさの合計 */
+  readonly maxTotalUncompressedBytes: number
+  /** 伸張後 ÷ 圧縮後の上限（1項目ごとと、全体の合計の両方で見る） */
+  readonly maxCompressionRatio: number
+  /** この大きさ以下なら縮み方を問わない（小さな DB や空に近いファイルは大きく縮む） */
+  readonly compressionRatioExemptBytes: number
+}
+
+const MEBIBYTE = 1024 * 1024
+const GIBIBYTE = 1024 * MEBIBYTE
+
+/**
+ * 既定の上限。書き出し（`archiveZipWriter.ts`）が作りうる正当なものは断らない値にする。
+ *
+ * - 項目の数: 100万。項目は manifest.json・archive.db と同梱ファイル（答案・模範解答の画像
+ *   など）で、答案は1試験で多くて数千枚（400人 × 4ページで 1,600）。数百の試験をまとめても
+ *   収まる
+ * - 1項目: 2GiB。`read` は1項目をまるごとメモリに載せる。画像は1枚で数 MB、archive.db は
+ *   画像を含まない（行だけ）ので、正当なものは遠く及ばない
+ * - 合計: 256GiB。画像はほぼ縮まないので、伸張後の合計はおおよそ .sao の大きさになる。
+ *   答案の画像は1試験で数 GB になりうるので、何年分もの試験をまとめても収まる大きさにする。
+ *   実際に書けるかは、展開の前に空きと比べる（`archiveOpener.ts`）
+ * - 縮み方: 200 倍（1 MiB を超えるものだけ）。画像（PNG・JPEG）はほぼ縮まず、archive.db は
+ *   書き出しで VACUUM してあり、行の文字が縮むだけなので数倍〜数十倍に収まる。deflate が
+ *   縮められる限りは約 1,000 倍で、それに近いものは中身が同じバイトの繰り返しの作り物
+ */
+export const DEFAULT_ARCHIVE_ZIP_LIMITS: ArchiveZipLimits = {
+  maxEntries: 1_000_000,
+  maxEntryUncompressedBytes: 2 * GIBIBYTE,
+  maxTotalUncompressedBytes: 256 * GIBIBYTE,
+  maxCompressionRatio: 200,
+  compressionRatioExemptBytes: MEBIBYTE,
+}
+
+/** 上限を確かめる項目の大きさ */
+export interface ArchiveZipEntrySizes {
+  readonly name: string
+  readonly compressedSize: number
+  readonly uncompressedSize: number
+}
+
+/** バイト数を人に見せる形にする（MB・GB） */
+export function formatByteSize(bytes: number): string {
+  if (bytes >= GIBIBYTE) return `${(bytes / GIBIBYTE).toFixed(1)}GB`
+  return `${Math.ceil(bytes / MEBIBYTE)}MB`
+}
+
+/** 圧縮後の大きさに比べて伸張後が大きすぎるか（小さいものは問わない） */
+const exceedsCompressionRatio = (
+  sizes: { compressedSize: number; uncompressedSize: number },
+  limits: ArchiveZipLimits
+): boolean =>
+  sizes.uncompressedSize > limits.compressionRatioExemptBytes &&
+  sizes.uncompressedSize > sizes.compressedSize * limits.maxCompressionRatio
+
+/**
+ * 項目の大きさを上限と照らし、超えていれば理由を返す（収まれば null）。
+ * 新しい形式（このファイル）と旧形式（adm-zip で読む `legacyZipLimits.ts`）で同じ規則を使う
+ */
+export function describeZipLimitViolation(
+  entries: readonly ArchiveZipEntrySizes[],
+  limits: ArchiveZipLimits
+): string | null {
+  if (entries.length > limits.maxEntries) {
+    return `項目の数が上限（${limits.maxEntries}）を超えている`
+  }
+  let totalCompressedBytes = 0
+  let totalUncompressedBytes = 0
+  for (const entry of entries) {
+    if (entry.uncompressedSize > limits.maxEntryUncompressedBytes) {
+      return `${entry.name}: 伸張後の大きさが上限（${formatByteSize(limits.maxEntryUncompressedBytes)}）を超えている`
+    }
+    if (exceedsCompressionRatio(entry, limits)) {
+      return `${entry.name}: 圧縮後の大きさに比べて、伸張後が大きすぎる`
+    }
+    totalCompressedBytes += entry.compressedSize
+    totalUncompressedBytes += entry.uncompressedSize
+  }
+  if (totalUncompressedBytes > limits.maxTotalUncompressedBytes) {
+    return `伸張後の大きさの合計が上限（${formatByteSize(limits.maxTotalUncompressedBytes)}）を超えている`
+  }
+  if (
+    exceedsCompressionRatio(
+      {
+        compressedSize: totalCompressedBytes,
+        uncompressedSize: totalUncompressedBytes,
+      },
+      limits
+    )
+  ) {
+    return "圧縮後の大きさに比べて、伸張後の合計が大きすぎる"
+  }
+  return null
+}
+
 /** 中央ディレクトリの項目1つ */
 export interface ArchiveZipEntry {
   /** ZIP の中の名前（区切りは "/"。ディレクトリの項目は末尾が "/"） */
   readonly name: string
   readonly isDirectory: boolean
+  /** 中央ディレクトリに記録された、伸張後の大きさ（`read` はこれと合わなければ断る） */
+  readonly uncompressedSize: number
+  readonly compressedSize: number
   /** 伸張し、CRC と大きさを確かめた中身。合わなければ `ArchiveZipFormatError` */
   readonly read: () => Promise<Uint8Array>
 }
@@ -37,6 +158,8 @@ export interface ArchiveZipEntry {
 /** 開いた ZIP。読み終えたら `close` する */
 export interface ArchiveZip {
   readonly entries: readonly ArchiveZipEntry[]
+  /** 全項目の伸張後の大きさの合計（記録の値。展開の前に空きと比べる） */
+  readonly totalUncompressedBytes: number
   readonly close: () => Promise<void>
 }
 
@@ -307,17 +430,71 @@ const decompress = (
   }
 }
 
+/** 中央ディレクトリから読んだ項目1つ（中身を読む前の記録） */
+interface CentralDirectoryRecord {
+  readonly name: string
+  readonly nameLength: number
+  readonly compression: number
+  readonly expectedCrc: number
+  readonly compressedSize: number
+  readonly uncompressedSize: number
+  /** ローカルヘッダーの位置 */
+  readonly localHeaderOffset: number
+}
+
+/**
+ * 項目のデータの範囲（ローカルヘッダーから圧縮データの終わりまで）が互いに重ならず、
+ * 中央ディレクトリより前にあることを確かめ、項目ごとに「データが越えてはいけない位置」
+ * （次の項目の始まりか、中央ディレクトリの始まり）を返す。
+ *
+ * ここでは中央ディレクトリの名前の長さで範囲の下限を見積もる（ローカルヘッダーの拡張欄の
+ * 長さは読むまで分からない）。実際の終わりは `read` でローカルヘッダーを読んでから、返した
+ * 位置を越えないことを確かめる
+ */
+const dataLimitsOf = (
+  records: readonly CentralDirectoryRecord[],
+  centralDirectoryOffset: number
+): Map<CentralDirectoryRecord, number> => {
+  const byOffset = [...records].sort(
+    (left, right) => left.localHeaderOffset - right.localHeaderOffset
+  )
+  const dataLimits = new Map<CentralDirectoryRecord, number>()
+  byOffset.forEach((record, recordIndex) => {
+    const nextStart =
+      byOffset[recordIndex + 1]?.localHeaderOffset ?? centralDirectoryOffset
+    const minimumEnd =
+      record.localHeaderOffset +
+      LOCAL_FILE_HEADER_SIZE +
+      record.nameLength +
+      record.compressedSize
+    if (minimumEnd > nextStart) {
+      throw new ArchiveZipFormatError(
+        `${record.name}: 項目のデータが、他の項目か中央ディレクトリと重なっている`
+      )
+    }
+    dataLimits.set(record, nextStart)
+  })
+  return dataLimits
+}
+
 /** 中央ディレクトリから項目の一覧を読む */
 const readCentralDirectory = async (
-  zipFile: ZipFile
+  zipFile: ZipFile,
+  limits: ArchiveZipLimits
 ): Promise<ArchiveZipEntry[]> => {
   const centralDirectory = await locateCentralDirectory(zipFile)
+  // 中央ディレクトリを読む前に、記録された項目の数で断る
+  if (centralDirectory.entryCount > limits.maxEntries) {
+    throw new ArchiveZipLimitError(
+      `項目の数が上限（${limits.maxEntries}）を超えている`
+    )
+  }
   const zip = await zipFile.read(
     centralDirectory.offset,
     centralDirectory.size,
     "中央ディレクトリ"
   )
-  const entries: ArchiveZipEntry[] = []
+  const records: CentralDirectoryRecord[] = []
   let headerOffset = centralDirectory.offset
   for (
     let entryIndex = 0;
@@ -360,42 +537,82 @@ const readCentralDirectory = async (
         `${name}: 読めない圧縮の方式（${compression}）`
       )
     }
-    entries.push({
+    records.push({
+      name,
+      nameLength,
+      compression,
+      expectedCrc,
+      compressedSize: sizes.compressedSize,
+      uncompressedSize: sizes.uncompressedSize,
+      localHeaderOffset: sizes.offset,
+    })
+  }
+
+  // 伸ばす前に、記録された大きさを上限と照らす
+  const violation = describeZipLimitViolation(records, limits)
+  if (violation !== null) throw new ArchiveZipLimitError(violation)
+  const dataLimits = dataLimitsOf(records, centralDirectory.offset)
+
+  return records.map((record): ArchiveZipEntry => {
+    const { name, compressedSize, uncompressedSize } = record
+    return {
       name,
       isDirectory: name.endsWith("/"),
+      uncompressedSize,
+      compressedSize,
       read: async () => {
-        const dataOffset = await dataOffsetOf(zipFile, sizes.offset)
+        const dataOffset = await dataOffsetOf(zipFile, record.localHeaderOffset)
+        const dataLimit = dataLimits.get(record) ?? centralDirectory.offset
+        if (dataOffset + compressedSize > dataLimit) {
+          throw new ArchiveZipFormatError(
+            `${name}: 項目のデータが、他の項目か中央ディレクトリと重なっている`
+          )
+        }
         const compressed = (
-          await zipFile.read(dataOffset, sizes.compressedSize, `${name} の中身`)
+          await zipFile.read(dataOffset, compressedSize, `${name} の中身`)
         ).bytes
         const content = decompress(
           name,
           compressed,
-          compression,
-          sizes.uncompressedSize
+          record.compression,
+          uncompressedSize
         )
-        if (content.byteLength !== sizes.uncompressedSize) {
+        if (content.byteLength !== uncompressedSize) {
           throw new ArchiveZipFormatError(`${name}: 大きさが記録と合わない`)
         }
-        if (crc32Of(content) !== expectedCrc) {
+        if (crc32Of(content) !== record.expectedCrc) {
           throw new ArchiveZipFormatError(`${name}: CRC が合わない`)
         }
         return content
       },
-    })
-  }
-  return entries
+    }
+  })
 }
 
 /**
- * ZIP のファイルを開き、項目の一覧を読む。ZIP として読めなければ `ArchiveZipFormatError`
- * （開けなければ fs の例外）。中身は返した項目の `read` で取り出し、終わったら `close` する
+ * ZIP のファイルを開き、項目の一覧を読む。ZIP として読めなければ `ArchiveZipFormatError`、
+ * 大きさの上限を超えれば `ArchiveZipLimitError`（開けなければ fs の例外）。中身は返した項目の
+ * `read` で取り出し、終わったら `close` する
  */
-export async function openArchiveZip(filePath: string): Promise<ArchiveZip> {
+export async function openArchiveZip(
+  filePath: string,
+  limits: ArchiveZipLimits = DEFAULT_ARCHIVE_ZIP_LIMITS
+): Promise<ArchiveZip> {
   const fileHandle = await fsPromises.open(filePath, "r")
   try {
-    const entries = await readCentralDirectory(await openZipFile(fileHandle))
-    return { entries, close: () => fileHandle.close() }
+    const entries = await readCentralDirectory(
+      await openZipFile(fileHandle),
+      limits
+    )
+    const totalUncompressedBytes = entries.reduce(
+      (total, entry) => total + entry.uncompressedSize,
+      0
+    )
+    return {
+      entries,
+      totalUncompressedBytes,
+      close: () => fileHandle.close(),
+    }
   } catch (error) {
     await fileHandle.close()
     throw error

@@ -27,6 +27,10 @@ import {
 import {
   type ArchiveZip,
   ArchiveZipFormatError,
+  ArchiveZipLimitError,
+  type ArchiveZipLimits,
+  DEFAULT_ARCHIVE_ZIP_LIMITS,
+  describeZipLimitViolation,
   openArchiveZip,
 } from "../../../electron-src/lib/import/unified-archive/archiveZipReader"
 
@@ -220,5 +224,175 @@ describe("統合アーカイブの ZIP", () => {
 
     expect(await readArchiveZipEntries(zipBytes)).toHaveLength(3)
     expect(new AdmZip(OUTPUT_PATH).getEntries()).toHaveLength(3)
+  })
+})
+
+describe("統合アーカイブの ZIP の大きさの上限と、項目の重なり", () => {
+  afterEach(async () => {
+    await Promise.all(openedZips.map((archiveZip) => archiveZip.close()))
+    openedZips.length = 0
+  })
+
+  beforeEach(() => {
+    fs.rmSync(WORK_DIR, { recursive: true, force: true })
+    fs.mkdirSync(WORK_DIR, { recursive: true })
+  })
+
+  /** 上限を差し替えて開く（大きなファイルを作らずに、上限の手前と先を確かめる） */
+  const openWithLimits = async (
+    zipBytes: Uint8Array,
+    limits: Partial<ArchiveZipLimits>
+  ): Promise<ArchiveZip> => {
+    const zipPath = path.join(WORK_DIR, `${openedZips.length}-上限.zip`)
+    fs.writeFileSync(zipPath, zipBytes)
+    const archiveZip = await openArchiveZip(zipPath, {
+      ...DEFAULT_ARCHIVE_ZIP_LIMITS,
+      ...limits,
+    })
+    openedZips.push(archiveZip)
+    return archiveZip
+  }
+
+  const sampleBytes = async (): Promise<Buffer> => {
+    await writeSampleArchive()
+    return fs.readFileSync(OUTPUT_PATH)
+  }
+
+  /** 中央ディレクトリの項目の位置（書いた順） */
+  const centralDirectoryHeaderOffsets = (zipBytes: Buffer): number[] => {
+    const signature = Buffer.from([0x50, 0x4b, 0x01, 0x02])
+    const offsets: number[] = []
+    let searchFrom = 0
+    for (;;) {
+      const found = zipBytes.indexOf(signature, searchFrom)
+      if (found < 0) return offsets
+      offsets.push(found)
+      searchFrom = found + signature.length
+    }
+  }
+
+  it("既定の上限なら、書き出しが作ったものは今までどおり開け、伸張後の合計を返す", async () => {
+    const archiveZip = await openWithLimits(await sampleBytes(), {})
+    expect(archiveZip.entries.map((entry) => entry.uncompressedSize)).toEqual([
+      Buffer.byteLength(MANIFEST_TEXT),
+      DATABASE_BYTES.length,
+      IMAGE_BYTES.length,
+    ])
+    expect(archiveZip.totalUncompressedBytes).toBe(
+      Buffer.byteLength(MANIFEST_TEXT) +
+        DATABASE_BYTES.length +
+        IMAGE_BYTES.length
+    )
+    expect(Buffer.from(await archiveZip.entries[1].read())).toEqual(
+      DATABASE_BYTES
+    )
+  })
+
+  it("上限ちょうどなら開ける", async () => {
+    const total =
+      Buffer.byteLength(MANIFEST_TEXT) +
+      DATABASE_BYTES.length +
+      IMAGE_BYTES.length
+    const archiveZip = await openWithLimits(await sampleBytes(), {
+      maxEntries: 3,
+      maxEntryUncompressedBytes: IMAGE_BYTES.length,
+      maxTotalUncompressedBytes: total,
+    })
+    expect(archiveZip.entries).toHaveLength(3)
+  })
+
+  it("項目の数が上限を超えれば ArchiveZipLimitError で断る", async () => {
+    await expect(
+      openWithLimits(await sampleBytes(), { maxEntries: 2 })
+    ).rejects.toThrow(ArchiveZipLimitError)
+  })
+
+  it("1項目の伸張後の大きさが上限を超えれば ArchiveZipLimitError で断る", async () => {
+    await expect(
+      openWithLimits(await sampleBytes(), {
+        maxEntryUncompressedBytes: IMAGE_BYTES.length - 1,
+      })
+    ).rejects.toThrow(ArchiveZipLimitError)
+  })
+
+  it("伸張後の合計が上限を超えれば ArchiveZipLimitError で断る", async () => {
+    await expect(
+      openWithLimits(await sampleBytes(), {
+        maxTotalUncompressedBytes: DATABASE_BYTES.length + IMAGE_BYTES.length,
+      })
+    ).rejects.toThrow(ArchiveZipLimitError)
+  })
+
+  it("縮み方が上限を超える項目は ArchiveZipLimitError で断る（縮まない画像は通る）", async () => {
+    const zipBytes = await sampleBytes()
+    // 同じバイトの繰り返しの archive.db は2倍より大きく縮む
+    await expect(
+      openWithLimits(zipBytes, {
+        maxCompressionRatio: 2,
+        compressionRatioExemptBytes: 1024,
+      })
+    ).rejects.toThrow(/archive\.db/)
+    // 小さいものは縮み方を問わない
+    const archiveZip = await openWithLimits(zipBytes, {
+      maxCompressionRatio: 2,
+      compressionRatioExemptBytes: DATABASE_BYTES.length,
+    })
+    expect(archiveZip.entries).toHaveLength(3)
+  })
+
+  it("2つの項目が同じデータを指していれば ArchiveZipFormatError で断る", async () => {
+    const zipBytes = await sampleBytes()
+    const [manifestHeader, databaseHeader] =
+      centralDirectoryHeaderOffsets(zipBytes)
+    // archive.db の項目の位置を、manifest.json の項目の位置に書き換える
+    zipBytes.writeUInt32LE(
+      zipBytes.readUInt32LE(manifestHeader + 42),
+      databaseHeader + 42
+    )
+    await expect(openWithLimits(zipBytes, {})).rejects.toThrow(
+      ArchiveZipFormatError
+    )
+    await expect(openWithLimits(zipBytes, {})).rejects.toThrow(/重なっている/)
+  })
+
+  it("項目のデータが中央ディレクトリまで延びていれば ArchiveZipFormatError で断る", async () => {
+    const zipBytes = await sampleBytes()
+    const imageHeader = centralDirectoryHeaderOffsets(zipBytes)[2]
+    // 無圧縮の画像の大きさ（圧縮後・伸張後）を、中央ディレクトリに届くまで延ばす
+    const enlargedSize = zipBytes.readUInt32LE(imageHeader + 20) + 64
+    zipBytes.writeUInt32LE(enlargedSize, imageHeader + 20)
+    zipBytes.writeUInt32LE(enlargedSize, imageHeader + 24)
+    await expect(openWithLimits(zipBytes, {})).rejects.toThrow(/重なっている/)
+  })
+
+  it("上限の規則: 小さい項目は縮み方を問わず、全体の縮み方も見る", () => {
+    const limits: ArchiveZipLimits = {
+      maxEntries: 10,
+      maxEntryUncompressedBytes: 1000,
+      maxTotalUncompressedBytes: 5000,
+      maxCompressionRatio: 10,
+      compressionRatioExemptBytes: 100,
+    }
+    const smallButHighlyCompressed = {
+      name: "files/a.png",
+      compressedSize: 1,
+      uncompressedSize: 100,
+    }
+    expect(
+      describeZipLimitViolation([smallButHighlyCompressed], limits)
+    ).toBeNull()
+    // 1つずつは小さくても、合計の縮み方が上限を超える
+    expect(
+      describeZipLimitViolation(
+        Array.from({ length: 5 }, () => smallButHighlyCompressed),
+        limits
+      )
+    ).toMatch(/合計/)
+    expect(
+      describeZipLimitViolation(
+        [{ name: "archive.db", compressedSize: 100, uncompressedSize: 1000 }],
+        limits
+      )
+    ).toBeNull()
   })
 })

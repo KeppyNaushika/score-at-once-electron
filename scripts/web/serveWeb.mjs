@@ -5,8 +5,8 @@
  * （`electron-src/lib/rendererFiles.ts`）を使う。動的ルートの実際の id を殻へ書き換え、
  * 見つからなければ `404.html` を返す。書き換えの規則の出どころは `src/lib/routeShell.ts` だけ。
  *
- * 加えて、COOP/COEP（cross-origin isolation）を付ける。画像処理の wasm（wasm-vips）が
- * SharedArrayBuffer を使うため。
+ * ヘッダー（COOP/COEP・CSP など）は、本番の `_headers` と同じ定義（`scripts/web/webHeaders.mjs`）
+ * から、要求のパスで当てる。手元の確認用なので、どのファイルも毎回読み直させる（`Cache-Control`）。
  *
  * 使い方: node scripts/web/serveWeb.mjs [--port 4173]（環境変数 PORT でも指定できる）
  */
@@ -15,6 +15,8 @@ import { createServer } from "node:http"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { tsImport } from "tsx/esm/api"
+
+import { headersForPath } from "./webHeaders.mjs"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -43,9 +45,13 @@ const readPort = () => {
   return port
 }
 
-const CROSS_ORIGIN_ISOLATION_HEADERS = {
-  "Cross-Origin-Opener-Policy": "same-origin",
-  "Cross-Origin-Embedder-Policy": "require-corp",
+/** 要求の URL のパス（クエリを除く）。読めない URL は `/` として扱う（ヘッダーを当てるためだけ） */
+const requestPathOf = (requestUrl) => {
+  try {
+    return new URL(requestUrl, "http://localhost").pathname
+  } catch {
+    return "/"
+  }
 }
 
 const server = createServer((request, response) => {
@@ -54,20 +60,20 @@ const server = createServer((request, response) => {
     response.end()
     return
   }
-  const rendererFile = resolveRendererFile(WEB_DIST_DIR, request.url ?? "/")
+  const requestUrl = request.url ?? "/"
+  const deliveryHeaders = headersForPath(requestPathOf(requestUrl))
+  const rendererFile = resolveRendererFile(WEB_DIST_DIR, requestUrl)
   if (!rendererFile) {
     response.writeHead(404, {
-      ...CROSS_ORIGIN_ISOLATION_HEADERS,
+      ...deliveryHeaders,
       "Content-Type": "text/plain; charset=utf-8",
     })
     response.end("Not Found")
     return
   }
   response.writeHead(rendererFile.statusCode, {
-    ...CROSS_ORIGIN_ISOLATION_HEADERS,
+    ...deliveryHeaders,
     "Content-Type": rendererFile.contentType,
-    // 手元の確認用なので、書き出し直したものを毎回読ませる
-    "Cache-Control": "no-cache",
   })
   if (request.method === "HEAD") {
     response.end()

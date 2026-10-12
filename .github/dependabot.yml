@@ -1,0 +1,8 @@
+# GitHub Actions の更新だけを見る（workflows の uses: はコミットの SHA で固定している）。
+# npm の依存の更新は人が判断する運用なので、ここには足さない。
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

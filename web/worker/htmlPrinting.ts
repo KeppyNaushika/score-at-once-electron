@@ -21,11 +21,6 @@ import type {
 } from "../../electron-src/lib/printUtils"
 import { requestPrintHtml } from "./pageRequests"
 
-/** 画面の静的書き出しに入っている MathJax（`public/js/mathjax/`。`src/app/layout.tsx` と同じ） */
-const MATHJAX_SCRIPT_URL = "/js/mathjax/tex-svg.js"
-
-const MATHJAX_PLACEHOLDER = '<script src="__MATHJAX_SRC__"></script>'
-
 /** 余白（インチ） */
 interface PrintMargins {
   top: number
@@ -57,16 +52,12 @@ const pageCssOf = (
   return `@page { size: ${pageSizeCssOf(pageSize, landscape)};${marginCss} }`
 }
 
-/** HTML に `@page` を足し、MathJax の置き場を画面の静的書き出しの URL にする */
+/** HTML に `@page` を足す */
 const preparePrintHtml = (html: string, pageCss: string) => {
-  const withMathJax = html.replace(
-    MATHJAX_PLACEHOLDER,
-    `<script src="${MATHJAX_SCRIPT_URL}"></script>`
-  )
   const pageStyle = `<style>${pageCss}</style>`
-  return withMathJax.includes("</head>")
-    ? withMathJax.replace("</head>", `${pageStyle}</head>`)
-    : `${pageStyle}${withMathJax}`
+  return html.includes("</head>")
+    ? html.replace("</head>", `${pageStyle}</head>`)
+    : `${pageStyle}${html}`
 }
 
 /**

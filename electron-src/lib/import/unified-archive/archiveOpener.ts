@@ -36,11 +36,17 @@ import {
   sortMigrationsByName,
 } from "../../prisma/schema/migrationApplier"
 import { hasTable, type SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
+import { describeMistypedArchiveValues } from "./archiveColumnTypeGuards"
+import { measureAvailableBytes } from "./archiveFreeSpace"
 import { parseUnifiedArchiveManifest } from "./archiveManifestParser"
 import { describeUnacceptableArchiveValues } from "./archiveValueGuards"
 import {
   type ArchiveZip,
   type ArchiveZipEntry,
+  ArchiveZipLimitError,
+  type ArchiveZipLimits,
+  DEFAULT_ARCHIVE_ZIP_LIMITS,
+  formatByteSize,
   openArchiveZip,
 } from "./archiveZipReader"
 import type { OpenedUnifiedArchive } from "./types"
@@ -48,6 +54,10 @@ import type { OpenedUnifiedArchive } from "./types"
 export type UnifiedArchiveOpenErrorKind =
   /** ZIP でない・manifest.json か archive.db が無い・ZIP の外へ出る名前・想定外の項目 */
   | "notArchive"
+  /** 項目の数・伸張後の大きさ・縮み方が上限を超える（`archiveZipReader.ts` の上限） */
+  | "tooLarge"
+  /** 展開に要る大きさが、展開先の空きより大きい */
+  | "insufficientSpace"
   /** manifest の形が違う */
   | "invalidManifest"
   /** format が違う、formatVersion がアプリの知る版より新しい */
@@ -56,26 +66,31 @@ export type UnifiedArchiveOpenErrorKind =
   | "newerSchema"
   /** integrity_check が ok でない、DB として読めない */
   | "corrupt"
-  /** テーブル・索引以外（トリガー・ビュー）がある */
+  /** テーブル・索引以外（トリガー・ビュー）・仮想テーブル・生成列や隠し列がある */
   | "unsafeSchema"
   /** 現行化できない、現行化後の表・列が参照 DB と違う、外部キーが閉じていない */
   | "schemaMismatch"
   /** id かファイルのパスの値が、アプリの書く形でない（`archiveValueGuards.ts`） */
   | "unsafeValues"
+  /** 列の型（Prisma のスキーマの型）に合わない値がある（`archiveColumnTypeGuards.ts`） */
+  | "mistypedValues"
 
 const OPEN_ERROR_MESSAGES: Record<UnifiedArchiveOpenErrorKind, string> = {
   notArchive: "統合アーカイブのファイルではありません",
+  tooLarge: "アーカイブが大きすぎるか、中身の大きさが不自然です",
+  insufficientSpace: "アーカイブを展開するための空き容量が足りません",
   invalidManifest: "アーカイブの manifest.json の形が正しくありません",
   unsupportedFormat: "このアプリでは読めない形式のアーカイブです",
   newerSchema:
     "このアーカイブは新しいバージョンのアプリで書き出されています。アプリを更新してから開いてください",
   corrupt: "アーカイブのデータベースが壊れています",
   unsafeSchema:
-    "アーカイブのデータベースに、想定外のトリガーかビューがあります",
+    "アーカイブのデータベースに、想定外のトリガー・ビュー・仮想テーブル・生成列があります",
   schemaMismatch:
     "アーカイブのデータベースを、このアプリのスキーマに揃えられませんでした",
   unsafeValues:
     "アーカイブのデータベースに、このアプリが書き出さない形の id かファイルの場所があります",
+  mistypedValues: "アーカイブのデータベースに、列の型に合わない値があります",
 }
 
 export class UnifiedArchiveOpenError extends Error {
@@ -102,6 +117,10 @@ interface OpenUnifiedArchiveOptions {
   migrations?: readonly MigrationScript[]
   /** 表・列を比べる相手（本番は取り込み先のライブ DB）。読み取り専用で開く */
   referenceDatabasePath: string
+  /** ZIP の大きさの上限。省略すると既定（テストは小さくして確かめる） */
+  zipLimits?: ArchiveZipLimits
+  /** 展開先の空きを測る。省略すると `archiveFreeSpace.ts`（テストは差し替える） */
+  measureAvailableBytes?: (directory: string) => Promise<number | null>
 }
 
 const quote = (identifier: string): string =>
@@ -150,25 +169,52 @@ const isExpectedEntry = (segments: readonly string[], isDirectory: boolean) => {
  */
 const extractArchive = async (
   archivePath: string,
-  workDirectory: string
+  workDirectory: string,
+  zipLimits: ArchiveZipLimits,
+  measureSpace: (directory: string) => Promise<number | null>
 ): Promise<Uint8Array> => {
   let archiveZip: ArchiveZip
   try {
-    archiveZip = await openArchiveZip(archivePath)
+    archiveZip = await openArchiveZip(archivePath, zipLimits)
   } catch (error) {
+    if (error instanceof ArchiveZipLimitError) {
+      throw new UnifiedArchiveOpenError("tooLarge", [error.message])
+    }
     throw new UnifiedArchiveOpenError("notArchive", [errorMessageOf(error)])
   }
   try {
-    return await extractEntries(archiveZip.entries, workDirectory)
+    return await extractEntries(archiveZip, workDirectory, measureSpace)
   } finally {
     await archiveZip.close()
   }
 }
 
+/**
+ * 展開に要る大きさ（記録された伸張後の大きさの合計）が、展開先の空きに収まることを確かめる。
+ * archive.db はメモリで現行化してから書くが、同じだけ要るので合計に含める。測れなければ断らない
+ */
+const assertEnoughSpace = async (
+  archiveZip: ArchiveZip,
+  workDirectory: string,
+  measureSpace: (directory: string) => Promise<number | null>
+): Promise<void> => {
+  const availableBytes = await measureSpace(workDirectory)
+  if (
+    availableBytes !== null &&
+    archiveZip.totalUncompressedBytes > availableBytes
+  ) {
+    throw new UnifiedArchiveOpenError("insufficientSpace", [
+      `展開に約${formatByteSize(archiveZip.totalUncompressedBytes)}必要で、空きは約${formatByteSize(availableBytes)}`,
+    ])
+  }
+}
+
 const extractEntries = async (
-  entries: readonly ArchiveZipEntry[],
-  workDirectory: string
+  archiveZip: ArchiveZip,
+  workDirectory: string,
+  measureSpace: (directory: string) => Promise<number | null>
 ): Promise<Uint8Array> => {
+  const { entries } = archiveZip
   const problems: string[] = []
   const seenNames = new Set<string>()
   const filesToWrite: { entry: ArchiveZipEntry; segments: string[] }[] = []
@@ -200,6 +246,8 @@ const extractEntries = async (
   if (problems.length > 0) {
     throw new UnifiedArchiveOpenError("notArchive", problems)
   }
+  // 1つも伸ばす前に、空きと比べる
+  await assertEnoughSpace(archiveZip, workDirectory, measureSpace)
 
   const root = path.resolve(workDirectory)
   let databaseImage: Uint8Array | null = null
@@ -257,17 +305,44 @@ const readManifest = async (
 
 // ── 3〜4. スキーマの守りと壊れの検査 ─────────────────────
 
+/**
+ * スキーマが普通の表と索引だけでできていることを確かめる（integrity_check より前に呼ぶ。
+ * 仮想テーブルは、検査や読み出しのときに拡張のコードを動かしうる）。
+ *
+ * - トリガー・ビューを断る
+ * - 仮想テーブルを断る（CREATE VIRTUAL TABLE で作られ、ページを持たない）
+ * - 生成列・隠し列（`pragma_table_xinfo` の hidden が 0 でない列）を断る。アプリの
+ *   スキーマには無く、値が式から作られる
+ */
 const assertOnlyTablesAndIndexes = (db: SqliteDatabase): void => {
   const unsafeObjects = db
     .prepare<[], { type: string; name: string }>(
       "SELECT type, name FROM sqlite_master WHERE type NOT IN ('table', 'index')"
     )
     .all()
-  if (unsafeObjects.length > 0) {
-    throw new UnifiedArchiveOpenError(
-      "unsafeSchema",
-      unsafeObjects.map((object) => `${object.type} ${object.name}`)
+    .map((object) => `${object.type} ${object.name}`)
+  const virtualTables = db
+    .prepare<[], { name: string }>(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND (rootpage = 0 OR sql LIKE 'CREATE VIRTUAL TABLE%')"
     )
+    .all()
+    .map((table) => `virtual table ${table.name}`)
+  if (unsafeObjects.length > 0 || virtualTables.length > 0) {
+    throw new UnifiedArchiveOpenError("unsafeSchema", [
+      ...unsafeObjects,
+      ...virtualTables,
+    ])
+  }
+  const hiddenColumns = db
+    .prepare<[], { tableName: string; columnName: string }>(
+      `SELECT master.name AS tableName, columnInfo.name AS columnName
+       FROM sqlite_master AS master, pragma_table_xinfo(master.name) AS columnInfo
+       WHERE master.type = 'table' AND columnInfo.hidden <> 0`
+    )
+    .all()
+    .map((column) => `hidden column ${column.tableName}.${column.columnName}`)
+  if (hiddenColumns.length > 0) {
+    throw new UnifiedArchiveOpenError("unsafeSchema", hiddenColumns)
   }
 }
 
@@ -417,6 +492,21 @@ const readReferenceColumns = (
   }
 }
 
+/**
+ * 登録表（`archiveTableRegistry.ts`）に無い表の名前（現行化の後に見る）。`_prisma_migrations` と
+ * SQLite 自身の表（`sqlite_` で始まる）だけは許す。`_` で始まる表は参照 DB との比較
+ * （`readApplicationColumns`）に載らないので、ここで断る
+ */
+const describeUnregisteredTables = (db: SqliteDatabase): string[] =>
+  db
+    .prepare<[], { name: string }>(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\'"
+    )
+    .all()
+    .map((tableRow) => tableRow.name)
+    .filter((name) => name !== "_prisma_migrations" && !ARCHIVE_TABLES[name])
+    .map((name) => `表 ${name} が登録表に無い`)
+
 const describeSchemaDifferences = (
   archiveColumns: ReadonlyMap<string, ReadonlySet<string>>,
   referenceColumns: ReadonlyMap<string, ReadonlySet<string>>
@@ -477,7 +567,12 @@ export async function openUnifiedArchive(
     throw new Error(`展開先が空ではありません: ${workDirectory}`)
   }
 
-  const databaseImage = await extractArchive(options.archivePath, workDirectory)
+  const databaseImage = await extractArchive(
+    options.archivePath,
+    workDirectory,
+    options.zipLimits ?? DEFAULT_ARCHIVE_ZIP_LIMITS,
+    options.measureAvailableBytes ?? measureAvailableBytes
+  )
   const manifest = await readManifest(
     path.join(workDirectory, UNIFIED_ARCHIVE_MANIFEST_NAME)
   )
@@ -514,6 +609,7 @@ export async function openUnifiedArchive(
     const migratedRowIds = diffRegisteredIds(idsBefore, readRegisteredIds(db))
 
     const mismatches = [
+      ...describeUnregisteredTables(db),
       ...describeSchemaDifferences(
         readApplicationColumns(db),
         readReferenceColumns(options.referenceDatabasePath)
@@ -529,6 +625,11 @@ export async function openUnifiedArchive(
     const unacceptableValues = describeUnacceptableArchiveValues(db)
     if (unacceptableValues.length > 0) {
       throw new UnifiedArchiveOpenError("unsafeValues", unacceptableValues)
+    }
+    // 列の型の守り。SQLite の表は STRICT でないので、型の違う値も入る
+    const mistypedValues = describeMistypedArchiveValues(db)
+    if (mistypedValues.length > 0) {
+      throw new UnifiedArchiveOpenError("mistypedValues", mistypedValues)
     }
 
     await writeDatabaseFile(db, databasePath, { exclusive: true })

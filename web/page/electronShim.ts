@@ -87,6 +87,19 @@ const printRequestedHtml = async (
   post({ kind: "htmlPrinted", requestId: message.requestId, failure })
 }
 
+/**
+ * Worker から頼まれた外部のページを新しいタブで開く。開くのは `https:` の URL だけで、
+ * それ以外（`javascript:`・`data:`・`file:` 等や、URL として読めないもの）は開かずに警告を残す
+ */
+const openExternalHttps = (requestedUrl: string) => {
+  const parsedUrl = URL.canParse(requestedUrl) ? new URL(requestedUrl) : null
+  if (parsedUrl?.protocol !== "https:") {
+    console.warn("https 以外の外部 URL は開きません:", requestedUrl)
+    return
+  }
+  window.open(parsedUrl.href, "_blank", "noopener")
+}
+
 const receive = (message: WorkerToPageMessage, lifecycle: WorkerLifecycle) => {
   switch (message.kind) {
     case "reply": {
@@ -106,7 +119,7 @@ const receive = (message: WorkerToPageMessage, lifecycle: WorkerLifecycle) => {
       return
     }
     case "openExternal": {
-      window.open(message.url, "_blank", "noopener")
+      openExternalHttps(message.url)
       return
     }
     case "download": {
