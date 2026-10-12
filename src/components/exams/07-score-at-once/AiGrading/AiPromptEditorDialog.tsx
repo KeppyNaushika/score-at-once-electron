@@ -16,7 +16,10 @@ import {
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { createAiPromptMutation } from "@/queries/aiGrading"
+import {
+  createAiPromptMutation,
+  discardAiQuestionImagesMutation,
+} from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { AiQuestionImagesField } from "./AiQuestionImagesField"
@@ -43,27 +46,62 @@ interface AiPromptEditorDialogProps {
 
 /**
  * 採点指示を書く。保存すると**新しい行**になる（元があれば、それを親にする）。
- * 配点とアプリ共通の指示はアプリが加えるので、ここでは書かない（設計 §3-1）
+ * 配点とアプリ共通の指示はアプリが加えるので、ここでは書かない（設計 §3-1）。
+ *
+ * 問題の画像は取り込んだ時点でファイルができる。閉じるとき、この画面で取り込んで保存しなかった
+ * ファイルを消す（やめたなら取り込んだもの全部、保存したなら保存前に外した・切り出し直したもの）
  */
 export function AiPromptEditorDialog(props: AiPromptEditorDialogProps) {
+  const { onOpenChange } = props
+  const [importedImagePaths, setImportedImagePaths] = useState<string[]>([])
+  const discardImages = useMutation(discardAiQuestionImagesMutation())
+
+  /** 閉じる。`savedImagePaths` は保存した採点指示の画像（やめたなら空） */
+  const close = (savedImagePaths: readonly string[]) => {
+    const unsavedImagePaths = importedImagePaths.filter(
+      (imagePath) => !savedImagePaths.includes(imagePath)
+    )
+    if (unsavedImagePaths.length > 0) discardImages.mutate(unsavedImagePaths)
+    setImportedImagePaths([])
+    onOpenChange(false)
+  }
+
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+    <Dialog
+      open={props.open}
+      onOpenChange={(open) => (open ? onOpenChange(true) : close([]))}
+    >
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <AiPromptEditorForm {...props} />
+        <AiPromptEditorForm
+          {...props}
+          onImageImported={(imagePath) =>
+            setImportedImagePaths((prev) => [...prev, imagePath])
+          }
+          onClose={close}
+        />
       </DialogContent>
     </Dialog>
   )
 }
 
+interface AiPromptEditorFormProps extends Omit<
+  AiPromptEditorDialogProps,
+  "open" | "onOpenChange"
+> {
+  onImageImported: (imagePath: string) => void
+  onClose: (savedImagePaths: readonly string[]) => void
+}
+
 function AiPromptEditorForm({
-  onOpenChange,
+  onImageImported,
+  onClose,
   examId,
   cropRegion,
   basePrompt,
   basePromptNumber,
   defaultAnnotationInstruction,
   onCreated,
-}: AiPromptEditorDialogProps) {
+}: AiPromptEditorFormProps) {
   const [questionText, setQuestionText] = useState(
     basePrompt?.questionText ?? ""
   )
@@ -105,7 +143,7 @@ function AiPromptEditorForm({
         onSuccess: (createdPrompt) => {
           toast.success("採点指示を保存しました")
           onCreated(createdPrompt.id)
-          onOpenChange(false)
+          onClose(questionImagePaths)
         },
       }
     )
@@ -142,6 +180,7 @@ function AiPromptEditorForm({
           cropRegionId={cropRegion.id}
           imagePaths={questionImagePaths}
           onImagePathsChange={setQuestionImagePaths}
+          onImageImported={onImageImported}
         />
         <div className="space-y-1">
           <div className="flex items-center justify-between">
@@ -199,7 +238,7 @@ function AiPromptEditorForm({
       </div>
 
       <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <Button variant="outline" onClick={() => onClose([])}>
           やめる
         </Button>
         <Button onClick={handleSave} disabled={createPrompt.isPending}>

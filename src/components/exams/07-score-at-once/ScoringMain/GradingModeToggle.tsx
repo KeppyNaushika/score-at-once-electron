@@ -18,7 +18,7 @@ const MANUAL_GRADING_MODE_OPTIONS: GradingModeOption[] = [
   { mode: "individual", label: "個別表示", Icon: User },
 ]
 
-/** AI採点（実験的機能）。同意して API キーを保存した事業者があるときだけ並べる（設計 §9-1） */
+/** AI採点（実験的機能）。同意して API キーを保存した事業者があるときだけ並べる（設計 §10-1） */
 const AI_GRADING_MODE_OPTION: GradingModeOption = {
   mode: "ai",
   label: "AI採点",

@@ -42,7 +42,7 @@ interface NavItem {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
-  /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI 採点。設計 §9-1） */
+  /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI 採点。設計 §10-1） */
   isExperimental?: boolean
 }
 

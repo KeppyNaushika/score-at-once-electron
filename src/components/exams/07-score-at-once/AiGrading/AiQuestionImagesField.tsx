@@ -27,6 +27,8 @@ interface AiQuestionImagesFieldProps {
   /** 問題の画像（data ディレクトリからの相対パス）を送る順に */
   imagePaths: readonly string[]
   onImagePathsChange: (imagePaths: string[]) => void
+  /** 画像を1枚取り込んだ（ファイルはもうできている。保存しなければ呼び出し側が消す） */
+  onImageImported: (imagePath: string) => void
 }
 
 /** クリップボード・選んだファイルのうち、画像として取り込むもの */
@@ -41,6 +43,7 @@ export function AiQuestionImagesField({
   cropRegionId,
   imagePaths,
   onImagePathsChange,
+  onImageImported,
 }: AiQuestionImagesFieldProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const thumbnailRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -57,13 +60,14 @@ export function AiQuestionImagesField({
 
   const handleImported = useCallback(
     (imagePath: string, replaceIndex: number | null) => {
+      onImageImported(imagePath)
       onImagePathsChange(
         replaceIndex === null
           ? [...imagePaths, imagePath]
           : imagePaths.with(replaceIndex, imagePath)
       )
     },
-    [imagePaths, onImagePathsChange]
+    [imagePaths, onImagePathsChange, onImageImported]
   )
   const intake = useQuestionImageIntake({
     cropRegionId,

@@ -18,7 +18,12 @@ import {
   getAbsolutePathFromSharedFiles,
   getMasterAnswersDirectory,
   getRelativePathFromSharedFiles,
+  getSharedFilesDirectory,
 } from "../dataManager"
+import {
+  questionImagePathsOfCropRegions,
+  removeUnreferencedQuestionImages,
+} from "./aiQuestionImageCleanup"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
@@ -235,6 +240,10 @@ export const deleteMasterAnswer = async (
   }
 
   const { examId } = targetPage
+  // ページの採点枠の採点指示の問題の画像も cascade で行だけ消えるので、先にパスを読んでおく
+  const questionImagePaths = await questionImagePathsOfCropRegions({
+    examPageId,
+  })
 
   await deleteAfterRecount({
     confirmedCounts,
@@ -270,6 +279,10 @@ export const deleteMasterAnswer = async (
   for (const studentAnswerImage of targetPage.studentAnswerImages) {
     await removeImageFile(studentAnswerImage.imagePath)
   }
+  await removeUnreferencedQuestionImages(
+    questionImagePaths,
+    getSharedFilesDirectory()
+  )
 
   const scope = await resolveExamScope(examId)
   await recordAuditLog({

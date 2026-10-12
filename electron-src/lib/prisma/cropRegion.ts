@@ -1,5 +1,10 @@
 import type { Prisma } from "@prisma/client"
 
+import { getSharedFilesDirectory } from "../dataManager"
+import {
+  questionImagePathsOfCropRegions,
+  removeUnreferencedQuestionImages,
+} from "./aiQuestionImageCleanup"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveExamScopeByCropRegion } from "./auditScope"
 import { cropRegionAuditTarget } from "./auditTargets"
@@ -114,11 +119,19 @@ export const updateCropRegion = async (
 /** 設問領域を削除する */
 export const deleteCropRegion = async (id: string) => {
   const scope = await resolveExamScopeByCropRegion(id)
+  // 採点指示の問題の画像の行は枠とともに cascade で消えるので、先にパスを読んでおき、消したあとでファイルを消す
+  const questionImagePaths = await questionImagePathsOfCropRegions({
+    cropRegionId: id,
+  })
 
   // 消した行がそのまま返るので、ラベルはそこから取る
   const region = await prisma.cropRegion.delete({
     where: { id },
   })
+  await removeUnreferencedQuestionImages(
+    questionImagePaths,
+    getSharedFilesDirectory()
+  )
 
   await recordAuditLog({
     action: "exam.region.delete",

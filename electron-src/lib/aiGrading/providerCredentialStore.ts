@@ -673,7 +673,7 @@ export function createProviderCredentialStore(
     return recordedConsent
   }
 
-  /** 同意を取り消す。保存した API キーも一緒に消す（設計 §9-1 の 8） */
+  /** 同意を取り消す。保存した API キーも一緒に消す（設計 §10-1 の 9） */
   async function revokeConsent(provider: GradingProviderId): Promise<void> {
     await updateProviderEntry(provider, () => createEmptyEntry())
   }

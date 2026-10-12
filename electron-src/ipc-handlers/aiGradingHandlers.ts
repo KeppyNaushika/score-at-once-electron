@@ -33,6 +33,7 @@ import {
   getAsbModelAnswerSource,
   listAiPromptsByCropRegion,
 } from "../lib/prisma/aiPrompt"
+import { removeUnreferencedQuestionImages } from "../lib/prisma/aiQuestionImageCleanup"
 import {
   type AiQuestioningScoreWrite,
   markAiQuestioningCommitted,
@@ -83,6 +84,18 @@ export const aiGradingHandlers = {
   ) => {
     requireActorUserId()
     return importAiQuestionImage(input, getSharedFilesDirectory())
+  },
+
+  /**
+   * 取り込んだが保存しなかった問題の画像のファイルを消す（採点指示の画面をやめた・保存前に外した）。
+   * 取り込み先の外を指すパスと、どれかの採点指示がまだ指している画像は消さない
+   */
+  "aiGrading:discardQuestionImages": async (imagePaths: string[]) => {
+    requireActorUserId()
+    return removeUnreferencedQuestionImages(
+      imagePaths,
+      getSharedFilesDirectory()
+    )
   },
 
   /** 模範解答の下書きの元（ASB の小問・枝問とテキスト要素の木）。照合は renderer */

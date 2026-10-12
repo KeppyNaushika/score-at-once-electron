@@ -158,6 +158,20 @@ export const importAiQuestionImageMutation = () =>
   })
 
 /**
+ * 取り込んだが保存しなかった問題の画像のファイルを消す（DB には書かない。どれかの採点指示が
+ * 指している画像は main が残す）
+ */
+export const discardAiQuestionImagesMutation = () =>
+  defineMutation({
+    mutationFn: (imagePaths: string[]) =>
+      window.electronAPI.aiGrading.discardQuestionImages(imagePaths),
+    meta: {
+      writesDatabase: false,
+      errorMessage: "保存しなかった問題の画像を消せませんでした",
+    },
+  })
+
+/**
  * 採点を始める（外部へ送る）。run と試行が返り、その場の採点は裏で続く。
  * 進み具合は `subscribeAiGradingRunProgress` で届くので、届いたら実行の一覧を取り直す
  */

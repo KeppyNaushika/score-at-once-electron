@@ -6,6 +6,8 @@
  * - ファイルを選ぶと切り出しの画面が開き、取り込むと末尾に足される（全体なら元のバイト列を送る）
  * - 外す・前へ・後へのボタンと、サムネイルの上のキー（Alt＋← →・Delete）で並びが変わる
  * - 編集で開くと元の採点指示の画像を並び順のまま引き継ぎ、保存で並べた順のパスを渡す
+ * - この画面で取り込んで保存しなかった画像は、閉じるときに消させる（やめたら全部、保存したら外したものだけ。
+ *   元の採点指示の画像は名指ししない）
  *
  * window.electronAPI は偽物で、ファイルにも実データにも触れない。画像は合成したバイト列。
  */
@@ -44,6 +46,7 @@ const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3])
 function installFakeElectronApi() {
   const aiGrading = {
     importQuestionImage: vi.fn(async () => ({ imagePath: IMPORTED_PATH })),
+    discardQuestionImages: vi.fn(async () => 0),
     createPrompt: vi.fn(async () => makePrompt({ id: "prompt-new" })),
     listPrompts: vi.fn(async () => []),
   }
@@ -75,6 +78,7 @@ function FieldHarness({ initialPaths }: { initialPaths: string[] }) {
         cropRegionId={CROP_REGION_ID}
         imagePaths={imagePaths}
         onImagePathsChange={setImagePaths}
+        onImageImported={() => {}}
       />
       <output data-testid="image-paths">{imagePaths.join(",")}</output>
     </>
@@ -240,6 +244,83 @@ describe("採点指示の編集", () => {
         parentPromptId: "prompt-1",
         questionImagePaths: [SECOND_PATH, FIRST_PATH],
       })
+    )
+  })
+
+  /** 編集で開き、画像を1枚取り込む */
+  async function openAndImport(onOpenChange = vi.fn()) {
+    const aiGrading = installFakeElectronApi()
+    const user = userEvent.setup()
+    renderWithProviders(
+      <AiPromptEditorDialog
+        open
+        onOpenChange={onOpenChange}
+        examId="exam-1"
+        cropRegion={cropRegion}
+        basePromptNumber={1}
+        basePrompt={makePrompt({
+          questionImages: [questionImageRow(FIRST_PATH, 0)],
+        })}
+        defaultAnnotationInstruction=""
+        onCreated={vi.fn()}
+      />
+    )
+    await user.upload(
+      screen.getByTestId("ai-question-image-file-input"),
+      new File([PNG_BYTES], "問題.png", { type: "image/png" })
+    )
+    const cropDialog = await screen.findByRole("dialog", {
+      name: /問題の画像を切り出す/,
+    })
+    await user.click(
+      within(cropDialog).getByRole("button", { name: "取り込む" })
+    )
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "2枚目を外す" })).toBeTruthy()
+    )
+    return { aiGrading, user }
+  }
+
+  it("やめると、この画面で取り込んだ画像を消させる（元の採点指示の画像は名指ししない）", async () => {
+    const onOpenChange = vi.fn()
+    const { aiGrading, user } = await openAndImport(onOpenChange)
+
+    await user.click(screen.getByRole("button", { name: "やめる" }))
+
+    await waitFor(() =>
+      expect(aiGrading.discardQuestionImages).toHaveBeenCalledWith([
+        IMPORTED_PATH,
+      ])
+    )
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(aiGrading.createPrompt).not.toHaveBeenCalled()
+  })
+
+  it("保存すると、保存した画像は消させず、保存前に外した画像だけを消させる", async () => {
+    const { aiGrading, user } = await openAndImport()
+
+    await user.click(
+      screen.getByRole("button", { name: "新しい採点指示として保存" })
+    )
+    await waitFor(() => expect(aiGrading.createPrompt).toHaveBeenCalled())
+    expect(aiGrading.discardQuestionImages).not.toHaveBeenCalled()
+  })
+
+  it("取り込んで外してから保存すると、外した画像を消させる", async () => {
+    const { aiGrading, user } = await openAndImport()
+
+    await user.click(screen.getByRole("button", { name: "2枚目を外す" }))
+    await user.click(
+      screen.getByRole("button", { name: "新しい採点指示として保存" })
+    )
+
+    await waitFor(() =>
+      expect(aiGrading.discardQuestionImages).toHaveBeenCalledWith([
+        IMPORTED_PATH,
+      ])
+    )
+    expect(aiGrading.createPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({ questionImagePaths: [FIRST_PATH] })
     )
   })
 })
