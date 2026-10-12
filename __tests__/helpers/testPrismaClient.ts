@@ -72,6 +72,8 @@ export async function cleanupTestDatabase(): Promise<void> {
   await prisma.cropRegionOmrConfig.deleteMany()
   await prisma.cropSubtotal.deleteMany()
   await prisma.cropRegion.deleteMany()
+  // 段階評価のルーブリック。共通のもの（examId が null）は試験を消しても残るので、ここで消す
+  await prisma.scoreScale.deleteMany()
   await prisma.studentAnswerImage.deleteMany()
   await prisma.examPage.deleteMany()
   await prisma.examAnswerOverlayStyle.deleteMany()

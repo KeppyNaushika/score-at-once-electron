@@ -57,7 +57,7 @@ export async function setRubricApplications(
     include: { cropRegion: true },
   })
   if (!rubricItem || rubricItem.cropRegionId !== input.cropRegionId) {
-    throw new Error("ルーブリック項目が、この設問のものではありません")
+    throw new Error("採点項目が、この設問のものではありません")
   }
   await assertCropRegionsInSameExam(
     examStudentIds.map((examStudentId) => ({
@@ -134,7 +134,7 @@ export async function setRubricApplications(
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       target: rubricItem.label || null,
-      summary: `ルーブリック項目「${rubricItem.label}」を${touchedQuestionScoreIds.length}件の答案に${verb}`,
+      summary: `採点項目「${rubricItem.label}」を${touchedQuestionScoreIds.length}件の答案に${verb}`,
       extra: { count: touchedQuestionScoreIds.length },
       targets: [cropRegionAuditTarget(rubricItem.cropRegion)],
     })

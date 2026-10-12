@@ -158,7 +158,7 @@ describe("ルーブリック項目", () => {
     )
     expect(updated.scoringMethod).toBe("deduction")
     await expect(
-      setCropRegionScoringMethod(cropRegionId(), "scale", ownerId())
+      setCropRegionScoringMethod(cropRegionId(), "rank", ownerId())
     ).rejects.toThrow("採点方式")
   })
 })

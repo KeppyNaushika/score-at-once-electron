@@ -58,10 +58,12 @@ const SYNC_TABLE_LABELS: Record<string, string> = {
   AiRubricProposalResponse: "AI採点の項目の案への答え",
   AiRubricProposalAdviceDraft: "AI採点の項目の案の助言の下書き",
   AiRubricProposalInstructionDraft: "AI採点の項目の案の再採点への指示の下書き",
-  RubricItem: "ルーブリック項目",
-  RubricApplication: "ルーブリック項目の適用",
+  RubricItem: "採点項目",
+  RubricApplication: "採点項目の適用",
   RubricAdviceCombination: "重なった助言の決まり",
   RubricAdviceCombinationItem: "重なった助言の決まりの項目",
+  ScoreScale: "類型評価",
+  ScoreScaleLevel: "類型評価の類型",
 
   // 成績算出
   Grade: "成績算出",

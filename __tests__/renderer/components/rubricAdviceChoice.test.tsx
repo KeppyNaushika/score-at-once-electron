@@ -89,6 +89,7 @@ const cropRegion: QuestionAnswerRegionRow = {
   points: 4,
   orderIndex: 0,
   scoringMethod: "deduction",
+  scoreScaleId: null,
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
   examPage: {
@@ -113,6 +114,7 @@ function makeRubricItem(
     pointDelta: -1,
     setStatus: null,
     setScore: null,
+    setScaleLevelId: null,
     adviceText: "",
     sortOrder: 0,
     createdByUserId: CURRENT_USER_ID,

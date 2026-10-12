@@ -48,4 +48,6 @@ export const DEFAULT_GRADE_REPORT_SETTINGS: GradeReportSettings = {
   footerLeft: "",
   footerCenter: "",
   footerRight: "",
+
+  scaleValueDisplay: "label_points",
 }

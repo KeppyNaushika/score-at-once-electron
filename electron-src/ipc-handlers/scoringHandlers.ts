@@ -53,6 +53,7 @@ function serializeScore(score: {
   comment: string
   userId: string
   overridesRubric: boolean
+  scaleLevelId: string | null
   createdAt: Date
   updatedAt: Date
 }): SerializedQuestionScore {
@@ -65,6 +66,7 @@ function serializeScore(score: {
     comment: score.comment,
     userId: score.userId,
     overridesRubric: score.overridesRubric,
+    scaleLevelId: score.scaleLevelId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
   }

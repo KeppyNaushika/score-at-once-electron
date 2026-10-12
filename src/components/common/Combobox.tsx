@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
+  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -28,6 +29,26 @@ export interface ComboboxOption {
   keywords?: string[]
   /** 見せはするが選ばせない（他で使用済みなど、選べない理由を label に添える） */
   disabled?: boolean
+  /**
+   * 見出しを付けてまとめる（例「この試験」「共通」）。同じ見出しの選択肢は、その見出しが
+   * 最初に出た位置にまとめて並べる。どの選択肢にも無ければ見出しを出さない
+   */
+  group?: string
+}
+
+/** 見出しごとの選択肢の並び（見出しは最初に出た順） */
+function groupByHeading<TEntry extends { option: ComboboxOption }>(
+  entries: readonly TEntry[]
+): { heading: string; entries: TEntry[] }[] {
+  const groups = new Map<string, TEntry[]>()
+  entries.forEach((entry) => {
+    const heading = entry.option.group ?? ""
+    groups.set(heading, [...(groups.get(heading) ?? []), entry])
+  })
+  return [...groups].map(([heading, groupEntries]) => ({
+    heading,
+    entries: groupEntries,
+  }))
 }
 
 interface ComboboxProps {
@@ -73,6 +94,31 @@ export function Combobox({
   const selectedOption = options.find((option) => option.value === value)
 
   const searchableOptions = useSearchableOptions(options)
+  const hasGroups = options.some((option) => option.group !== undefined)
+
+  const renderOption = ({
+    option,
+    searchKeywords,
+  }: (typeof searchableOptions)[number]) => (
+    <CommandItem
+      key={option.value}
+      value={option.value}
+      keywords={searchKeywords}
+      disabled={option.disabled}
+      onSelect={() => {
+        onValueChange(option.value)
+        setOpen(false)
+      }}
+    >
+      <CheckIcon
+        className={cn(
+          "size-4",
+          option.value === value ? "opacity-100" : "opacity-0"
+        )}
+      />
+      <span className="truncate">{option.label}</span>
+    </CommandItem>
+  )
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
@@ -110,26 +156,16 @@ export function Combobox({
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
-            {searchableOptions.map(({ option, searchKeywords }) => (
-              <CommandItem
-                key={option.value}
-                value={option.value}
-                keywords={searchKeywords}
-                disabled={option.disabled}
-                onSelect={() => {
-                  onValueChange(option.value)
-                  setOpen(false)
-                }}
-              >
-                <CheckIcon
-                  className={cn(
-                    "size-4",
-                    option.value === value ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <span className="truncate">{option.label}</span>
-              </CommandItem>
-            ))}
+            {hasGroups
+              ? groupByHeading(searchableOptions).map((optionGroup) => (
+                  <CommandGroup
+                    key={optionGroup.heading}
+                    heading={optionGroup.heading}
+                  >
+                    {optionGroup.entries.map(renderOption)}
+                  </CommandGroup>
+                ))
+              : searchableOptions.map(renderOption)}
           </CommandList>
         </Command>
       </PopoverContent>

@@ -30,6 +30,7 @@ function makeCropRegion(id: string, label: string): QuestionAnswerRegionRow {
     points: 2,
     orderIndex: 0,
     scoringMethod: "points",
+    scoreScaleId: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     examPage: {

@@ -120,6 +120,7 @@ function questionRegion(id: string, label: string): CropRegionRow {
     points: 10,
     orderIndex: 0,
     scoringMethod: "points",
+    scoreScaleId: null,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     examPage: {

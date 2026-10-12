@@ -74,6 +74,7 @@ function cropRegion(
     height: 0,
     orderIndex: 0,
     scoringMethod: "points",
+    scoreScaleId: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     ...overrides,

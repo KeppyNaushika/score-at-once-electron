@@ -88,6 +88,8 @@ function routeToLabel(pathname: string): RouteLabel {
       return { base: "学級管理" }
     case "subtotal-groups":
       return { base: "小計点管理" }
+    case "score-scales":
+      return { base: "類型評価管理" }
     case "tags":
       return { base: "タグ管理" }
     case "data-export":

@@ -21,11 +21,17 @@ export type CropRegionArea = Omit<
   | "type"
   | "points"
   | "scoringMethod"
+  | "scoreScaleId"
 > &
   Partial<
     Pick<
       CropRegion,
-      "examPageId" | "orderIndex" | "createdAt" | "updatedAt" | "scoringMethod"
+      | "examPageId"
+      | "orderIndex"
+      | "createdAt"
+      | "updatedAt"
+      | "scoringMethod"
+      | "scoreScaleId"
     >
   > & {
     type: CropRegionAreaType

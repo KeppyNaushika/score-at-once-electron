@@ -19,6 +19,8 @@ import type { ComponentType } from "react"
 import { useState } from "react"
 
 import { OmrConfigInlineForm } from "@/components/exams/03-region-info/components/OmrConfigInlineForm"
+import { ScoringMethodInlinePanel } from "@/components/exams/03-region-info/components/ScoringMethodInlinePanel"
+import { ScoringMethodToggleButton } from "@/components/exams/03-region-info/components/ScoringMethodToggleButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -58,7 +60,11 @@ const typeIcons: Record<CropRegionAreaType, IconType> = {
   ["OTHER"]: Ellipsis,
 }
 
+/** 表の列の数（開いた行を横いっぱいに広げる） */
+const REGION_TABLE_COLUMN_COUNT = 9
+
 type RegionTableRowProps = {
+  examId: string
   region: CropRegionRow
   /** 表の中での並び（`#` 列の番号と、ドラッグの相手を指すのに使う） */
   globalIndex: number
@@ -105,6 +111,7 @@ type RegionTableRowProps = {
 }
 
 export const RegionTableRow = ({
+  examId,
   region,
   globalIndex,
   isSelected,
@@ -129,6 +136,7 @@ export const RegionTableRow = ({
   onDragEnd,
 }: RegionTableRowProps) => {
   const [omrExpanded, setOmrExpanded] = useState(false)
+  const [scoringMethodExpanded, setScoringMethodExpanded] = useState(false)
   const regionType = region.type
   const isQuestionAnswer = regionType === "QUESTION_ANSWER"
   const hasOmrConfig = omrConfig !== null
@@ -256,6 +264,16 @@ export const RegionTableRow = ({
             <span className="text-sm text-muted-foreground">-</span>
           )}
         </td>
+        {/* 採点方式（類型評価なら使う類型の組も、開いた行の中で選ぶ） */}
+        <td className="border border-border px-2 py-1">
+          {isQuestionAnswer && (
+            <ScoringMethodToggleButton
+              region={region}
+              expanded={scoringMethodExpanded}
+              onToggle={() => setScoringMethodExpanded((prev) => !prev)}
+            />
+          )}
+        </td>
         {/* OMR */}
         <td className="border border-border px-2 py-1 text-center">
           {isQuestionAnswer && (
@@ -291,10 +309,28 @@ export const RegionTableRow = ({
           </Button>
         </td>
       </tr>
+      {/* 採点方式の展開行 */}
+      {scoringMethodExpanded && isQuestionAnswer && (
+        <tr>
+          <td
+            colSpan={REGION_TABLE_COLUMN_COUNT}
+            className="border border-border px-4 py-2"
+          >
+            <ScoringMethodInlinePanel
+              examId={examId}
+              cropRegion={region}
+              disabled={disabled}
+            />
+          </td>
+        </tr>
+      )}
       {/* OMR設定アコーディオン展開行 */}
       {omrExpanded && isQuestionAnswer && (
         <tr>
-          <td colSpan={8} className="border border-border px-4 py-2">
+          <td
+            colSpan={REGION_TABLE_COLUMN_COUNT}
+            className="border border-border px-4 py-2"
+          >
             <OmrConfigInlineForm
               cropRegionId={region.id}
               existingConfig={omrConfig}

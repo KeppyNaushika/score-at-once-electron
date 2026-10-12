@@ -38,6 +38,7 @@ function makeRubricItem(adviceText: string, id = "item-1"): RubricItemRow {
     pointDelta: -1,
     setStatus: null,
     setScore: null,
+    setScaleLevelId: null,
     adviceText,
     sortOrder: 0,
     createdByUserId: null,

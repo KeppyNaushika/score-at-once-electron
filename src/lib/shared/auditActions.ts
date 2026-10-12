@@ -125,6 +125,96 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "採点方式を変更しました",
   },
+  "exam.region.score_scale_update": {
+    category: "exam",
+    verb: "update",
+    label: "設問の類型評価を変更しました",
+  },
+
+  /**
+   * 類型評価（docs/vlm-grading-design.md §4-8）。試験のものは `exam.score_scale.*` で
+   * 試験の作業領域に入り、共通のものは `score_scale.*` で作業領域に入らない
+   */
+  "exam.score_scale.create": {
+    category: "exam",
+    verb: "create",
+    label: "類型評価「{target}」を作成しました",
+  },
+  "exam.score_scale.update": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の名前を変更しました",
+  },
+  "exam.score_scale.delete": {
+    category: "exam",
+    verb: "delete",
+    label: "類型評価「{target}」を削除しました",
+  },
+  "exam.score_scale.scope_update": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の使える範囲を変更しました",
+  },
+  "exam.score_scale.level.create": {
+    category: "exam",
+    verb: "create",
+    label: "類型評価「{target}」に類型を追加しました",
+  },
+  "exam.score_scale.level.update": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の類型を編集しました",
+  },
+  "exam.score_scale.level.delete": {
+    category: "exam",
+    verb: "delete",
+    label: "類型評価「{target}」の類型を削除しました",
+  },
+  "exam.score_scale.level.reorder": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の類型を並び替えました",
+  },
+  "score_scale.create": {
+    category: "exam",
+    verb: "create",
+    label: "類型評価「{target}」を作成しました",
+  },
+  "score_scale.update": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の名前を変更しました",
+  },
+  "score_scale.delete": {
+    category: "exam",
+    verb: "delete",
+    label: "類型評価「{target}」を削除しました",
+  },
+  "score_scale.scope_update": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の使える範囲を変更しました",
+  },
+  "score_scale.level.create": {
+    category: "exam",
+    verb: "create",
+    label: "類型評価「{target}」に類型を追加しました",
+  },
+  "score_scale.level.update": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の類型を編集しました",
+  },
+  "score_scale.level.delete": {
+    category: "exam",
+    verb: "delete",
+    label: "類型評価「{target}」の類型を削除しました",
+  },
+  "score_scale.level.reorder": {
+    category: "exam",
+    verb: "update",
+    label: "類型評価「{target}」の類型を並び替えました",
+  },
 
   /**
    * **過去の記録専用（create / update / delete の3つ）。** 設問グループは小計グループ
@@ -301,34 +391,34 @@ const AUDIT_ACTIONS = {
   "exam.rubric_item.create": {
     category: "exam",
     verb: "create",
-    label: "ルーブリック項目を作成しました",
+    label: "採点項目を作成しました",
   },
   "exam.rubric_item.update": {
     category: "exam",
     verb: "update",
-    label: "ルーブリック項目を変更しました",
+    label: "採点項目を変更しました",
   },
   "exam.rubric_item.delete": {
     category: "exam",
     verb: "delete",
-    label: "ルーブリック項目を削除しました",
+    label: "採点項目を削除しました",
   },
   /** 適用の付け外しは、1回の操作（選んだ答案にまとめて）を1件にまとめる */
   "exam.rubric.apply": {
     category: "exam",
     verb: "update",
-    label: "ルーブリック項目を答案に当てました",
+    label: "採点項目を答案に当てました",
   },
   "exam.rubric.unapply": {
     category: "exam",
     verb: "update",
-    label: "ルーブリック項目を答案から外しました",
+    label: "採点項目を答案から外しました",
   },
   /** 自分の採点行へ、項目から計算した点を書いた。1回の書き込みを1件にまとめる */
   "exam.score.rubric": {
     category: "exam",
     verb: "update",
-    label: "ルーブリック項目から採点を反映しました",
+    label: "採点項目から採点を反映しました",
   },
   /** 重なった助言の決まり（§4-7）。項目の集合ごとに、朱書きの扱いを決める */
   "exam.rubric_advice.save": {
@@ -345,7 +435,7 @@ const AUDIT_ACTIONS = {
   "exam.rubric_advice.sync": {
     category: "exam",
     verb: "update",
-    label: "ルーブリック項目の助言から朱書きを作りました",
+    label: "採点項目の助言から朱書きを作りました",
   },
   /** 共有の項目を変えたことによる、他の採点者の点の計算し直し（§4-6） */
   "exam.rubric.recalculate_others": {

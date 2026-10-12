@@ -1,7 +1,8 @@
 /**
  * ルーブリック採点（教員の層）の IPC（docs/vlm-grading-design.md §4・§11）。
  *
- * 項目の作成・変更・削除、採点方式の変更、適用の付け外し（まとめて）、項目から計算した点の
+ * 項目の作成・変更・削除、採点方式の変更、類型評価（類型の組）の読み書き、
+ * 適用の付け外し（まとめて）、項目から計算した点の
  * 書き込み、点を計算し直す材料の取得、重なった助言の決まりと助言の朱書きの読み書き。**点の計算は renderer** で、main は元データを返して
  * 受け取った結果を書くだけ。
  *
@@ -40,6 +41,19 @@ import {
   type RubricScoreWrite,
   writeRubricScores,
 } from "../lib/prisma/rubricScoreWrite"
+import {
+  createScoreScale,
+  createScoreScaleLevel,
+  deleteScoreScale,
+  deleteScoreScaleLevel,
+  duplicateScoreScale,
+  listScoreScales,
+  reorderScoreScaleLevels,
+  setCropRegionScoreScale,
+  setScoreScaleExam,
+  updateScoreScale,
+  updateScoreScaleLevel,
+} from "../lib/prisma/scoreScale"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 操作者（ログイン中の教員）。ログインしていなければ投げる */
@@ -68,7 +82,7 @@ export const rubricHandlers = {
   "rubric:deleteItem": async (rubricItemId: string) =>
     deleteRubricItem(rubricItemId, requireActorUserId()),
 
-  /** 設問の採点方式（points / deduction / addition）を変える */
+  /** 設問の採点方式（points / deduction / addition / scale）を変える */
   "rubric:setScoringMethod": async (
     cropRegionId: string,
     scoringMethod: ScoringMethod
@@ -78,6 +92,68 @@ export const rubricHandlers = {
       scoringMethod,
       requireActorUserId()
     ),
+
+  // ── 類型評価（類型の組。§4-8） ─────────────────────
+  /** 組の一覧（類型・使っている設問付き）。試験を渡せばその試験で選べるもの、null なら全部 */
+  "rubric:listScoreScales": async (filter: { examId: string | null }) =>
+    listScoreScales(filter),
+
+  /** 組を作る（最初の類型は画面が渡す）。examId が null なら共通 */
+  "rubric:createScoreScale": async (input: {
+    examId: string | null
+    name: string
+    levels: { label: string; score: number }[]
+  }) => createScoreScale(input, requireActorUserId()),
+
+  "rubric:updateScoreScale": async (
+    scoreScaleId: string,
+    data: { name: string }
+  ) => updateScoreScale(scoreScaleId, data, requireActorUserId()),
+
+  /** 共通にする（null）・試験に戻す（その試験の設問だけが使っているときに限る） */
+  "rubric:setScoreScaleExam": async (
+    scoreScaleId: string,
+    examId: string | null
+  ) => setScoreScaleExam(scoreScaleId, examId, requireActorUserId()),
+
+  /** 組を類型ごと複製し、渡した設問を複製へ付け替える */
+  "rubric:duplicateScoreScale": async (input: {
+    scoreScaleId: string
+    examId: string | null
+    reassignCropRegionIds: string[]
+  }) => duplicateScoreScale(input, requireActorUserId()),
+
+  /** 組を消す（使っている設問があれば拒む） */
+  "rubric:deleteScoreScale": async (scoreScaleId: string) =>
+    deleteScoreScale(scoreScaleId, requireActorUserId()),
+
+  "rubric:createScoreScaleLevel": async (input: {
+    scaleId: string
+    label: string
+    description: string
+    score: number
+  }) => createScoreScaleLevel(input, requireActorUserId()),
+
+  "rubric:updateScoreScaleLevel": async (
+    scaleLevelId: string,
+    data: { label?: string; description?: string; score?: number }
+  ) => updateScoreScaleLevel(scaleLevelId, data, requireActorUserId()),
+
+  "rubric:reorderScoreScaleLevels": async (
+    scaleId: string,
+    orders: { id: string; sortOrder: number }[]
+  ) => reorderScoreScaleLevels(scaleId, orders, requireActorUserId()),
+
+  /** 類型を消す（付けた採点・確定・項目が使っていれば拒む） */
+  "rubric:deleteScoreScaleLevel": async (scaleLevelId: string) =>
+    deleteScoreScaleLevel(scaleLevelId, requireActorUserId()),
+
+  /** 設問の類型評価で使う組を選ぶ（null で外す） */
+  "rubric:setCropRegionScoreScale": async (
+    cropRegionId: string,
+    scoreScaleId: string | null
+  ) =>
+    setCropRegionScoreScale(cropRegionId, scoreScaleId, requireActorUserId()),
 
   // ── 適用 ───────────────────────────────────────────────────
   /** 設問の適用を全部（採点者を問わない。誰のものかは採点行と突き合わせて絞る） */

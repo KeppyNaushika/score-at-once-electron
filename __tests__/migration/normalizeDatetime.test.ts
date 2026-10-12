@@ -274,6 +274,9 @@ describe("DateTime正規化マイグレーション", () => {
     "RubricAdviceCombinationItem",
     "RubricApplication",
     "RubricItem",
+    // 20261012120000 で追加（段階評価のルーブリック）。normalize migration より後で ISO text 生成
+    "ScoreScale",
+    "ScoreScaleLevel",
     // 20260819140000 で追加（利用者の設定JSONを行へ割る）。
     // normalize migration より後で ISO text 生成
     "UserClickScoringAction",

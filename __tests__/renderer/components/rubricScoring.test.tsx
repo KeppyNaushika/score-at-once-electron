@@ -79,6 +79,7 @@ function makeCropRegion(scoringMethod: string): QuestionAnswerRegionRow {
     points: 4,
     orderIndex: 0,
     scoringMethod,
+    scoreScaleId: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     examPage: {
@@ -104,6 +105,7 @@ function makeRubricItem(
     pointDelta: -1,
     setStatus: null,
     setScore: null,
+    setScaleLevelId: null,
     adviceText: "",
     sortOrder: 0,
     createdByUserId: CURRENT_USER_ID,
@@ -642,7 +644,7 @@ describe("ルーブリック採点の画面", () => {
 
       await userEvent.keyboard("0")
       expect(
-        await screen.findByRole("dialog", { name: "ルーブリック項目を追加" })
+        await screen.findByRole("dialog", { name: "採点項目を追加" })
       ).toBeInTheDocument()
     })
   })

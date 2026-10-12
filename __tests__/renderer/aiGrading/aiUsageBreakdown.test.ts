@@ -71,6 +71,7 @@ function makeMyRun(options: {
         points: 1,
         orderIndex: 0,
         scoringMethod: "points",
+        scoreScaleId: null,
         createdAt: FIXED_DATE,
         updatedAt: FIXED_DATE,
         examPage: {

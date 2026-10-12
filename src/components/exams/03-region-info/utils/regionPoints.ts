@@ -8,7 +8,10 @@
 
 import type { RubricRecalculationSource } from "@/components/exams/07-score-at-once/Rubric/utils/rubricRecalculation"
 import { planRubricRecalculation } from "@/components/exams/07-score-at-once/Rubric/utils/rubricRecalculation"
-import { toScoringMethod } from "@/types/rubric.types"
+import {
+  computesScoreFromRubricItems,
+  toScoringMethod,
+} from "@/types/rubric.types"
 
 /** 配点の欄に打った文字の読み */
 type PointsInput =
@@ -19,7 +22,7 @@ type PointsInput =
 
 /** 配点が点の計算に入る設問か（減点・加点方式） */
 export const recalculatesRubricScores = (scoringMethod: string): boolean =>
-  toScoringMethod(scoringMethod) !== "points"
+  computesScoreFromRubricItems(toScoringMethod(scoringMethod))
 
 /**
  * 配点の欄の文字を読む。

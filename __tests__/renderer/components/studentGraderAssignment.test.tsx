@@ -159,6 +159,7 @@ function questionRegion(id: string): QuestionAnswerRegionRow {
     points: 4,
     orderIndex: 0,
     scoringMethod: "points",
+    scoreScaleId: null,
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     examPage: {

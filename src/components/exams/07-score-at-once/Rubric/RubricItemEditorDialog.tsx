@@ -113,7 +113,7 @@ function RubricItemEditorForm({
     <>
       <DialogHeader>
         <DialogTitle>
-          {rubricItem ? "ルーブリック項目を変更" : "ルーブリック項目を追加"}
+          {rubricItem ? "採点項目を変更" : "採点項目を追加"}
         </DialogTitle>
         <DialogDescription>
           項目はこの設問を採点する教員の間で共有します

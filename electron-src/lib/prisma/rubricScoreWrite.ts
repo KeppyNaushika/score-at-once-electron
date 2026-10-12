@@ -118,7 +118,7 @@ async function recordRubricScoreAudit(
       entityId: ownRows[0].cropRegionId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: `ルーブリック項目から採点を反映しました（${ownRows.length}件）`,
+      summary: `採点項目から採点を反映しました（${ownRows.length}件）`,
       extra: { count: ownRows.length },
     })
   }
@@ -131,7 +131,7 @@ async function recordRubricScoreAudit(
       entityId: otherRows[0].cropRegionId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: `ルーブリック項目の変更で、他の採点者${otherUserCount}名の点を計算し直しました（${otherRows.length}件）`,
+      summary: `採点項目の変更で、他の採点者${otherUserCount}名の点を計算し直しました（${otherRows.length}件）`,
       extra: { count: otherRows.length, userCount: otherUserCount },
     })
   }

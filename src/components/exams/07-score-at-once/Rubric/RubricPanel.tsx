@@ -180,9 +180,7 @@ export function RubricPanel({
       <div className="border-b px-3 py-2">
         <div className="flex items-center gap-1.5">
           <ListChecks className="h-3.5 w-3.5 text-gray-500" />
-          <span className="text-xs font-medium text-gray-700">
-            ルーブリック
-          </span>
+          <span className="text-xs font-medium text-gray-700">採点項目</span>
           <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
             {SCORING_METHOD_LABELS[scoringMethod]}
             {cropRegion.points !== null ? `・配点 ${cropRegion.points}点` : ""}
