@@ -20,11 +20,10 @@ import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
-import { EllipseToolPopover } from "./EllipseToolPopover"
 import { usePaletteAutoHide } from "./hooks/view/usePaletteAutoHide"
 import { LineToolPopover } from "./LineToolPopover"
 import { PaletteTooltip } from "./PaletteTooltip"
-import { RectangleToolPopover } from "./RectangleToolPopover"
+import { ShapeToolPopover } from "./ShapeToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
 import type { CanvasTool } from "./types"
 import { paletteStylesFor } from "./utils/paletteStyles"
@@ -218,7 +217,8 @@ export function DrawingToolPalette({
               shortcutKey={keyBindings["tool.line"] || "L"}
             />
 
-            <RectangleToolPopover
+            <ShapeToolPopover
+              shape="rectangle"
               currentTool={currentTool}
               onToolChange={onToolChange}
               strokeColor={rectangle.color}
@@ -235,7 +235,8 @@ export function DrawingToolPalette({
               shortcutKey={keyBindings["tool.rectangle"] || "B"}
             />
 
-            <EllipseToolPopover
+            <ShapeToolPopover
+              shape="ellipse"
               currentTool={currentTool}
               onToolChange={onToolChange}
               strokeColor={ellipse.color}

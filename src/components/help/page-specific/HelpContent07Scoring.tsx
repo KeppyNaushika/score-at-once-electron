@@ -1,9 +1,12 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { useShortcutContext } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { HelpHero } from "@/components/help/common/DocComponents"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { resolveKeyBindings } from "@/lib/scoringKeybindings"
+import { keyboardShortcutsQuery } from "@/queries/settings"
 
 import { GridGuide } from "./07-scoring/GridGuide"
 import { HeadingFocusContext } from "./07-scoring/HeadingFocus"
@@ -35,8 +38,15 @@ function getScrollParent(el: HTMLElement | null): HTMLElement | null {
 // ============================================================================
 
 export function HelpContent07Scoring() {
-  // ユーザーが設定したショートカット（既定＋上書きの解決済み）を反映する
-  const { keyBindings } = useShortcutContext()
+  // ユーザーが設定したショートカット（既定＋上書きの解決済み）を反映する。
+  // 「使い方」は段のヘッダー（layout）が開くので ShortcutProvider の外にある。
+  // provider と同じ設定のキャッシュから直接読む
+  const userId = useCurrentUser().id
+  const { data: storedKeyBindings } = useQuery(keyboardShortcutsQuery(userId))
+  const keyBindings = useMemo(
+    () => resolveKeyBindings(storedKeyBindings),
+    [storedKeyBindings]
+  )
   const [style, setStyle] = useState<"grid" | "individual" | null>(null)
 
   const keys: GuideKeys = {

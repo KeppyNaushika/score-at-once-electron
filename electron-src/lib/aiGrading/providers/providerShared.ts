@@ -29,6 +29,76 @@ export class GradingProviderError extends Error {
   }
 }
 
+/** SDK の失敗のクラス（`instanceof` で見分けるためだけに使う） */
+type SdkErrorClass<ErrorInstance = Error> = abstract new (
+  ...args: never
+) => ErrorInstance
+
+/**
+ * 事業者の SDK が投げる失敗のクラス。OpenAI と Anthropic の SDK は同じ名前・同じ継承関係の
+ * クラスを持つので、どちらもこの形で渡せる
+ */
+export interface ProviderSdkErrorClasses {
+  APIUserAbortError: SdkErrorClass
+  APIConnectionTimeoutError: SdkErrorClass
+  APIConnectionError: SdkErrorClass
+  AuthenticationError: SdkErrorClass
+  PermissionDeniedError: SdkErrorClass
+  RateLimitError: SdkErrorClass
+  BadRequestError: SdkErrorClass
+  NotFoundError: SdkErrorClass
+  UnprocessableEntityError: SdkErrorClass
+  InternalServerError: SdkErrorClass
+  APIError: SdkErrorClass<{ status?: number | undefined }>
+}
+
+function toErrorKind(
+  error: unknown,
+  sdkErrorClasses: ProviderSdkErrorClasses
+): ProviderErrorKind {
+  // 継承関係があるので、子のクラスから順に調べる
+  if (error instanceof sdkErrorClasses.APIUserAbortError) return "aborted"
+  if (error instanceof sdkErrorClasses.APIConnectionTimeoutError) {
+    return "timeout"
+  }
+  if (error instanceof sdkErrorClasses.APIConnectionError) return "connection"
+  if (error instanceof sdkErrorClasses.AuthenticationError) {
+    return "authentication"
+  }
+  if (error instanceof sdkErrorClasses.PermissionDeniedError) {
+    return "permission"
+  }
+  if (error instanceof sdkErrorClasses.RateLimitError) return "rate_limit"
+  if (
+    error instanceof sdkErrorClasses.BadRequestError ||
+    error instanceof sdkErrorClasses.NotFoundError ||
+    error instanceof sdkErrorClasses.UnprocessableEntityError
+  ) {
+    return "bad_request"
+  }
+  if (error instanceof sdkErrorClasses.InternalServerError) return "server"
+  if (error instanceof sdkErrorClasses.APIError && (error.status ?? 0) >= 500) {
+    return "server"
+  }
+  return "unknown"
+}
+
+/** SDK が投げた失敗を `GradingProviderError` にする */
+export function toGradingProviderError(
+  error: unknown,
+  sdkErrorClasses: ProviderSdkErrorClasses
+): GradingProviderError {
+  if (error instanceof GradingProviderError) return error
+  const message = error instanceof Error ? error.message : String(error)
+  return new GradingProviderError(
+    toErrorKind(error, sdkErrorClasses),
+    message,
+    {
+      cause: error,
+    }
+  )
+}
+
 /** バッチの custom_id に使える文字列（Anthropic の制約。OpenAI もこれに揃える） */
 const CUSTOM_ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/
 

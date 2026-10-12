@@ -46,11 +46,13 @@ import type { ErrorObject } from "@anthropic-ai/sdk/resources/shared"
 
 import { decideAdaptiveThinking } from "@/lib/shared/aiGrading/modelFeatures"
 
+import type { GradingProviderError } from "./providerShared"
 import {
   assertValidBatchRequests,
   createCompletedResponse,
   createErrorResponse,
-  GradingProviderError,
+  type ProviderSdkErrorClasses,
+  toGradingProviderError,
 } from "./providerShared"
 import type {
   GradingProvider,
@@ -304,31 +306,24 @@ function toAnthropicBatchResponse(
   }
 }
 
-function toErrorKind(error: unknown): ProviderErrorKind {
-  // 継承関係があるので、子のクラスから順に調べる
-  if (error instanceof APIUserAbortError) return "aborted"
-  if (error instanceof APIConnectionTimeoutError) return "timeout"
-  if (error instanceof APIConnectionError) return "connection"
-  if (error instanceof AuthenticationError) return "authentication"
-  if (error instanceof PermissionDeniedError) return "permission"
-  if (error instanceof RateLimitError) return "rate_limit"
-  if (
-    error instanceof BadRequestError ||
-    error instanceof NotFoundError ||
-    error instanceof UnprocessableEntityError
-  ) {
-    return "bad_request"
-  }
-  if (error instanceof InternalServerError) return "server"
-  if (error instanceof APIError && (error.status ?? 0) >= 500) return "server"
-  return "unknown"
+/** Anthropic の SDK が投げる失敗のクラス */
+const ANTHROPIC_SDK_ERROR_CLASSES: ProviderSdkErrorClasses = {
+  APIUserAbortError,
+  APIConnectionTimeoutError,
+  APIConnectionError,
+  AuthenticationError,
+  PermissionDeniedError,
+  RateLimitError,
+  BadRequestError,
+  NotFoundError,
+  UnprocessableEntityError,
+  InternalServerError,
+  APIError,
 }
 
 /** SDK が投げた失敗を `GradingProviderError` にする */
 function toAnthropicProviderError(error: unknown): GradingProviderError {
-  if (error instanceof GradingProviderError) return error
-  const message = error instanceof Error ? error.message : String(error)
-  return new GradingProviderError(toErrorKind(error), message, { cause: error })
+  return toGradingProviderError(error, ANTHROPIC_SDK_ERROR_CLASSES)
 }
 
 async function callAnthropic<T>(call: () => PromiseLike<T>): Promise<T> {
