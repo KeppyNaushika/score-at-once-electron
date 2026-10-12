@@ -210,6 +210,73 @@ describe("processSubtotalGroupIdIntegration", () => {
     expect(created!.name).toBe(groupName)
   })
 
+  // SG-3b: 名前一致+create_new: 名前を変えずにアーカイブの id で別の行として作る
+  it("SG-3b: 同名の既存グループがあってもcreate_newなら名前を変えずに別の行として作る", async () => {
+    const existingId = generateId()
+    const importId = generateId()
+    const groupName = `同名G_${Date.now()}`
+
+    await prisma.subtotalGroup.create({
+      data: { id: existingId, name: groupName },
+    })
+
+    const data = createExtractedArchiveData({
+      subtotalsData: createArchiveSubtotalsData([
+        { id: importId, name: groupName },
+      ]),
+    })
+
+    const preMatch = createFileOverviewData({
+      subtotalGroup: createPreMatchingResult({
+        byName: [
+          createMatchedItem({
+            importId,
+            existingId,
+          }),
+        ],
+      }),
+    })
+
+    const idMappings = createEmptyIdMappings()
+    const counts = createEmptyImportCounts()
+    const warnings: string[] = []
+    const idChangeTargets: IdChangeTarget[] = []
+
+    await prisma.$transaction(async (tx) => {
+      await processSubtotalGroupIdIntegration(
+        data,
+        preMatch,
+        {
+          strategy: "by_name",
+          decisions: [
+            createDecision({
+              importId,
+              decisionType: "create_new",
+            }),
+          ],
+        },
+        idMappings,
+        idChangeTargets,
+        counts,
+        warnings,
+        policy,
+        tx
+      )
+    })
+
+    // 他の表と同じく、アーカイブの id のまま作る
+    expect(idMappings.subtotalGroup[importId]).toBe(importId)
+    expect(counts.created.subtotalGroups).toBe(1)
+
+    // 同じ名前のグループが2つ並ぶ（既存は書き換えない）
+    const groups = await prisma.subtotalGroup.findMany({
+      where: { name: groupName },
+    })
+    expect(groups.map((group) => group.id).sort()).toEqual(
+      [existingId, importId].sort()
+    )
+  })
+
   // SG-4: use_import_id: ID変更ターゲット追加
   it("SG-4: use_import_id選択時にidChangeTargetに追加される", async () => {
     const existingId = generateId()

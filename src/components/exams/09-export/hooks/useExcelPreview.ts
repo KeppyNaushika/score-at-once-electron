@@ -25,7 +25,7 @@ interface ExcelPreviewSubtotalScore {
   maxScore: number
 }
 
-export interface ExcelPreviewRow {
+interface ExcelPreviewRow {
   examStudentId: string
   studentName: string
   studentNumber: string
@@ -39,7 +39,7 @@ export interface ExcelPreviewRow {
   subtotalScores: ExcelPreviewSubtotalScore[]
 }
 
-export interface ExcelPreviewHeader {
+interface ExcelPreviewHeader {
   questionLabels: string[]
   questionMaxScores: number[]
   subtotalLabels: string[]

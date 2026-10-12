@@ -32,10 +32,12 @@ function makeStudent(
 
 describe("computeSpTable", () => {
   it("完全Guttonパターンでは注意係数が0（分母0の最上位はnull）", () => {
+    // 入力は生徒も設問も期待の並びと違う順にして、並べ替えを通す
+    // colSum: q1=1, q2=3, q3=2 → 設問は q2,q3,q1 の順
     const data = [
+      makeStudent("S3", [0, 1, 0]),
       makeStudent("S1", [1, 1, 1]),
-      makeStudent("S2", [1, 1, 0]),
-      makeStudent("S3", [1, 0, 0]),
+      makeStudent("S2", [0, 1, 1]),
     ]
     const result = computeSpTable(data)
     expect(result).not.toBeNull()
@@ -45,6 +47,12 @@ describe("computeSpTable", () => {
       "S1",
       "S2",
       "S3",
+    ])
+    // 設問は正答者数降順
+    expect(spTable.problems.map((problem) => problem.questionId)).toEqual([
+      "q2",
+      "q3",
+      "q1",
     ])
     expect(spTable.students[0].correctCount).toBe(3)
     // S1(n=3)は分母0→null、S2/S3はGuttman一致で0
@@ -82,13 +90,14 @@ describe("computeSpTable", () => {
   })
 
   it("cells は設問の並び（正答者数降順）に揃う", () => {
+    // colSum: q1=1, q2=3, q3=2 → 設問は q2,q3,q1 の順（入力の並びと違う）
     const data = [
       makeStudent("S1", [1, 1, 1]),
-      makeStudent("S2", [1, 1, 0]),
-      makeStudent("S3", [1, 0, 0]),
+      makeStudent("S2", [0, 1, 1]),
+      makeStudent("S3", [0, 1, 0]),
     ]
     const spTable = computeSpTable(data)!
-    // S2 は p1,p2 正答・p3 誤答（並びは p1,p2,p3）
+    // S2 は q2,q3 正答・q1 誤答 → 並び q2,q3,q1 で [正,正,誤]（入力順なら [誤,正,正]）
     const student2 = spTable.students.find(
       (student) => student.examStudentId === "S2"
     )!

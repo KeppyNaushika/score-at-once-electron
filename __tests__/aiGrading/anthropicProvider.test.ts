@@ -587,14 +587,12 @@ describe("anthropicProvider", () => {
         createAnthropicProvider(client).getBatchStatus("msgbatch_test")
       ).resolves.toBe("ended")
     })
-  })
-})
 
-describe("Anthropic の取り込み後の片付け", () => {
-  it("取り込み終えたバッチを消す", async () => {
-    const { client, deleteBatchCall } = createFakeClient({})
-    await createAnthropicProvider(client).cleanupBatch?.("msgbatch_test")
-    expect(deleteBatchCall).toHaveBeenCalledWith("msgbatch_test")
+    it("取り込み終えたバッチを消す", async () => {
+      const { client, deleteBatchCall } = createFakeClient({})
+      await createAnthropicProvider(client).cleanupBatch?.("msgbatch_test")
+      expect(deleteBatchCall).toHaveBeenCalledWith("msgbatch_test")
+    })
   })
 
   describe("モデルの一覧", () => {

@@ -257,7 +257,7 @@ describe("統合アーカイブの書き出し", () => {
       }
     })
 
-    it("archive.db は整合し、外部キーが閉じ、トリガー・ビューを持たず、利用者の passcode が空になる", async () => {
+    it("archive.db は整合し、外部キーが閉じ、トリガー・ビュー・同期の内部表を持たず、利用者の passcode が空になる", async () => {
       await prisma.user.update({
         where: { id: fixture.examA.user.id },
         data: { passcode: "1234", passcodeType: "pin" },
@@ -266,12 +266,13 @@ describe("統合アーカイブの書き出し", () => {
         where: { id: fixture.otherScorer.id },
         data: { passcode: "secret", passcodeType: "password" },
       })
-      // 同期のトリガーやビューを持つ元 DB でも、書き出しには残らない
+      // 同期のトリガー・内部表やビューを持つ元 DB でも、書き出しには残らない
       const sourcePath = copyTestDatabase("source-with-objects.db")
       modifyDatabase(sourcePath, (db) => {
         db.exec(`CREATE VIEW "exam_names" AS SELECT examName FROM "Exam"`)
+        db.exec(`CREATE TABLE "_sns_rows_Exam" (id TEXT PRIMARY KEY)`)
         db.exec(
-          `CREATE TRIGGER "exam_touch" AFTER UPDATE ON "Exam" BEGIN UPDATE "Exam" SET examName = examName WHERE 0; END`
+          `CREATE TRIGGER "sns_exam_insert" AFTER INSERT ON "Exam" BEGIN INSERT INTO "_sns_rows_Exam" (id) VALUES (NEW.id); END`
         )
       })
 
@@ -302,7 +303,7 @@ describe("統合アーカイブの書き出し", () => {
         expect(
           db
             .prepare<[], { name: string }>(
-              "SELECT name FROM sqlite_master WHERE type IN ('trigger', 'view')"
+              "SELECT name FROM sqlite_master WHERE type IN ('trigger', 'view') OR name LIKE '\\_sns%' ESCAPE '\\'"
             )
             .all()
         ).toEqual([])

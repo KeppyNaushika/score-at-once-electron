@@ -22,9 +22,9 @@ import * as path from "path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
-import { applyMigrationSql } from "../../electron-src/lib/prisma/schema/migrationApplier"
 import { deployPendingMigrations } from "../../electron-src/lib/prisma/schema/migrationDeployer"
 import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
+import { buildDatabaseBeforeMigration } from "../helpers/preMigrationDatabase"
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_ROOT = path.join(os.tmpdir(), "subtotal-uniques-by-uuid")
@@ -305,22 +305,11 @@ describe("適用前から在った子は、Subtotal の作り直しで消えな�
     fs.readFileSync(path.join(MIGRATIONS_DIR, name, "migration.sql"), "utf-8")
 
   it("割り当て（CropSubtotal）とデータソース（GradeDataSource）が残り、Subtotal を指したまま", async () => {
-    // init → この migration の1つ手前まで（本番の deployer と同じ当て方）
-    await bootstrapSchema(PRE_TARGET_DB_PATH)
+    // init → この migration の1つ手前まで（本番の deployer で当てる）
+    fs.mkdirSync(path.dirname(PRE_TARGET_DB_PATH), { recursive: true })
+    await buildDatabaseBeforeMigration(PRE_TARGET_DB_PATH, TARGET_MIGRATION)
     const db = new Database(PRE_TARGET_DB_PATH)
     try {
-      const migrationNames = fs
-        .readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => entry.name)
-        .sort()
-      const targetIndex = migrationNames.indexOf(TARGET_MIGRATION)
-      expect(targetIndex).toBeGreaterThan(0)
-      for (const name of migrationNames.slice(0, targetIndex)) {
-        if (name === "20260322232329_init") continue
-        applyMigrationSql(db, readMigrationSql(name))
-      }
-
       // 子を持つ小計を入れる
       db.pragma("foreign_keys = ON")
       db.exec(`

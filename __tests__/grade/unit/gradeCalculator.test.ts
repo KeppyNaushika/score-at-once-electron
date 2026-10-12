@@ -63,6 +63,10 @@ interface DataSourceCase {
   id: string
   type: string
   name: string
+  /**
+   * coursework 型の参照先（評価項目）の満点。データソースの満点の列は撤去済みで、
+   * それ以外の型では `buildGrade` が捨てる（満点は元データからライブ算出する）
+   */
   maxScore: unknown
   weight: unknown
   order: number
@@ -119,7 +123,7 @@ function buildGrade(
     ...gradeItem,
     boundaries: gradeItem.boundaries ?? [],
     dataSources: gradeItem.dataSources.map(
-      ({ scores, inputMode, letterScales, ...dataSourceCase }) => {
+      ({ scores, inputMode, letterScales, maxScore, ...dataSourceCase }) => {
         const dataSource = {
           examId: null,
           subtotalId: null,
@@ -146,7 +150,7 @@ function buildGrade(
           ...dataSource,
           courseworkItemId: `${dataSource.id}-item`,
           courseworkItem: {
-            maxScore: dataSource.maxScore,
+            maxScore,
             inputMode: inputMode ?? "numeric",
             // 点数は資料の対象者（CourseworkStudent）にぶら下がる。テストケースは
             // 生徒idで書けるようにし、ここで対象者を1段かませた形へ寄せる。

@@ -221,9 +221,13 @@ describe("N-up の面の書き出し", () => {
 
     const output = await readFirstPage(outputPath)
     expect(output.pageCount).toBe(1)
-    expect(output.operators.match(/ Do/g)).toHaveLength(1)
-    // 左のスロット（x=0）に置く
-    expect(output.operators).toMatch(/1 0 0 1 0 0 cm/)
+    const drawn = drawnPages(output.operators)
+    expect(drawn).toHaveLength(1)
+    // 左のスロット（用紙横の左半分）を覆う。空きの右スロットへ寄らない
+    // （A4 の縦横比はスロットとほぼ同じなので、余白は 0.1pt 未満）
+    const slotWidth = A4.height / 2
+    expect(drawn[0].left).toBeCloseTo(0, 1)
+    expect(drawn[0].right).toBeCloseTo(slotWidth, 1)
   })
 })
 

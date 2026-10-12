@@ -42,7 +42,7 @@ export interface LegacyArchiveCourseworkRef {
 }
 
 /** v1.0.0 の評価項目（変換表・点数を内包） */
-export interface LegacyArchiveCourseworkItemRef {
+interface LegacyArchiveCourseworkItemRef {
   id: string
   name: string
   order: number

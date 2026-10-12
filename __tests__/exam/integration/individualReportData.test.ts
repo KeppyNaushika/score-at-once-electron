@@ -187,6 +187,12 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
+    // 小計そのものは載る（載らなければ下のループは空回りする）
+    expect(
+      result.population.subtotals
+        .map((reportSubtotal) => reportSubtotal.subtotalId)
+        .sort()
+    ).toEqual(fixture.subtotals.map((subtotal) => subtotal.id).sort())
     for (const reportSubtotal of result.population.subtotals) {
       expect(reportSubtotal.maxScore).toBe(0)
     }
@@ -240,12 +246,25 @@ describe("個人成績表のデータ取得", () => {
     )
 
     // 平均・偏差値・順位・箱ひげ図は renderer（computeReportData）の担当。
-    // main が算出して返していた頃の形が復活していないことを固定する
-    const report = result.reports[0] as unknown as Record<string, unknown>
-    expect(report.statistics).toBeUndefined()
-    expect(
-      (result.population as unknown as Record<string, unknown>).overall
-    ).toBeUndefined()
+    // main が算出して返していた頃の形（report.statistics・population.overall 等）が
+    // 復活していないことを、返す鍵の一覧ごと固定する。統計を足せばここが落ちる
+    expect(result.reports).toHaveLength(fixture.examStudents.length)
+    for (const report of result.reports) {
+      expect(Object.keys(report).sort()).toEqual([
+        "examInfo",
+        "learningAdvice",
+        "scoringData",
+        "studentInfo",
+      ])
+    }
+    expect(Object.keys(result.population).sort()).toEqual([
+      "classrooms",
+      "questionCorrectRates",
+      "questionScoreRates",
+      "rawTotalScores",
+      "subtotalRawScores",
+      "subtotals",
+    ])
   })
 
   it("試験タグと試験名を返す", async () => {
@@ -268,6 +287,8 @@ describe("個人成績表のデータ取得", () => {
   })
 
   it("存在しない試験では例外を投げる", async () => {
-    await expect(fetchReport("non-existent-exam", [])).rejects.toThrow()
+    await expect(fetchReport("non-existent-exam", [])).rejects.toThrow(
+      "試験が見つかりません"
+    )
   })
 })

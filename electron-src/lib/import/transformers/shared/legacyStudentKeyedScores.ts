@@ -22,7 +22,7 @@ export type LegacyQuestionScore = StudentKeyed<
   ArchiveScoresData["questionScores"][number]
 >
 
-export type LegacyScoreDecision = StudentKeyed<
+type LegacyScoreDecision = StudentKeyed<
   NonNullable<ArchiveScoresData["scoreDecisions"]>[number]
 >
 

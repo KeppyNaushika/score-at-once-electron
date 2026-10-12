@@ -46,40 +46,6 @@ describe("preMatching", () => {
     await disconnectTestPrisma()
   })
 
-  // PM-1: 生徒ID一致マッチ
-  it("PM-1: 同一IDの生徒がbyIdに分類される", async () => {
-    const studentId = generateId()
-
-    // 既存生徒
-    await prisma.student.create({
-      data: {
-        id: studentId,
-        studentNumber: `SN_${Date.now()}`,
-        lastName: "山田",
-        firstName: "太郎",
-        lastNameKana: "ヤマダ",
-        firstNameKana: "タロウ",
-      },
-    })
-
-    const data = createExtractedArchiveData({
-      studentsData: createArchiveStudentsData([
-        {
-          id: studentId,
-          studentNumber: `SN_${Date.now()}_import`,
-          lastName: "山田",
-          firstName: "太郎",
-        },
-      ]),
-    })
-
-    const result = await performPreMatching(data)
-
-    expect(result.student.byId.length).toBe(1)
-    expect(result.student.byId[0].importId).toBe(studentId)
-    expect(result.student.byId[0].existingId).toBe(studentId)
-  })
-
   // PM-2: 生徒学籍番号一致マッチ
   it("PM-2: 学籍番号が一致する生徒がbyStudentNumberに分類される", async () => {
     const existingId = generateId()
@@ -116,59 +82,7 @@ describe("preMatching", () => {
     expect(result.student.byStudentNumber![0].existingId).toBe(existingId)
   })
 
-  // PM-3: 生徒氏名一致マッチ
-  it("PM-3: 氏名が一致する生徒がbyNameに分類される", async () => {
-    const existingId = generateId()
-    const importId = generateId()
-
-    await prisma.student.create({
-      data: {
-        id: existingId,
-        studentNumber: `SN_NAME_EXISTING_${Date.now()}`,
-        lastName: "鈴木",
-        firstName: "一郎",
-        lastNameKana: "スズキ",
-        firstNameKana: "イチロウ",
-      },
-    })
-
-    const data = createExtractedArchiveData({
-      studentsData: createArchiveStudentsData([
-        {
-          id: importId,
-          studentNumber: `SN_NAME_IMPORT_${Date.now()}`,
-          lastName: "鈴木",
-          firstName: "一郎",
-        },
-      ]),
-    })
-
-    const result = await performPreMatching(data)
-
-    expect(result.student.byName).toBeDefined()
-    expect(result.student.byName!.length).toBe(1)
-    expect(result.student.byName![0].importId).toBe(importId)
-    expect(result.student.byName![0].existingId).toBe(existingId)
-  })
-
-  // PM-4: 生徒マッチなし
-  it("PM-4: 一致しない生徒がnoMatchに分類される", async () => {
-    const data = createExtractedArchiveData({
-      studentsData: createArchiveStudentsData([
-        {
-          id: generateId(),
-          studentNumber: `NO_MATCH_${Date.now()}`,
-          lastName: "未知",
-          firstName: "太郎",
-        },
-      ]),
-    })
-
-    const result = await performPreMatching(data)
-
-    expect(result.student.noMatch.length).toBe(1)
-    expect(result.student.byId).toHaveLength(0)
-  })
+  // PM-1（ID一致）・PM-3（氏名一致）・PM-4（一致なし）は PM-9 の部分集合なので PM-9 へ統合した
 
   // PM-5: 学級byId/byNameマッチ
   it("PM-5: 学級がID一致・名前一致で分類される", async () => {
@@ -334,9 +248,11 @@ describe("preMatching", () => {
 
     expect(result.student.byId.length).toBe(1)
     expect(result.student.byId[0].importId).toBe(studentIdMatch)
+    expect(result.student.byId[0].existingId).toBe(studentIdMatch)
 
     expect(result.student.byName!.length).toBe(1)
     expect(result.student.byName![0].importId).toBe(studentNameMatchImport)
+    expect(result.student.byName![0].existingId).toBe(studentNameMatchExisting)
 
     expect(result.student.noMatch.length).toBe(1)
     expect(result.student.noMatch[0].importId).toBe(noMatchImport)

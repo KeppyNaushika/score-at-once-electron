@@ -410,14 +410,8 @@ export function useImportWizard(startState: ImportWizardState = initialState) {
 
   // インポート実行
   const executeImport = useCallback(async () => {
-    if (!state.archivePath) return null
-    if (!state.fileOverviewData) {
-      setState((prev) => ({
-        ...prev,
-        error: "事前照合データがありません",
-      }))
-      return null
-    }
+    // archivePath と fileOverviewData は loadExamArchive が必ず揃えて入れる（片方だけの状態は無い）
+    if (!state.archivePath || !state.fileOverviewData) return null
 
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 

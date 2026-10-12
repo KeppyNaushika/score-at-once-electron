@@ -55,6 +55,22 @@ const getMigrationNames = async (): Promise<string[]> => {
   return rows.map((row) => row.migration_name)
 }
 
+/** 適用記録を、行の中身ごと移行名の順で読む */
+const getMigrationRows = async () =>
+  await prisma.$queryRawUnsafe<
+    {
+      id: string
+      checksum: string
+      finished_at: string | null
+      migration_name: string
+      rolled_back_at: string | null
+      started_at: string
+      applied_steps_count: number
+    }[]
+  >(
+    `SELECT "id", "checksum", CAST("finished_at" AS TEXT) AS "finished_at", "migration_name", CAST("rolled_back_at" AS TEXT) AS "rolled_back_at", CAST("started_at" AS TEXT) AS "started_at", "applied_steps_count" FROM "_prisma_migrations" ORDER BY "migration_name"`
+  )
+
 beforeAll(async () => {
   if (!fs.existsSync(TEST_DB_DIR))
     fs.mkdirSync(TEST_DB_DIR, { recursive: true })
@@ -142,11 +158,16 @@ describe("ensureBaselineUpToDate", () => {
     const localNames = listLocalMigrationNames()
     await insertMigration(localNames[0])
     await insertMigration("0001_legacy_custom_migration")
+    const before = await getMigrationRows()
 
     await ensureBaselineUpToDate(prisma)
 
-    const names = await getMigrationNames()
-    // ベースライン（init）が既にあるため、旧エントリも残る（変更なし）
-    expect(names).toContain("0001_legacy_custom_migration")
+    // ベースライン（init）が既にあるため、旧エントリも残り、足しも書き換えもしない。
+    // 行の中身（id・checksum・日時）ごと比べる
+    expect(before.map((row) => row.migration_name)).toEqual([
+      "0001_legacy_custom_migration",
+      localNames[0],
+    ])
+    expect(await getMigrationRows()).toEqual(before)
   })
 })

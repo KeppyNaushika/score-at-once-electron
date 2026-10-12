@@ -12,7 +12,6 @@ import type {
   IdIntegrationDecision,
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import { generateUniqueStudentNumber } from "../../exam-archive/uniqueNameGenerators"
 import type { ImportValuePolicy } from "../importValuePolicy"
 import { replacementUpdatedAt } from "../importValuePolicy"
 import type {
@@ -108,11 +107,6 @@ export async function processStudentIdIntegration(
     if (!importStudent) return
 
     if (!decision || decision.decisionType === "create_new") {
-      const uniqueStudentNumber = await generateUniqueStudentNumber(
-        tx,
-        importStudent.studentNumber
-      )
-
       const existingById = await tx.student.findUnique({
         where: { id: importId },
       })
@@ -122,7 +116,7 @@ export async function processStudentIdIntegration(
         await tx.student.create({
           data: {
             id: importId,
-            studentNumber: uniqueStudentNumber,
+            studentNumber: importStudent.studentNumber,
             lastName: importStudent.lastName,
             firstName: importStudent.firstName,
             lastNameKana: importStudent.lastNameKana ?? null,
@@ -133,12 +127,6 @@ export async function processStudentIdIntegration(
         })
         idMappings.student[importId] = importId
         counts.created.students++
-
-        if (uniqueStudentNumber !== importStudent.studentNumber) {
-          warnings.push(
-            `生徒「${importStudent.lastName} ${importStudent.firstName}」の学籍番号を「${uniqueStudentNumber}」として新規作成しました（重複回避）`
-          )
-        }
       }
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId

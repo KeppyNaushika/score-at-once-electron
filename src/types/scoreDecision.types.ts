@@ -28,7 +28,7 @@ export interface ScoreProposal {
 }
 
 /** 確定済みセルの内容（裁定パネルの初期値・再確認の判断材料） */
-export interface ScoreDecisionSnapshot {
+interface ScoreDecisionSnapshot {
   verdict: ScoringStatus
   score: number | null
   comment: string | null
@@ -102,7 +102,7 @@ export interface CropRegionAssignmentSummary {
 }
 
 /** 割当先の候補（試験のメンバー） */
-export interface ExamMemberSummary {
+interface ExamMemberSummary {
   userId: string
   userName: string
   role: string

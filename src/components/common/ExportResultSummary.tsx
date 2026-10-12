@@ -10,7 +10,7 @@ import { useState } from "react"
  * 壊れておらず取り込みも成功するので、ここで伝えないと「答案画像だけ無い試験」が
  * 警告なしで同僚の手元に届く。
  */
-export interface ExportedArchive {
+interface ExportedArchive {
   /** 書き出し元の id（試験 id / 解答用紙定義 id）。一覧の key に使う */
   sourceId: string
   /** 書き出し元の名前（試験名 / 解答用紙名） */
@@ -21,7 +21,7 @@ export interface ExportedArchive {
 }
 
 /** 書き出せなかった1件 */
-export interface FailedExport {
+interface FailedExport {
   /** 書き出し元の id。一覧の key に使う */
   sourceId: string
   sourceName: string

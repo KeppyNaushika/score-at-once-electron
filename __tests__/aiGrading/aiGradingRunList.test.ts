@@ -85,6 +85,19 @@ describe("listAiGradingRunsByCropRegion", () => {
   it("既定は自分の実行だけ、null なら全員の実行を返す（文字列の列は union に絞る）", async () => {
     await gradeAll()
     await gradeAll(fixture.otherUser.id)
+    // 文字列の列に union の外の値が入っていたら、既定の値（実行は failed、試行は errored）へ倒す
+    const otherUserRun = await testPrisma.aiGradingRun.findFirstOrThrow({
+      where: { userId: fixture.otherUser.id, purpose: "grade" },
+      include: { attempts: { orderBy: { id: "asc" } } },
+    })
+    await testPrisma.aiGradingRun.update({
+      where: { id: otherUserRun.id },
+      data: { status: "not-a-status" },
+    })
+    await testPrisma.aiGradingAttempt.update({
+      where: { id: otherUserRun.attempts[0].id },
+      data: { state: "not-a-state" },
+    })
 
     // 1段目のあとに自動で続いた2段目（項目の案）の実行も並ぶので、1段目だけを見る
     const ownRuns = (
@@ -102,7 +115,19 @@ describe("listAiGradingRunsByCropRegion", () => {
     expect(ownRuns[0].status).toBe("ended")
     expect(ownRuns[0].attempts[0].state).toBe("succeeded")
     expect("passcode" in ownRuns[0].user).toBe(false)
-    expect(allRuns).toHaveLength(2)
+    expect(ownRuns[0].userId).toBe(fixture.exam.user.id)
+    expect(allRuns.map((run) => run.userId).sort()).toEqual(
+      [fixture.exam.user.id, fixture.otherUser.id].sort()
+    )
+    const narrowedOtherUserRun = allRuns.find(
+      (run) => run.id === otherUserRun.id
+    )!
+    expect(narrowedOtherUserRun.status).toBe("failed")
+    expect(
+      narrowedOtherUserRun.attempts.find(
+        (attempt) => attempt.id === otherUserRun.attempts[0].id
+      )!.state
+    ).toBe("errored")
   })
 })
 
@@ -111,16 +136,22 @@ describe("listAiGradingRunsByExam", () => {
     await gradeAll()
     await gradeAll(fixture.otherUser.id)
 
-    const ownRuns = (
-      await listAiGradingRunsByExam(fixture.exam.exam.id, fixture.exam.user.id)
-    ).filter((run) => run.purpose === "grade")
+    const ownAllPurposeRuns = await listAiGradingRunsByExam(
+      fixture.exam.exam.id,
+      fixture.exam.user.id
+    )
+    // 2段目（項目の案）の実行も並ぶので、1段目だけを見る
+    const ownRuns = ownAllPurposeRuns.filter((run) => run.purpose === "grade")
     const otherExamRuns = await listAiGradingRunsByExam(
       "exam-not-exists",
       fixture.exam.user.id
     )
 
+    // 他の教員の実行は入らない
+    expect(
+      ownAllPurposeRuns.every((run) => run.userId === fixture.exam.user.id)
+    ).toBe(true)
     expect(ownRuns).toHaveLength(1)
-    expect(ownRuns[0].purpose).toBe("grade")
     expect(ownRuns[0].prompt.cropRegionId).toBe(fixture.cropRegion.id)
     expect(ownRuns[0].attempts.map((attempt) => attempt.state)).toEqual([
       "succeeded",

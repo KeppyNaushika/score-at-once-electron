@@ -26,7 +26,7 @@ export function isGradingProviderId(
 }
 
 /** 推論にかける手間。全事業者に共通する3段だけを使う */
-export const GRADING_EFFORTS = ["low", "medium", "high"] as const
+const GRADING_EFFORTS = ["low", "medium", "high"] as const
 export type GradingEffort = (typeof GRADING_EFFORTS)[number]
 
 /** 推論の手間の値かどうか */
@@ -83,7 +83,7 @@ export interface ProviderUsage {
 }
 
 /** 応答がどう終わったか */
-export type ProviderStop = "completed" | "refused" | "max_tokens" | "error"
+type ProviderStop = "completed" | "refused" | "max_tokens" | "error"
 
 /**
  * 失敗の種類。jobRunner が「全体を止める（認証）」「待って再試行する（レート制限）」
@@ -153,7 +153,7 @@ export interface ProviderModelInfo {
 }
 
 /** 事業者ができること */
-export interface GradingProviderCapabilities {
+interface GradingProviderCapabilities {
   batch: boolean
   promptCache: "explicit" | "automatic" | "none"
   structuredOutput: "json_schema" | "json_object"

@@ -76,7 +76,7 @@ export interface CellImageElement extends AsbImageElementAttributes {
 // 罫線設定
 // =====================
 
-export interface BorderStyles {
+interface BorderStyles {
   top?: BorderLineStyle
   bottom?: BorderLineStyle
   left?: BorderLineStyle
@@ -265,7 +265,7 @@ export type AsbCellParent =
 // マージン設定
 // =====================
 
-export interface Margins {
+interface Margins {
   top: number
   bottom: number
   left: number
@@ -286,7 +286,7 @@ export interface ColumnWidths {
 // スペーシング設定
 // =====================
 
-export interface SpacingConfig {
+interface SpacingConfig {
   majorQuestionSpacing: number
   headerHeight: number
 }

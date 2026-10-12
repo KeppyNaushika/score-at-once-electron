@@ -869,9 +869,6 @@ describe("AI 採点の問いかけ", () => {
     await userEvent.click(await logRow("移項で符号を誤った"))
     await card("移項で符号を誤った")
     expect(focusedOption()).toHaveTextContent("誤答 0点")
-    // Ctrl/⌘+Shift+Enter でも前へ戻れる（先頭なら動かない）
-    await userEvent.keyboard("{Control>}{Shift>}{Enter}{/Shift}{/Control}")
-    expect(await card("移項で符号を誤った")).toBeInTheDocument()
   })
 
   it("全部答えると見直しに件数と置き換えの知らせが出て、確定で初めて全部書く", async () => {

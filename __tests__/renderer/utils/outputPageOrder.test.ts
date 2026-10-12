@@ -13,12 +13,15 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  filePageKeys,
+  arrangementWithImportedFiles,
+  arrangementWithInterleaveConfig,
+  arrangementWithMode,
+  arrangementWithoutFile,
+  INITIAL_PAGE_ARRANGEMENT,
   movePageInOrder,
   outputPageKey,
-  type PageOrder,
+  type PageArrangement,
   rebuildPageOrder,
-  withoutFilePageOrder,
 } from "@/components/pdf-tools/export-panel/outputPageOrder"
 import { deriveOutputPages } from "@/components/pdf-tools/export-panel/outputSheets"
 import type {
@@ -26,7 +29,6 @@ import type {
   InterleaveConfig,
   NUpConfig,
   OutputPage,
-  PdfExportMode,
   RotationDegree,
 } from "@/types/pdfTools.types"
 
@@ -49,39 +51,34 @@ function buildImportedFile(
   }
 }
 
-/** 画面の state に相当するもの（ExportPanel が導くのと同じ材料） */
-interface ScreenState {
+/**
+ * 画面の state に相当するもの（PdfToolsMainView が持つのと同じ組）。並び順の移り変わりは
+ * 本番の `arrangementWith*` を通す
+ */
+interface ScreenState extends PageArrangement {
   files: ImportedFile[]
-  mode: PdfExportMode
-  interleaveConfig: InterleaveConfig
   pageRotations: Map<string, RotationDegree>
-  pageOrder: PageOrder
   excludedPages: Set<string>
 }
 
 function initialScreen(files: ImportedFile[]): ScreenState {
-  return files.reduce(imported, {
-    files: [],
-    mode: "merge",
-    interleaveConfig: { transforms: [] },
-    pageRotations: new Map(),
-    pageOrder: [],
-    excludedPages: new Set(),
-  })
+  return imported(
+    {
+      ...INITIAL_PAGE_ARRANGEMENT,
+      files: [],
+      pageRotations: new Map(),
+      excludedPages: new Set(),
+    },
+    files
+  )
 }
 
-/** ファイルを取り込んだ（PdfToolsMainView と同じく、並び順の末尾に付ける） */
-function imported(screen: ScreenState, file: ImportedFile): ScreenState {
+/** ファイルを取り込んだ */
+function imported(screen: ScreenState, files: ImportedFile[]): ScreenState {
   return {
     ...screen,
-    files: [...screen.files, file],
-    pageOrder: [...screen.pageOrder, ...filePageKeys(file)],
-    interleaveConfig: {
-      transforms: [
-        ...screen.interleaveConfig.transforms,
-        { fileId: file.id, pagesPerGroup: 1 },
-      ],
-    },
+    ...arrangementWithImportedFiles(screen, files),
+    files: [...screen.files, ...files],
   }
 }
 
@@ -89,26 +86,20 @@ function imported(screen: ScreenState, file: ImportedFile): ScreenState {
 function removed(screen: ScreenState, fileId: string): ScreenState {
   return {
     ...screen,
+    ...arrangementWithoutFile(screen, fileId),
     files: screen.files.filter((file) => file.id !== fileId),
-    pageOrder: withoutFilePageOrder(screen.pageOrder, fileId),
-    interleaveConfig: {
-      transforms: screen.interleaveConfig.transforms.filter(
-        (transform) => transform.fileId !== fileId
-      ),
-    },
   }
 }
 
-/** 出力モードを変えた（並び順をその方式の順に作り直す） */
-function modeChanged(screen: ScreenState, mode: PdfExportMode): ScreenState {
-  return {
-    ...screen,
-    mode,
-    pageOrder: rebuildPageOrder(screen.files, mode, screen.interleaveConfig),
-  }
+/** 出力モードを変えた */
+function modeChanged(
+  screen: ScreenState,
+  mode: PageArrangement["mode"]
+): ScreenState {
+  return { ...screen, ...arrangementWithMode(screen, screen.files, mode) }
 }
 
-/** 交互挿入で1回に入れるページ数を変えた（並び順をその数で作り直す） */
+/** 交互挿入で1回に入れるページ数を変えた（交互挿入の欄が組む設定を渡す） */
 function pagesPerGroupChanged(
   screen: ScreenState,
   fileId: string,
@@ -121,8 +112,7 @@ function pagesPerGroupChanged(
   }
   return {
     ...screen,
-    interleaveConfig,
-    pageOrder: rebuildPageOrder(screen.files, screen.mode, interleaveConfig),
+    ...arrangementWithInterleaveConfig(screen, screen.files, interleaveConfig),
   }
 }
 
@@ -202,7 +192,7 @@ describe("ページの並び順（全ページ）", () => {
   it("取り込んだファイルのページは並び順の末尾に付き、外したファイルのページは順から消える", () => {
     let screen = initialScreen([buildImportedFile("A", 3)])
     screen = dragged(screen, "A:3", "A:1", "before")
-    screen = imported(screen, buildImportedFile("B", 2))
+    screen = imported(screen, [buildImportedFile("B", 2)])
     expect(keysOf(screen)).toEqual(["A:3", "A:1", "A:2", "B:1", "B:2"])
 
     screen = removed(screen, "A")

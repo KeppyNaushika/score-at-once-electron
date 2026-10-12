@@ -444,6 +444,13 @@ describe("日付の出し方", () => {
       9,
       5
     )
+    const twoDaysAgo = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 2,
+      17,
+      42
+    )
     renderList({
       rows: [
         {
@@ -458,12 +465,24 @@ describe("日付の出し方", () => {
           examDate: null,
           updatedAt: yesterday,
         },
+        {
+          id: "exam-3",
+          examName: "一昨日の試験",
+          examDate: null,
+          updatedAt: twoDaysAgo,
+        },
       ],
-      totalCount: 2,
+      totalCount: 3,
     })
 
     expect(screen.getByText("今日 13:24")).toBeInTheDocument()
     expect(screen.getByText("昨日 09:05")).toBeInTheDocument()
+    // 一昨日より前は日付だけ（時刻を出さない）
+    const twoDaysAgoText = `${String(twoDaysAgo.getFullYear()).slice(-2)}/${String(
+      twoDaysAgo.getMonth() + 1
+    ).padStart(2, "0")}/${String(twoDaysAgo.getDate()).padStart(2, "0")}`
+    expect(screen.getByText(twoDaysAgoText)).toBeInTheDocument()
+    expect(screen.queryByText(/17:42/)).toBeNull()
   })
 })
 

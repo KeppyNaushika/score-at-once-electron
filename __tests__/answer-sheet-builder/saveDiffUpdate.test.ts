@@ -65,6 +65,12 @@ import {
 
 const prisma = getTestPrismaClient()
 
+/**
+ * 「書き換えていない」を日時で見るための、作成より前の固定時刻。
+ * 作成の直後に保存し直すと、誤って書き換えても同じミリ秒なら一致して通ってしまう
+ */
+const BACKDATED_AT = new Date("2020-01-01T00:00:00.000Z")
+
 let ownerId: string
 let otherUserId: string
 
@@ -83,8 +89,9 @@ describe("解答用紙の保存", () => {
   it("2回目の保存で作成日時と担当が変わらない", async () => {
     const definition = createDefaultDefinition()
     await replaceAsbDefinition(definition, ownerId)
-    const first = await prisma.asbDefinition.findUniqueOrThrow({
+    await prisma.asbDefinition.update({
       where: { id: definition.id },
+      data: { createdAt: BACKDATED_AT },
     })
 
     await replaceAsbDefinition({ ...definition, name: "名前を変えた" }, ownerId)
@@ -92,7 +99,7 @@ describe("解答用紙の保存", () => {
       where: { id: definition.id },
     })
 
-    expect(second.createdAt.toISOString()).toBe(first.createdAt.toISOString())
+    expect(second.createdAt.toISOString()).toBe(BACKDATED_AT.toISOString())
     expect(second.userId).toBe(ownerId)
     expect(second.name).toBe("名前を変えた")
   })
@@ -122,6 +129,10 @@ describe("解答用紙の保存", () => {
       ownerId
     )
 
+    await prisma.asbSubQuestion.updateMany({
+      where: { majorQuestion: { definitionId: definition.id } },
+      data: { createdAt: BACKDATED_AT },
+    })
     const before = await prisma.asbSubQuestion.findMany({
       where: { majorQuestion: { definitionId: definition.id } },
       orderBy: { order: "asc" },
@@ -145,10 +156,7 @@ describe("解答用紙の保存", () => {
     })
     expect(after.map((row) => row.id)).toEqual([keptSubQuestion.id])
     // 残った行は作り直されていない（id だけでなく作成日時も同じ）
-    const keptBefore = before.find((row) => row.id === keptSubQuestion.id)!
-    expect(after[0].createdAt.toISOString()).toBe(
-      keptBefore.createdAt.toISOString()
-    )
+    expect(after[0].createdAt.toISOString()).toBe(BACKDATED_AT.toISOString())
   })
 
   it("触っていない大問は書き換えない（更新日時が動かない）", async () => {
@@ -173,13 +181,10 @@ describe("解答用紙の保存", () => {
       majorQuestions: [firstMajorQuestion, secondMajorQuestion],
     }
     await replaceAsbDefinition(twoMajorQuestions, ownerId)
-
-    const before = await prisma.asbMajorQuestion.findMany({
+    await prisma.asbMajorQuestion.updateMany({
       where: { definitionId: definition.id },
+      data: { updatedAt: BACKDATED_AT },
     })
-    const untouchedBefore = before.find(
-      (row) => row.id === secondMajorQuestion.id
-    )!
 
     // 第1問のラベルだけを変えて保存し直す
     await replaceAsbDefinition(
@@ -202,9 +207,12 @@ describe("解答用紙の保存", () => {
     )!
 
     expect(touchedAfter.label).toBe("書き換えた第1問")
+    expect(touchedAfter.updatedAt.getTime()).toBeGreaterThan(
+      BACKDATED_AT.getTime()
+    )
     // 触っていない大問は書き込みが起きていない
     expect(untouchedAfter.updatedAt.toISOString()).toBe(
-      untouchedBefore.updatedAt.toISOString()
+      BACKDATED_AT.toISOString()
     )
   })
 
@@ -253,8 +261,9 @@ describe("解答用紙の保存", () => {
   it("何も変えずに保存し直しても、解答用紙の更新日時が動かない", async () => {
     const definition = createDefaultDefinition()
     await replaceAsbDefinition(definition, ownerId)
-    const first = await prisma.asbDefinition.findUniqueOrThrow({
+    await prisma.asbDefinition.update({
       where: { id: definition.id },
+      data: { updatedAt: BACKDATED_AT },
     })
 
     await replaceAsbDefinition(definition, ownerId)
@@ -262,7 +271,7 @@ describe("解答用紙の保存", () => {
       where: { id: definition.id },
     })
 
-    expect(second.updatedAt.toISOString()).toBe(first.updatedAt.toISOString())
+    expect(second.updatedAt.toISOString()).toBe(BACKDATED_AT.toISOString())
   })
 
   it("タグの設定は、外れたものだけ消して付いたものだけ作る", async () => {
@@ -337,8 +346,9 @@ describe("解答用紙の保存", () => {
   it("タグを付け替えると、解答用紙の更新日時が繰り上がる", async () => {
     const definition = createDefaultDefinition()
     await replaceAsbDefinition(definition, ownerId)
-    const before = await prisma.asbDefinition.findUniqueOrThrow({
+    await prisma.asbDefinition.update({
       where: { id: definition.id },
+      data: { updatedAt: BACKDATED_AT },
     })
     const tag = await prisma.tag.create({
       data: { name: `並べ替え確認_${crypto.randomUUID()}` },
@@ -349,10 +359,7 @@ describe("解答用紙の保存", () => {
     const after = await prisma.asbDefinition.findUniqueOrThrow({
       where: { id: definition.id },
     })
-    expect(after.updatedAt.getTime()).toBeGreaterThanOrEqual(
-      before.updatedAt.getTime()
-    )
-    expect(after.updatedAt.getTime()).not.toBe(0)
+    expect(after.updatedAt.getTime()).toBeGreaterThan(BACKDATED_AT.getTime())
   })
 
   it("担当を渡せるのは今の担当者だけで、渡した後は相手が保存できる", async () => {

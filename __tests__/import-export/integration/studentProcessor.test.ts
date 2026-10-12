@@ -498,10 +498,11 @@ describe("processStudentIdIntegration", () => {
   })
 
   // =========================================================================
-  // Bug B5: create_newだが既存の学籍番号が一致する場合
+  // create_newだが既存の学籍番号が一致する場合（旧 Bug B5）
+  // 学籍番号は unique ではない。付け替えずにアーカイブの値のまま別の行として作り、id で区別する
   // =========================================================================
-  describe("Bug B5: create_newで既存studentNumberが一致する場合", () => {
-    it("学籍番号にサフィックスを付与して新規作成する", async () => {
+  describe("create_newで既存studentNumberが一致する場合", () => {
+    it("学籍番号を変えずに別の行として新規作成する", async () => {
       const existingId = generateId()
       const importId = generateId()
 
@@ -562,24 +563,30 @@ describe("processStudentIdIntegration", () => {
         )
       })
 
-      // B5修正: サフィックス付きの学籍番号で新規作成される
+      // 学籍番号はアーカイブの値のまま、取り込んだ id で新規作成される
       expect(idMappings.student[importId]).toBe(importId)
       const created = await prisma.student.findUnique({
         where: { id: importId },
       })
       expect(created).not.toBeNull()
-      expect(created!.studentNumber).toBe("S001_1") // suffix added
+      expect(created!.studentNumber).toBe("S001")
       expect(created!.lastName).toBe("インポート")
       expect(counts.created.students).toBe(1)
-      // 警告にサフィックス付与の通知が含まれる
-      expect(warnings.length).toBeGreaterThan(0)
-      expect(warnings[0]).toContain("重複回避")
-      // 既存レコードは変更されない
-      const existing = await prisma.student.findUnique({
-        where: { id: existingId },
+      expect(warnings).toEqual([])
+      // 同じ学籍番号の行が2つ並び、id で区別される（既存へ統合されていない）
+      const sameNumberStudents = await prisma.student.findMany({
+        where: { studentNumber: "S001" },
       })
-      expect(existing).not.toBeNull()
-      expect(existing!.studentNumber).toBe("S001")
+      expect(
+        new Map(
+          sameNumberStudents.map((student) => [student.id, student.lastName])
+        )
+      ).toEqual(
+        new Map([
+          [existingId, "既存"],
+          [importId, "インポート"],
+        ])
+      )
     })
   })
 

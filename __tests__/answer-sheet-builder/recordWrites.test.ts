@@ -120,6 +120,21 @@ async function majorQuestionRows(definitionId: string) {
   })
 }
 
+/**
+ * 「書いていない」を更新日時で見るための、作成より前の固定時刻。
+ * 作成の直後に操作すると、誤って書いても同じミリ秒なら一致して通ってしまう
+ */
+const BACKDATED_AT = new Date("2020-01-01T00:00:00.000Z")
+
+/** 大問の行の更新日時を過去へ戻してから読む */
+async function backdatedMajorQuestionRows(definitionId: string) {
+  await prisma.asbMajorQuestion.updateMany({
+    where: { definitionId },
+    data: { updatedAt: BACKDATED_AT },
+  })
+  return majorQuestionRows(definitionId)
+}
+
 describe("実体ごとの書き込み", () => {
   it("足した大問は末尾に付く（位置を決めるのは main）", async () => {
     const definition = await givenThreeMajorQuestions()
@@ -139,7 +154,7 @@ describe("実体ごとの書き込み", () => {
 
   it("属性の更新は対象行だけを書く", async () => {
     const definition = await givenThreeMajorQuestions()
-    const before = await majorQuestionRows(definition.id)
+    const before = await backdatedMajorQuestionRows(definition.id)
 
     await updateAsbMajorQuestion(definition.id, before[1].id, {
       label: "第2問",
@@ -147,27 +162,22 @@ describe("実体ごとの書き込み", () => {
 
     const after = await majorQuestionRows(definition.id)
     expect(after[1].label).toBe("第2問")
-    // 触っていない行は書き込みが起きていない
-    expect(after[0].updatedAt.toISOString()).toBe(
-      before[0].updatedAt.toISOString()
-    )
-    expect(after[2].updatedAt.toISOString()).toBe(
-      before[2].updatedAt.toISOString()
-    )
+    // 書いた行は進み、触っていない行は書き込みが起きていない
+    expect(after[1].updatedAt.getTime()).toBeGreaterThan(BACKDATED_AT.getTime())
+    expect(after[0].updatedAt.toISOString()).toBe(BACKDATED_AT.toISOString())
+    expect(after[2].updatedAt.toISOString()).toBe(BACKDATED_AT.toISOString())
   })
 
   it("同じ値で更新しても書かない", async () => {
     const definition = await givenThreeMajorQuestions()
-    const before = await majorQuestionRows(definition.id)
+    const before = await backdatedMajorQuestionRows(definition.id)
 
     await updateAsbMajorQuestion(definition.id, before[0].id, {
       label: before[0].label,
     })
 
     const after = await majorQuestionRows(definition.id)
-    expect(after[0].updatedAt.toISOString()).toBe(
-      before[0].updatedAt.toISOString()
-    )
+    expect(after[0].updatedAt.toISOString()).toBe(BACKDATED_AT.toISOString())
   })
 
   it("消すと、残りの並びが詰まる（穴が空かない）", async () => {
@@ -183,7 +193,7 @@ describe("実体ごとの書き込み", () => {
 
   it("並べ替えは渡した id の並びのとおりで、動かない行は書かない", async () => {
     const definition = await givenThreeMajorQuestions()
-    const before = await majorQuestionRows(definition.id)
+    const before = await backdatedMajorQuestionRows(definition.id)
 
     // 先頭2つを入れ替える。3つ目は位置が変わらない
     await reorderAsbMajorQuestions(definition.id, [
@@ -195,17 +205,16 @@ describe("実体ごとの書き込み", () => {
     const after = await majorQuestionRows(definition.id)
     expect(after.map((row) => row.label)).toEqual(["2", "1", "3"])
     const untouched = after.find((row) => row.id === before[2].id)!
-    expect(untouched.updatedAt.toISOString()).toBe(
-      before[2].updatedAt.toISOString()
-    )
+    expect(untouched.updatedAt.toISOString()).toBe(BACKDATED_AT.toISOString())
   })
 
   it("子を書くと、解答用紙そのものの更新日時が進む", async () => {
     // 一覧の更新日時・並べ替え・期間の絞り込みは解答用紙の行を見る。子だけが
     // 変わったときに進まないと、古い時刻で答え続ける
     const definition = await givenThreeMajorQuestions()
-    const before = await prisma.asbDefinition.findUniqueOrThrow({
+    const before = await prisma.asbDefinition.update({
       where: { id: definition.id },
+      data: { updatedAt: BACKDATED_AT },
     })
     const rows = await majorQuestionRows(definition.id)
 

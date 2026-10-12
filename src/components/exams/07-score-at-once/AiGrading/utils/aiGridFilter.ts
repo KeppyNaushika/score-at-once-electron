@@ -13,7 +13,7 @@ import type { ReviewedAiGradingAnswer } from "./answerReview"
 import { isScored } from "./scoreComparison"
 
 /** 採点状態ごとの表示の有無 */
-export type StatusFilterSettings = Record<ScoringStatus, boolean>
+type StatusFilterSettings = Record<ScoringStatus, boolean>
 
 /** 絞り込みの組（誰の採点の状態で絞るか） */
 export const FILTER_SOURCES = ["mine", "ai"] as const

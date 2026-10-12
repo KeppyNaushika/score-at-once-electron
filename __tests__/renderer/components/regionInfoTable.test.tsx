@@ -110,8 +110,6 @@ beforeEach(() => {
       updateCropRegion: vi.fn(async () => null),
       deleteCropRegion: vi.fn(async () => null),
       updateCropRegionOrders: vi.fn(async () => null),
-      assignCropRegion: vi.fn(async () => null),
-      unassignCropRegion: vi.fn(async () => null),
     },
   })
 })
@@ -179,8 +177,8 @@ describe("領域情報テーブルの選択", () => {
     // 他の教員が先頭の領域を消した（＝取り直しで行が1つ繰り上がる）
     rerender(<RegionTableHarness regions={[REGION_B, REGION_C]} />)
 
-    expect(screen.getByTestId("selected")).toHaveTextContent(REGION_B.id)
-    // 光っているのも同じ領域の行（添字で持っていた頃はここが1つ下へずれた）
+    // 光っているのが同じ領域の行（添字で持っていた頃はここが1つ下へずれた）。
+    // 選択そのものは harness が id で持つので、見るのは表の描き分けのほう
     expect(rowOf(REGION_B.id).className).toContain("bg-primary/10")
     expect(rowOf(REGION_C.id).className).not.toContain("bg-primary/10")
   })

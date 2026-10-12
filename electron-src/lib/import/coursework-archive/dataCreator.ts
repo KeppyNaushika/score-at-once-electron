@@ -12,6 +12,7 @@
  * grade-archive はこの importCourseworkData をトランザクション内で呼び出して内包する。
  */
 
+import type { Prisma } from "@prisma/client"
 import * as crypto from "crypto"
 
 import type {
@@ -20,7 +21,6 @@ import type {
   CourseworkArchiveData,
   CourseworkImportOptions,
 } from "../../../../src/types/courseworkArchive.types"
-import type { TransactionClient } from "../exam-archive/uniqueNameGenerators"
 import type { ImportValuePolicy } from "../merge/importValuePolicy"
 import {
   createImportValuePolicy,
@@ -87,7 +87,7 @@ function groupBy<T>(rows: T[], keyOf: (row: T) => string): Map<string, T[]> {
  * 試験外成績資料をトランザクション内で DB へ反映する。
  */
 export async function importCourseworkData(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   data: CourseworkImportSections,
   options: CourseworkImportOptions = {}
 ): Promise<ImportCourseworkResult> {

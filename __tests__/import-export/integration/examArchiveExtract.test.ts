@@ -51,58 +51,15 @@ import { legacyArchivePath } from "../../helpers/legacyArchiveFixtures"
 
 let testDir: string
 
-describe("archiveRoundTrip", () => {
+describe("examArchiveExtract", () => {
   beforeEach(() => {
-    testDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-rt-"))
+    testDir = fs.mkdtempSync(path.join(os.tmpdir(), "archive-extract-"))
   })
 
   afterEach(() => {
     if (testDir && fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true })
     }
-  })
-
-  // RT-1: 現行版の形で手組みしたアーカイブを抽出できる（全 JSON の一致は RT-F が固定ファイルで見る）
-  it("RT-1: 手組みしたアーカイブを抽出すると、試験・生徒・マニフェストが読める", async () => {
-    const archiveContents = createMinimalArchiveContents({
-      examId: "rt-exam-1",
-      examName: "RT試験",
-    })
-
-    // students追加
-    archiveContents.studentsData.students = [
-      {
-        id: "s1",
-        studentNumber: "S001",
-        lastName: "山田",
-        firstName: "太郎",
-        lastNameKana: "ヤマダ",
-        firstNameKana: "タロウ",
-        enrollmentYear: 2024,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-    archiveContents.counts.students = 1
-
-    const archivePath = path.join(testDir, "test.score")
-    createTestArchive(archiveContents, archivePath, "rt-exam-1", "RT試験")
-
-    // 抽出
-    const result = await extractArchive(archivePath)
-    expect(result.success).toBe(true)
-    expect(result.data).toBeDefined()
-
-    const data = result.data!
-
-    // JSON一致
-    expect(data.examData.exam.id).toBe("rt-exam-1")
-    expect(data.studentsData.students.length).toBe(1)
-    expect(data.studentsData.students[0].lastName).toBe("山田")
-    expect(data.manifest.examName).toBe("RT試験")
-
-    // 後片付け
-    cleanupTempDir(data.tempDir)
   })
 
   // RT-F: 旧書き出しが実際に書いた形を読めること。固定ファイル exam-full.score は

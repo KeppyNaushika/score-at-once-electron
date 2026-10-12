@@ -17,13 +17,13 @@ import * as os from "os"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
-import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
-import { createPrismaClientForPath } from "../helpers/testPrismaClient"
+import {
+  applyAppMigration,
+  buildDatabaseBeforeMigration,
+} from "../helpers/preMigrationDatabase"
 
 const TEST_ROOT = path.join(os.tmpdir(), "rewire-grade-cells")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../prisma/migrations")
 const TARGET_MIGRATION = "20260730000000_rewire_grade_cells_to_grade_student"
 const AUDIT_ACTION = "system.migration.cleanup_orphaned_grade_cells"
 
@@ -40,41 +40,6 @@ const withDatabase = <T>(operation: (db: SqliteDatabase) => T): T => {
   } finally {
     db.close()
   }
-}
-
-const migrationNames = (): string[] =>
-  fs
-    .readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort()
-
-const applyMigration = (db: SqliteDatabase, name: string): void => {
-  db.exec(
-    fs.readFileSync(path.join(MIGRATIONS_DIR, name, "migration.sql"), "utf-8")
-  )
-}
-
-/** init ＋ 本マイグレーションの1つ手前までを適用した DB を用意する */
-async function buildDatabaseBeforeTargetMigration(): Promise<void> {
-  await bootstrapSchema(DB_PATH)
-  const prisma = createPrismaClientForPath(DB_PATH)
-  try {
-    await createBaseline(prisma)
-  } finally {
-    await prisma.$disconnect()
-  }
-
-  const names = migrationNames()
-  const targetIndex = names.indexOf(TARGET_MIGRATION)
-  expect(targetIndex).toBeGreaterThan(0)
-
-  withDatabase((db) => {
-    for (const name of names.slice(0, targetIndex)) {
-      if (name === "20260322232329_init") continue
-      applyMigration(db, name)
-    }
-  })
 }
 
 const ISO = "2026-07-01T00:00:00.000+00:00"
@@ -171,9 +136,9 @@ afterEach(() => {
 
 describe("成績のセルの GradeStudent 経由への配線変更マイグレーション", () => {
   it("対象者のある行は付け替わり、孤児は破棄され、件数が監査ログに残る", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     withDatabase((db) => seedLegacyData(db))
-    withDatabase((db) => applyMigration(db, TARGET_MIGRATION))
+    withDatabase((db) => applyAppMigration(db, TARGET_MIGRATION))
 
     withDatabase((db) => {
       expect(idsOf(db, "GradeOverride")).toEqual(["override-student-kept"])
@@ -227,14 +192,14 @@ describe("成績のセルの GradeStudent 経由への配線変更マイグレ�
   })
 
   it("孤児が無ければ監査ログの行を作らない", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     withDatabase((db) => {
       seedLegacyData(db)
       for (const table of CELL_TABLES) {
         db.exec(`DELETE FROM "${table}" WHERE studentId = 'student-orphan'`)
       }
     })
-    withDatabase((db) => applyMigration(db, TARGET_MIGRATION))
+    withDatabase((db) => applyAppMigration(db, TARGET_MIGRATION))
 
     withDatabase((db) => {
       const count = db
@@ -246,9 +211,9 @@ describe("成績のセルの GradeStudent 経由への配線変更マイグレ�
   })
 
   it("差し替え後も FK 参照名が正しい（RENAME TO の取り違え防止）", async () => {
-    await buildDatabaseBeforeTargetMigration()
+    await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
     withDatabase((db) => seedLegacyData(db))
-    withDatabase((db) => applyMigration(db, TARGET_MIGRATION))
+    withDatabase((db) => applyAppMigration(db, TARGET_MIGRATION))
 
     withDatabase((db) => {
       const definitions = new Map(

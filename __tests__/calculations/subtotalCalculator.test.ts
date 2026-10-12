@@ -292,8 +292,36 @@ describe("calculateSubtotalScoreForStudent", () => {
       cropRegions
     )
 
-    // フォールバック（全設問合計）でもnull
+    // フォールバック（全設問合計）でもnull。満点は全設問の配点合計で、割り当てありとして返す
+    // （フォールバックを通らず例外の catch に落ちると maxScore=0・割り当てなしになる）
     expect(result.score).toBeNull()
+    expect(result.maxScore).toBe(30)
+    expect(result.hasQuestionAssignments).toBe(true)
+  })
+
+  it("グループ定義が無い場合のフォールバックで、採点済みの設問は全設問合計に入る", async () => {
+    mockGetCropSubtotalsForScoring.mockResolvedValue([])
+
+    const scores: QuestionScoreForSubtotal[] = [
+      createQuestionScore("s1", "q1", "correct"),
+      createQuestionScore("s1", "q2", "partial", 5),
+      // 別の生徒の点は入らない
+      createQuestionScore("s2", "q1", "correct"),
+    ]
+    mockCalculateActualScore.mockReturnValueOnce(10).mockReturnValueOnce(5)
+
+    const result = await calculateSubtotalScoreForStudent(
+      "s1",
+      "exam1",
+      "subtotal-region-1",
+      scores,
+      cropRegions
+    )
+
+    expect(result.score).toBe(15)
+    expect(result.maxScore).toBe(30)
+    expect(result.hasQuestionAssignments).toBe(true)
+    expect(mockCalculateActualScore).toHaveBeenCalledTimes(2)
   })
 
   it("エラー時 → score が null", async () => {

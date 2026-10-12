@@ -168,7 +168,7 @@ describe("planSlotPermutation", () => {
           ["y", "z"],
         ])
       )
-    ).toThrow()
+    ).toThrow(/同じ移動先が2回指定されています: z/)
   })
 
   it("2つの輪が同時にあっても、それぞれの中身だけが回る", () => {

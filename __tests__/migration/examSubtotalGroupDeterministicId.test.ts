@@ -17,13 +17,13 @@ import * as os from "os"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
-import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
-import { createPrismaClientForPath } from "../helpers/testPrismaClient"
+import {
+  applyAppMigration,
+  buildDatabaseBeforeMigration,
+} from "../helpers/preMigrationDatabase"
 
 const TEST_ROOT = path.join(os.tmpdir(), "exam-subtotal-group-deterministic-id")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../prisma/migrations")
 const TARGET_MIGRATION = "20260802040000_exam_subtotal_group_deterministic_id"
 
 vi.mock("../../electron-src/lib/prisma/databaseInitializer", () => ({
@@ -39,40 +39,6 @@ const withDatabase = <T>(operation: (db: SqliteDatabase) => T): T => {
   } finally {
     db.close()
   }
-}
-
-const migrationNames = (): string[] =>
-  fs
-    .readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort()
-
-const applyMigration = (db: SqliteDatabase, name: string): void => {
-  db.exec(
-    fs.readFileSync(path.join(MIGRATIONS_DIR, name, "migration.sql"), "utf-8")
-  )
-}
-
-async function buildDatabaseBeforeTargetMigration(): Promise<void> {
-  await bootstrapSchema(DB_PATH)
-  const prisma = createPrismaClientForPath(DB_PATH)
-  try {
-    await createBaseline(prisma)
-  } finally {
-    await prisma.$disconnect()
-  }
-
-  const names = migrationNames()
-  const targetIndex = names.indexOf(TARGET_MIGRATION)
-  expect(targetIndex).toBeGreaterThan(0)
-
-  withDatabase((db) => {
-    for (const name of names.slice(0, targetIndex)) {
-      if (name === "20260322232329_init") continue
-      applyMigration(db, name)
-    }
-  })
 }
 
 const OLD_ISO = "2026-07-01T00:00:00.000+00:00"
@@ -130,10 +96,10 @@ const readRows = (): ExamSubtotalGroupRow[] =>
   )
 
 async function migrate(): Promise<void> {
-  await buildDatabaseBeforeTargetMigration()
+  await buildDatabaseBeforeMigration(DB_PATH, TARGET_MIGRATION)
   withDatabase((db) => {
     seedLegacyRows(db)
-    applyMigration(db, TARGET_MIGRATION)
+    applyAppMigration(db, TARGET_MIGRATION)
   })
 }
 

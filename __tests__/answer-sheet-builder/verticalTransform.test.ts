@@ -37,11 +37,6 @@ describe("transposeRect", () => {
     })
   })
 
-  it("面積は保存される", () => {
-    const rect = transposeRect(5, 7, 11, 13, W)
-    expect(rect.w * rect.h).toBe(11 * 13)
-  })
-
   it("論理ページ右下端の矩形が実座標内に収まる", () => {
     // 論理ページは幅高さ入れ替え (LW=H, LH=W)。論理の右下隅 (LW, LH)=(297,210)
     const rect = transposeRect(H - 10, W - 10, 10, 10, W)

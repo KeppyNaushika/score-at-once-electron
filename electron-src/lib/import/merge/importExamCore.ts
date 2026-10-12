@@ -9,7 +9,8 @@
  *
  * 「別で追加する」を人が選んだ場合、id は呼び出し前に振り直されている
  * （separateExamRewriter）ので、ここから見ると単なるID不一致＝新規作成になる。
- * 名前だけは既存とぶつかるため、この処理がサフィックスを付ける。
+ * 試験名はアーカイブの値のまま作る。同じ名前の試験が並ぶのは正常で、id で区別する
+ * （どちらが取り込んだ方かを見分けるのは画面の役目）。
  */
 
 import * as crypto from "crypto"
@@ -17,7 +18,6 @@ import * as path from "path"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
-import { generateUniqueExamName } from "../exam-archive/uniqueNameGenerators"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
@@ -39,8 +39,8 @@ function toImportedMasterImagePath(
  * 既にある試験の列を、人が選んだ操作に従って書き換える。
  *
  * **Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
- * createdAt / updatedAt で全部**（prisma/schema.prisma）。id は同定そのもの、
- * createdAt は「既にある行」なので動かさない。残り4列がここの対象。
+ * anonymousScoringEnforced / createdAt / updatedAt で全部**（prisma/schema.prisma）。
+ * id は同定そのもの、createdAt は「既にある行」なので動かさない。残り5列がここの対象。
  * 列を足したらここにも足すこと。
  */
 async function applyExamColumns(
@@ -179,17 +179,12 @@ export async function processExam(
     return exam.id
   }
 
-  // 別物として並べるので、一覧で見分けられるよう名前をずらす
-  const examName = importAsSeparateExam
-    ? await generateUniqueExamName(tx, exam.examName)
-    : exam.examName
-
   // Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
-  // createdAt / updatedAt で全部。列を足したらここも足すこと。
+  // anonymousScoringEnforced / createdAt / updatedAt で全部。列を足したらここも足すこと。
   await tx.exam.create({
     data: {
       id: exam.id,
-      examName,
+      examName: exam.examName,
       referenceDate: exam.referenceDate ? new Date(exam.referenceDate) : null,
       description: exam.description,
       // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
@@ -201,8 +196,7 @@ export async function processExam(
 
   if (importAsSeparateExam) {
     warnings.push(
-      `「${exam.examName}」を別の試験として取り込みました` +
-        `${examName === exam.examName ? "" : `（試験名は「${examName}」）`}。既存の試験はそのまま残っています。`
+      `「${exam.examName}」を別の試験として取り込みました。既存の試験はそのまま残っています。`
     )
   }
 

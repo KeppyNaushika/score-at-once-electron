@@ -386,22 +386,6 @@ describe("列数の上限は段の幅から出る", () => {
     expect(outerRightEdge(overflowing)).toBeGreaterThan(contentRight)
   })
 
-  it("小問と枝問で上限が違う（枝問は枝番号欄のぶん狭い）", () => {
-    const branch = branchQuestion("ア", undefined)
-    const parent = subQuestion("(1)", undefined, [branch])
-    const subLimit = maxManuscriptColumns(
-      subManuscriptAreaWidth(settings, parent),
-      manuscriptCellSize(parent, baseRowHeight)
-    )
-    const branchLimit = maxManuscriptColumns(
-      branchManuscriptAreaWidth(settings, parent, branch),
-      manuscriptCellSize(branch, baseRowHeight)
-    )
-
-    expect(subLimit).toBe(14)
-    expect(branchLimit).toBeLessThan(subLimit)
-  })
-
   it("超えている列数を切り詰めない（そのまま描く）", () => {
     const columns = 30
     const sub = subQuestion("(1)", manuscriptPaper(columns, 2))

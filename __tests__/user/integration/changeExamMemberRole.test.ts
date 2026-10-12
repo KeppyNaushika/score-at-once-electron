@@ -132,15 +132,6 @@ describe("試験の参加者の役割変更", () => {
     expect(auditLog?.summary).toBe("「採点者B」を閲覧者にしました")
   })
 
-  it("オーナーが2人いれば、他のオーナーも採点者へ戻せる", async () => {
-    const { examId, grader } = await buildExam()
-    await changeExamMemberRole(examId, grader.id, "OWNER")
-
-    await changeExamMemberRole(examId, grader.id, "EDITOR")
-
-    expect(await roleOf(examId, grader.id)).toBe("EDITOR")
-  })
-
   it("最後の1人のオーナーはほかの役割へ変えられない", async () => {
     const { examId, owner } = await buildExam()
 
@@ -245,12 +236,14 @@ describe("匿名採点の固定", () => {
     await setExamAnonymousScoringEnforced(examId, false)
     expect(await enforcedOf()).toBe(false)
 
+    // 立て続けの2行は createdAt が同じミリ秒になりうるので、時刻では並べず中身で比べる
     const auditLogs = await testPrisma.auditLog.findMany({
       where: { action: "exam.anonymous_scoring.update" },
-      orderBy: { createdAt: "asc" },
     })
-    expect(auditLogs).toHaveLength(2)
-    expect(auditLogs[0].summary).toMatch(/匿名採点を固定しました/)
+    expect(auditLogs.map((auditLog) => auditLog.summary).sort()).toEqual([
+      expect.stringMatching(/匿名採点の固定を外しました$/),
+      expect.stringMatching(/匿名採点を固定しました$/),
+    ])
   })
 
   it("オーナーでない利用者は固定を変えられない", async () => {

@@ -85,11 +85,11 @@ export interface RunCostEstimateInput {
 }
 
 /** 固定部の大きさの根拠 */
-export type InputBasis =
+type InputBasis =
   { kind: "measured_prompt"; sampleCount: number } | { kind: "computed" }
 
 /** 出力の根拠 */
-export type OutputBasis =
+type OutputBasis =
   | { kind: "measured_question"; sampleCount: number }
   | { kind: "measured_model"; sampleCount: number }
   | { kind: "guideline" }

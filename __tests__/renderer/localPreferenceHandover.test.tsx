@@ -19,6 +19,7 @@
 import "./setup"
 
 import { act, render, renderHook, waitFor } from "@testing-library/react"
+import { StrictMode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LocalPreferenceHandover } from "@/components/common/LocalPreferenceHandover"
@@ -90,15 +91,21 @@ function seedPreference(
   storedPreferences.set(`${userId}:${key}`, storedText)
 }
 
-/** 写しを1回走らせ、落ち着くまで待つ */
-async function renderHandover(userId: string) {
+/**
+ * 写しを走らせ、落ち着くまで待つ。`strictMode` では開発時の二重描画と同じく effect が
+ * 二度走る（2度目は1度目の書き込みより前、鍵が残っているうちに来る）
+ */
+async function renderHandover(userId: string, strictMode = false) {
   const QueryWrapper = createQueryWrapper()
-  const view = render(
+  const handover = (
     <QueryWrapper>
       <CurrentUserProvider user={testUser(userId)}>
         <LocalPreferenceHandover />
       </CurrentUserProvider>
     </QueryWrapper>
+  )
+  const view = render(
+    strictMode ? <StrictMode>{handover}</StrictMode> : handover
   )
   await act(async () => {
     await Promise.resolve()
@@ -220,20 +227,18 @@ describe("LocalPreferenceHandover", () => {
     ).toBe(false)
   })
 
-  it("二度は書かない（写したあとも、旧い鍵が無いときも）", async () => {
+  it("二度は書かない（鍵が残ったまま同じ窓で二度走っても、旧い鍵が無いときも）", async () => {
     const userId = nextUserId()
     localStorage.setItem("sidebarBehavior_exams", "collapse")
 
-    const first = await renderHandover(userId)
+    // effect が二度走る。どちらの回も鍵はまだ残っていて、DB もまだ空
+    const first = await renderHandover(userId, true)
     await waitFor(() =>
       expect(localStorage.getItem("sidebarBehavior_exams")).toBeNull()
     )
+    expect(setUserPreference).toHaveBeenCalledTimes(1)
     first.unmount()
     setUserPreference.mockClear()
-
-    // 同じ窓でもう一度載っても走らない
-    await renderHandover(userId)
-    expect(setUserPreference).not.toHaveBeenCalled()
 
     // 旧い鍵が無ければ、別の利用者でも書かない
     await renderHandover(nextUserId())

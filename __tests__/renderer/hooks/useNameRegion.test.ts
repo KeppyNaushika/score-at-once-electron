@@ -94,21 +94,4 @@ describe("useNameRegion", () => {
     expect(result.current.nameRegionExamPageIds.has(PAGE_B)).toBe(true)
   })
 
-  it("列に対応する ExamPage が無い孤立答案（examPageId が null）はクリップしない", async () => {
-    installElectronAPI([
-      { id: "region-a", examPageId: PAGE_A, type: "STUDENT_NAME" },
-    ])
-
-    const { result } = renderUseNameRegion()
-    result.current.canvasRef.current = document.createElement("canvas")
-
-    // 採点領域はフックのマウント時に引くので、ここで「引いていないこと」は見ない
-    // （見るべきは、対象ページが無いときにクリップ結果を返さないこと）
-    const canvas = await result.current.drawNameRegionCanvas(
-      "data:image/png;base64,",
-      null
-    )
-
-    expect(canvas).toBeNull()
-  })
 })

@@ -11,10 +11,7 @@ import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as MigrationSqlModule from "../../electron-src/lib/prisma/schema/migrationSql"
-import {
-  INDEX_SQL,
-  MIGRATION_SQL,
-} from "../../electron-src/lib/prisma/schema/migrationSql"
+import { MIGRATION_SQL } from "../../electron-src/lib/prisma/schema/migrationSql"
 import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
 
 const TEST_DIR = path.resolve(__dirname, "../../data/test-bootstrap")
@@ -261,7 +258,17 @@ describe("初期スキーマSQL", () => {
 
     // MIGRATION_SQL / INDEX_SQL は init マイグレーションの複製であり、
     // 片方だけ変更されると新規インストールのみが壊れるため差分を検出する
-    expect(readSchemaShape(bootstrapPath)).toEqual(readSchemaShape(initPath))
-    expect(INDEX_SQL).toContain("CREATE UNIQUE INDEX")
+    const bootstrapShape = readSchemaShape(bootstrapPath)
+    expect(bootstrapShape).toEqual(readSchemaShape(initPath))
+    // 比較が空振りしていない: 両方とも空なら一致してしまうので、init が作る
+    // テーブルとインデックスが実際に載っていることを数で確かめる
+    const initIndexStatementCount = (
+      initSql.match(/^CREATE (UNIQUE )?INDEX /gm) ?? []
+    ).length
+    expect(initIndexStatementCount).toBeGreaterThan(0)
+    expect(bootstrapShape.tableNames).toHaveLength(SCHEMA_TABLE_COUNT)
+    expect(bootstrapShape.indexes.length).toBeGreaterThanOrEqual(
+      initIndexStatementCount
+    )
   })
 })

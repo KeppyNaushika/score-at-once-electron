@@ -25,7 +25,6 @@ import type {
   IdIntegrationDecision,
   MatchedItem,
   PreMatchingResult,
-  ScoringConflict,
   UserPreMatchingResult,
 } from "../../src/types/examArchive.types"
 
@@ -433,33 +432,5 @@ export function createEmptyImportCounts(): ImportCounts {
     updated: createEmptyCounts(),
     skipped: createEmptyCounts(),
     unchanged: createEmptyCounts(),
-  }
-}
-
-// =============================================================================
-// 採点競合データ
-// =============================================================================
-
-export function createScoringConflict(
-  overrides: Partial<ScoringConflict> = {}
-): ScoringConflict {
-  return {
-    importScoreId: overrides.importScoreId ?? generateId(),
-    existingScoreId: overrides.existingScoreId ?? generateId(),
-    studentName: overrides.studentName ?? "テスト生徒",
-    studentId: overrides.studentId ?? generateId(),
-    questionLabel: overrides.questionLabel ?? "問1",
-    cropRegionId: overrides.cropRegionId ?? generateId(),
-    importScore: overrides.importScore ?? {
-      status: "correct",
-      partialScore: 10,
-      updatedAt: new Date("2025-07-01").toISOString(),
-    },
-    existingScore: overrides.existingScore ?? {
-      status: "incorrect",
-      partialScore: 0,
-      updatedAt: new Date("2025-06-01").toISOString(),
-    },
-    maxPoints: overrides.maxPoints ?? 10,
   }
 }

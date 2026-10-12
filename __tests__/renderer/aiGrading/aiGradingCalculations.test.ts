@@ -107,29 +107,49 @@ describe("実行の履歴", () => {
     ).toBeNull()
   })
 
-  it("表示する試行: `<` `>` の選択 → 選んだ実行の試行 → 最新の成功", () => {
-    const newerAttempt = makeAttempt({
+  it("表示する試行: `<` `>` で選んだ実行の試行 → 最新の成功 → 最新", () => {
+    // 最新の試行は失敗、成功はその1つ前（「最新」と「最新の成功」を区別するため）
+    const newestErroredAttempt = makeAttempt({
       examStudentId: "s1",
-      id: "attempt-newer",
+      id: "attempt-newest",
+      state: "errored",
+      createdAt: new Date("2026-10-03T00:00:00.000Z"),
+    })
+    const succeededAttempt = makeAttempt({
+      examStudentId: "s1",
+      id: "attempt-succeeded",
       createdAt: new Date("2026-10-02T00:00:00.000Z"),
     })
-    const olderAttempt = makeAttempt({
+    const oldestErroredAttempt = makeAttempt({
       examStudentId: "s1",
-      id: "attempt-older",
+      id: "attempt-oldest",
       state: "errored",
       createdAt: new Date("2026-10-01T00:00:00.000Z"),
     })
     const attempts = [
-      { attempt: newerAttempt, run: makeRun({ id: "run-newer" }) },
-      { attempt: olderAttempt, run: makeRun({ id: "run-older" }) },
+      { attempt: newestErroredAttempt, run: makeRun({ id: "run-newest" }) },
+      { attempt: succeededAttempt, run: makeRun({ id: "run-succeeded" }) },
+      { attempt: oldestErroredAttempt, run: makeRun({ id: "run-oldest" }) },
     ]
     // 選んだ実行の試行は、失敗でもそれを出す
-    expect(resolveDisplayedAttempt(attempts, "run-older")?.attempt.id).toBe(
-      "attempt-older"
+    expect(resolveDisplayedAttempt(attempts, "run-oldest")?.attempt.id).toBe(
+      "attempt-oldest"
     )
-    // 選んだ実行にこの答案の試行が無ければ最新の成功
+    // 選んだ実行にこの答案の試行が無ければ、最新の失敗ではなく最新の成功
     expect(resolveDisplayedAttempt(attempts, "run-elsewhere")?.attempt.id).toBe(
-      "attempt-newer"
+      "attempt-succeeded"
     )
+    expect(resolveDisplayedAttempt(attempts, null)?.attempt.id).toBe(
+      "attempt-succeeded"
+    )
+    // 成功が1つも無ければ最新（失敗も「失敗した」と見せる）
+    expect(
+      resolveDisplayedAttempt(
+        attempts.filter(
+          (attemptWithRun) => attemptWithRun.attempt.state === "errored"
+        ),
+        "run-elsewhere"
+      )?.attempt.id
+    ).toBe("attempt-newest")
   })
 })

@@ -98,13 +98,27 @@ function RunsAndPricingLoadedProbe() {
   )
 }
 
-function renderBadge(options: { withLoadProbe?: boolean } = {}) {
+/**
+ * 事業者の状態が届いたかの印。状態が届く前は「使える事業者」が0件なので、
+ * 届く前に見ると「読みに行かない」がどんな実装でも成り立つ
+ */
+function StatusesLoadedProbe() {
+  const { isSuccess: isStatusesLoaded } = useQuery(aiProviderStatusesQuery())
+  return (
+    <output data-testid="statuses-loaded">{String(isStatusesLoaded)}</output>
+  )
+}
+
+function renderBadge(
+  options: { withLoadProbe?: boolean; withStatusesProbe?: boolean } = {}
+) {
   const QueryWrapper = createQueryWrapper()
   return render(
     <QueryWrapper>
       <CurrentUserProvider user={currentUser}>
         <AiExamCostBadge examId="exam-1" />
         {options.withLoadProbe && <RunsAndPricingLoadedProbe />}
+        {options.withStatusesProbe && <StatusesLoadedProbe />}
       </CurrentUserProvider>
     </QueryWrapper>
   )
@@ -153,9 +167,9 @@ describe("AiExamCostBadge", () => {
       modelPrices: [OPUS_PRICE],
       hasConsent: false,
     })
-    renderBadge()
+    renderBadge({ withStatusesProbe: true })
     await waitFor(() =>
-      expect(window.electronAPI.aiProvider.getStatuses).toHaveBeenCalled()
+      expect(screen.getByTestId("statuses-loaded")).toHaveTextContent("true")
     )
     expect(window.electronAPI.aiGrading.listRunsByExam).not.toHaveBeenCalled()
     expect(screen.queryByTestId("ai-exam-cost-badge")).toBeNull()

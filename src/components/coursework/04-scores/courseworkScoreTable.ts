@@ -12,7 +12,7 @@ import type {
  */
 
 /** 1セル分の点数（評価項目×生徒） */
-export interface CourseworkCell {
+interface CourseworkCell {
   /** 数値モードのスコア */
   score: number | null
   /** 文字モードの評価記号 */

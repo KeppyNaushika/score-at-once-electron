@@ -56,8 +56,8 @@ describe("useAllStudentAnnotations", () => {
     vi.restoreAllMocks()
   })
 
-  describe("currentExamStudentId変更（生徒切り替え）", () => {
-    it("生徒変更で全設問のアノテーションを再取得する", async () => {
+  describe("currentExamStudentId（生徒の取得と切り替え）", () => {
+    it("受験者の全設問のアノテーションを、操作者で絞って取得する（設問では絞らない）", async () => {
       const annotations = [
         createMockAnnotation({ id: "a1" }),
         createMockAnnotation({ id: "a2" }),

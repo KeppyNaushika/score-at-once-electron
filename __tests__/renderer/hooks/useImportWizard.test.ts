@@ -270,16 +270,18 @@ describe("useImportWizard", () => {
           noMatch: [],
         },
       })
-      mockArchive.preMatch.mockResolvedValue(newData)
 
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
       })
 
-      // まずselectFileでarchivePathを設定
+      // まずselectFileでarchivePathを設定（このときの照合結果は既定のモックで、ID一致が2件）
       await act(async () => {
         await result.current.selectFile()
       })
+      expect(result.current.state.fileOverviewData?.student.byId).toHaveLength(
+        2
+      )
 
       // preMatchの返り値を更新
       mockArchive.preMatch.mockResolvedValue(newData)
@@ -409,6 +411,18 @@ describe("useImportWizard", () => {
         wrapper: createQueryWrapper(),
       })
 
+      // 他のカテゴリを初期値から変えておく（初期値に戻す実装と区別するため）
+      act(() => {
+        result.current.updateIdIntegrationConfig("classroom", {
+          strategy: "all_new",
+          decisions: [],
+        })
+        result.current.updateIdIntegrationConfig("subtotalGroup", {
+          strategy: "individual",
+          decisions: [],
+        })
+      })
+
       act(() => {
         result.current.updateIdIntegrationConfig("student", {
           strategy: "by_name",
@@ -417,11 +431,11 @@ describe("useImportWizard", () => {
       })
 
       expect(result.current.state.idIntegrationConfig.classroom.strategy).toBe(
-        "by_name"
+        "all_new"
       )
       expect(
         result.current.state.idIntegrationConfig.subtotalGroup.strategy
-      ).toBe("by_name")
+      ).toBe("individual")
     })
   })
 
@@ -695,31 +709,7 @@ describe("useImportWizard", () => {
       })
 
       expect(importResult).toBeNull()
-    })
-
-    it("IW-78: fileOverviewData未設定時にerrorが設定される", async () => {
-      // selectFileでpreMatchが失敗し、fileOverviewDataがnullになるケース
-      mockArchive.preMatch.mockRejectedValue(
-        new Error("事前照合に失敗しました")
-      )
-
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      await act(async () => {
-        await result.current.selectFile()
-      })
-      expect(result.current.state.fileOverviewData).toBeNull()
-
-      let importResult: unknown
-      await act(async () => {
-        importResult = await result.current.executeImport()
-      })
-
-      expect(importResult).toBeNull()
-      // 事前照合が失敗した時点の文言が残る（実行しても上書きしない）
-      expect(result.current.state.error).toBe("事前照合に失敗しました")
+      expect(mockArchive.idIntegrationImport).not.toHaveBeenCalled()
     })
 
     it("IW-79: 実行中にisProcessingがtrueになる", async () => {

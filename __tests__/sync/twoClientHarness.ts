@@ -124,21 +124,41 @@ export const isoMinutesAgo = (minutes: number): string =>
   new Date(Date.now() - minutes * 60_000).toISOString().replace("Z", "+00:00")
 
 /**
- * 同期を止めうる警告と、行が表から外れたことを知らせる警告だけを拾う。
+ * 次の書き込みの時刻を、直前の書き込みより確実に後ろへずらす。
  *
- * v0.19.0 までは、ユニーク違反や外部キー違反で取り込みが落ちると「その相手からは以後
- * 何も届かない」状態になった。v0.20.0 の取り込みは帳簿にしか書かないので、その形では
- * 落ちなくなったが、代わりに**置けなかった行**（`Unplaceable …`）と**作り直しの失敗**
- * （`Rebuild failed …`）が警告に出る。どちらも行が表から黙って外れる症状なので、
- * 同じく通過させない。
+ * 版の強さは時刻列（`updatedAt`。ミリ秒まで）で決まり、時刻が同じなら id の順で決まる。
+ * 2台が同じユニークキーへ別の id の行を続けて書く試験は、間を空けないと同じミリ秒に
+ * 落ちることがあり、「あとの版が勝つ」が uuid の偶然で決まってしまう。
+ */
+export const advanceClock = async (): Promise<void> => {
+  const startedAt = Date.now()
+  while (Date.now() <= startedAt) {
+    await new Promise((resolve) => setTimeout(resolve, 1))
+  }
+}
+
+/**
+ * 行が相手へ届かなかったことを知らせる警告だけを拾う（sqlite-nas-sync 0.20.0 以降の
+ * `SyncResult.warnings` の文言。一覧はライブラリの `src/types.ts` の `warnings`）。
+ *
+ * - `Sync failed for client …` — その相手からの取り込みが例外で落ちた。SQLite の
+ *   ユニーク違反・外部キー違反もここに載る（取り込みは帳簿にしか書かないので、
+ *   ふつうは起きない）
+ * - `Skipped remote …` / `Skipped table …` — その相手・その表を今回は取り込まなかった
+ * - `Rebuild failed …` — 外部キーの違反が残るので、その表への反映をやめた
+ * - `Unplaceable …` — NOT NULL・CHECK・親行がまだ無いなどで、その行が表に入らなかった
+ *
+ * ユニークのかぶりは警告にならない。弱い方の行が隠れ、`SyncResult.folds` に載る
+ * （同期は止まらない）。かぶりを見る試験は `folds` を見ること。
  */
 export const blockingWarnings = (warnings: string[]): string[] =>
   warnings.filter(
     (warning) =>
-      warning.includes("UNIQUE constraint failed") ||
-      warning.includes("FOREIGN KEY") ||
-      warning.startsWith("Unplaceable") ||
-      warning.startsWith("Rebuild failed")
+      warning.startsWith("Sync failed") ||
+      warning.startsWith("Skipped remote") ||
+      warning.startsWith("Skipped table") ||
+      warning.startsWith("Rebuild failed") ||
+      warning.startsWith("Unplaceable")
   )
 
 // ---------------------------------------------------------------------------

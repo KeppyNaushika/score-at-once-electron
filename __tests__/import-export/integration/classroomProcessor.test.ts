@@ -400,10 +400,11 @@ describe("processClassroomIdIntegration", () => {
   })
 
   // =========================================================================
-  // Bug B5類似: create_newだが既存の名前が一致する場合
+  // create_newだが既存の名前が一致する場合（旧 Bug B5 類似）
+  // 学級名は unique ではない。付け替えずにアーカイブの値のまま別の行として作り、id で区別する
   // =========================================================================
-  describe("Bug B5類似: create_newで既存名が一致する場合", () => {
-    it("クラス名にサフィックスを付与して新規作成する", async () => {
+  describe("create_newで既存名が一致する場合", () => {
+    it("学級名を変えずに別の行として新規作成する", async () => {
       const existingId = generateId()
       const importId = generateId()
 
@@ -457,23 +458,33 @@ describe("processClassroomIdIntegration", () => {
         )
       })
 
-      // B5修正: サフィックス付きのクラス名で新規作成される
+      // 学級名はアーカイブの値のまま、取り込んだ id で新規作成される
       expect(idMappings.classroom[importId]).toBe(importId)
       const created = await prisma.classroom.findUnique({
         where: { id: importId },
       })
       expect(created).not.toBeNull()
-      expect(created!.name).toBe("1年A組 (2)") // suffix added
+      expect(created!.name).toBe("1年A組")
+      expect(created!.classroomCode).toBe("1A-new")
       expect(counts.created.classrooms).toBe(1)
-      // 警告にサフィックス付与の通知が含まれる
-      expect(warnings.length).toBeGreaterThan(0)
-      expect(warnings[0]).toContain("重複回避")
-      // 既存レコードは変更されない
-      const existing = await prisma.classroom.findUnique({
-        where: { id: existingId },
+      expect(warnings).toEqual([])
+      // 同じ学級名の行が2つ並び、id で区別される（既存へ統合されていない）
+      const sameNameClassrooms = await prisma.classroom.findMany({
+        where: { name: "1年A組" },
       })
-      expect(existing).not.toBeNull()
-      expect(existing!.name).toBe("1年A組")
+      expect(
+        new Map(
+          sameNameClassrooms.map((classroom) => [
+            classroom.id,
+            classroom.classroomCode,
+          ])
+        )
+      ).toEqual(
+        new Map([
+          [existingId, "1A-old"],
+          [importId, "1A-new"],
+        ])
+      )
     })
   })
 

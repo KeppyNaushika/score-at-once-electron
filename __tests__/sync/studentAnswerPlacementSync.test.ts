@@ -11,7 +11,7 @@
  * - QuestionScore / DrawingAnnotation / ScoreDecision / CompoundAnswerScore /
  *   StudentAnswerImage が B 側で正しい受験者に付いているか
  * - A→B のあと B→A も回して両端末が同じ答えに落ちるか
- * - 取り込みを止める警告（UNIQUE / FOREIGN KEY / Sync failed）が出ていないか
+ * - 行が相手へ届かなかった警告（`blockingWarnings`）が出ていないか
  */
 import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
@@ -22,6 +22,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 import {
+  blockingWarnings,
   createClientDatabase,
   createSyncInstance,
   isoMinutesAgo,
@@ -121,23 +122,6 @@ const drawingAnnotationsOf = (
            FROM "DrawingAnnotation" ORDER BY id`
       )
       .all()
-  )
-
-/**
- * 同期を止めた（＝以後その相手から何も届かない）警告と、行が表から黙って外れた警告を拾う。
- *
- * v0.20.0 の取り込みは帳簿にしか書かないので前者では落ちにくくなったが、代わりに
- * 置けなかった行（`Unplaceable …`）と作り直しの失敗（`Rebuild failed …`）が出る。
- * 配置の移動で親が隠れると、その下の採点が置けなくなるのはこちらに出る。
- */
-const fatalWarnings = (result: SyncResult): string[] =>
-  result.warnings.filter(
-    (warning) =>
-      warning.includes("UNIQUE constraint failed") ||
-      warning.includes("FOREIGN KEY") ||
-      warning.includes("Sync failed") ||
-      warning.startsWith("Unplaceable") ||
-      warning.startsWith("Rebuild failed")
   )
 
 // ---------------------------------------------------------------------------
@@ -575,8 +559,8 @@ afterAll(async () => {
 
 describe("答案配置は同期を越えて伝わる: 空きマスへの移動", () => {
   it("取り込みを止める警告が出ない", () => {
-    expect(fatalWarnings(moveObservation.fromAtoB)).toEqual([])
-    expect(fatalWarnings(moveObservation.fromBtoA)).toEqual([])
+    expect(blockingWarnings(moveObservation.fromAtoB.warnings)).toEqual([])
+    expect(blockingWarnings(moveObservation.fromBtoA.warnings)).toEqual([])
   })
 
   it("端末B でも採点はすべて移動先の受験者に付いている", () => {
@@ -636,8 +620,8 @@ describe("答案配置は同期を越えて伝わる: 空きマスへの移動",
 
 describe("答案配置は同期を越えて伝わる: 入れ替え", () => {
   it("取り込みを止める警告が出ない", () => {
-    expect(fatalWarnings(swapObservation.fromAtoB)).toEqual([])
-    expect(fatalWarnings(swapObservation.fromBtoA)).toEqual([])
+    expect(blockingWarnings(swapObservation.fromAtoB.warnings)).toEqual([])
+    expect(blockingWarnings(swapObservation.fromBtoA.warnings)).toEqual([])
   })
 
   it("端末B でも採点が入れ替わっている", () => {
@@ -654,9 +638,12 @@ describe("答案配置は同期を越えて伝わる: 入れ替え", () => {
         content: "incorrect",
       },
     ])
-    // unique を持つ3表は行がマスに留まり、中身が入れ替わる。
-    // 入れ替えを unique キーの書き換えで表すと相手側で unique 違反になり、
-    // その相手からの同期が永久に止まる（この場面で実測した）。
+    // unique を持つ3表は行がマスに留まり、中身が入れ替わる（placementApply は
+    // 端末A の表の unique を途中で壊さないよう、行を動かさず中身を置き換える）。
+    // その形が端末B でも保たれていることを見る。
+    // sqlite-nas-sync 0.19 までは、unique キーの書き換えを相手側が unique 違反で
+    // 取り込めず、その相手からの同期が止まった。0.20.0 からは止まらず、かぶった
+    // 弱い方の行が隠れる（`folds`）だけになった。
     expect(swapObservation.scoreDecisionsB).toEqual([
       {
         id: "score-decision-x",
@@ -721,17 +708,29 @@ describe("答案配置は同期を越えて伝わる: 入れ替え", () => {
 
 describe("答案配置は同期を越えて伝わる: 相手が移動先に自分の行を持っていた", () => {
   it("取り込みを止める警告が出ない", () => {
-    expect(fatalWarnings(rivalObservation.fromAtoB)).toEqual([])
-    expect(fatalWarnings(rivalObservation.fromBtoA)).toEqual([])
+    expect(blockingWarnings(rivalObservation.fromAtoB.warnings)).toEqual([])
+    expect(blockingWarnings(rivalObservation.fromBtoA.warnings)).toEqual([])
   })
 
   it("ScoreDecision は 1 マス 1 行だけが表示される（もう片方は隠れる）", () => {
-    expect(rivalObservation.scoreDecisionsB).toHaveLength(1)
-    expect(rivalObservation.scoreDecisionsB[0].examStudentId).toBe(
-      "exam-student-y"
-    )
+    // 勝つのは版の強い方（updatedAt の新しい方）。端末B の独自の採点は 30 分前、
+    // 端末A の移動は今書いたので、移ってきた X の採点が残り、B の採点が隠れる
+    expect(rivalObservation.scoreDecisionsB).toEqual([
+      {
+        id: "score-decision-x",
+        examStudentId: "exam-student-y",
+        content: "correct",
+      },
+    ])
     expect(rivalObservation.scoreDecisionsA).toEqual(
       rivalObservation.scoreDecisionsB
+    )
+    // 隠れたことは端末B の同期の結果に統合として載る（利用者へ伝える元になる）
+    expect(rivalObservation.fromAtoB.folds).toContainEqual(
+      expect.objectContaining({
+        tableName: "ScoreDecision",
+        losingId: "score-decision-rival",
+      })
     )
   })
 

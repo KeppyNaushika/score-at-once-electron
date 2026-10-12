@@ -25,6 +25,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 import {
+  advanceClock,
   blockingWarnings,
   createClientDatabase,
   createSyncInstance,
@@ -198,19 +199,31 @@ describe("ショートカットの同期", () => {
   })
 
   it("同じ割り当てを2台が直したときは、あとの版が両方へ残る", async () => {
-    await onClient(prismaA, () =>
+    // **互いの行を取り込む前に、両方で書く。** 先に A の行を取り込んでから B が書くと、
+    // 同じ行（同じ id）の普通の更新になり、後勝ちの判定を通らない。両方で書けば
+    // 別の id の2行が同じユニークキー（userId, action）でかぶり、版の強い方が残る
+    const shortcutA = await onClient(prismaA, () =>
       setUserKeyboardShortcut(USER_ID, "scoring.correct", "Shift+z")
     )
-    await syncRound("A 送出", syncA)
-    await syncRound("B 取り込み", syncB)
-
-    // B があとから同じ割り当てを直す
-    await onClient(prismaB, () =>
+    // B があとから同じ割り当てを直す（同じミリ秒だと勝敗が id の順で決まる）
+    await advanceClock()
+    const shortcutB = await onClient(prismaB, () =>
       setUserKeyboardShortcut(USER_ID, "scoring.correct", "Shift+x")
     )
-    await syncRound("B 送出", syncB)
-    await syncRound("A 取り込み", syncA)
+    expect(shortcutB.id).not.toBe(shortcutA.id)
 
+    await syncRound("A 送出", syncA)
+    await syncRound("B 取り込みと送出", syncB)
+    const importedByA = await syncRound("A 取り込み", syncA)
+    await syncRound("B 取り込み", syncB)
+
+    // 端末A の行は、B の行に負けて隠れる（かぶりの後勝ちを通った）
+    expect(importedByA.folds).toContainEqual(
+      expect.objectContaining({
+        tableName: "UserKeyboardShortcut",
+        losingId: shortcutA.id,
+      })
+    )
     for (const [label, client] of [
       ["端末A", prismaA],
       ["端末B", prismaB],

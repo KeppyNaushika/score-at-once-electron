@@ -347,7 +347,8 @@ describe("applyStudentAnswerPlacements", () => {
           scorePolicy: "carry", // 追従は不可
         },
       ])
-    ).rejects.toThrow()
+      // 移動先 (p2,A) は埋まっているので、文言を見ないと占有の検査で投げても通ってしまう
+    ).rejects.toThrow(/ページを跨ぐ移動/)
 
     // ロールバックで examPageId は元のまま
     const imgAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({

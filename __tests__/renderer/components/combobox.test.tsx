@@ -10,7 +10,13 @@
 
 import "../setup"
 
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { beforeAll, describe, expect, it, vi } from "vitest"
@@ -80,8 +86,13 @@ function visibleOptionLabels() {
 
 describe("Combobox", () => {
   it("未選択なら placeholder を、選択中ならその label をボタンに出す", () => {
+    renderCombobox(studentOptions, "")
+    expect(screen.getByRole("combobox")).toHaveTextContent("生徒を選択")
+    cleanup()
+
     renderCombobox(studentOptions, "a1b2c3d4-0002")
     expect(screen.getByRole("combobox")).toHaveTextContent("佐藤 花子 (1002)")
+    expect(screen.getByRole("combobox")).not.toHaveTextContent("生徒を選択")
   })
 
   it("label で絞り込める", async () => {

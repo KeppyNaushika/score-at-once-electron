@@ -102,7 +102,7 @@ export interface DatPageBlock {
   QuizImage: string
 }
 
-export interface DatAreaBlock {
+interface DatAreaBlock {
   Height: number
   /** "AREA_NO" = 出席番号, "AREA_NAME" = 氏名 */
   Type: string
@@ -125,7 +125,7 @@ export interface DatQuationBlock {
   Completion: DatCompletion[] | null
 }
 
-export interface DatPointArea {
+interface DatPointArea {
   Height: number
   Type: string
   Width: number
@@ -133,7 +133,7 @@ export interface DatPointArea {
   Y: number
 }
 
-export interface DatCompletion {
+interface DatCompletion {
   PointArea: DatPointArea[]
 }
 

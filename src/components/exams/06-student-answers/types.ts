@@ -108,7 +108,7 @@ export interface PendingChange {
 }
 
 /** 変更の移動元/移動先の位置。同定は examPageId/examStudentId、表示は導出値。 */
-export interface PendingChangePosition {
+interface PendingChangePosition {
   examStudentId: string | null
   examPageId: string
   pageNumber: number // 表示用（列 ExamPage から導出）

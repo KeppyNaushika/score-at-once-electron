@@ -1089,23 +1089,9 @@ describe("executeIdIntegrationImport", () => {
 
     const { data, examId } = createBasicTestData()
 
-    // subtotalのnameをnull（NOT NULL違反）にして制約エラーを引き起こす
-    // subtotals処理で失敗させるために不正なsubtotalGroupIdを設定
-    data.subtotalsData.subtotals = [
-      {
-        id: generateId(),
-        name: "テスト小計",
-        subtotalGroupId: "will-be-mapped-to-valid-group",
-        order: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    // QuestionScoreにnullのstudentIdを与えてFK制約違反を起こす
-    // → 実際にはidMappingsでスキップされてしまう
-    // 代わりに: UserExam作成でUNIQUE制約違反を起こす
-    // currentUserIdに存在しないUserIDを渡す
+    // 取り込む人に存在しない利用者を渡すと、UserExam の作成（6. UserExam）が
+    // 外部キー違反で失敗する。生徒（1.）と試験（5.）はそれより前に作られているので、
+    // ロールバックが効かなければ件数が増えて残る
     const fakeUserId = "non-existent-user-id-for-rollback-test"
 
     const preMatch = createFileOverviewData({
@@ -1146,7 +1132,7 @@ describe("executeIdIntegrationImport", () => {
         createIdIntegrationConfig(),
         fakeUserId // 存在しないユーザーIDでFK違反
       )
-    ).rejects.toThrow()
+    ).rejects.toThrow(/Foreign key constraint violated/)
 
     // DBが変更されていない（トランザクションがロールバック）
     const afterStudents = await prisma.student.count()

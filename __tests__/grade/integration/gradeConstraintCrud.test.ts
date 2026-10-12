@@ -158,9 +158,9 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
       where: { constraintId: created.id },
       orderBy: { order: "asc" },
     })
-    const knowledgeRowCreatedAt = before.find(
+    const knowledgeRowId = before.find(
       (viewpoint) => viewpoint.gradeItemId === knowledge.id
-    )!.createdAt
+    )!.id
 
     // 態度を外して知識・技能だけにする
     await updateGradeConstraint({
@@ -173,8 +173,8 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
     })
     expect(after).toHaveLength(1)
     expect(after[0].gradeItemId).toBe(knowledge.id)
-    // 据え置いた行は作り直されていない（createdAt が保たれる）
-    expect(after[0].createdAt.getTime()).toBe(knowledgeRowCreatedAt.getTime())
+    // 据え置いた行は作り直されていない（作り直すと新しい uuid になる）
+    expect(after[0].id).toBe(knowledgeRowId)
   })
 
   it("ラベル値の入れ替えで外れたラベルだけ消える", async () => {
@@ -202,7 +202,7 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
     })
     expect(after.map((labelValue) => labelValue.label)).toEqual(["A", "B"])
     expect(Number(after[0].value)).toBe(4)
-    // A は値だけ変わって行は据え置き
-    expect(after[0].createdAt.getTime()).toBe(beforeA!.createdAt.getTime())
+    // A は値だけ変わって行は据え置き（作り直すと新しい uuid になる）
+    expect(after[0].id).toBe(beforeA!.id)
   })
 })

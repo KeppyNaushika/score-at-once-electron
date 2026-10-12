@@ -411,8 +411,21 @@ describe("監査ログ getAuditLogs フィルタ/ページネーション", () =
   })
 
   it("検索語の % や _ は文字として扱う", async () => {
-    const page = await getAuditLogs({ search: "%" })
-    expect(page.total).toBe(0)
+    // ワイルドカードとして効くと、既存のどの行にも一致してしまう
+    expect((await getAuditLogs({ search: "%" })).total).toBe(0)
+    expect((await getAuditLogs({ search: "_" })).total).toBe(0)
+
+    await recordAuditLog({
+      action: "exam.update",
+      userId: "u-1",
+      entityType: "Exam",
+      entityId: "e-literal",
+      summary: "正答率100%_達成",
+    })
+    for (const search of ["%", "_", "%_"]) {
+      const page = await getAuditLogs({ search })
+      expect(page.logs.map((log) => log.entityId)).toEqual(["e-literal"])
+    }
   })
 
   it("limit/offset でページングでき、total は全件数を返す", async () => {
@@ -633,22 +646,8 @@ describe("diffFields", () => {
 })
 
 describe("mergeCoalescedChanges", () => {
-  it("同じ項目は before を初回のまま、after を今回の値にする", () => {
-    const merged = mergeCoalescedChanges(
-      [
-        { field: "a", label: "A", before: 1, after: 2 },
-        { field: "b", label: "B", before: "x", after: "y" },
-      ],
-      [
-        { field: "a", label: "A", before: 2, after: 3 },
-        { field: "b", label: "B", before: "y", after: "z" },
-      ]
-    )
-    expect(merged).toEqual([
-      { field: "a", label: "A", before: 1, after: 3 },
-      { field: "b", label: "B", before: "x", after: "z" },
-    ])
-  })
+  // 同じ項目の before/after の畳み方は、本番の recordAuditLog を通す
+  // 「複数項目の連続操作は、項目ごとに before は初回・after は最新になる」で見る
 
   it("今回初めて変わった項目は足し、今回触れなかった項目は残す", () => {
     const merged = mergeCoalescedChanges(

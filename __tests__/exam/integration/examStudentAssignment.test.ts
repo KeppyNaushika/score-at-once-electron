@@ -127,6 +127,13 @@ describe("受験生徒ごとの採点担当", () => {
       assigned: true,
       requestedByUserId: fixture.user.id,
     })
+    // 作った直後に保存すると、書き直しても同じミリ秒に収まって日時が一致してしまうので、
+    // 先に過去の固定時刻へ戻しておく
+    const pastTimestamp = new Date("2020-01-01T00:00:00.000Z")
+    await testPrisma.examStudentAssignment.updateMany({
+      where: { examStudentId: firstId },
+      data: { createdAt: pastTimestamp, updatedAt: pastTimestamp },
+    })
     const before = await testPrisma.examStudentAssignment.findFirstOrThrow({
       where: { examStudentId: firstId },
     })
@@ -144,7 +151,9 @@ describe("受験生徒ごとの採点担当", () => {
       where: { examStudentId: firstId },
     })
     // 既にあった行は書き直さない（同期に無駄な更新を流さない）
-    expect(after.updatedAt).toEqual(before.updatedAt)
+    expect(after.id).toBe(before.id)
+    expect(after.createdAt.toISOString()).toBe(pastTimestamp.toISOString())
+    expect(after.updatedAt.toISOString()).toBe(pastTimestamp.toISOString())
 
     // 担当でない生徒を外しても何も起きない
     const [, , thirdId] = fixture.examStudents.map(
@@ -173,7 +182,7 @@ describe("受験生徒ごとの採点担当", () => {
         assigned: true,
         requestedByUserId: grader.id,
       })
-    ).rejects.toThrow()
+    ).rejects.toThrow(/試験の所有者（OWNER）のみ/)
     expect(await testPrisma.examStudentAssignment.count()).toBe(0)
   })
 

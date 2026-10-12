@@ -51,7 +51,7 @@ export const { is: isRubricSetStatus } = defineStringUnion(
  * 助言を持つ項目が2つ以上当たったときの朱書きの決まり（§4-7）。
  * merged はまとめた一文、single は1つの項目の助言だけ、all は並べる、none は朱書きなし
  */
-export const RUBRIC_ADVICE_COMBINATION_MODES = [
+const RUBRIC_ADVICE_COMBINATION_MODES = [
   "merged",
   "single",
   "all",

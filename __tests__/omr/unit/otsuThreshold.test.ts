@@ -13,12 +13,6 @@ import {
   type OtsuOptions,
 } from "../../../src/lib/omr/otsuThreshold"
 
-/** 呼び出し側が自動決定を採用する最小の塗りつぶし率差（reevaluateResults と同値） */
-const MIN_FILL_RATIO_SEPARATION = 0.25
-
-/** 呼び出し側が自動決定を採用する最小の輝度差（markRecognizer と同値） */
-const MIN_LUMINANCE_SEPARATION = 60
-
 /** 塗りつぶし率用のビン設定（1%刻み） */
 const RATIO_OPTIONS: OtsuOptions = { min: 0, max: 1, bins: 100 }
 
@@ -45,10 +39,11 @@ describe("computeOtsuThreshold", () => {
     expect(otsu).not.toBeNull()
     expect(otsu!.threshold).toBeGreaterThan(0.06)
     expect(otsu!.threshold).toBeLessThan(0.88)
-    expect(otsu!.meanDistance).toBeGreaterThan(MIN_FILL_RATIO_SEPARATION)
+    // 2群の平均（ビン中心で 0.05 と 0.91）の差
+    expect(otsu!.meanDistance).toBeCloseTo(0.86, 5)
   })
 
-  it("単峰分布では2群が離れず、呼び出し側が採用を拒める", () => {
+  it("単峰分布では2群の平均が群の幅ほどしか離れない（呼び出し側が採用を拒める材料）", () => {
     // 全員未マーク（白紙に近い）— 2クラスに割る意味がない
     const values = [
       ...repeat(0.01, 40),
@@ -60,7 +55,8 @@ describe("computeOtsuThreshold", () => {
 
     // 大津法は単峰でも境界を返す。密集した1群を割っただけかは平均値の差で分かる
     expect(otsu).not.toBeNull()
-    expect(otsu!.meanDistance).toBeLessThan(MIN_FILL_RATIO_SEPARATION)
+    // 0.01〜0.03 の1群を割っただけなので、差は群の幅より小さい
+    expect(otsu!.meanDistance).toBeCloseTo(0.015, 5)
   })
 
   it("サンプル数が不足していれば null", () => {
@@ -98,7 +94,8 @@ describe("computeOtsuThreshold", () => {
     const otsu = computeOtsuThreshold(values, RATIO_OPTIONS)
 
     expect(otsu).not.toBeNull()
-    expect(otsu!.meanDistance).toBeGreaterThan(MIN_FILL_RATIO_SEPARATION)
+    // 中間帯を含めても、2群の平均は 0.8 以上離れる
+    expect(otsu!.meanDistance).toBeCloseTo(0.81, 2)
     expect(otsu!.threshold).toBeGreaterThan(0.05)
     expect(otsu!.threshold).toBeLessThan(0.85)
   })
@@ -119,7 +116,8 @@ describe("computeOtsuFromHistogram", () => {
     // 空ビンが続く区間の端ではなく中央に置く（黒40と白240の中間あたり）
     expect(otsu!.threshold).toBeGreaterThan(100)
     expect(otsu!.threshold).toBeLessThan(180)
-    expect(otsu!.meanDistance).toBeGreaterThan(MIN_LUMINANCE_SEPARATION)
+    // 黒（35・40）と白（240・245）の群の平均の差
+    expect(otsu!.meanDistance).toBeCloseTo(204.14, 1)
   })
 
   it("別の分割が同値になっても平均しない（境界が山の中に落ちない）", () => {

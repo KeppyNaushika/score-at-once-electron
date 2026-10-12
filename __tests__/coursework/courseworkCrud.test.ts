@@ -328,7 +328,7 @@ describe("Coursework CRUD", () => {
           score: 85,
         },
       ])
-    ).rejects.toThrow()
+    ).rejects.toThrow(/別の試験外成績資料に属しています/)
 
     const written = await getCourseworkScoresByItemId(itemA.id)
     expect(written).toHaveLength(0)

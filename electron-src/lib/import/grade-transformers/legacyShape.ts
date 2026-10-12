@@ -269,7 +269,7 @@ export interface LegacyArchiveCoursework {
   items: LegacyArchiveCourseworkItem[]
 }
 
-export interface LegacyArchiveCourseworkItem {
+interface LegacyArchiveCourseworkItem {
   id: string
   name: string
   order: number

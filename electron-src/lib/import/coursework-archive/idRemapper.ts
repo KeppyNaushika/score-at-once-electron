@@ -6,9 +6,11 @@
  *   学級  = UUID → 学級名
  *   タグ  = UUID → タグ名（無ければ upsert で作成）
  *
- * allowCreate=true（単体インポート）では未一致を新規作成（名前衝突はサフィックス回避）。
+ * allowCreate=true（単体インポート）では未一致をアーカイブの値のまま新規作成する。
  * allowCreate=false（grade-archive 内包）では既存 lookup のみ、未一致はスキップ。
  */
+
+import type { Prisma } from "@prisma/client"
 
 import type {
   ArchiveCwClass,
@@ -17,11 +19,6 @@ import type {
   ArchiveCwTag,
   CourseworkMatchingMethod,
 } from "../../../../src/types/courseworkArchive.types"
-import {
-  generateUniqueClassName,
-  generateUniqueStudentNumber,
-  type TransactionClient,
-} from "../exam-archive/uniqueNameGenerators"
 import {
   describeAmbiguity,
   describeClassroom,
@@ -50,7 +47,7 @@ const isUuid = (value: string): boolean => UUID_PATTERN.test(value)
  * 呼び出し側が「既存に一致した生徒」と区別できるようにするため返す。
  */
 export async function resolveStudents(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   students: ArchiveCwStudent[],
   options: { method: CourseworkMatchingMethod; allowCreate: boolean }
 ): Promise<{ map: IdMap; createdIds: Set<string>; warnings: string[] }> {
@@ -119,17 +116,13 @@ export async function resolveStudents(
       )
       continue
     }
-    const uniqueNumber = await generateUniqueStudentNumber(
-      tx,
-      student.studentNumber
-    )
     const created = await tx.student.create({
       data: {
         // 合成された非 uuid の id（旧 .grade 由来の `legacy-student:…`）を主キーへ
         // 持ち込まない。持ち込むと id は原則 uuid という規約を破ったまま
         // 以後のアーカイブと同期へ伝播する
         ...(isUuid(student.id) ? { id: student.id } : {}),
-        studentNumber: uniqueNumber,
+        studentNumber: student.studentNumber,
         lastName: student.lastName,
         firstName: student.firstName,
         lastNameKana: student.lastNameKana,
@@ -146,7 +139,7 @@ export async function resolveStudents(
 
 /** 学級を解決する。返り値は archiveClassroomId → 実 classroomId のマップ。 */
 export async function resolveClassrooms(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   classes: ArchiveCwClass[],
   options: { allowCreate: boolean }
 ): Promise<{ map: IdMap; warnings: string[] }> {
@@ -189,12 +182,11 @@ export async function resolveClassrooms(
       )
       continue
     }
-    const uniqueName = await generateUniqueClassName(tx, classroom.name)
     const created = await tx.classroom.create({
       data: {
         // 生徒と同じく、合成された非 uuid の id は主キーへ持ち込まない
         ...(isUuid(classroom.id) ? { id: classroom.id } : {}),
-        name: uniqueName,
+        name: classroom.name,
         classroomCode: classroom.classroomCode,
         grade: classroom.grade,
         description: classroom.description,
@@ -212,7 +204,7 @@ export async function resolveClassrooms(
  * 返り値は archiveTagId → 実 tagId のマップ。
  */
 export async function resolveTags(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   tags: ArchiveCwTag[]
 ): Promise<IdMap> {
   const map: IdMap = new Map()
@@ -246,7 +238,7 @@ export async function resolveTags(
  * 一括追加の母集団まで、取り込みと無関係なところが変わる。
  */
 export async function restoreMemberships(
-  tx: TransactionClient,
+  tx: Prisma.TransactionClient,
   memberships: ArchiveCwMembership[],
   studentMap: IdMap,
   classroomMap: IdMap,

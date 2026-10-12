@@ -6,7 +6,7 @@
  * - 空の欄は節ごと省く
  */
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { buildGradingVariableParts } from "@/lib/shared/aiGrading/promptBuilder"
 import {
@@ -48,12 +48,20 @@ const partsOf = (
 
 describe("固定部の組み立て", () => {
   it("同じ入力からはバイト単位で同じ文面になる", () => {
-    const first = partsOf({ questionImages: [QUESTION_IMAGE] })
-    const second = partsOf({
-      prompt: { ...FULL_PROMPT },
-      questionImages: [{ ...QUESTION_IMAGE }],
-    })
-    expect(JSON.stringify(second)).toBe(JSON.stringify(first))
+    // 呼んだ時刻が違っても同じになる（同じミリ秒の2回では、時刻が混ざっても一致してしまう）
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date("2026-04-01T09:00:00.000Z"))
+      const first = partsOf({ questionImages: [QUESTION_IMAGE] })
+      vi.setSystemTime(new Date("2027-11-23T18:30:45.678Z"))
+      const second = partsOf({
+        prompt: { ...FULL_PROMPT },
+        questionImages: [{ ...QUESTION_IMAGE }],
+      })
+      expect(JSON.stringify(second)).toBe(JSON.stringify(first))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("固定部とアプリ共通の指示に uuid・時刻が混ざらない", () => {

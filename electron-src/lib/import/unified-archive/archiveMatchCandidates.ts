@@ -78,7 +78,7 @@ const USER_SECRET_COLUMNS: ReadonlySet<string> = new Set([
 /** 生の1行（列名 → SQLite の値） */
 type MatchRowValues = Readonly<Record<string, unknown>>
 
-export interface ArchiveMatchCandidateRow {
+interface ArchiveMatchCandidateRow {
   readonly existingId: string
   readonly existingRow: MatchRowValues
 }

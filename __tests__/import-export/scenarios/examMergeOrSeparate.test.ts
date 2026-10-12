@@ -122,6 +122,7 @@ async function rewriteLocalExam(examId: string, updatedAt: Date) {
       referenceDate: new Date("2020-05-05T00:00:00.000Z"),
       description: null,
       markerCorrectionEnabled: false,
+      anonymousScoringEnforced: true,
       updatedAt,
     },
   })
@@ -157,9 +158,9 @@ describe("examMergeOrSeparate", () => {
     expect(exams.find((exam) => exam.id === archivedExam.id)!.examName).toBe(
       archivedExam.examName
     )
-    // 一覧で見分けられるよう名前をずらす
+    // 名前はアーカイブの値のまま。同じ名前の試験が2つ並び、id で区別する
     const importedExam = exams.find((exam) => exam.id === examId)!
-    expect(importedExam.examName).toBe(`${archivedExam.examName} (2)`)
+    expect(importedExam.examName).toBe(archivedExam.examName)
     // 新しい行なので誰とも競合しない。時刻はアーカイブの値をそのまま持つ
     expect(importedExam.createdAt.toISOString()).toBe(
       new Date(archivedExam.createdAt).toISOString()
@@ -242,14 +243,16 @@ describe("examMergeOrSeparate", () => {
 
     const merged = await prisma.exam.findUnique({ where: { id: examId } })
     // Exam の列は id / examName / referenceDate / description /
-    // markerCorrectionEnabled / createdAt / updatedAt で全部。
+    // markerCorrectionEnabled / anonymousScoringEnforced / createdAt / updatedAt で全部。
     // id と createdAt を除く全列がアーカイブ側の値になる
+    // （anonymousScoringEnforced は旧形式が持たないので、既定の false へ倒れる）
     expect(merged!.examName).toBe("書き出した側の試験名")
     expect(merged!.referenceDate!.toISOString()).toBe(
       "2026-03-01T00:00:00.000Z"
     )
     expect(merged!.description).toBe("書き出した側の説明")
     expect(merged!.markerCorrectionEnabled).toBe(true)
+    expect(merged!.anonymousScoringEnforced).toBe(false)
     // 勝ったときの updatedAt はアーカイブ側の値（取り込み時刻ではない）
     expect(merged!.updatedAt.toISOString()).toBe(
       new Date(archivedExam.updatedAt).toISOString()
@@ -292,6 +295,7 @@ describe("examMergeOrSeparate", () => {
     )
     expect(merged!.description).toBeNull()
     expect(merged!.markerCorrectionEnabled).toBe(false)
+    expect(merged!.anonymousScoringEnforced).toBe(true)
     expect(merged!.updatedAt.toISOString()).toBe(localUpdatedAt.toISOString())
     expect(
       warnings.some((warning) =>
@@ -323,6 +327,7 @@ describe("examMergeOrSeparate", () => {
     )
     expect(overwritten!.description).toBe("書き出した側の説明")
     expect(overwritten!.markerCorrectionEnabled).toBe(true)
+    expect(overwritten!.anonymousScoringEnforced).toBe(false)
 
     // updatedAt は取り込み時刻。アーカイブの値でも元の値でもない
     // （保つと次の同期で相手に負け、上書きが取り消される）

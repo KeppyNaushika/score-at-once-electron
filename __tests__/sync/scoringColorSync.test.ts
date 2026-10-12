@@ -24,6 +24,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 import {
+  advanceClock,
   blockingWarnings,
   createClientDatabase,
   createSyncInstance,
@@ -235,6 +236,9 @@ describe("採点状態の表示色の同期", () => {
 
   it("2台が別々のプリセットを選んだときは、あとの版が両方へ残る", async () => {
     await onClient(prismaA, () => applyUserScoringColorPreset(USER_ID, "vivid"))
+    // 2台の行は id が違い、同じユニークキー（userId, key）でかぶる。同じミリ秒に
+    // 書くと勝敗が id の順で決まるので、B の版を確実に後ろへ置く
+    await advanceClock()
     await onClient(prismaB, () => applyUserScoringColorPreset(USER_ID, "soft"))
 
     await roundTrip()

@@ -15,19 +15,7 @@ import type {
 
 import prisma from "../../prisma/client"
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
-import { getQuestionScoresForExam } from "../../prisma/questionScore"
-import { getScoreDecisionsForExam } from "../../prisma/scoreDecision"
-import {
-  getActiveSubtotalGroupsForExam,
-  type SubtotalGroupForScoring,
-} from "../../prisma/subtotalGroup"
-import type { EffectiveScore } from "../../shared/calculations/scoreResolution"
-import { resolveEffectiveScores } from "../../shared/calculations/scoreResolution"
-import {
-  computeSubtotalScore,
-  type QuestionScoreForSubtotal,
-} from "../../shared/calculations/subtotalCalculator"
-import type { SubtotalScore } from "../../shared/types"
+import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
@@ -62,9 +50,10 @@ export async function fetchIndividualReportData(
     studentPlacements
   )
 
+  // 小計点（Subtotal単位）は fetchExportData が同じ有効スコアから算出済みなので引き直さない
   const exam = allExportData.exam
-  const allScoringDataFromExcel = allExportData.scoringData
-  const selectedScoringDataFromExcel = selectedExportData.scoringData
+  const allScoringData = allExportData.scoringData
+  const selectedScoringData = selectedExportData.scoringData
 
   // 試験に紐づくタグを取得
   const examTags = await prisma.examTag.findMany({
@@ -78,42 +67,6 @@ export async function fetchIndividualReportData(
     referenceDate: exam.referenceDate,
     tags: examTags.map((examTag) => examTag.tag.name),
   }
-
-  // 試験のactiveなSubtotalGroupsとSubtotalsを取得
-  const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(examId)
-
-  // 採点データを取得（小計の配点は割り当て行が持つので設問領域は引かない）
-  const questionScoresResult = await getQuestionScoresForExam(examId)
-  const decisionsResult = await getScoreDecisionsForExam(examId)
-  // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
-  const { resolved: allQuestionScores } = resolveEffectiveScores(
-    questionScoresResult,
-    decisionsResult
-  )
-
-  // 全生徒の小計点を計算（Subtotal単位）
-  const allScoringData = allScoringDataFromExcel.map((scoringData) => ({
-    ...scoringData,
-    subtotalScores: buildSubtotalScoresFromGroups(
-      scoringData.examStudentId,
-      examId,
-      subtotalGroupsData,
-      allQuestionScores
-    ),
-  }))
-
-  // 選択された生徒の小計点を計算
-  const selectedScoringData = selectedScoringDataFromExcel.map(
-    (scoringData) => ({
-      ...scoringData,
-      subtotalScores: buildSubtotalScoresFromGroups(
-        scoringData.examStudentId,
-        examId,
-        subtotalGroupsData,
-        allQuestionScores
-      ),
-    })
-  )
 
   // 設問別正答率・得点率を計算（全生徒データを使用）
   const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
@@ -178,61 +131,6 @@ export async function fetchIndividualReportData(
   )
 
   return { reports, examInfo, population }
-}
-
-/**
- * 試験で有効な SubtotalGroup を取得する（各小計は設問割り当てを実体で持つ）
- */
-async function getSubtotalGroupsWithSubtotals(
-  examId: string
-): Promise<SubtotalGroupForScoring[]> {
-  const examSubtotalGroups = await getActiveSubtotalGroupsForExam(examId)
-
-  return examSubtotalGroups.map(
-    (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
-  )
-}
-
-/**
- * SubtotalGroup単位で小計点を計算
- * CropRegion（SUBTOTAL_SCORE）を使わず、Subtotalから直接計算
- */
-function buildSubtotalScoresFromGroups(
-  examStudentId: string,
-  examId: string,
-  subtotalGroups: SubtotalGroupForScoring[],
-  allQuestionScores: EffectiveScore[]
-): SubtotalScore[] {
-  // 採点データを変換
-  const questionScoreData: QuestionScoreForSubtotal[] = allQuestionScores.map(
-    (score) => ({
-      examStudentId: score.examStudentId,
-      cropRegionId: score.cropRegionId,
-      status: score.status,
-      partialScore: score.partialScore,
-    })
-  )
-
-  return subtotalGroups.flatMap((subtotalGroup) =>
-    subtotalGroup.subtotals.map((subtotal) => {
-      const scoreResult = computeSubtotalScore(
-        examStudentId,
-        examId,
-        questionScoreData,
-        subtotal.cropSubtotals
-      )
-
-      return {
-        subtotalId: subtotal.id,
-        subtotalGroupId: subtotalGroup.id,
-        subtotalGroupName: subtotalGroup.name,
-        subtotalLabel: subtotal.name,
-        score: scoreResult.score,
-        maxScore: scoreResult.maxScore,
-        hasQuestionAssignments: scoreResult.hasQuestionAssignments,
-      }
-    })
-  )
 }
 
 /**

@@ -104,8 +104,14 @@ describe("一覧の新規作成はダイアログを出さない", () => {
     })
 
     it(`${screenName}: id を renderer で振って既定値の1件を作る`, () => {
-      expect(source).toContain("crypto.randomUUID()")
-      expect(source).toContain("const handleCreate = useCallback(async () => {")
+      // 振った id をそのまま作成に渡す（書式ではなく、id の流れを見る）
+      const generatedId = source.match(
+        /const (\w+Id) = crypto\.randomUUID\(\)/
+      )?.[1]
+      expect(generatedId).toBeDefined()
+      expect(source).toMatch(
+        new RegExp(`\\.mutateAsync\\(\\{\\s*id: ${generatedId},`)
+      )
     })
 
     it(`${screenName}: 作成直後の導線が概要ページへ向く`, () => {

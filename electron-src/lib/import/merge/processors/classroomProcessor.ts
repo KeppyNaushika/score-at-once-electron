@@ -12,7 +12,6 @@ import type {
   IdIntegrationDecision,
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import { generateUniqueClassName } from "../../exam-archive/uniqueNameGenerators"
 import type { ImportValuePolicy } from "../importValuePolicy"
 import { replacementUpdatedAt } from "../importValuePolicy"
 import type {
@@ -111,8 +110,6 @@ export async function processClassroomIdIntegration(
     if (!importClassroom) return
 
     if (!decision || decision.decisionType === "create_new") {
-      const uniqueName = await generateUniqueClassName(tx, importClassroom.name)
-
       const existingById = await tx.classroom.findUnique({
         where: { id: importId },
       })
@@ -122,7 +119,7 @@ export async function processClassroomIdIntegration(
         await tx.classroom.create({
           data: {
             id: importId,
-            name: uniqueName,
+            name: importClassroom.name,
             classroomCode: importClassroom.classroomCode ?? null,
             grade: importClassroom.grade ?? null,
             description: importClassroom.description ?? null,
@@ -134,12 +131,6 @@ export async function processClassroomIdIntegration(
         })
         idMappings.classroom[importId] = importId
         counts.created.classrooms++
-
-        if (uniqueName !== importClassroom.name) {
-          warnings.push(
-            `学級「${importClassroom.name}」を「${uniqueName}」として新規作成しました（重複回避）`
-          )
-        }
       }
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId

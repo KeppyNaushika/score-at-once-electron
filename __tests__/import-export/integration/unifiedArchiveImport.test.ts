@@ -8,7 +8,8 @@
  * 段階2の createUnifiedArchive で書き出した ZIP を、このテストの中で展開して
  * OpenedUnifiedArchive を組む（開く側 ─ 守りと現行化 ─ には頼らない）。
  * 規則は docs/unified-archive-design.md §7:
- * - 書き出し → 空にした DB へ統合で取り込むと、範囲の全表の行が書き出し前と一致する（§10 の段階3）
+ * - 書き出し → 空にした DB へ統合で取り込むと、範囲の全表の行が書き出し前と一致する（§10 の段階3。
+ *   これは開く側までつないだ unifiedArchiveRoundTrip.test.ts が見る）
  * - 3択（上書き・統合・別で追加）が全行に同じように効く。別で追加は根の子孫の id を振り直す
  * - 利用者の passcode は書かない。監査ログは追記だけ
  *
@@ -248,74 +249,8 @@ describe("統合アーカイブの取り込み", () => {
     await disconnectTestPrisma()
   })
 
-  it("書き出し → 空の DB へ統合で取り込むと、範囲の全表の行が全列で書き出し前と一致し、画像も写る", async () => {
-    // 範囲が試験・資料・成績算出・解答用紙定義・在籍・採点・監査ログまで及んでいること
-    for (const table of [
-      "Exam",
-      "Coursework",
-      "Grade",
-      "AsbDefinition",
-      "AsbImageElement",
-      "StudentClassroomMembership",
-      "QuestionScore",
-      "GradeComparison",
-      "UserPreference",
-      "AuditLog",
-      "AuditLogTarget",
-    ]) {
-      expect(archiveIds.get(table)?.length ?? 0, table).toBeGreaterThan(0)
-    }
-
-    await cleanupTestDatabase()
-    fs.rmSync(DATA_DIR, { recursive: true, force: true })
-    fs.mkdirSync(DATA_DIR, { recursive: true })
-    for (const [table, rows] of readRowsByIds(archiveIds)) {
-      expect(rows, `${table} が空になっていない`).toEqual([])
-    }
-
-    const plan = await importRows(archive, "merge")
-    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, plan)
-
-    for (const [table, ids] of archiveIds) {
-      expect(plan.counts[table], table).toEqual({
-        created: ids.length,
-        replaced: 0,
-        kept: 0,
-        skipped: 0,
-      })
-    }
-    expect(Object.keys(plan.counts).sort()).toEqual(
-      [...archiveIds.keys()].sort()
-    )
-    expect(plan.uniqueConflicts).toEqual([])
-    expect(plan.renamedIds).toEqual([])
-    expect(plan.idMap).toEqual({})
-
-    const rowsAfterImport = readRowsByIds(archiveIds)
-    for (const [table, rows] of rowsBeforeExport) {
-      expect(rowsAfterImport.get(table), table).toEqual(rows)
-    }
-    // 作り直した利用者は passcode を持たない
-    const users = await prisma.user.findMany({
-      where: { id: { in: archiveIds.get("User") ?? [] } },
-    })
-    for (const user of users) {
-      expect(user.passcode, user.id).toBeNull()
-      expect(user.passcodeType, user.id).toBe("none")
-    }
-    expect(danglingReferences()).toEqual([])
-
-    expect(files.failed).toEqual([])
-    expect(files.copied.sort()).toEqual(allImagePaths().sort())
-    for (const imagePath of allImagePaths()) {
-      expect(
-        readFileIfExists(dataFilePath(imagePath))?.equals(
-          fileContentsByPath.get(imagePath) ?? Buffer.alloc(0)
-        ),
-        imagePath
-      ).toBe(true)
-    }
-  })
+  // 書き出し → 空の DB へ統合で取り込んで全行・画像が戻ることは、開く側まで本番どおりに
+  // つなぐ unifiedArchiveRoundTrip.test.ts が見る
 
   it("同じ DB へ統合で取り込むと、全行が残り、何も変わらない", async () => {
     const countsBefore = countTestDatabaseRows()

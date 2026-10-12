@@ -11,7 +11,8 @@
  *
  * **id を見るだけでは関門にならない。** 消して作り直す実装でも、この検査が渡す id を
  * そのまま `create` へ載せてしまえば id は同じに見える。行が作り直されていないことは
- * 作成日時（と、触っていない行の更新日時）で確かめる。
+ * 作成日時（と、触っていない行の更新日時）で確かめる。作った直後に保存すると、作り直しや
+ * 書き換えが同じミリ秒に収まって一致してしまうので、先に日時を過去の固定時刻へ戻しておく。
  */
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -49,6 +50,34 @@ async function createTestSubtotalGroup() {
       { name: "作文", order: 2 },
     ],
   })
+}
+
+/** 作成・更新日時を戻しておく過去の固定時刻 */
+const PAST_TIMESTAMP = new Date("2020-01-01T00:00:00.000Z")
+
+/**
+ * 小計点グループ（項目3つ）を作り、グループと項目の作成・更新日時を過去の固定時刻へ戻す。
+ * 返すグループと項目も、戻した日時を持つ
+ */
+async function createBackdatedSubtotalGroup() {
+  const subtotalGroup = await createTestSubtotalGroup()
+  const timestamps = { createdAt: PAST_TIMESTAMP, updatedAt: PAST_TIMESTAMP }
+  await testPrisma.subtotalGroup.update({
+    where: { id: subtotalGroup.id },
+    data: timestamps,
+  })
+  await testPrisma.subtotal.updateMany({
+    where: { subtotalGroupId: subtotalGroup.id },
+    data: timestamps,
+  })
+  return {
+    ...subtotalGroup,
+    ...timestamps,
+    subtotals: subtotalGroup.subtotals.map((subtotal) => ({
+      ...subtotal,
+      ...timestamps,
+    })),
+  }
 }
 
 /** 設問（採点領域）を1つ作り、その小計への割り当てを付ける */
@@ -164,7 +193,7 @@ describe("小計点グループの更新", () => {
   })
 
   it("小計項目を1つ消しても、残った項目の id が変わらない", async () => {
-    const subtotalGroup = await createTestSubtotalGroup()
+    const subtotalGroup = await createBackdatedSubtotalGroup()
     const [kanji, dokkai, sakubun] = subtotalGroup.subtotals
 
     const updated = await updateSubtotalGroup(subtotalGroup.id, {
@@ -192,7 +221,7 @@ describe("小計点グループの更新", () => {
   })
 
   it("小計項目を並べ替えても、id が変わらない", async () => {
-    const subtotalGroup = await createTestSubtotalGroup()
+    const subtotalGroup = await createBackdatedSubtotalGroup()
     const [kanji, dokkai, sakubun] = subtotalGroup.subtotals
 
     const updated = await updateSubtotalGroup(subtotalGroup.id, {
@@ -226,7 +255,7 @@ describe("小計点グループの更新", () => {
   })
 
   it("項目を1つ足しても、既にある項目は書き換わらない", async () => {
-    const subtotalGroup = await createTestSubtotalGroup()
+    const subtotalGroup = await createBackdatedSubtotalGroup()
 
     const updated = await updateSubtotalGroup(subtotalGroup.id, {
       name: subtotalGroup.name,
@@ -288,7 +317,7 @@ describe("小計点グループの更新", () => {
   })
 
   it("何も変えずに保存すると、1行も書き換わらない", async () => {
-    const subtotalGroup = await createTestSubtotalGroup()
+    const subtotalGroup = await createBackdatedSubtotalGroup()
 
     await updateSubtotalGroup(subtotalGroup.id, {
       name: subtotalGroup.name,

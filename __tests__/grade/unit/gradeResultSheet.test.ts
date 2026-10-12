@@ -88,16 +88,19 @@ const RESULT: GradeCalculationResult = {
   ],
 }
 
-/** 知識・技能に付けた比較2つ（1学期と、同じ成績算出の思考） */
+/**
+ * 知識・技能に付けた比較2つ（1学期と、同じ成績算出の思考）。
+ * cells は students と逆の並びにして、添字ではなく対象者 id で引くことを確かめる。
+ */
 const COMPARISON_COLUMNS: GradeExcelComparisonColumn[] = [
   {
     comparisonId: "cmp-first-term",
     gradeItemId: "gi-knowledge",
     comparedTargetName: "1学期 > 知識・技能",
     cells: [
-      { gradeStudentId: "gs-1", comparedGradeLabel: "B", symbol: "↑" },
       // 比較先の結果が取れない生徒は「・」（missing）
       { gradeStudentId: "gs-2", comparedGradeLabel: null, symbol: "・" },
+      { gradeStudentId: "gs-1", comparedGradeLabel: "B", symbol: "↑" },
     ],
   },
   {
@@ -105,8 +108,8 @@ const COMPARISON_COLUMNS: GradeExcelComparisonColumn[] = [
     gradeItemId: "gi-knowledge",
     comparedTargetName: "思考・判断・表現",
     cells: [
+      { gradeStudentId: "gs-2", comparedGradeLabel: "C", symbol: "↓" },
       { gradeStudentId: "gs-1", comparedGradeLabel: "B", symbol: "↑" },
-      { gradeStudentId: "gs-2", comparedGradeLabel: "C", symbol: "↑" },
     ],
   },
 ]
@@ -211,7 +214,7 @@ describe("createGradeResultSheet: 見出しは2段", () => {
       null,
       "・",
       "C",
-      "↑",
+      "↓",
       62.3,
       "C",
     ])

@@ -173,14 +173,29 @@ describe("GradeStudent / GradeClassroom", () => {
     })
 
     it("customOrderが出席番号順で連番になる", async () => {
-      const { grade, classroomA } = await createTestData()
+      const { grade, classroomA, student1, student2 } = await createTestData()
+      // 作成順（student1 → student2）と出席番号順を逆にして、並べ替えを通す
+      await testPrisma.studentClassroomMembership.updateMany({
+        where: { studentId: student1.id, classroomId: classroomA.id },
+        data: { attendanceNumber: 2 },
+      })
+      await testPrisma.studentClassroomMembership.updateMany({
+        where: { studentId: student2.id, classroomId: classroomA.id },
+        data: { attendanceNumber: 1 },
+      })
 
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const students = await getStudentsByGradeId(grade.id)
-      expect(students).toHaveLength(2)
-      expect(students[0].customOrder).toBe(1)
-      expect(students[1].customOrder).toBe(2)
+      expect(
+        students.map((gradeStudent) => [
+          gradeStudent.studentId,
+          gradeStudent.customOrder,
+        ])
+      ).toEqual([
+        [student2.id, 1],
+        [student1.id, 2],
+      ])
     })
   })
 

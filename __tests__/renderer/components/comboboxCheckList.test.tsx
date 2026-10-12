@@ -220,13 +220,21 @@ describe("ComboboxCheckList", () => {
 
   it("外せない行は、クリックしても Enter でも入れ替わらない", async () => {
     const user = userEvent.setup()
-    const { handleCheckedChange } = renderCheckList()
+
+    const { handleCheckedChange, handleActiveValueChange } = renderCheckList()
 
     await user.click(screen.getByRole("option", { name: /鈴木 一郎/ }))
     await user.click(screen.getByPlaceholderText("氏名で検索"))
-    await user.keyboard("{End}{Enter} ")
+    await user.keyboard("{End}")
+    // Enter・Space を押すのが外せない行の上であることを確かめてから押す
+    expect(handleActiveValueChange).toHaveBeenLastCalledWith("a1b2c3d4-0003")
+    await user.keyboard("{Enter} ")
 
     expect(handleCheckedChange).not.toHaveBeenCalled()
+
+    // 同じ操作は、外せる行の上なら入れ替える（キーが一覧に届いていることの確かめ）
+    await user.keyboard("{Home}{Enter}")
+    expect(handleCheckedChange).toHaveBeenCalledWith("a1b2c3d4-0001", false)
   })
 
   it("今いる行（マウスを当てた・↑↓ で来た）を知らせ、一覧から離れたら null を知らせる", async () => {

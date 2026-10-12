@@ -377,9 +377,19 @@ describe("coursework-archive 取り込み", () => {
   it("previewCourseworkImport が UUID一致と名前候補を返す", async () => {
     const archive = await readFixture()
     await seedCourseworkSections(archive)
+    // 同名で別 UUID の資料は名前候補に入り、別名の資料は入らない
+    const sameNameCoursework = await prisma.coursework.create({
+      data: { name: archive.courseworks[0].name },
+    })
+    await prisma.coursework.create({ data: { name: "別の資料" } })
 
     const preview = await previewCourseworkImport(archive)
     expect(preview.matches).toHaveLength(1)
     expect(preview.matches[0].uuidMatch?.id).toBe(archive.courseworks[0].id)
+    expect(
+      preview.matches[0].nameCandidates
+        .map((coursework) => coursework.id)
+        .sort()
+    ).toEqual([archive.courseworks[0].id, sameNameCoursework.id].sort())
   })
 })

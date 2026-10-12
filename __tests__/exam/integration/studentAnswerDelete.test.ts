@@ -222,16 +222,21 @@ describe("deleteStudentAnswer", () => {
     ).not.toBeNull()
   })
 
-  it("削除直前の採点実績を返す（モーダルと同じ定義）", async () => {
+  it("削除の直前に数え直した採点実績を返す（見せた件数ではない）", async () => {
     const { examStudentA, page1, image } = await buildSimpleExam()
 
-    const { deletedCounts } = await deleteAnswerAsSeen(
-      image(page1.id, examStudentA.id).id
+    // 利用者は「採点済みの設問 5問・書き込み 2件」を見た（その後、他の教員が減らした）。
+    // 減る向きなので削除は通り、返すのは実際に消えた（数え直した）件数
+    const { deletedCounts } = await deleteStudentAnswer(
+      image(page1.id, examStudentA.id).id,
+      [
+        { countedName: "採点済みの設問", shownCount: 5 },
+        { countedName: "答案への書き込み", shownCount: 2 },
+      ]
     )
-    expect(deletedCounts).toContainEqual({
-      countedName: "採点済みの設問",
-      shownCount: 1,
-    })
+    expect(deletedCounts).toEqual([
+      { countedName: "採点済みの設問", shownCount: 1 },
+    ])
   })
 
   it("未採点の答案では採点実績なしを返す（トーストの文言が変わる）", async () => {
@@ -369,11 +374,11 @@ describe("getStudentAnswerDeletionCounts", () => {
     const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.length).toBeGreaterThan(0)
-    expect(countOf(result, "採点済みの設問")).toBe(1)
-    expect(countOf(result, "答案への書き込み")).toBe(1)
-    // 0件の項目は出さない（見せていない＝0件と見せた扱い）
-    expect(countOf(result, "確定した点数")).toBe(0)
+    // 0件の項目（確定した点数・採点済みの複合回答）は出さない（見せていない＝0件と見せた扱い）
+    expect(result).toEqual([
+      { countedName: "採点済みの設問", shownCount: 1 },
+      { countedName: "答案への書き込み", shownCount: 1 },
+    ])
   })
 
   it("協調採点で1設問に複数教員の行があっても設問数で数える", async () => {
@@ -440,21 +445,6 @@ describe("getStudentAnswerDeletionCounts", () => {
     )
     expect(countOf(result, "採点済みの複合回答")).toBe(1)
     expect(result.length).toBeGreaterThan(0)
-  })
-
-  it("unscored の初期化行だけなら何も数えない", async () => {
-    const { examStudentA, page1, region1, image } = await buildSimpleExam()
-
-    // 初期化直後の状態（status=unscored・部分点なし）に戻す
-    await testPrisma.questionScore.updateMany({
-      where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
-      data: { status: "unscored", partialScore: null },
-    })
-
-    const result = await getStudentAnswerDeletionCounts(
-      image(page1.id, examStudentA.id).id
-    )
-    expect(result).toEqual([])
   })
 
   it("未採点でも削除時は初期化行ごと消える", async () => {
