@@ -1,4 +1,5 @@
-import { ArrowLeftRight, Ban, Shuffle } from "lucide-react"
+import { CornerDownRight } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { CodeRefToken } from "./CodeRefToken"
 import type { GlossaryTermId } from "./glossaryTerms"
@@ -11,11 +12,30 @@ export function glossaryTermAnchorId(termId: GlossaryTermId): string {
   return `glossary-term-${termId}`
 }
 
+/** 説明の下の1行。見出しの幅を揃え、どの語でも同じ位置から読み始められるようにする */
+function EntryNote({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex gap-4">
+      <dt className="w-24 shrink-0 pt-px text-[11px] text-muted-foreground/60">
+        {label}
+      </dt>
+      <dd className="min-w-0 flex-1">{children}</dd>
+    </div>
+  )
+}
+
 /**
- * 用語集の語1つ。**呼び名のすぐ後ろに、指す表・列・値・型を並べる。**
+ * 用語集の語1つ。**呼び名と同じ行に、指す表・列・値・型を右に揃えて並べる。**
  *
- * 辞書の1項のように、枠で囲まず罫線で区切る。説明の下に「別の表記」「使わない語」
- * 「似た語との違い」を、行頭の印で見分けられるように置く。
+ * 辞書の1項のように、枠で囲まず罫線で区切る。表・列は色の札にせず等幅の控えめな文字に
+ * して、日本語の見出し語がいちばん先に目に入るようにする。説明の下に「別の表記」
+ * 「使わない語」「似た語との違い」を、見出しの幅を揃えて置く。
  */
 export function GlossaryTermEntry({
   glossaryTerm,
@@ -34,29 +54,39 @@ export function GlossaryTermEntry({
     const distinction = termText.distinctions[otherTermId]
     return distinction === undefined ? [] : [{ otherTermId, distinction }]
   })
+  const tableModels = new Set(
+    glossaryTerm.codeRefs.flatMap((codeRef) =>
+      codeRef.kind === "table" ? [codeRef.model] : []
+    )
+  )
 
   return (
     <article
       id={glossaryTermAnchorId(glossaryTerm.id)}
       data-glossary-term-id={glossaryTerm.id}
-      className="scroll-mt-16 border-b py-5 last:border-b-0"
+      className="scroll-mt-20 border-b border-border/60 py-7 last:border-b-0"
     >
-      <h3 className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span className="text-lg leading-tight font-semibold tracking-tight">
+      <h3 className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5">
+        <span className="text-[22px] leading-tight font-semibold tracking-tight">
           <HighlightedText
             text={termText.label}
             normalizedQuery={normalizedQuery}
           />
         </span>
-        {glossaryTerm.codeRefs.map((codeRef, codeRefIndex) => (
-          <CodeRefToken
-            key={codeRefIndex}
-            codeRef={codeRef}
-            glossaryText={glossaryText}
-          />
-        ))}
+        {glossaryTerm.codeRefs.length > 0 && (
+          <span className="-mr-1 ml-auto flex flex-wrap items-baseline justify-end gap-x-2.5 gap-y-0.5 font-normal">
+            {glossaryTerm.codeRefs.map((codeRef, codeRefIndex) => (
+              <CodeRefToken
+                key={codeRefIndex}
+                codeRef={codeRef}
+                tableModels={tableModels}
+                glossaryText={glossaryText}
+              />
+            ))}
+          </span>
+        )}
       </h3>
-      <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+      <p className="mt-3 text-base leading-8 text-foreground">
         <HighlightedText
           text={termText.summary}
           normalizedQuery={normalizedQuery}
@@ -65,72 +95,61 @@ export function GlossaryTermEntry({
       {(termText.variants.length > 0 ||
         termText.avoidedAliases.length > 0 ||
         distinctionEntries.length > 0) && (
-        <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+        <dl className="mt-4 space-y-1 text-[12.5px] leading-6 text-muted-foreground">
           {termText.variants.length > 0 && (
-            <>
-              <dt className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Shuffle className="size-3.5" />
-                {glossaryText.ui.variants}
-              </dt>
-              <dd className="flex flex-wrap gap-1.5">
-                {termText.variants.map((variant) => (
-                  <span
-                    key={variant}
-                    className="rounded bg-muted px-1.5 text-foreground/80"
-                  >
+            <EntryNote label={glossaryText.ui.variants}>
+              <span>
+                {termText.variants.map((variant, variantIndex) => (
+                  <span key={variant}>
+                    {variantIndex > 0 && (
+                      <span className="text-muted-foreground/40">、</span>
+                    )}
                     <HighlightedText
                       text={variant}
                       normalizedQuery={normalizedQuery}
                     />
                   </span>
                 ))}
-              </dd>
-            </>
+              </span>
+            </EntryNote>
           )}
           {termText.avoidedAliases.length > 0 && (
-            <>
-              <dt className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Ban className="size-3.5 text-destructive/70" />
-                {glossaryText.ui.avoidedAliases}
-              </dt>
-              <dd className="flex flex-wrap gap-1.5">
-                {termText.avoidedAliases.map((avoidedAlias) => (
-                  <span
-                    key={avoidedAlias}
-                    className="rounded bg-destructive/10 px-1.5 text-destructive line-through decoration-destructive/50"
-                  >
+            <EntryNote label={glossaryText.ui.avoidedAliases}>
+              {termText.avoidedAliases.map((avoidedAlias, aliasIndex) => (
+                <span key={avoidedAlias}>
+                  {aliasIndex > 0 && (
+                    <span className="text-muted-foreground/40">、</span>
+                  )}
+                  <span className="text-destructive/55 line-through decoration-destructive/30">
                     <HighlightedText
                       text={avoidedAlias}
                       normalizedQuery={normalizedQuery}
                     />
                   </span>
-                ))}
-              </dd>
-            </>
+                </span>
+              ))}
+            </EntryNote>
           )}
           {distinctionEntries.length > 0 && (
-            <>
-              <dt className="flex items-start gap-1 pt-0.5 text-xs text-muted-foreground">
-                <ArrowLeftRight className="mt-px size-3.5" />
-                {glossaryText.ui.distinctions}
-              </dt>
-              <dd>
-                <ul className="space-y-1">
-                  {distinctionEntries.map(({ otherTermId, distinction }) => (
-                    <li key={otherTermId} className="leading-relaxed">
+            <EntryNote label={glossaryText.ui.distinctions}>
+              <ul className="space-y-1">
+                {distinctionEntries.map(({ otherTermId, distinction }) => (
+                  <li key={otherTermId} className="flex gap-1.5">
+                    <CornerDownRight className="mt-1.5 size-3 shrink-0 text-muted-foreground/40" />
+                    <span>
                       <button
                         type="button"
                         onClick={() => onJumpToTerm(otherTermId)}
-                        className="mr-2 font-medium underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+                        className="mr-1.5 font-medium text-foreground/70 underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
                       >
                         {glossaryText.terms[otherTermId].label}
                       </button>
-                      <span className="text-foreground/80">{distinction}</span>
-                    </li>
-                  ))}
-                </ul>
-              </dd>
-            </>
+                      <span>{distinction}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </EntryNote>
           )}
         </dl>
       )}
