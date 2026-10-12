@@ -530,7 +530,6 @@ describe("markRecognizer", () => {
 
       expect(result.autoScoreStatus).toBe("ambiguous")
       expect(result.recognizedValues).toHaveLength(2)
-      expect(result.confidence).toBeLessThanOrEqual(0.3) // ダブルマークは低信頼度
     })
 
     it("本命しっかり + 閾値をわずかに超える塗り(中心45%) → ダブルマーク判定", async () => {

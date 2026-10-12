@@ -381,13 +381,13 @@ describe("複数正解の設問の部分点", () => {
     expect(entry.score).toBe(10)
   })
 
-  it("複数正解を全て選んでも、既定のしきい値では保留になる（現状の挙動）", () => {
-    // 2つ以上塗られたセルの信頼度は、正解の数にかかわらず一律 0.3（choiceEvaluation.ts）。
-    // 正しく塗った答案も人の確認へ回る。直す予定（#1444）。直したらこのテストも書き換える
+  it("複数正解を全て選べば、既定のしきい値でも満点（保留に回さない）", () => {
+    // 2つ以上塗られたセルの信頼度を一律に下げていたため、正しく塗った答案だけが
+    // 人の確認へ回っていた（#1444）
     const { entry } = evaluateMarks([0, 2], [0, 2], 10)
 
-    expect(entry.status).toBe("pending")
-    expect(entry.score).toBe(0)
+    expect(entry.status).toBe("correct")
+    expect(entry.score).toBe(10)
   })
 
   it("正解が1つの設問では、外しても部分点にしない", () => {
