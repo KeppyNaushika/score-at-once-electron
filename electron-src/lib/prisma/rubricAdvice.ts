@@ -66,7 +66,7 @@ async function toCombinationColumns(input: SaveRubricAdviceCombinationInput) {
     where: { id: { in: rubricItemIds }, cropRegionId: input.cropRegionId },
   })
   if (rubricItems.length !== rubricItemIds.length) {
-    throw new Error("ルーブリック項目が、この設問のものではありません")
+    throw new Error("採点項目が、この設問のものではありません")
   }
   const mergedText = input.mode === "merged" ? input.mergedText.trim() : ""
   if (input.mode === "merged" && mergedText === "") {
@@ -362,7 +362,7 @@ export async function syncRubricAdviceAnnotations(
       entityId: input.cropRegionId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: `ルーブリック項目の助言から朱書きを作りました（作成${result.createdCount}件・書き換え${result.updatedCount}件・削除${result.deletedCount}件）`,
+      summary: `採点項目の助言から朱書きを作りました（作成${result.createdCount}件・書き換え${result.updatedCount}件・削除${result.deletedCount}件）`,
       extra: { ...result },
       targets: cropRegion ? [cropRegionAuditTarget(cropRegion)] : [],
     })

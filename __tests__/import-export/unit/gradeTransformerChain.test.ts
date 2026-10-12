@@ -1087,11 +1087,12 @@ function buildV1_14_0Archive(settingsJson: string): GradeArchiveDataV1_14_0 {
 /**
  * 旧形式（凍結）の通知書の設定の行が持つ列の既定。
  *
- * 旧形式は形を凍結しているので、凍結の後に足した列（`itemGradeComparisonMarks`）は行に無い。
+ * 旧形式は形を凍結しているので、凍結の後に足した列（`itemGradeComparisonMarks`・`scaleValueDisplay`）は行に無い。
  * 取り込みでは DB の既定が入る（`gradeArchiveImporter` は行の値だけを渡して作る）。
  */
 const {
   itemGradeComparisonMarks: _addedAfterFreeze,
+  scaleValueDisplay: _scaleValueDisplayAddedAfterFreeze,
   ...LEGACY_REPORT_SETTINGS_DEFAULTS
 } = DEFAULT_GRADE_REPORT_SETTINGS
 

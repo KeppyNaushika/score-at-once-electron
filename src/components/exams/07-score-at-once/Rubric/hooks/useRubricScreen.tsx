@@ -4,7 +4,10 @@ import type { GridAnswerItem } from "@/components/exams/07-score-at-once/Scoring
 import type { GradingMode } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import { toScoringMethod } from "@/types/rubric.types"
+import {
+  computesScoreFromRubricItems,
+  toScoringMethod,
+} from "@/types/rubric.types"
 
 import { RubricCellMark } from "../RubricCellMark"
 import { useRubricQuestion } from "./useRubricQuestion"
@@ -37,7 +40,9 @@ export function useRubricScreen({
   const rubricCropRegion =
     gradingMode !== "ai" &&
     currentCropRegion &&
-    toScoringMethod(currentCropRegion.scoringMethod) !== "points"
+    computesScoreFromRubricItems(
+      toScoringMethod(currentCropRegion.scoringMethod)
+    )
       ? currentCropRegion
       : null
   const questionScores = currentCropRegion

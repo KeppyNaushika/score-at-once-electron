@@ -65,7 +65,14 @@ const verdictLabel = (verdict: string | null | undefined): string => {
 export type UpsertScoreDecisionData = Required<
   Omit<
     Prisma.ScoreDecisionUncheckedCreateInput,
-    "id" | "createdAt" | "updatedAt" | "decidedAt" | "verdict" | "score"
+    | "id"
+    | "createdAt"
+    | "updatedAt"
+    | "decidedAt"
+    | "verdict"
+    | "score"
+    // 類型の確定は 08 を類型評価に対応させるとき（docs/vlm-grading-design.md §4-8-7 の S5）に足す
+    | "scaleLevelId"
   >
 > & {
   verdict: ScoringStatus

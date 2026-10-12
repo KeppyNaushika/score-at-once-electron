@@ -201,6 +201,9 @@ const RegionDetailsTable = ({
             <TableHead className="h-auto w-24 border border-border bg-transparent px-2 py-1">
               配点
             </TableHead>
+            <TableHead className="h-auto w-32 border border-border bg-transparent px-2 py-1">
+              採点方式
+            </TableHead>
             <TableHead className="h-auto w-16 border border-border bg-transparent px-2 py-1 text-center">
               OMR
             </TableHead>
@@ -218,6 +221,7 @@ const RegionDetailsTable = ({
             return (
               <RegionTableRow
                 key={region.id}
+                examId={examId}
                 region={region}
                 globalIndex={globalIndex}
                 isSelected={isSelected}

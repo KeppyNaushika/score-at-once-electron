@@ -15,7 +15,11 @@
  * 適用（消えた項目を指すもの）は数えない。
  */
 
-import { isRubricSetStatus, toScoringMethod } from "@/types/rubric.types"
+import {
+  computesScoreFromRubricItems,
+  isRubricSetStatus,
+  toScoringMethod,
+} from "@/types/rubric.types"
 
 import type {
   RubricScoredRow,
@@ -85,7 +89,9 @@ export function computeRubricScore(
   row: Pick<RubricScoredRow, "overridesRubric" | "rubricApplications">
 ): RubricScoreOutcome {
   const scoringMethod = toScoringMethod(region.scoringMethod)
-  if (scoringMethod === "points") return { kind: "directScoring" }
+  if (!computesScoreFromRubricItems(scoringMethod)) {
+    return { kind: "directScoring" }
+  }
   if (row.overridesRubric) return { kind: "overridden" }
 
   const appliedItemIds = new Set(

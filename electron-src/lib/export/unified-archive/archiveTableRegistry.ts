@@ -163,10 +163,26 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       nullable("invitedBy", "User"),
     ],
   },
+  // 類型評価（類型の組。docs/vlm-grading-design.md §4-8-3）。持ち主の examId は null に
+  // なりうる。試験のもの（examId あり）は試験に従って入り、共通のもの（null）は親を持たないので、
+  // 入った設問が scoreScaleId で指したときだけ参照で引き上げる。取り込み先に同じ id があれば id で照合する
+  ScoreScale: {
+    role: "owned",
+    owner: ["examId"],
+    references: [nullable("examId", "Exam")],
+  },
+  ScoreScaleLevel: {
+    role: "owned",
+    owner: ["scaleId"],
+    references: [required("scaleId", "ScoreScale")],
+  },
   CropRegion: {
     role: "owned",
     owner: ["examPageId"],
-    references: [required("examPageId", "ExamPage")],
+    references: [
+      required("examPageId", "ExamPage"),
+      nullable("scoreScaleId", "ScoreScale"),
+    ],
   },
   CropRegionOmrConfig: {
     role: "owned",
@@ -232,6 +248,7 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       required("examStudentId", "ExamStudent"),
       required("cropRegionId", "CropRegion"),
       required("userId", "User"),
+      nullable("scaleLevelId", "ScoreScaleLevel"),
     ],
   },
   DrawingAnnotation: {
@@ -250,6 +267,7 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     references: [
       required("cropRegionId", "CropRegion"),
       nullable("createdByUserId", "User"),
+      nullable("setScaleLevelId", "ScoreScaleLevel"),
     ],
   },
   RubricApplication: {
@@ -292,6 +310,7 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       required("examStudentId", "ExamStudent"),
       required("cropRegionId", "CropRegion"),
       required("decidedByUserId", "User"),
+      nullable("scaleLevelId", "ScoreScaleLevel"),
     ],
   },
   ReturnSnapshot: {

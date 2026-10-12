@@ -21,6 +21,14 @@ import {
   SCORING_METHOD_LABELS,
 } from "./utils/rubricEffectLabel"
 
+/**
+ * ここで選べる方式。類型評価は類型の組も選ぶので、03 の領域情報で選ぶ
+ * （docs/vlm-grading-design.md §4-8-3a）
+ */
+const POINT_SCORING_METHODS = SCORING_METHODS.filter(
+  (method) => method !== "scale"
+)
+
 interface ScoringMethodSectionProps {
   examId: string
   cropRegion: QuestionAnswerRegionRow
@@ -78,7 +86,7 @@ export function ScoringMethodSection({
       onToggle={onToggle}
     >
       <div className="flex gap-1">
-        {SCORING_METHODS.map((method) => (
+        {POINT_SCORING_METHODS.map((method) => (
           <Button
             key={method}
             type="button"
@@ -95,6 +103,11 @@ export function ScoringMethodSection({
       <p className="mt-1 text-[11px] text-gray-500">
         {SCORING_METHOD_DESCRIPTIONS[scoringMethod]}
       </p>
+      {scoringMethod === "scale" && (
+        <p className="mt-1 text-[11px] text-gray-500">
+          類型評価は 03 の領域情報で選びます。
+        </p>
+      )}
       <RubricRecalculationDialog pending={pending} onCancel={cancel} />
     </SidePanelSection>
   )

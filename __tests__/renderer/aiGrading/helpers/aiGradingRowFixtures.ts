@@ -30,6 +30,7 @@ export function makeQuestionScore(
     comment: "",
     userId: CURRENT_USER_ID,
     overridesRubric: false,
+    scaleLevelId: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     ...overrides,

@@ -32,6 +32,8 @@ export type QuestionScoreForSubtotal = Omit<
   | "comment"
   // 手での上書きの印は、点が項目から来たか採点キーから来たかだけで、点そのものではない
   | "overridesRubric"
+  // 類型評価の類型。類型の点数を引くのは実効の点の関数が受け持つ（docs/vlm-grading-design.md §4-8-7 の S3）
+  | "scaleLevelId"
 > & {
   partialScore?: number | null
   // SQLite は enum を持てないので Prisma の型は `string`。判定の集合はここで注入する

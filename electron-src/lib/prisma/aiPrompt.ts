@@ -233,8 +233,7 @@ export async function ensurePromptRendersRubricItems(
     entityId: created.id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    summary:
-      "ルーブリック項目の一覧が変わったので、採点指示の新しい版を作りました",
+    summary: "採点項目の一覧が変わったので、採点指示の新しい版を作りました",
   })
   return created
 }

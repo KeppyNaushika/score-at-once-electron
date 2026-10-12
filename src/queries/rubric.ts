@@ -148,7 +148,7 @@ export const createRubricItemMutation = (
     scope: { id: `exam:${examId}:rubric:${cropRegionId}` },
     meta: {
       invalidates: rubricItemInvalidations(examId, cropRegionId),
-      errorMessage: "ルーブリック項目を作成できませんでした",
+      errorMessage: "採点項目を作成できませんでした",
     },
   })
 
@@ -168,7 +168,7 @@ export const updateRubricItemMutation = (
     scope: { id: `exam:${examId}:rubric:${cropRegionId}` },
     meta: {
       invalidates: rubricItemInvalidations(examId, cropRegionId),
-      errorMessage: "ルーブリック項目を変更できませんでした",
+      errorMessage: "採点項目を変更できませんでした",
     },
   })
 
@@ -189,7 +189,7 @@ export const deleteRubricItemMutation = (
         ...rubricItemInvalidations(examId, cropRegionId),
         questionScoresQuery(examId, cropRegionId).queryKey,
       ],
-      errorMessage: "ルーブリック項目を削除できませんでした",
+      errorMessage: "採点項目を削除できませんでした",
     },
   })
 
@@ -234,7 +234,7 @@ export const setRubricApplicationsMutation = (
         rubricScope(examId, cropRegionId),
         questionScoresQuery(examId, cropRegionId).queryKey,
       ],
-      errorMessage: "ルーブリック項目を当てられませんでした",
+      errorMessage: "採点項目を当てられませんでした",
     },
   })
 
@@ -256,7 +256,7 @@ export const writeRubricScoresMutation = (examId: string) =>
         questionScoresScope(examId),
         [...scopeKeys.exam(examId), "rubric"],
       ],
-      errorMessage: "ルーブリック項目からの採点を保存できませんでした",
+      errorMessage: "採点項目からの採点を保存できませんでした",
     },
   })
 

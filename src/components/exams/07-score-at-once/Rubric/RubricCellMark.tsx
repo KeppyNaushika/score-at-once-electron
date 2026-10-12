@@ -20,7 +20,7 @@ export function RubricCellMark({ cell }: RubricCellMarkProps) {
       {appliedCount > 0 && (
         <span
           className="flex items-center gap-px rounded bg-blue-100 px-0.5 text-[10px] leading-3 text-blue-800"
-          title={`ルーブリック項目が${appliedCount}つ当たっています`}
+          title={`採点項目が${appliedCount}つ当たっています`}
           aria-label={`項目${appliedCount}つ`}
         >
           <ListChecks className="h-2.5 w-2.5" />

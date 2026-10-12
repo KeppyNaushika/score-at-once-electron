@@ -60,6 +60,7 @@ function makeCropRegion(scoringMethod: string): CropRegionRow {
     points: 4,
     orderIndex: 0,
     scoringMethod,
+    scoreScaleId: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     examPage: {

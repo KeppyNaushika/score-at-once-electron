@@ -152,7 +152,7 @@ export async function updateRubricItem(
     where: { id: rubricItemId },
     include: { cropRegion: true },
   })
-  if (!before) throw new Error("ルーブリック項目が見つかりません")
+  if (!before) throw new Error("採点項目が見つかりません")
 
   const updated = await prisma.rubricItem.update({
     where: { id: rubricItemId },
@@ -213,7 +213,7 @@ export async function deleteRubricItem(
     where: { id: rubricItemId },
     include: { cropRegion: true },
   })
-  if (!before) throw new Error("ルーブリック項目が見つかりません")
+  if (!before) throw new Error("採点項目が見つかりません")
 
   const scope = await resolveExamScopeByCropRegion(before.cropRegionId)
   const deleted = await prisma.$transaction(async (tx) => {

@@ -4,7 +4,6 @@
  *
  * SQLite(Prisma) は enum を持たないので、`CropRegion.scoringMethod`・`RubricItem.effectKind`・
  * `RubricItem.setStatus`・`RubricAdviceCombination.mode` が取りうる値はここにしか無い。
- * 段階評価（§4-8）を足すときは、採点方式に `scale` を足す。
  */
 
 import type { RubricItem } from "@prisma/client"
@@ -15,14 +14,38 @@ import { defineStringUnion } from "./stringUnion"
 /**
  * 設問の採点方式。points は採点キー・部分点で直接付ける今の採点（既定）。
  * deduction は配点から当たった項目の減点を引き、addition は0点から加点を足す。
+ * scale は類型評価（A/B/C。§4-8）で、類型が評価そのもの・点は類型の点数から導く。
  * 外れ値は points に倒す（項目からの計算で点を書き換えない側）
  */
-export const SCORING_METHODS = ["points", "deduction", "addition"] as const
+export const SCORING_METHODS = [
+  "points",
+  "deduction",
+  "addition",
+  "scale",
+] as const
 export type ScoringMethod = (typeof SCORING_METHODS)[number]
 export const { is: isScoringMethod, to: toScoringMethod } = defineStringUnion(
   SCORING_METHODS,
   "points"
 )
+
+/**
+ * 当たった項目の加減から点を計算する方式か（減点・加点方式）。
+ * 直接採点と類型評価は、項目から部分点を計算しない（配点を変えても点を計算し直さない）
+ */
+export const computesScoreFromRubricItems = (
+  scoringMethod: ScoringMethod
+): scoringMethod is "deduction" | "addition" =>
+  scoringMethod === "deduction" || scoringMethod === "addition"
+
+/**
+ * 類型評価の値の見せ方（§4-8-8）。points は「8」（点数だけ）、label_points は「A (8)」（記号と点数）、
+ * label は「A」（記号だけ）。外部資料の今の表示に合わせて label_points を既定にする
+ */
+export const SCALE_VALUE_DISPLAYS = ["points", "label_points", "label"] as const
+export type ScaleValueDisplay = (typeof SCALE_VALUE_DISPLAYS)[number]
+export const { is: isScaleValueDisplay, to: toScaleValueDisplay } =
+  defineStringUnion(SCALE_VALUE_DISPLAYS, "label_points")
 
 /** 項目の効き方。adjust は点を加減し、set は判定と点を決める（加減より優先する） */
 export const RUBRIC_EFFECT_KINDS = ["adjust", "set"] as const
