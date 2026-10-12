@@ -165,6 +165,8 @@ export interface OMRSheetResult {
   examStudentId?: string
   pageIndex: number
   markerDetection: MarkerDetectionResult
+  /** 検出できず、残り3隅から推定した隅（4隅とも検出できたら null） */
+  estimatedCorner?: DetectedCornerMarker["corner"] | null
   cellResults: OMRCellResult[]
   error?: string
 }

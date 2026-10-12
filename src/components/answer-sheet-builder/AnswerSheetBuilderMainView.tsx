@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Redo2, Undo2 } from "lucide-react"
+import { Redo2, TriangleAlert, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
 
@@ -39,6 +39,8 @@ import { MultiColumnSettings } from "./components/form/MultiColumnSettings"
 import { OMRMarkerSettings } from "./components/form/OMRMarkerSettings"
 import { QuestionListEditor } from "./components/form/QuestionListEditor"
 import { AnswerSheetPreview } from "./components/preview/AnswerSheetPreview"
+import { getPaperDimensions } from "./hooks/layout/layoutUtils"
+import { checkOMRMarkerPlacement } from "./hooks/layout/omrMarkers"
 import { useAnswerSheetDefinition } from "./hooks/useAnswerSheetDefinition"
 import {
   useAnswerSheetLayout,
@@ -184,6 +186,11 @@ export function AnswerSheetBuilderMainView({
 
   const layout = useAnswerSheetLayout(definition)
   const multiPageLayout = useMultiPageLayout(definition)
+  // マーカーと余白は別々のタブで変えられるので、どちらを変えても検査し直す
+  const omrMarkerWarnings = checkOMRMarkerPlacement(
+    definition.settings,
+    getPaperDimensions(definition.settings)
+  )
 
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
@@ -299,6 +306,12 @@ export function AnswerSheetBuilderMainView({
               </TabsTrigger>
               <TabsTrigger value="omr" className="text-xs">
                 OMR
+                {omrMarkerWarnings.length > 0 && (
+                  <TriangleAlert
+                    className="ml-0.5 h-3 w-3 text-orange-600"
+                    aria-label="マーカーの配置に問題があります"
+                  />
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -371,6 +384,7 @@ export function AnswerSheetBuilderMainView({
                 <div className="p-3">
                   <OMRMarkerSettings
                     config={definition.settings.omrMarkers}
+                    warnings={omrMarkerWarnings}
                     onUpdate={(omrMarkers) =>
                       updatePaperSettings({
                         omrMarkers: {

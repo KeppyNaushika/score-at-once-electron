@@ -41,6 +41,14 @@ const DEFAULT_AREA_THRESHOLD = 0.4
 /** 低信頼として保留に落とす閾値 */
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 
+/** 隅のマーカーで問題のあった答案1枚（ダイアログで生徒を名指しする） */
+export interface MarkerIssueSheet {
+  examStudentId: string | undefined
+  studentName: string
+  /** 失敗の理由、または推定した隅 */
+  detail: string
+}
+
 interface OmrAutoScoringState {
   /** 認識処理中か */
   isRecognizing: boolean
@@ -68,6 +76,10 @@ interface OmrAutoScoringState {
   recommendedAreaThreshold: number | null
   /** 分布から算出したマークと見なす濃さの下限（消し跡が無ければ null） */
   minInkDarkness: number | null
+  /** 隅のマーカーが検出できず、認識から外れた答案 */
+  markerFailedSheets: MarkerIssueSheet[]
+  /** 隅を1つ推定して読み取った答案（位置がずれていないか確認してほしい） */
+  markerEstimatedSheets: MarkerIssueSheet[]
 }
 
 /**
@@ -98,6 +110,8 @@ export function useOmrAutoScoring(examId: string) {
     pointsMap: {},
     recommendedAreaThreshold: null,
     minInkDarkness: null,
+    markerFailedSheets: [],
+    markerEstimatedSheets: [],
   })
 
   /** バッチ進捗リスナー */
@@ -121,6 +135,8 @@ export function useOmrAutoScoring(examId: string) {
       summary: null,
       error: null,
       progress: null,
+      markerFailedSheets: [],
+      markerEstimatedSheets: [],
     }))
 
     try {
@@ -142,7 +158,7 @@ export function useOmrAutoScoring(examId: string) {
         setState((prev) => ({
           ...prev,
           isRecognizing: false,
-          error: "マーカーを検出できませんでした",
+          error: `模範解答のマーカーを検出できませんでした（${markerResult.pages[0]?.result.error ?? ""}）`,
         }))
         return
       }
@@ -163,7 +179,8 @@ export function useOmrAutoScoring(examId: string) {
         setState((prev) => ({
           ...prev,
           isRecognizing: false,
-          error: "ページ1のマーカーが検出できません",
+          // 模範解答の隅は推定しない。ここがずれると全答案の位置合わせがずれる
+          error: `模範解答のページ1のマーカーが検出できません（${page1?.result.error ?? "ページ1がありません"}）`,
         }))
         return
       }
@@ -227,17 +244,29 @@ export function useOmrAutoScoring(examId: string) {
       // 7. 配点マップ構築
       const pointsMap = pointsMapOf(page1Regions)
 
-      // マーカー検出失敗の診断
-      const failedSheets = results.filter((result) => !result.success)
-      if (failedSheets.length > 0) {
-        console.warn(
-          `OMR: ${failedSheets.length}/${results.length} 枚でマーカー検出失敗`,
-          failedSheets.map((sheet) => ({
-            examStudentId: sheet.examStudentId,
-            error: sheet.error,
-          }))
-        )
-      }
+      // 隅のマーカーで問題のあった答案を、生徒を名指しで出す
+      const studentNameOf = new Map(
+        imagePaths.map((imagePath) => [
+          imagePath.examStudentId,
+          imagePath.studentName,
+        ])
+      )
+      const markerFailedSheets: MarkerIssueSheet[] = results
+        .filter((result) => !result.success)
+        .map((result) => ({
+          examStudentId: result.examStudentId,
+          studentName:
+            studentNameOf.get(result.examStudentId ?? "") ?? "（不明）",
+          detail: result.error ?? "マーカーを検出できませんでした",
+        }))
+      const markerEstimatedSheets: MarkerIssueSheet[] = results
+        .filter((result) => result.success && result.estimatedCorner)
+        .map((result) => ({
+          examStudentId: result.examStudentId,
+          studentName:
+            studentNameOf.get(result.examStudentId ?? "") ?? "（不明）",
+          detail: `${result.estimatedCorner} を推定`,
+        }))
       const emptyResultSheets = results.filter(
         (result) => result.success && result.cellResults.length === 0
       )
@@ -284,6 +313,8 @@ export function useOmrAutoScoring(examId: string) {
         confidenceThreshold: initialConfidenceThreshold,
         recommendedAreaThreshold: recommended,
         minInkDarkness,
+        markerFailedSheets,
+        markerEstimatedSheets,
       }))
     } catch (error) {
       setState((prev) => ({

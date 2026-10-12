@@ -1,9 +1,18 @@
 "use client"
 
-import { CircleCheck, CircleX, Lightbulb, ScanLine } from "lucide-react"
+import {
+  CircleCheck,
+  CircleX,
+  Lightbulb,
+  ScanLine,
+  TriangleAlert,
+} from "lucide-react"
 import { useCallback } from "react"
 
-import { useOmrAutoScoring } from "@/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring"
+import {
+  type MarkerIssueSheet,
+  useOmrAutoScoring,
+} from "@/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -41,6 +50,8 @@ export function OMRAutoScoringModal({
     areaThreshold,
     confidenceThreshold,
     recommendedAreaThreshold,
+    markerFailedSheets,
+    markerEstimatedSheets,
     runRecognition,
     applyScores,
     updateAreaThreshold,
@@ -161,6 +172,18 @@ export function OMRAutoScoringModal({
                 合計 {summary.total} 件（低信頼は保留として反映）
               </div>
 
+              {/* 隅のマーカーで問題のあった答案 */}
+              <MarkerIssueList
+                title="マーカー検出失敗（認識していません）"
+                sheets={markerFailedSheets}
+                tone="error"
+              />
+              <MarkerIssueList
+                title="隅を1つ推定して読み取り（答案を確認してください）"
+                sheets={markerEstimatedSheets}
+                tone="warning"
+              />
+
               {/* 閾値調整 */}
               <div className="space-y-3 border-t pt-3">
                 <div className="text-sm font-medium">閾値調整</div>
@@ -267,5 +290,40 @@ export function OMRAutoScoringModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** 隅のマーカーで問題のあった答案の件数と生徒の一覧 */
+function MarkerIssueList({
+  title,
+  sheets,
+  tone,
+}: {
+  title: string
+  sheets: MarkerIssueSheet[]
+  tone: "error" | "warning"
+}) {
+  if (sheets.length === 0) return null
+  return (
+    <div
+      className={
+        tone === "error"
+          ? "space-y-1 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700"
+          : "space-y-1 rounded-md border border-orange-200 bg-orange-50 p-2 text-xs text-orange-700"
+      }
+    >
+      <div className="flex items-center gap-1 font-medium">
+        <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+        {title} {sheets.length} 枚
+      </div>
+      <ul className="max-h-24 space-y-0.5 overflow-y-auto pl-5">
+        {sheets.map((sheet) => (
+          <li key={sheet.examStudentId ?? sheet.studentName}>
+            {sheet.studentName}
+            <span className="ml-1 opacity-75">{sheet.detail}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
