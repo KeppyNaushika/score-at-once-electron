@@ -14,12 +14,10 @@
  */
 
 import Database from "better-sqlite3"
-import * as fs from "fs"
-import * as os from "os"
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 
-import { writeArchiveDatabase } from "../../../electron-src/lib/export/unified-archive/archiveDatabaseWriter"
+import { buildArchiveDatabase } from "../../../electron-src/lib/export/unified-archive/archiveDatabaseWriter"
 import {
   ArchiveScopeError,
   type ArchiveSelection,
@@ -38,7 +36,6 @@ import {
 
 const prisma = getTestPrismaClient()
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
-const OUTPUT_DIR = path.join(os.tmpdir(), "unified-archive-scope")
 
 const resolve = (selection: ArchiveSelection) => {
   const db = new Database(TEST_DB_PATH, { readonly: true })
@@ -59,13 +56,10 @@ describe("統合アーカイブの範囲", () => {
 
   beforeEach(async () => {
     await cleanupTestDatabase()
-    fs.rmSync(OUTPUT_DIR, { recursive: true, force: true })
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true })
     fixture = await createUnifiedArchiveFixture(prisma)
   })
 
   afterAll(async () => {
-    fs.rmSync(OUTPUT_DIR, { recursive: true, force: true })
     await disconnectTestPrisma()
   })
 
@@ -206,16 +200,13 @@ describe("統合アーカイブの範囲", () => {
     )
   })
 
-  it("書き出した DB は範囲の行だけを持ち、外部キーが閉じている", async () => {
+  it("書き出した DB は範囲の行だけを持ち、外部キーが閉じている", () => {
     const scope = resolve({
       roots: { Grade: [fixture.gradeId] },
       exclusions: { Grade: [fixture.comparedGradeId] },
       scoring: { kind: "self", userId: fixture.examA.user.id },
     })
-    const outputPath = path.join(OUTPUT_DIR, "archive.db")
-    await writeArchiveDatabase(TEST_DB_PATH, outputPath, scope)
-
-    const archive = new Database(outputPath, { readonly: true })
+    const archive = buildArchiveDatabase(TEST_DB_PATH, scope)
     try {
       for (const [table, ids] of scope.rows) {
         const count = archive

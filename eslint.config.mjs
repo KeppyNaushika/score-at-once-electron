@@ -22,6 +22,7 @@ export default [
       "**/.next-screenshot/**",
       "**/out/**",
       "renderer/**",
+      "web-dist/**",
       "**/public/**",
       "**/scripts/**",
       "**/generated/**",

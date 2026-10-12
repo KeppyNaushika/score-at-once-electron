@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from "electron"
+import { dialog } from "electron"
 
 import type { ConflictWarning } from "@/types/exportValidation.types"
 import type { GetIndividualReportDataOptions } from "@/types/individualReport.types"
@@ -13,7 +13,12 @@ import {
   exportRData,
   type ExportRDataOptions,
 } from "../lib/export/r-exametrika/rDataExporter"
-import { resolveMathJaxSrc, waitForRendering } from "../lib/printUtils"
+import {
+  type HtmlPrintPreviewOptions,
+  type HtmlToPdfFileOptions,
+  openHtmlPrintPreview,
+  printHtmlToPdfFile,
+} from "../lib/printUtils"
 import { recordAuditLog } from "../lib/prisma/auditLog"
 import { resolveExamScope } from "../lib/prisma/auditScope"
 import {
@@ -268,172 +273,12 @@ export const exportHandlers = {
   },
 
   // HTMLからPDFを生成（ブラウザ印刷機能を使用）
-  "export:printHtmlToPdf": async (options: {
-    html: string
-    filePath: string
-    pageSize?: "A4" | "Letter" | { width: number; height: number }
-    landscape?: boolean
-    margins?: {
-      top?: number
-      bottom?: number
-      left?: number
-      right?: number
-    }
-  }): Promise<void> => {
-    const fs = require("fs").promises
-    const path = require("path")
-    const { app } = require("electron")
+  "export:printHtmlToPdf": async (options: HtmlToPdfFileOptions) =>
+    printHtmlToPdfFile(options),
 
-    // 一時ファイルにHTMLを書き込む（data URIは長すぎると失敗するため）
-    const tempDir = app.getPath("temp")
-    const tempHtmlPath = path.join(tempDir, `report-${Date.now()}.html`)
-
-    const win = new BrowserWindow({
-      width: 794, // A4 at 96 DPI
-      height: 1123,
-      show: false,
-      webPreferences: {
-        offscreen: true,
-      },
-    })
-
-    try {
-      // MathJaxパスを解決してHTMLを一時ファイルに書き込み
-      const html = await resolveMathJaxSrc(options.html)
-      await fs.writeFile(tempHtmlPath, html, "utf-8")
-
-      // 一時HTMLファイルをロード
-      await win.loadFile(tempHtmlPath)
-
-      // MathJax描画完了を待つ（MathJaxがなければ500ms待機）
-      await waitForRendering(win)
-
-      // PDFを生成（マージンはインチ単位、デフォルト5mm ≈ 0.2インチ）
-      const margins = options.margins || {}
-      // pageSizeがmmオブジェクトの場合はインチに変換
-      let resolvedPageSize:
-        "A4" | "Letter" | { width: number; height: number } =
-        options.pageSize || "A4"
-      if (
-        typeof resolvedPageSize === "object" &&
-        "width" in resolvedPageSize &&
-        "height" in resolvedPageSize
-      ) {
-        resolvedPageSize = {
-          width: resolvedPageSize.width / 25.4,
-          height: resolvedPageSize.height / 25.4,
-        }
-      }
-      const pdfBuffer = await win.webContents.printToPDF({
-        pageSize: resolvedPageSize,
-        landscape: options.landscape || false,
-        printBackground: true,
-        margins: {
-          top: margins.top ?? 0.2,
-          bottom: margins.bottom ?? 0.2,
-          left: margins.left ?? 0.2,
-          right: margins.right ?? 0.2,
-        },
-      })
-
-      // ファイルに保存
-      await fs.writeFile(options.filePath, pdfBuffer)
-    } finally {
-      win.destroy()
-      // 一時ファイルを削除
-      try {
-        await fs.unlink(tempHtmlPath)
-      } catch {
-        // 削除に失敗しても無視
-      }
-    }
-  },
-
-  // ============================================================
-  // 印刷ダイアログを表示するAPI
-  // ============================================================
-
-  // HTMLからPDFを生成してプレビューで開く
-  "export:openPrintDialog": async (options: {
-    html: string
-    title?: string
-    pageSize?: "A4" | "Letter" | { width: number; height: number }
-    landscape?: boolean
-  }): Promise<void> => {
-    const fs = require("fs").promises
-    const path = require("path")
-    const { app, shell } = require("electron")
-
-    const tempDir = app.getPath("temp")
-    const tempHtmlPath = path.join(tempDir, `print-${Date.now()}.html`)
-    const tempPdfPath = path.join(
-      tempDir,
-      `${options.title || "個人成績表"}-${Date.now()}.pdf`
-    )
-
-    const win = new BrowserWindow({
-      width: 794, // A4 at 96 DPI
-      height: 1123,
-      show: false,
-      webPreferences: {
-        offscreen: true,
-      },
-    })
-
-    try {
-      // MathJaxパスを解決してHTMLを一時ファイルに書き込み
-      const html = await resolveMathJaxSrc(options.html)
-      await fs.writeFile(tempHtmlPath, html, "utf-8")
-
-      // 一時HTMLファイルをロード
-      await win.loadFile(tempHtmlPath)
-
-      // MathJax描画完了を待つ（MathJaxがなければ500ms待機）
-      await waitForRendering(win)
-
-      // PDFを生成（マージンはCSSの@page marginに任せるため0に設定）
-      // pageSizeがmmオブジェクトの場合はインチに変換
-      let pageSize: "A4" | "Letter" | { width: number; height: number } =
-        options.pageSize || "A4"
-      if (
-        typeof pageSize === "object" &&
-        "width" in pageSize &&
-        "height" in pageSize
-      ) {
-        pageSize = {
-          width: pageSize.width / 25.4,
-          height: pageSize.height / 25.4,
-        }
-      }
-
-      const pdfBuffer = await win.webContents.printToPDF({
-        pageSize,
-        landscape: options.landscape || false,
-        printBackground: true,
-        margins: {
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0,
-        },
-      })
-
-      // PDFを一時ファイルに保存
-      await fs.writeFile(tempPdfPath, pdfBuffer)
-
-      // プレビュー.appで開く（ユーザーがそこから印刷・保存可能）
-      await shell.openPath(tempPdfPath)
-    } finally {
-      win.destroy()
-      // HTMLの一時ファイルを削除
-      try {
-        await fs.unlink(tempHtmlPath)
-      } catch {
-        // 削除に失敗しても無視
-      }
-      // PDFは開いているので削除しない（ユーザーが保存する可能性がある）
-    }
-  },
+  // HTMLからPDFを生成してプレビューで開く（web 版は印刷ダイアログを出す）
+  "export:openPrintDialog": async (options: HtmlPrintPreviewOptions) =>
+    openHtmlPrintPreview(options),
 
   // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録する
   "export:captureReturnSnapshot": async (options: {

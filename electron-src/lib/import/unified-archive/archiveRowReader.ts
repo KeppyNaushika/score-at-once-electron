@@ -10,9 +10,9 @@
  * 共通の実体と、その配下（在籍・小計）と、選べる項目は振り直さない。
  */
 
-import Database from "better-sqlite3"
 import * as crypto from "crypto"
 
+import { openDatabaseFile } from "../../export/unified-archive/archiveDatabaseImage"
 import { ARCHIVE_TABLES } from "../../export/unified-archive/archiveTableRegistry"
 import { orderArchiveTables } from "./archiveTableOrder"
 
@@ -40,11 +40,10 @@ const quote = (identifier: string): string =>
   `"${identifier.replaceAll('"', '""')}"`
 
 /** archive.db を読み取り専用で開き、登録表に載る全ての表の行を読む */
-export function readArchiveRows(databasePath: string): ArchiveRows {
-  const archive = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  })
+export async function readArchiveRows(
+  databasePath: string
+): Promise<ArchiveRows> {
+  const archive = await openDatabaseFile(databasePath, { readonly: true })
   try {
     const tableNames = archive
       .prepare<[], { name: string }>(

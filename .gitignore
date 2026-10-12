@@ -13,6 +13,8 @@ coverage/
 out/
 # 画面の静的書き出し（next.config.ts の RENDERER_EXPORT_DIR）
 renderer/
+# web 版の書き出し（scripts/web/buildWeb.mjs）
+web-dist/
 
 # production
 build/

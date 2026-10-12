@@ -10,6 +10,8 @@
  *   消すとき、作業者がまだ書いていないように）。どちらでも、次の依頼は新しい作業者で続ける
  *
  * 作業者の起こし方（Electron の utilityProcess）は `spawn` で受け、ここは electron に依存しない。
+ * utilityProcess の無い web 版は、同じスレッドで仕事をする作業者（`spawnInProcessArchiveExportWorker`）
+ * を渡す。
  */
 
 import * as crypto from "crypto"
@@ -20,6 +22,7 @@ import {
   type ArchiveExportJobOptions,
   type ArchiveExportWorkerRequest,
   type ArchiveExportWorkerResponse,
+  runArchiveExportJob,
 } from "./archiveExportJob"
 import type {
   PreviewUnifiedArchiveExportOptions,
@@ -58,6 +61,44 @@ interface ArchiveExportWorkerClient {
   ) => Promise<UnifiedArchiveExportPreview>
   /** 作業者を終わらせ、終わっていない依頼を全て失敗にする（アプリの終了時） */
   shutdown: () => void
+}
+
+/**
+ * 同じスレッドで仕事をする作業者（web 版）。web 版には utilityProcess が無く、アプリの DB
+ * （sqlite-wasm の opfs-sahpool）を開けるのも main の処理を動かす1つの Worker だけなので、
+ * その Worker の中で `runArchiveExportJob` をそのまま走らせる。依頼も返事も次の周回で渡す
+ * （本物の作業者と同じく、送った呼び出しの中では返らない）。
+ *
+ * 終わらせる（kill）と、以後の返事を捨てて終わったことにする。走っている仕事そのものは止められない
+ */
+export function spawnInProcessArchiveExportWorker(): ArchiveExportWorkerProcess {
+  const messageListeners: ((response: ArchiveExportWorkerResponse) => void)[] =
+    []
+  const exitListeners: ((code: number) => void)[] = []
+  let alive = true
+  return {
+    postMessage: (request) => {
+      setTimeout(() => {
+        void runArchiveExportJob(request, (response) =>
+          setTimeout(() => {
+            if (!alive) return
+            messageListeners.forEach((listener) => listener(response))
+          }, 0)
+        )
+      }, 0)
+    },
+    onMessage: (listener) => {
+      messageListeners.push(listener)
+    },
+    onExit: (listener) => {
+      exitListeners.push(listener)
+    },
+    kill: () => {
+      if (!alive) return
+      alive = false
+      setTimeout(() => exitListeners.forEach((listener) => listener(0)), 0)
+    },
+  }
 }
 
 /** 同期処理の間は生存の知らせも届かない。64MB の DB で約1秒なので、桁違いに余裕を持たせる */

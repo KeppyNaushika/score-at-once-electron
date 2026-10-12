@@ -22,6 +22,7 @@ import type { UnifiedArchiveExportPreview } from "../../../electron-src/lib/expo
 import {
   type ArchiveExportWorkerProcess,
   createArchiveExportWorkerClient,
+  spawnInProcessArchiveExportWorker,
 } from "../../../electron-src/lib/export/unified-archive/archiveExportWorkerClient"
 import { ArchiveScopeError } from "../../../electron-src/lib/export/unified-archive/archiveScopeResolver"
 import type { UnifiedArchiveExportResult } from "../../../electron-src/lib/export/unified-archive/unifiedArchiveCreator"
@@ -363,5 +364,42 @@ describe("作業者の中身（runArchiveExportJob）", () => {
         },
       },
     ])
+  })
+})
+
+describe("同じスレッドで仕事をする作業者（web 版の spawnInProcessArchiveExportWorker）", () => {
+  it("依頼をこなして窓口へ返し、失敗は窓口で例外に戻る", async () => {
+    const client = createArchiveExportWorkerClient({
+      spawn: spawnInProcessArchiveExportWorker,
+      idleLimitMs: 0,
+    })
+    await expect(
+      client.previewExport({
+        ...PREVIEW_OPTIONS,
+        sourceDatabasePath: path.join(
+          os.tmpdir(),
+          "archive-export-in-process-missing",
+          "source.db"
+        ),
+      })
+    ).rejects.toThrow(Error)
+    client.shutdown()
+  })
+
+  it("終わらせると、以後の返事を捨てて終わりを知らせる", async () => {
+    const worker = spawnInProcessArchiveExportWorker()
+    const responses: ArchiveExportWorkerResponse[] = []
+    const exitCodes: number[] = []
+    worker.onMessage((response) => responses.push(response))
+    worker.onExit((code) => exitCodes.push(code))
+    worker.postMessage({
+      requestId: "r1",
+      job: { kind: "preview", options: PREVIEW_OPTIONS },
+    })
+    worker.kill()
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(exitCodes).toEqual([0])
+    expect(responses).toEqual([])
   })
 })

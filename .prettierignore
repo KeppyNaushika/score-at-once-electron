@@ -7,6 +7,7 @@ node_modules/
 .next-screenshot/
 out/
 renderer/
+web-dist/
 main/
 dist/
 

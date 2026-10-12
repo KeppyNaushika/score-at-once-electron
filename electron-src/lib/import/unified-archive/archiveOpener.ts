@@ -2,14 +2,15 @@
  * 統合アーカイブ（.sao）を開き、守りを通し、中の DB を現行化する
  *
  * 設計は docs/unified-archive-design.md §4.1・§7.1 の1。アーカイブは外から来たファイルなので、
- * ZIP の項目名・manifest・DB のスキーマを1つずつ確かめてから触る。中の DB は呼び出し側が
- * 用意した一時ディレクトリへ展開した複製だけを書き換える（元の .sao には触らない）。
+ * ZIP の項目名・manifest・DB のスキーマを1つずつ確かめてから触る。中の DB はメモリ上で
+ * 確かめて現行化し、済んだものだけを呼び出し側が用意した一時ディレクトリへ書く（元の .sao には
+ * 触らない）。ZIP は `archiveZipReader.ts`、DB の読み書きは `archiveDatabaseImage.ts` で、
+ * デスクトップ版と web 版で同じコードが動く。
  *
  * electron（app・dataManager）には依存しない。migration の場所と、表・列を比べる相手の DB は
  * 呼び出し側が渡す。書き込み（取り込み先への反映）は `archiveRowImporter.ts` の仕事。
  */
 
-import AdmZip from "adm-zip"
 import Database from "better-sqlite3"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
@@ -20,6 +21,10 @@ import {
   UNIFIED_ARCHIVE_MANIFEST_NAME,
   type UnifiedArchiveManifest,
 } from "../../../../src/types/unifiedArchive.types"
+import {
+  openDatabaseImage,
+  writeDatabaseFile,
+} from "../../export/unified-archive/archiveDatabaseImage"
 import { ARCHIVE_TABLES } from "../../export/unified-archive/archiveTableRegistry"
 import { BUNDLED_MIGRATIONS } from "../../prisma/schema/bundledMigrations"
 import {
@@ -32,6 +37,11 @@ import {
 } from "../../prisma/schema/migrationApplier"
 import { hasTable, type SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 import { parseUnifiedArchiveManifest } from "./archiveManifestParser"
+import {
+  type ArchiveZip,
+  type ArchiveZipEntry,
+  openArchiveZip,
+} from "./archiveZipReader"
 import type { OpenedUnifiedArchive } from "./types"
 
 export type UnifiedArchiveOpenErrorKind =
@@ -129,34 +139,47 @@ const isExpectedEntry = (segments: readonly string[], isDirectory: boolean) => {
   )
 }
 
-/** ZIP の項目を確かめてから展開する。展開先から外へ出るものは1つも書かない */
+/**
+ * ZIP の項目を確かめてから展開する。展開先から外へ出るものは1つも書かない。
+ * archive.db は書かずに中身を返す（確かめて現行化してから書く）
+ */
 const extractArchive = async (
   archivePath: string,
   workDirectory: string
-): Promise<void> => {
-  let entries: AdmZip.IZipEntry[]
+): Promise<Uint8Array> => {
+  let archiveZip: ArchiveZip
   try {
-    entries = new AdmZip(archivePath).getEntries()
+    archiveZip = await openArchiveZip(archivePath)
   } catch (error) {
     throw new UnifiedArchiveOpenError("notArchive", [errorMessageOf(error)])
   }
+  try {
+    return await extractEntries(archiveZip.entries, workDirectory)
+  } finally {
+    await archiveZip.close()
+  }
+}
 
+const extractEntries = async (
+  entries: readonly ArchiveZipEntry[],
+  workDirectory: string
+): Promise<Uint8Array> => {
   const problems: string[] = []
   const seenNames = new Set<string>()
-  const filesToWrite: { entry: AdmZip.IZipEntry; segments: string[] }[] = []
+  const filesToWrite: { entry: ArchiveZipEntry; segments: string[] }[] = []
   for (const entry of entries) {
-    const split = splitEntryName(entry.entryName)
+    const split = splitEntryName(entry.name)
     if ("problem" in split) {
-      problems.push(`${entry.entryName}: ${split.problem}`)
+      problems.push(`${entry.name}: ${split.problem}`)
       continue
     }
     if (!isExpectedEntry(split.segments, entry.isDirectory)) {
-      problems.push(`${entry.entryName}: 想定外の項目`)
+      problems.push(`${entry.name}: 想定外の項目`)
       continue
     }
     const normalizedName = split.segments.join("/")
     if (seenNames.has(normalizedName)) {
-      problems.push(`${entry.entryName}: 同じ名前の項目が複数ある`)
+      problems.push(`${entry.name}: 同じ名前の項目が複数ある`)
       continue
     }
     seenNames.add(normalizedName)
@@ -174,26 +197,37 @@ const extractArchive = async (
   }
 
   const root = path.resolve(workDirectory)
+  let databaseImage: Uint8Array | null = null
   for (const { entry, segments } of filesToWrite) {
     const targetPath = path.resolve(root, ...segments)
     const relativePath = path.relative(root, targetPath)
     // 名前の検査で弾いているが、書く直前にもう一度確かめる
     if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
       throw new UnifiedArchiveOpenError("notArchive", [
-        `${entry.entryName}: 展開先の外を指す`,
+        `${entry.name}: 展開先の外を指す`,
       ])
     }
-    let content: Buffer
+    let content: Uint8Array
     try {
-      content = entry.getData()
+      content = await entry.read()
     } catch (error) {
       throw new UnifiedArchiveOpenError("notArchive", [
-        `${entry.entryName}: ${errorMessageOf(error)}`,
+        `${entry.name}: ${errorMessageOf(error)}`,
       ])
+    }
+    if (segments.join("/") === UNIFIED_ARCHIVE_DATABASE_NAME) {
+      databaseImage = content
+      continue
     }
     await fsPromises.mkdir(path.dirname(targetPath), { recursive: true })
     await fsPromises.writeFile(targetPath, content, { flag: "wx" })
   }
+  if (databaseImage === null) {
+    throw new UnifiedArchiveOpenError("notArchive", [
+      `${UNIFIED_ARCHIVE_DATABASE_NAME} が無い`,
+    ])
+  }
+  return databaseImage
 }
 
 // ── 2. manifest ───────────────────────────────────────────
@@ -438,7 +472,7 @@ export async function openUnifiedArchive(
     throw new Error(`展開先が空ではありません: ${workDirectory}`)
   }
 
-  await extractArchive(options.archivePath, workDirectory)
+  const databaseImage = await extractArchive(options.archivePath, workDirectory)
   const manifest = await readManifest(
     path.join(workDirectory, UNIFIED_ARCHIVE_MANIFEST_NAME)
   )
@@ -447,7 +481,12 @@ export async function openUnifiedArchive(
 
   const databasePath = path.join(workDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
   const localNames = listLocalMigrationNames(migrations)
-  const db = new Database(databasePath, { fileMustExist: true })
+  let db: SqliteDatabase
+  try {
+    db = openDatabaseImage(databaseImage, { readonly: false })
+  } catch (error) {
+    throw asCorruptUnlessOpenError(error)
+  }
   try {
     let appliedNames: Set<string>
     let idsBefore: Map<string, Set<string>>
@@ -480,6 +519,7 @@ export async function openUnifiedArchive(
       throw new UnifiedArchiveOpenError("schemaMismatch", mismatches)
     }
 
+    await writeDatabaseFile(db, databasePath, { exclusive: true })
     return {
       manifest,
       databasePath,

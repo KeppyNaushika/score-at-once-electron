@@ -244,7 +244,7 @@ npm run make:linux:x64   # Linux
 - **UIコンポーネント**: Radix UI / shadcn/ui
 - **画像処理**: sharp（OMRの二値化・傾き補正は自前実装）
 - **PDF処理**: PDF.js (react-pdf, pdfjs-dist), pdf-lib
-- **ファイル出力**: exceljs (Excel), pdf-lib (PDF), archiver / adm-zip (アーカイブ)
+- **ファイル出力**: exceljs (Excel), pdf-lib (PDF), fflate (統合アーカイブ `.sao`), adm-zip (旧形式の読み込み)
 - **数式表示**: MathJax
 - **テスト**: Vitest, Playwright (Electron E2E・スクリーンショット)
 
