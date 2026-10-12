@@ -1,8 +1,15 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
-import { FileText, Group, ListTree, RotateCcw } from "lucide-react"
-import { useState } from "react"
+import {
+  FileText,
+  Group,
+  ListOrdered,
+  ListTree,
+  type LucideIcon,
+  RotateCcw,
+} from "lucide-react"
+import { type ReactNode, useState } from "react"
 
 import { CheckboxCellWithFillHandle } from "@/components/exams/shared/CheckboxCellWithFillHandle"
 import { useFillHandleDrag } from "@/components/exams/shared/useFillHandleDrag"
@@ -17,25 +24,133 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
+import { cn } from "@/lib/utils"
 
 import { useCropSubtotalAssignments } from "../hooks/useCropSubtotalAssignments"
 
-interface QuestionAssignmentTableWithFillHandleProps {
+/** 紐付けの種類ごとに変わる見た目と文言 */
+interface AssignmentTypePresentation {
+  emptyIcon: LucideIcon
+  emptyTitle: string
+  emptyHint: string
+  headerTitle: string
+  tableTitle: string
+  rowHeading: string
+  /** 小計グループの列見出しの配色 */
+  groupHeadClassName: string
+  groupHeadTextClassName: string
+  /** 行見出し（領域名）。ラベルが無いときの既定名も含む */
+  renderRowLabel: (cropRegion: CropRegionWithSubtotals) => string
+  /** 行見出しの右に添えるバッジ */
+  renderRowBadge: (cropRegion: CropRegionWithSubtotals) => ReactNode
+  explanationClassName: string
+  explanationTitleClassName: string
+  explanationTitle: string
+  /** 種類固有の説明（フィル操作と自動保存の説明は共通で後ろに続く） */
+  explanationItems: ReactNode
+}
+
+const PRESENTATION_BY_ASSIGNMENT_TYPE: Record<
+  CropSubtotalAssignmentType,
+  AssignmentTypePresentation
+> = {
+  QUESTION_ASSIGNMENT: {
+    emptyIcon: FileText,
+    emptyTitle: "設問がありません",
+    emptyHint: "採点領域から設問を作成してください",
+    headerTitle: "設問とグループ項目の関連付け",
+    tableTitle: "関連付け対応表",
+    rowHeading: "設問",
+    groupHeadClassName: "border-blue-200 bg-blue-50/50",
+    groupHeadTextClassName: "text-blue-700",
+    renderRowLabel: (cropRegion) =>
+      cropRegion.label || `問${cropRegion.orderIndex || 1}`,
+    renderRowBadge: (cropRegion) => (
+      <Badge variant="outline" className="shrink-0 text-xs">
+        {cropRegion.points || 0}
+      </Badge>
+    ),
+    explanationClassName: "bg-muted/50",
+    explanationTitleClassName: "",
+    explanationTitle: "使い方:",
+    explanationItems: (
+      <>
+        <li>
+          • 各設問に対して、関連付けたいグループ項目にチェックを入れてください
+        </li>
+        <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
+        <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
+      </>
+    ),
+  },
+  SUBTOTAL_DEFINITION: {
+    emptyIcon: ListOrdered,
+    emptyTitle: "小計点領域がありません",
+    emptyHint: "採点領域から小計点領域を作成してください",
+    headerTitle: "小計点領域とグループ項目の関連付け",
+    tableTitle: "小計点の関連付け対応表",
+    rowHeading: "小計点領域",
+    groupHeadClassName: "border-green-200 bg-green-50/50",
+    groupHeadTextClassName: "text-green-700",
+    renderRowLabel: (cropRegion) =>
+      cropRegion.label || `小計${cropRegion.orderIndex || 1}`,
+    renderRowBadge: () => (
+      <Badge
+        variant="outline"
+        className="shrink-0 bg-green-50 text-xs text-green-700"
+      >
+        小計点
+      </Badge>
+    ),
+    explanationClassName: "bg-green-50",
+    explanationTitleClassName: "text-green-800",
+    explanationTitle: "計算ロジック:",
+    explanationItems: (
+      <>
+        <li>
+          • <strong>グループ内はOR条件</strong>:
+          同じグループ内のいずれかの項目に該当する設問の合計
+        </li>
+        <li>
+          • <strong>グループ間はAND条件</strong>:
+          複数グループを選択した場合、すべてのグループに該当する設問の合計
+        </li>
+        <li>
+          • 例: 「大問1」OR「大問2」の設問 AND 「知識・理解」の設問 =
+          該当する設問の合計点
+        </li>
+      </>
+    ),
+  },
+}
+
+interface CropSubtotalAssignmentTableProps {
   examId: string
   subtotalGroups: SubtotalGroupWithSubtotals[]
-  /** 設問領域（QUESTION_ANSWER）。割り当ての出所でもある */
+  /** この表が書き込む紐付けの種類。行に並べる領域の種類もこれで決まる */
+  assignmentType: CropSubtotalAssignmentType
+  /**
+   * 行に並べる領域（設問割当なら設問領域 QUESTION_ANSWER、小計定義なら
+   * 小計欄領域 SUBTOTAL_SCORE）。割り当ての出所でもある
+   */
   cropRegions: CropRegionWithSubtotals[]
   /** 保存済みの割り当てを取り直す */
   onReload: () => void
 }
 
-export function QuestionAssignmentTableWithFillHandle({
+/** 採点領域（設問・小計欄）と小計項目の紐付けを、フィルハンドル付きのチェック表で編集する */
+export function CropSubtotalAssignmentTable({
   examId,
   subtotalGroups,
+  assignmentType,
   cropRegions,
   onReload,
-}: QuestionAssignmentTableWithFillHandleProps) {
+}: CropSubtotalAssignmentTableProps) {
+  const presentation = PRESENTATION_BY_ASSIGNMENT_TYPE[assignmentType]
+  const EmptyIcon = presentation.emptyIcon
+
   // 選択されたセルの状態（rowId-colId形式）
   const [selectedCell, setSelectedCell] = useState<string | null>(null)
 
@@ -45,7 +160,7 @@ export function QuestionAssignmentTableWithFillHandle({
   const { isAssigned, saving, setCellAssignment, fillCells } =
     useCropSubtotalAssignments({
       examId,
-      assignmentType: "QUESTION_ASSIGNMENT",
+      assignmentType,
     })
 
   // フィルハンドルのドラッグ管理
@@ -84,9 +199,9 @@ export function QuestionAssignmentTableWithFillHandle({
   if (cropRegions.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p>設問がありません</p>
-        <p className="text-sm">採点領域から設問を作成してください</p>
+        <EmptyIcon className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <p>{presentation.emptyTitle}</p>
+        <p className="text-sm">{presentation.emptyHint}</p>
       </div>
     )
   }
@@ -97,7 +212,7 @@ export function QuestionAssignmentTableWithFillHandle({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Group className="h-5 w-5" />
-          <span className="font-medium">設問とグループ項目の関連付け</span>
+          <span className="font-medium">{presentation.headerTitle}</span>
           {saving && (
             <Badge
               variant="outline"
@@ -123,7 +238,7 @@ export function QuestionAssignmentTableWithFillHandle({
       {/* 対応表 */}
       <div className="rounded-lg border">
         <div className="border-b bg-gray-50 px-4 py-3">
-          <h3 className="text-base font-medium">関連付け対応表</h3>
+          <h3 className="text-base font-medium">{presentation.tableTitle}</h3>
         </div>
         <div
           className="relative min-h-96 w-full overflow-auto"
@@ -145,15 +260,23 @@ export function QuestionAssignmentTableWithFillHandle({
                     maxWidth: "128px",
                   }}
                 >
-                  設問
+                  {presentation.rowHeading}
                 </TableHead>
                 {subtotalGroups.map((group) => (
                   <TableHead
                     key={group.id}
-                    className="sticky top-0 z-20 border-l-2 border-blue-200 bg-blue-50/50 text-center"
+                    className={cn(
+                      "sticky top-0 z-20 border-l-2 text-center",
+                      presentation.groupHeadClassName
+                    )}
                     colSpan={group.subtotals.length}
                   >
-                    <div className="text-sm font-semibold text-blue-700">
+                    <div
+                      className={cn(
+                        "text-sm font-semibold",
+                        presentation.groupHeadTextClassName
+                      )}
+                    >
                       {group.name}
                     </div>
                   </TableHead>
@@ -197,11 +320,9 @@ export function QuestionAssignmentTableWithFillHandle({
                   >
                     <div className="flex items-center gap-1 overflow-hidden">
                       <div className="flex-1 text-sm font-medium">
-                        {region.label || `問${region.orderIndex || 1}`}
+                        {presentation.renderRowLabel(region)}
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {region.points || 0}
-                      </Badge>
+                      {presentation.renderRowBadge(region)}
                     </div>
                   </TableCell>
                   {(() => {
@@ -263,14 +384,22 @@ export function QuestionAssignmentTableWithFillHandle({
       </div>
 
       {/* 説明 */}
-      <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-        <h4 className="mb-2 font-medium">使い方:</h4>
+      <div
+        className={cn(
+          "rounded-lg p-4 text-sm text-muted-foreground",
+          presentation.explanationClassName
+        )}
+      >
+        <h4
+          className={cn(
+            "mb-2 font-medium",
+            presentation.explanationTitleClassName
+          )}
+        >
+          {presentation.explanationTitle}
+        </h4>
         <ul className="ml-4 space-y-1">
-          <li>
-            • 各設問に対して、関連付けたいグループ項目にチェックを入れてください
-          </li>
-          <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
-          <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
+          {presentation.explanationItems}
           <li>
             •{" "}
             <strong>

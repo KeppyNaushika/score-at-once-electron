@@ -4,6 +4,11 @@
  * useImageCanvas.ts の drawSingleElement を純粋関数として抽出したもの。
  */
 
+import {
+  drawAnnotationEllipse,
+  drawAnnotationLine,
+  drawAnnotationRectangle,
+} from "@/lib/annotationShapeCanvas"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
@@ -115,215 +120,35 @@ export async function drawElement(
       break
 
     case "line":
-      {
-        const currentEndX = element.endX * imageWidth + offsetX
-        const currentEndY = (element.endY - pageOffset) * imageHeight + offsetY
-
-        ctx.save()
-        ctx.strokeStyle = element.color
-        ctx.fillStyle = element.color
-        ctx.lineWidth = strokeWidthPx
-        ctx.setLineDash([])
-        ctx.lineCap = "round"
-        ctx.lineJoin = "round"
-
-        // 線の長さと角度を計算
-        const dx = currentEndX - currentX
-        const dy = currentEndY - currentY
-        const lineLength = Math.sqrt(dx * dx + dy * dy)
-        const angle = Math.atan2(dy, dx)
-
-        // 矢印のサイズ
-        const arrowSize = strokeWidthPx * 5
-
-        switch (element.lineStyle) {
-          case "wave": {
-            // cos波（中央揃え）: 線分の中央が波の頂点
-            const waveAmplitude = strokeWidthPx * 1.5
-            const wavelength = strokeWidthPx * 10 * 2
-
-            const perpX = -Math.sin(angle)
-            const perpY = Math.cos(angle)
-
-            const steps = Math.max(
-              Math.ceil((lineLength / wavelength) * 32),
-              64
-            )
-
-            ctx.beginPath()
-            for (let i = 0; i <= steps; i++) {
-              const t = i / steps
-              const pos = t * lineLength
-              const theta = (2 * Math.PI * (pos - lineLength / 2)) / wavelength
-              const waveOffset = waveAmplitude * Math.cos(theta)
-
-              const x = currentX + dx * t + perpX * waveOffset
-              const y = currentY + dy * t + perpY * waveOffset
-
-              if (i === 0) ctx.moveTo(x, y)
-              else ctx.lineTo(x, y)
-            }
-            ctx.stroke()
-            break
-          }
-
-          case "zigzag": {
-            // ジグザグ（cos位相、中央揃え）: 中央が+A頂点
-            const zigAmplitude = strokeWidthPx * 1.5
-            const zigPitch = strokeWidthPx * 8
-
-            const perpX = -Math.sin(angle)
-            const perpY = Math.cos(angle)
-
-            const center = lineLength / 2
-            const peaks: { pos: number; amp: number }[] = []
-
-            peaks.push({ pos: center, amp: zigAmplitude })
-
-            for (let i = 1; center + i * zigPitch < lineLength; i++) {
-              const amp = (i % 2 === 0 ? 1 : -1) * zigAmplitude
-              peaks.push({
-                pos: center + i * zigPitch,
-                amp,
-              })
-            }
-            for (let i = 1; center - i * zigPitch > 0; i++) {
-              const amp = (i % 2 === 0 ? 1 : -1) * zigAmplitude
-              peaks.push({
-                pos: center - i * zigPitch,
-                amp,
-              })
-            }
-
-            peaks.sort((peakA, peakB) => peakA.pos - peakB.pos)
-
-            ctx.beginPath()
-            ctx.moveTo(currentX, currentY)
-
-            for (const peak of peaks) {
-              const t = peak.pos / lineLength
-              const baseX = currentX + dx * t
-              const baseY = currentY + dy * t
-              ctx.lineTo(baseX + perpX * peak.amp, baseY + perpY * peak.amp)
-            }
-
-            ctx.lineTo(currentX + dx, currentY + dy)
-            ctx.stroke()
-            break
-          }
-
-          case "double": {
-            const offset = strokeWidthPx
-            const perpX = -Math.sin(angle) * offset
-            const perpY = Math.cos(angle) * offset
-
-            ctx.beginPath()
-            ctx.moveTo(currentX + perpX, currentY + perpY)
-            ctx.lineTo(currentEndX + perpX, currentEndY + perpY)
-            ctx.stroke()
-
-            ctx.beginPath()
-            ctx.moveTo(currentX - perpX, currentY - perpY)
-            ctx.lineTo(currentEndX - perpX, currentEndY - perpY)
-            ctx.stroke()
-            break
-          }
-
-          case "arrow": {
-            ctx.beginPath()
-            ctx.moveTo(currentX, currentY)
-            ctx.lineTo(currentEndX, currentEndY)
-            ctx.stroke()
-
-            ctx.beginPath()
-            ctx.moveTo(currentEndX, currentEndY)
-            ctx.lineTo(
-              currentEndX - arrowSize * Math.cos(angle - Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6)
-            )
-            ctx.lineTo(
-              currentEndX - arrowSize * Math.cos(angle + Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6)
-            )
-            ctx.closePath()
-            ctx.fill()
-            break
-          }
-
-          case "both_arrow": {
-            ctx.beginPath()
-            ctx.moveTo(currentX, currentY)
-            ctx.lineTo(currentEndX, currentEndY)
-            ctx.stroke()
-
-            // 終点の矢印
-            ctx.beginPath()
-            ctx.moveTo(currentEndX, currentEndY)
-            ctx.lineTo(
-              currentEndX - arrowSize * Math.cos(angle - Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6)
-            )
-            ctx.lineTo(
-              currentEndX - arrowSize * Math.cos(angle + Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6)
-            )
-            ctx.closePath()
-            ctx.fill()
-
-            // 始点の矢印
-            ctx.beginPath()
-            ctx.moveTo(currentX, currentY)
-            ctx.lineTo(
-              currentX + arrowSize * Math.cos(angle - Math.PI / 6),
-              currentY + arrowSize * Math.sin(angle - Math.PI / 6)
-            )
-            ctx.lineTo(
-              currentX + arrowSize * Math.cos(angle + Math.PI / 6),
-              currentY + arrowSize * Math.sin(angle + Math.PI / 6)
-            )
-            ctx.closePath()
-            ctx.fill()
-            break
-          }
-
-          default:
-            // solid - 通常の直線
-            ctx.beginPath()
-            ctx.moveTo(currentX, currentY)
-            ctx.lineTo(currentEndX, currentEndY)
-            ctx.stroke()
-            break
-        }
-
-        ctx.restore()
-      }
+      drawAnnotationLine(
+        ctx,
+        {
+          startX: currentX,
+          startY: currentY,
+          endX: element.endX * imageWidth + offsetX,
+          endY: (element.endY - pageOffset) * imageHeight + offsetY,
+        },
+        element.lineStyle,
+        strokeWidthPx
+      )
       break
 
     case "rectangle":
-      {
-        const rectWidth = element.width * imageWidth
-        const rectHeight = element.height * imageHeight
-        ctx.strokeRect(currentX, currentY, rectWidth, rectHeight)
-      }
+      drawAnnotationRectangle(ctx, {
+        x: currentX,
+        y: currentY,
+        width: element.width * imageWidth,
+        height: element.height * imageHeight,
+      })
       break
 
     case "ellipse":
-      {
-        const rectWidth = element.width * imageWidth
-        const rectHeight = element.height * imageHeight
-
-        ctx.beginPath()
-        ctx.ellipse(
-          currentX + rectWidth / 2,
-          currentY + rectHeight / 2,
-          Math.abs(rectWidth) / 2,
-          Math.abs(rectHeight) / 2,
-          0,
-          0,
-          2 * Math.PI
-        )
-        ctx.stroke()
-      }
+      drawAnnotationEllipse(ctx, {
+        x: currentX,
+        y: currentY,
+        width: element.width * imageWidth,
+        height: element.height * imageHeight,
+      })
       break
   }
 }

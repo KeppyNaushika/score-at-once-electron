@@ -176,7 +176,7 @@ export function IndividualGuide({
       <Scene>
         <FocusSection title="⑦ 答案に記号やコメントを書き込む">
           <p>
-            個別表示では、答案の上に直接、丸や線、コメントを書き込めます。
+            個別表示では、答案の上に直接、直線・長方形・楕円やテキストを書き込めます。
             一覧表示にはない、個別表示だけの機能です。
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -188,19 +188,19 @@ export function IndividualGuide({
             />
             <DrawToolCard
               tool="rectangle"
-              name="四角"
-              desc="四角で囲む"
+              name="長方形"
+              desc="長方形で囲む"
               keyLabel={toolKeys.rectangle}
             />
             <DrawToolCard
               tool="ellipse"
-              name="丸"
-              desc="丸で囲む"
+              name="楕円"
+              desc="楕円で囲む"
               keyLabel={toolKeys.ellipse}
             />
             <DrawToolCard
               tool="text"
-              name="文字"
+              name="テキスト"
               desc="コメントを書く"
               keyLabel={toolKeys.text}
             />

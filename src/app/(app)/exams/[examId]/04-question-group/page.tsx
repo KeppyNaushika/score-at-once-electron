@@ -4,8 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Group } from "lucide-react"
 import { useCallback, useMemo } from "react"
 
-import { QuestionAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentTableWithFillHandle"
-import { SubtotalAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/SubtotalAssignmentTableWithFillHandle"
+import { CropSubtotalAssignmentTable } from "@/components/exams/04-question-group/components/CropSubtotalAssignmentTable"
 import { SubtotalGroupSelector } from "@/components/exams/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -116,9 +115,10 @@ export default function SubtotalGroupPage() {
                   設問と小計項目の関連付け
                 </h2>
               </div>
-              <QuestionAssignmentTableWithFillHandle
+              <CropSubtotalAssignmentTable
                 examId={examId}
                 subtotalGroups={activeSubtotalGroups}
+                assignmentType="QUESTION_ASSIGNMENT"
                 cropRegions={questionRegions}
                 onReload={reload}
               />
@@ -134,10 +134,11 @@ export default function SubtotalGroupPage() {
                   小計点領域との関連付け
                 </h2>
               </div>
-              <SubtotalAssignmentTableWithFillHandle
+              <CropSubtotalAssignmentTable
                 examId={examId}
                 subtotalGroups={activeSubtotalGroups}
-                subtotalRegions={subtotalRegions}
+                assignmentType="SUBTOTAL_DEFINITION"
+                cropRegions={subtotalRegions}
                 onReload={reload}
               />
             </div>
