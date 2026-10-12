@@ -84,6 +84,7 @@ describe("採点方式の推奨", () => {
           pointDelta,
           setStatus: null,
           setScore: null,
+          setScaleLevelId: null,
           rationale: "",
           recommended: true,
           sortOrder: 0,

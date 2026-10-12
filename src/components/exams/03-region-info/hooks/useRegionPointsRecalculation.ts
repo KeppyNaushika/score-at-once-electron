@@ -19,6 +19,7 @@ import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 
 import { toRubricScoreWrites } from "@/components/exams/07-score-at-once/Rubric/utils/rubricRecalculation"
+import { toRubricRecalculationSource } from "@/components/exams/07-score-at-once/Rubric/utils/rubricRecalculation"
 import {
   rubricRecalculationSourceQuery,
   writeRubricScoresMutation,
@@ -72,7 +73,10 @@ export function useRegionPointsRecalculation(examId: string) {
             rubricRecalculationSourceQuery(examId, cropRegionId)
           )
           if (isStale()) return
-          const changes = planPointsRecalculation(source, nextPoints)
+          const changes = planPointsRecalculation(
+            source && toRubricRecalculationSource(source),
+            nextPoints
+          )
           if (changes.length === 0) return
           await writeScores(toRubricScoreWrites(changes))
         } catch {

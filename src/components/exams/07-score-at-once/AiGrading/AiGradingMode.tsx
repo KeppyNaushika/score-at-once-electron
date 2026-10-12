@@ -7,7 +7,6 @@ import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-s
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import { toScoringMethod } from "@/types/rubric.types"
 
 import { AiGradingWorkspace } from "./AiGradingWorkspace"
 import { useAiGridViewSettings } from "./hooks/useAiGridViewSettings"
@@ -85,19 +84,7 @@ export function AiGradingMode({
   return (
     // 外枠を採点エリアいっぱいに広げる（縮むと右パネルが一覧の幅に引きずられて動く）
     <div className="flex h-full min-h-0 min-w-0 flex-1">
-      {currentCropRegion &&
-      toScoringMethod(currentCropRegion.scoringMethod) === "scale" ? (
-        // 類型方式の設問は AI採点の対象外（類型の選択肢は §4-8-7 の S6 で足す）。
-        // 作業場を開かないので、AI の判定も点の採点も書かれない
-        <>
-          <div className="flex flex-1 items-center justify-center p-4 text-sm text-muted-foreground">
-            類型方式の設問は、まだAI採点では採点できません。一覧表示か個別表示で類型を付けてください
-          </div>
-          <div className="w-96 shrink-0 overflow-y-auto border-l px-3">
-            {questionNavigator}
-          </div>
-        </>
-      ) : currentCropRegion ? (
+      {currentCropRegion ? (
         <AiGradingWorkspace
           key={currentCropRegion.id}
           examId={examId}

@@ -11,9 +11,11 @@ import { toast } from "sonner"
 
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { rubricItemsQuery, writeRubricScoresMutation } from "@/queries/rubric"
+import { toScoringMethod } from "@/types/rubric.types"
 
 import type { RubricScoredRow } from "../types"
 import { computeRubricScore, isSameRubricScore } from "../utils/rubricScore"
+import { fetchRubricScoringRegion } from "./useRubricScoringRegion"
 
 export function useRubricScoreWriting(
   examId: string,
@@ -28,6 +30,11 @@ export function useRubricScoreWriting(
     () => queryClient.fetchQuery(rubricItemsQuery(examId, cropRegion.id)),
     [queryClient, examId, cropRegion.id]
   )
+  /** 計算に使う設問（類型方式なら、組を読み終えた今の類型） */
+  const readScoringRegion = useCallback(
+    () => fetchRubricScoringRegion(queryClient, examId, cropRegion),
+    [queryClient, examId, cropRegion]
+  )
   const { mutateAsync: writeScores } = useMutation(
     writeRubricScoresMutation(examId)
   )
@@ -36,14 +43,19 @@ export function useRubricScoreWriting(
   const writeComputedScores = useCallback(
     async (rows: readonly RubricScoredRow[]) => {
       const rubricItems = await readRubricItems()
+      const scoringRegion = await readScoringRegion()
       const outcomes = rows.map((row) => ({
         row,
-        outcome: computeRubricScore(cropRegion, rubricItems, row),
+        outcome: computeRubricScore(scoringRegion, rubricItems, row),
       }))
       const writes = outcomes.flatMap(({ row, outcome }) =>
         outcome.kind === "computed" &&
         !isSameRubricScore(
-          { status: row.status, partialScore: row.partialScore },
+          {
+            status: row.status,
+            partialScore: row.partialScore,
+            scaleLevelId: row.scaleLevelId,
+          },
           outcome.result
         )
           ? [
@@ -51,6 +63,7 @@ export function useRubricScoreWriting(
                 questionScoreId: row.id,
                 status: outcome.result.status,
                 partialScore: outcome.result.partialScore,
+                scaleLevelId: outcome.result.scaleLevelId,
                 clearsOverride: false,
               },
             ]
@@ -61,14 +74,23 @@ export function useRubricScoreWriting(
           outcome.kind === "computed" && outcome.shadowedSetItemIds.length > 0
       ).length
       if (shadowedCount > 0) {
+        const decidingKind =
+          toScoringMethod(scoringRegion.scoringMethod) === "scale"
+            ? "類型か判定"
+            : "判定"
         toast.info(
-          `判定を決める項目が重なった答案が${shadowedCount}件あります。並びが先の項目を採りました`
+          `${decidingKind}を決める項目が重なった答案が${shadowedCount}件あります。並びが先の項目を採りました`
         )
       }
       if (writes.length > 0) await writeScores(writes)
     },
-    [cropRegion, readRubricItems, writeScores]
+    [readRubricItems, readScoringRegion, writeScores]
   )
 
-  return { readRubricItems, writeScores, writeComputedScores }
+  return {
+    readRubricItems,
+    readScoringRegion,
+    writeScores,
+    writeComputedScores,
+  }
 }

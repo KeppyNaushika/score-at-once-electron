@@ -326,6 +326,7 @@ describe("ルーブリック採点の画面", () => {
             questionScoreId: "score-colleague",
             status: "incorrect",
             partialScore: null,
+            scaleLevelId: null,
             clearsOverride: false,
           },
         ])
@@ -417,12 +418,14 @@ describe("ルーブリック採点の画面", () => {
             questionScoreId: "score-s1",
             status: "partial",
             partialScore: 3,
+            scaleLevelId: null,
             clearsOverride: false,
           },
           {
             questionScoreId: "score-s2",
             status: "partial",
             partialScore: 3,
+            scaleLevelId: null,
             clearsOverride: false,
           },
         ])
@@ -467,6 +470,7 @@ describe("ルーブリック採点の画面", () => {
             questionScoreId: "score-s1",
             status: "unscored",
             partialScore: null,
+            scaleLevelId: null,
             clearsOverride: false,
           },
         ])
@@ -507,6 +511,7 @@ describe("ルーブリック採点の画面", () => {
             questionScoreId: "score-s1",
             status: "partial",
             partialScore: 1,
+            scaleLevelId: null,
             clearsOverride: true,
           },
         ])
@@ -557,6 +562,7 @@ describe("ルーブリック採点の画面", () => {
             questionScoreId: "score-colleague",
             status: "unscored",
             partialScore: null,
+            scaleLevelId: null,
             clearsOverride: false,
           },
         ])

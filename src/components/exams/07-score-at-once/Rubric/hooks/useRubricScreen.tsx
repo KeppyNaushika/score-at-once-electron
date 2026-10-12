@@ -4,10 +4,7 @@ import type { GridAnswerItem } from "@/components/exams/07-score-at-once/Scoring
 import type { GradingMode } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import {
-  computesScoreFromRubricItems,
-  toScoringMethod,
-} from "@/types/rubric.types"
+import { scoresFromRubricItems, toScoringMethod } from "@/types/rubric.types"
 
 import { RubricCellMark } from "../RubricCellMark"
 import { useRubricQuestion } from "./useRubricQuestion"
@@ -24,10 +21,10 @@ interface UseRubricScreenOptions {
 }
 
 /**
- * 07 の一覧表示・個別表示で、今の設問がルーブリック採点（減点・加点方式）かと、
- * 一覧のマスに置く印を決める。
+ * 07 の一覧表示・個別表示で、今の設問が採点項目で採点する設問（減点・加点方式と類型方式）かと、
+ * 一覧のマスに置く印を決める。類型方式の設問では、類型にする採点項目を当てるとその類型になる（§4-8-6）。
  *
- * 直接採点（points）の設問では `rubricCropRegion` が null になり、印も出さず項目も
+ * 正誤方式（points）の設問では `rubricCropRegion` が null になり、印も出さず項目も
  * 読まない（画面はこれまでと同じ）。AI採点モードは自前の左パネルを持つので、ここでは扱わない
  */
 export function useRubricScreen({
@@ -40,9 +37,7 @@ export function useRubricScreen({
   const rubricCropRegion =
     gradingMode !== "ai" &&
     currentCropRegion &&
-    computesScoreFromRubricItems(
-      toScoringMethod(currentCropRegion.scoringMethod)
-    )
+    scoresFromRubricItems(toScoringMethod(currentCropRegion.scoringMethod))
       ? currentCropRegion
       : null
   const questionScores = currentCropRegion

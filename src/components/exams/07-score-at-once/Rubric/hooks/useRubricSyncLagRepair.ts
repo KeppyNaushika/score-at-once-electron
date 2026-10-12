@@ -27,6 +27,7 @@ import {
 
 import {
   planRubricRecalculation,
+  toRubricRecalculationSource,
   toRubricScoreWrites,
 } from "../utils/rubricRecalculation"
 
@@ -52,7 +53,9 @@ export function useRubricSyncLagRepair({
   const changes = useMemo(
     () =>
       source
-        ? planRubricRecalculation(source, { scorerUserId: currentUserId })
+        ? planRubricRecalculation(toRubricRecalculationSource(source), {
+            scorerUserId: currentUserId,
+          })
         : [],
     [source, currentUserId]
   )
@@ -65,7 +68,7 @@ export function useRubricSyncLagRepair({
     const signature = changes
       .map(
         (change) =>
-          `${change.questionScoreId}:${change.before.status}:${change.before.partialScore}>${change.after.status}:${change.after.partialScore}`
+          `${change.questionScoreId}:${change.before.status}:${change.before.partialScore}:${change.before.scaleLevelId}>${change.after.status}:${change.after.partialScore}:${change.after.scaleLevelId}`
       )
       .sort()
       .join("|")

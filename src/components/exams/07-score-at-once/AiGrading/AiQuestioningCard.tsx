@@ -10,6 +10,7 @@ import { AiQuestioningOptions } from "./AiQuestioningOptions"
 import type { QuestioningFlow } from "./hooks/useQuestioningFlow"
 import {
   memberCountLabelOf,
+  type QuestioningScaleLevel,
   type QuestioningStepState,
 } from "./utils/questioningSteps"
 
@@ -18,6 +19,8 @@ interface AiQuestioningCardProps {
   position: number
   total: number
   flow: QuestioningFlow
+  /** 設問の類型表の類型（類型の選択肢に類型の色を添える。類型方式でなければ空） */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 /**
@@ -29,6 +32,7 @@ export function AiQuestioningCard({
   position,
   total,
   flow,
+  scaleLevels,
 }: AiQuestioningCardProps) {
   const { step } = state
   const { keyBindings } = useKeyBindings()
@@ -56,7 +60,11 @@ export function AiQuestioningCard({
       </div>
       <p className="text-gray-700">{step.question}</p>
       {step.detail && <p className="text-gray-500">{step.detail}</p>}
-      <AiQuestioningOptions state={state} flow={flow} />
+      <AiQuestioningOptions
+        state={state}
+        flow={flow}
+        scaleLevels={scaleLevels}
+      />
       {step.advice && (
         <AiQuestioningAdviceField
           textareaRef={flow.adviceTextRef}

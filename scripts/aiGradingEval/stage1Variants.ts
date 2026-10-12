@@ -66,12 +66,18 @@ export function buildStage1EvalRequest(input: {
     parts: [...fixedParts, ...buildGradingVariableParts(input.answerImage)],
     schema: toJsonSchemaObject(buildStage1OutputSchema(rubricItemIds)),
     readVerdict: (structuredOutput) => {
+      // この評価は類型方式でない設問だけを対象にする（類型を送らない）
       const validation = validateStage1Response(structuredOutput, {
         maxPoints,
         rubricItemIds,
+        scaleLevelIds: [],
       })
       if (!validation.ok) return { ok: false, reasons: validation.reasons }
-      return { ok: true, ...validation.value }
+      const { status } = validation.value
+      if (status === "evaluated") {
+        return { ok: false, reasons: ["類型方式の判定は評価の対象にしません"] }
+      }
+      return { ok: true, ...validation.value, status }
     },
   }
 }

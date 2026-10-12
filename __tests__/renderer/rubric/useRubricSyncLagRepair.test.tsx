@@ -26,6 +26,7 @@ const unitMissing = {
   pointDelta: -2,
   setStatus: null,
   setScore: null,
+  setScaleLevelId: null,
   sortOrder: 0,
   createdAt: new Date("2026-10-01T00:00:00.000Z"),
 }
@@ -40,6 +41,7 @@ interface StoredRow {
 
 const appliedRow = (stored: StoredRow) => ({
   ...stored,
+  scaleLevelId: null,
   rubricApplications: [{ rubricItemId: unitMissing.id }],
 })
 
@@ -49,6 +51,7 @@ const sourceOf = (rows: StoredRow[]) => ({
   points: 10,
   rubricItems: [unitMissing],
   questionScores: rows.map(appliedRow),
+  scoreScale: null,
 })
 
 /** 項目からは 10 - 2 = 8 点（部分点） */
@@ -142,6 +145,7 @@ describe("useRubricSyncLagRepair", () => {
         questionScoreId: OWN_STALE.id,
         status: "partial",
         partialScore: 8,
+        scaleLevelId: null,
         clearsOverride: false,
       },
     ])

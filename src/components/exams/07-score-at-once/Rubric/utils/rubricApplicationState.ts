@@ -69,6 +69,7 @@ export function toRubricScoredRow(
     overridesRubric: questionScore.overridesRubric,
     status: toScoringStatus(questionScore.status),
     partialScore: questionScore.partialScore,
+    scaleLevelId: questionScore.scaleLevelId,
     rubricApplications: [...appliedItemIds].map((rubricItemId) => ({
       rubricItemId,
     })),

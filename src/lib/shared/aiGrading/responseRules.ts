@@ -7,7 +7,8 @@
  * 保証されない。したがって、形とアプリの規則の両方を各段の検証
  * （`stage1ResponseValidator.ts`・`stage2ResponseValidator.ts`）で確かめる。ここはその共通部分:
  *
- * - status は correct / partial / incorrect / no_answer / pending のいずれか
+ * - status は correct / partial / incorrect / no_answer / pending のいずれか（類型方式の設問は
+ *   evaluated / no_answer / pending のいずれかで、点を持たない。類型の id は各段の検証が確かめる）
  * - partialScore は partial では必ずあり、pending では任意（点の無い保留）。それ以外では無い。
  *   あるときは 0〜配点に収まる
  * - 0.01 より細かい点は 0.01 単位に丸めて受け取り、丸めたことを notes に残す
@@ -19,6 +20,7 @@ import { isOneOf } from "@/types/stringUnion"
 
 import {
   AI_GRADING_OUTPUT_STATUSES,
+  AI_GRADING_SCALE_OUTPUT_STATUSES,
   AI_GRADING_SCORED_STATUSES,
   type AiGradingOutputStatus,
 } from "./gradingSchema"
@@ -29,10 +31,23 @@ const CENT_EPSILON = 1e-9
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
+/** AI に返させる判定のどれか（方式を問わない。記録した試行を読むとき） */
 export const isAiGradingOutputStatus = (
   value: unknown
 ): value is AiGradingOutputStatus =>
-  typeof value === "string" && isOneOf(AI_GRADING_OUTPUT_STATUSES, value)
+  typeof value === "string" &&
+  (isOneOf(AI_GRADING_OUTPUT_STATUSES, value) ||
+    isOneOf(AI_GRADING_SCALE_OUTPUT_STATUSES, value))
+
+/** 設問の方式で返させる判定か（類型方式の設問は evaluated / no_answer / pending だけ） */
+export const isAiGradingOutputStatusFor = (
+  value: unknown,
+  isScaleQuestion: boolean
+): value is AiGradingOutputStatus =>
+  typeof value === "string" &&
+  (isScaleQuestion
+    ? isOneOf(AI_GRADING_SCALE_OUTPUT_STATUSES, value)
+    : isOneOf(AI_GRADING_OUTPUT_STATUSES, value))
 
 const isScoredStatus = (status: AiGradingOutputStatus): boolean =>
   isOneOf(AI_GRADING_SCORED_STATUSES, status)

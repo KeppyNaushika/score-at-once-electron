@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 
 import { useScaleQuestion } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleQuestion"
+import { effectiveMouseBrushOf } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleMouseBrush"
 import { useDecisionEntry } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useDecisionEntry"
 import { useGuardedScoring } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useGuardedScoring"
 import { useMasterAnswerPages } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerPages"
@@ -46,9 +47,12 @@ export function useScoringScreen({
   const currentUser = useCurrentUser()
 
   /** 操作モード管理 */
-  const { scoringOperationMode, ...scoringModeControls } = useScoringMode(
-    currentUser.id
-  )
+  const {
+    scoringOperationMode,
+    mouseBrush: chosenMouseBrush,
+    mouseScaleLevelId: chosenMouseScaleLevelId,
+    ...scoringModeControls
+  } = useScoringMode(currentUser.id)
   const effectiveMode = scoringOperationMode ?? "keyboard"
 
   /** データローダーフック */
@@ -187,6 +191,17 @@ export function useScoringScreen({
   })
 
   /**
+   * マウスモードで効くブラシ。今の設問の方式で効かないブラシ（点の採点の設問の類型・類型方式の設問の
+   * 正答など・消えた類型）は「選択」として読み、古い類型や止められる採点を書かない。選んだ値は書き換えない
+   */
+  const { mouseBrush, mouseScaleLevelId } = effectiveMouseBrushOf({
+    mouseBrush: chosenMouseBrush,
+    mouseScaleLevelId: chosenMouseScaleLevelId,
+    isScaleQuestion: scaleQuestion.isScaleQuestion,
+    scaleLevels: scaleQuestion.scaleLevels,
+  })
+
+  /**
    * 個別表示で、現在の設問のページが表示中の答案に無いか（判定は個別表示の描画側が持ち、
    * `onCurrentQuestionPageMissingChange` で伝えてくる）。無い間は採点の口を止める。
    * 個別表示を離れると（`AnswerIndividualView` が外れると）false に戻る
@@ -219,6 +234,7 @@ export function useScoringScreen({
       filteredScoringDataIds: answerList.filteredScoringDataIds,
       replaceSelection,
       setGradingMode,
+      mouseScaleLevelId,
     },
     currentCropRegion,
     scaleQuestion,
@@ -316,6 +332,8 @@ export function useScoringScreen({
     handleCurrentQuestionPageMissingChange: setIsCurrentQuestionPageMissing,
     isCurrentQuestionPageMissing,
     loading,
+    mouseBrush,
+    mouseScaleLevelId,
     questionProgress,
     questionScoresByCropRegionId,
     rubricAnswerFlow,

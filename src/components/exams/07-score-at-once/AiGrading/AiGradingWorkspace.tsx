@@ -14,6 +14,7 @@ import type { QuestionScoreRow } from "@/queries/scoring"
 import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
 
 import { useScoringKeysPausedWhile } from "../Rubric/hooks/useScoringKeysPausedWhile"
+import { useScaleQuestion } from "../ScaleLevel/hooks/useScaleQuestion"
 import { AiGradingGrid } from "./AiGradingGrid"
 import { AiGradingRunDialog } from "./AiGradingRunDialog"
 import { AiGradingRunProgress } from "./AiGradingRunProgress"
@@ -169,12 +170,25 @@ export function AiGradingWorkspace({
       ),
     [prompts]
   )
-  const gradingQuestions = useAiGradingQuestions({ examId, cropRegion, runs })
+  // 類型方式の設問の類型（選択肢・札・自分で採点の類型のボタン・マスの類型の色。§4-8-6）
+  const { scaleAppearanceOf, ...scaleQuestion } = useScaleQuestion({
+    examId,
+    currentUserId,
+    currentCropRegion: cropRegion,
+    questionScores,
+  })
+  const gradingQuestions = useAiGradingQuestions({
+    examId,
+    cropRegion,
+    runs,
+    scaleLevels: scaleQuestion.scaleLevels,
+  })
   const checkQuestions = useAiCheckQuestions({
     examId,
     cropRegion,
     runs,
     answers,
+    scaleLevels: scaleQuestion.scaleLevels,
   })
   // タブを選んでいなければ、AI採点を実行した設問（案がある・作っている）では AI採点を開く
   const [chosenLeftTab, setChosenLeftTab] = useState<LeftTab | null>(null)
@@ -218,6 +232,7 @@ export function AiGradingWorkspace({
     discardInstructionTexts: gradingQuestions.discardInstructionTexts,
     ownScoreOf: checkQuestions.ownScoreOf,
     proposals: questioningMode === "grade" ? proposals : NO_PROPOSALS,
+    scaleQuestion,
     onAnnotationsChanged,
   })
   const grid = useAiGridSelection({
@@ -366,11 +381,13 @@ export function AiGradingWorkspace({
                 : grid.setSelection(new Set(ids))
             }
             totalCount={reviewedAnswers.length}
-            draftStatusByExamStudentId={
+            draftScoreByExamStudentId={
               questioningMode !== null
-                ? questioning.draftStatusByExamStudentId
+                ? questioning.draftScoreByExamStudentId
                 : undefined
             }
+            scaleLevels={scaleQuestion.scaleLevels}
+            scaleAppearanceOf={scaleAppearanceOf}
             pageAnswerImages={pageAnswerImages}
             advicePreview={questioning.advicePreview}
           />

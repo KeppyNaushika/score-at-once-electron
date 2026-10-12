@@ -4,6 +4,8 @@
  * - adjust: pointDelta があり（0 でなく、絶対値が配点以内、0.01 単位）、setStatus・setScore は null
  * - set: setStatus が判定の値で、pointDelta は null。setScore は判定と点の規則（1段目と同じ）
  * - 選択肢は 1〜`STAGE2_MAX_OPTIONS` 個、推奨はちょうど1つ
+ * - 類型方式の設問（類型を送ったとき。§4-8-6）: set だけで、setStatus は evaluated / no_answer / pending。
+ *   evaluated は送った類型の id（setScaleLevelId）を必ず持ち、ほかでは null。pointDelta・setScore は null
  */
 
 import {
@@ -15,7 +17,7 @@ import { isOneOf } from "@/types/stringUnion"
 import type { AiGradingOutputStatus } from "./gradingSchema"
 import {
   applyStatusScoreRules,
-  isAiGradingOutputStatus,
+  isAiGradingOutputStatusFor,
   isRecord,
   readBoundedString,
 } from "./responseRules"
@@ -31,6 +33,8 @@ export interface ValidatedStage2Option {
   readonly pointDelta: number | null
   readonly setStatus: AiGradingOutputStatus | null
   readonly setScore: number | null
+  /** 類型方式の設問で、その類型にする選択肢（setStatus が evaluated のときだけ） */
+  readonly setScaleLevelId: string | null
   readonly rationale: string
   readonly recommended: boolean
 }
@@ -39,13 +43,18 @@ interface OptionValidationContext {
   /** 理由に出す案の位置（`proposals[0]`） */
   readonly path: string
   readonly maxPoints: number | null
+  /** 送った類型の id（類型方式の設問だけ。ほかの設問は空）。空でなければ類型方式の選択肢として検証する */
+  readonly scaleLevelIds: readonly string[]
   readonly reasons: string[]
   readonly adjustments: string[]
 }
 
-const OPTION_KEYS: readonly string[] =
-  buildStage2OutputSchema([]).properties?.proposals?.items?.properties?.options
-    ?.items?.required ?? []
+/** 選択肢の項目の名前（類型方式の設問か） */
+const optionKeysFor = (isScaleQuestion: boolean): readonly string[] =>
+  buildStage2OutputSchema([], isScaleQuestion).properties?.proposals?.items
+    ?.properties?.options?.items?.required ?? []
+const OPTION_KEYS = optionKeysFor(false)
+const SCALE_OPTION_KEYS = optionKeysFor(true)
 
 const isFiniteNumber = (candidate: unknown): candidate is number =>
   typeof candidate === "number" && Number.isFinite(candidate)
@@ -90,8 +99,10 @@ function validateOption(
     reasons.push(`${path} がオブジェクトではありません`)
     return null
   }
+  const isScaleQuestion = context.scaleLevelIds.length > 0
+  const optionKeys = isScaleQuestion ? SCALE_OPTION_KEYS : OPTION_KEYS
   const unknownKeys = Object.keys(option).filter(
-    (key) => !OPTION_KEYS.includes(key)
+    (key) => !optionKeys.includes(key)
   )
   if (unknownKeys.length > 0) {
     reasons.push(`${path} に知らない項目があります: ${unknownKeys.join(", ")}`)
@@ -118,6 +129,9 @@ function validateOption(
     return null
   }
 
+  if (isScaleQuestion) {
+    return validateScaleOption(option, path, context, rationale, recommended)
+  }
   if (effectKind === "adjust") {
     if (option.setStatus !== null || option.setScore !== null) {
       reasons.push(`${path}: adjust の setStatus・setScore は null にします`)
@@ -128,6 +142,7 @@ function validateOption(
       pointDelta,
       setStatus: null,
       setScore: null,
+      setScaleLevelId: null,
       rationale,
       recommended,
     }
@@ -136,7 +151,7 @@ function validateOption(
   if (option.pointDelta !== null) {
     reasons.push(`${path}: set の pointDelta は null にします`)
   }
-  if (!isAiGradingOutputStatus(option.setStatus)) {
+  if (!isAiGradingOutputStatusFor(option.setStatus, false)) {
     reasons.push(
       `${path}.setStatus が判定の値ではありません: ${String(option.setStatus)}`
     )
@@ -161,6 +176,59 @@ function validateOption(
     pointDelta: null,
     setStatus: status,
     setScore: partialScore,
+    setScaleLevelId: null,
+    rationale,
+    recommended,
+  }
+}
+
+/** 類型方式の設問の選択肢1つを検証する（set だけ・点なし・evaluated は送った類型） */
+function validateScaleOption(
+  option: Record<string, unknown>,
+  path: string,
+  context: OptionValidationContext,
+  rationale: string,
+  recommended: boolean
+): ValidatedStage2Option | null {
+  const { reasons } = context
+  if (option.effectKind !== "set") {
+    reasons.push(`${path}: 類型方式の設問では点を加減する選択肢を作れません`)
+    return null
+  }
+  if (option.pointDelta !== null || option.setScore !== null) {
+    reasons.push(
+      `${path}: 類型方式の設問の pointDelta・setScore は null にします`
+    )
+  }
+  const { setStatus, setScaleLevelId } = option
+  if (!isAiGradingOutputStatusFor(setStatus, true)) {
+    reasons.push(
+      `${path}.setStatus が類型方式の判定（evaluated / no_answer / pending）ではありません: ${String(setStatus)}`
+    )
+    return null
+  }
+  if (setStatus !== "evaluated") {
+    if (setScaleLevelId !== null) {
+      reasons.push(`${path}: ${setStatus} の setScaleLevelId は null にします`)
+    }
+  } else if (
+    typeof setScaleLevelId !== "string" ||
+    !context.scaleLevelIds.includes(setScaleLevelId)
+  ) {
+    reasons.push(
+      `${path}.setScaleLevelId が送った類型の id ではありません: ${String(setScaleLevelId)}`
+    )
+    return null
+  }
+  return {
+    effectKind: "set",
+    pointDelta: null,
+    setStatus,
+    setScore: null,
+    setScaleLevelId:
+      setStatus === "evaluated" && typeof setScaleLevelId === "string"
+        ? setScaleLevelId
+        : null,
     rationale,
     recommended,
   }

@@ -20,6 +20,18 @@ interface UseClickAndMouseScoringOptions {
     status: ScoringStatus | MouseBrushAction,
     answerIds: string[]
   ) => void
+  /**
+   * 類型のブラシが付ける類型（`useScoringMode`）。類型のブラシが効かない設問では null
+   * （`effectiveMouseBrushOf` で読み替えた後の値）
+   */
+  mouseScaleLevelId: string | null
+  /** 名指しした答案に類型を付け「いま採点した」印も付ける（ロックの判定の内側） */
+  scoreAnswersWithScaleLevel: (
+    scaleLevelId: string,
+    answerIds: string[]
+  ) => void
+  /** 受験者の、今の設問の自分の採点行の類型（類型のブラシのトグルの判断に使う） */
+  ownScaleLevelIdOf: (examStudentId: string) => string | null
 }
 
 /** クリック採点（回数ごとの割り当て）とマウスモードのブラシ採点・表示中の一括採点 */
@@ -31,6 +43,9 @@ export function useClickAndMouseScoring({
   setGradingMode,
   openPartialScoreModal,
   scoreAnswers,
+  mouseScaleLevelId,
+  scoreAnswersWithScaleLevel,
+  ownScaleLevelIdOf,
 }: UseClickAndMouseScoringOptions) {
   /** クリック採点：デバウンス後にクリック回数に応じたアクションを実行 */
   const handleClickScoring = useCallback(
@@ -76,6 +91,24 @@ export function useClickAndMouseScoring({
         return
       }
 
+      // 「類型」ブラシ: クリックした答案にその類型を付ける。同じ類型が付いていれば未採点に戻す
+      if (status === "scale_level") {
+        if (mouseScaleLevelId === null) return
+        const currentData = allScoringData.find(
+          (scoringData) => scoringData.id === answerId
+        )
+        if (
+          isToggle &&
+          currentData?.status === "evaluated" &&
+          ownScaleLevelIdOf(currentData.examStudentId) === mouseScaleLevelId
+        ) {
+          scoreAnswers("unscored", [answerId])
+          return
+        }
+        scoreAnswersWithScaleLevel(mouseScaleLevelId, [answerId])
+        return
+      }
+
       // トグル: 同じステータスなら未採点に戻す。
       //
       // 判断の元にするのはキャッシュだが、**画面の色も同じキャッシュから出ている**。
@@ -94,7 +127,15 @@ export function useClickAndMouseScoring({
 
       scoreAnswers(status, [answerId])
     },
-    [allScoringData, scoreAnswers, replaceSelection, openPartialScoreModal]
+    [
+      allScoringData,
+      scoreAnswers,
+      replaceSelection,
+      openPartialScoreModal,
+      mouseScaleLevelId,
+      scoreAnswersWithScaleLevel,
+      ownScaleLevelIdOf,
+    ]
   )
 
   /** マウスモード: 表示中の未採点を一括採点 */
@@ -106,12 +147,22 @@ export function useClickAndMouseScoring({
           filteredScoringDataIds.includes(scoringData.id)
       )
       if (unscoredVisible.length === 0) return
-      scoreAnswers(
-        status,
-        unscoredVisible.map((scoringData) => scoringData.id)
-      )
+      const answerIds = unscoredVisible.map((scoringData) => scoringData.id)
+      if (status === "scale_level") {
+        if (mouseScaleLevelId !== null) {
+          scoreAnswersWithScaleLevel(mouseScaleLevelId, answerIds)
+        }
+        return
+      }
+      scoreAnswers(status, answerIds)
     },
-    [allScoringData, filteredScoringDataIds, scoreAnswers]
+    [
+      allScoringData,
+      filteredScoringDataIds,
+      scoreAnswers,
+      mouseScaleLevelId,
+      scoreAnswersWithScaleLevel,
+    ]
   )
 
   /** 表示中の未採点件数 */

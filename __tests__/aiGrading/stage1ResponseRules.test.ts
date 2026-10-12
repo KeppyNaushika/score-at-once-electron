@@ -10,7 +10,12 @@ import { validateStage1Response } from "@/lib/shared/aiGrading/stage1ResponseVal
 const validateGradingResponse = (
   response: unknown,
   context: { maxPoints: number | null }
-) => validateStage1Response(response, { ...context, rubricItemIds: [] })
+) =>
+  validateStage1Response(response, {
+    ...context,
+    rubricItemIds: [],
+    scaleLevelIds: [],
+  })
 
 /** 検証を通る応答（各ケースはここから1点だけ変える） */
 const validResponse = {
@@ -54,7 +59,12 @@ describe("1段目の応答: 通るもの", () => {
     ["配点の無い設問の正答", withFields({}), null],
   ])("%s", (_label, response, maxPoints) => {
     const result = validateGradingResponse(response, { maxPoints })
-    expect(result).toEqual({ ok: true, value: response, notes: [] })
+    // 類型方式でない設問では類型を返させないので、検証を通った値の類型は null
+    expect(result).toEqual({
+      ok: true,
+      value: { ...response, scaleLevelId: null },
+      notes: [],
+    })
   })
 })
 

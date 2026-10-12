@@ -40,7 +40,7 @@ import { importAiQuestionImage } from "@/electron-src/lib/aiGrading/questionImag
 import { measureRunImageSizes } from "@/electron-src/lib/aiGrading/sendingImageInspection"
 import {
   createAiPrompt,
-  ensurePromptRendersRubricItems,
+  ensurePromptRendersCriteria,
   getAiPrompt,
 } from "@/electron-src/lib/prisma/aiPrompt"
 import { removeUnreferencedQuestionImages } from "@/electron-src/lib/prisma/aiQuestionImageCleanup"
@@ -235,9 +235,12 @@ describe("問題の画像の行", () => {
       },
       fixture.exam.user.id
     )
-    const recreated = await ensurePromptRendersRubricItems(
+    const recreated = await ensurePromptRendersCriteria(
       prompt,
-      "## 採点項目\n- 変わった一覧",
+      {
+        renderedRubricItems: "## 採点項目\n- 変わった一覧",
+        renderedScaleLevels: "",
+      },
       fixture.exam.user.id
     )
 

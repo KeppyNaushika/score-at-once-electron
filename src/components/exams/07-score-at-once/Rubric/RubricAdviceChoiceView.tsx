@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { RubricItemRow } from "@/queries/rubric"
 
+import type { ScaleLevelChoice } from "../ScaleLevel/utils/scaleLevelAppearance"
 import type { ActiveAdviceCombination } from "./hooks/useRubricAdviceChoice"
 import { RubricAdvicePreview } from "./RubricAdvicePreview"
 import {
@@ -18,6 +19,8 @@ import { rubricItemName } from "./utils/rubricEffectLabel"
 
 interface RubricAdviceChoiceViewProps {
   rubricItems: readonly RubricItemRow[]
+  /** 設問の類型表の類型（類型にする項目の呼び名を引く。類型方式でなければ空） */
+  scaleLevels: readonly ScaleLevelChoice[]
   activeCombination: ActiveAdviceCombination
   options: readonly AdviceOption[]
   /** 焦点のある選択肢（下見に出すもの） */
@@ -43,6 +46,7 @@ interface RubricAdviceChoiceViewProps {
  */
 export function RubricAdviceChoiceView({
   rubricItems,
+  scaleLevels,
   activeCombination,
   options,
   focusedIndex,
@@ -80,7 +84,7 @@ export function RubricAdviceChoiceView({
         return "まとめた一文"
       case "single": {
         const rubricItem = itemOf(option.rubricItemId)
-        return `「${rubricItem ? rubricItemName(rubricItem) : "（消えた項目）"}」の助言だけ`
+        return `「${rubricItem ? rubricItemName(rubricItem, scaleLevels) : "（消えた項目）"}」の助言だけ`
       }
       case "all":
         return "すべて並べる"
@@ -99,7 +103,9 @@ export function RubricAdviceChoiceView({
         <div className="border-b px-3 py-2">
           <p className="text-xs font-medium text-gray-800">
             {combinationItems
-              .map((rubricItem) => `「${rubricItemName(rubricItem)}」`)
+              .map(
+                (rubricItem) => `「${rubricItemName(rubricItem, scaleLevels)}」`
+              )
               .join("＋")}
           </p>
           <p className="mt-0.5 text-[11px] text-gray-500">

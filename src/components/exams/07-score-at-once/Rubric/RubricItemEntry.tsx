@@ -5,10 +5,15 @@ import { ArrowDown, ArrowUp, Pencil, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { RubricItemRow } from "@/queries/rubric"
 
+import type { ScaleLevelChoice } from "../ScaleLevel/utils/scaleLevelAppearance"
 import { rubricEffectLabel } from "./utils/rubricEffectLabel"
 
 interface RubricItemEntryProps {
   rubricItem: RubricItemRow
+  /** 設問の類型表の類型（類型にする項目の記号を引く。類型方式でなければ空） */
+  scaleLevels: readonly ScaleLevelChoice[]
+  /** 今の方式で効く項目か（方式を変える前に作った項目は効かない） */
+  isEffective: boolean
   /** 選択の場面で振っている番号（今の組の外・場面の外なら null） */
   choiceNumber: number | null
   /** 選択の場面の焦点がここにある */
@@ -27,6 +32,8 @@ interface RubricItemEntryProps {
 /** 左のパネルの項目1つ。押すと選んだ答案に当てる・外す */
 export function RubricItemEntry({
   rubricItem,
+  scaleLevels,
+  isEffective,
   choiceNumber,
   isFocused,
   appliedCount,
@@ -40,7 +47,8 @@ export function RubricItemEntry({
 }: RubricItemEntryProps) {
   const isAppliedToAll = selectedCount > 0 && appliedCount === selectedCount
   const isAppliedToSome = appliedCount > 0 && !isAppliedToAll
-  const name = rubricItem.label || rubricEffectLabel(rubricItem)
+  const effectLabel = rubricEffectLabel(rubricItem, scaleLevels)
+  const name = rubricItem.label || effectLabel
   return (
     <li
       data-rubric-item-id={rubricItem.id}
@@ -50,7 +58,14 @@ export function RubricItemEntry({
           : isAppliedToSome
             ? "border-blue-200 bg-blue-50/40"
             : "border-gray-200 bg-white"
-      } ${isFocused ? "ring-2 ring-amber-400" : ""}`}
+      } ${isFocused ? "ring-2 ring-amber-400" : ""} ${
+        isEffective ? "" : "opacity-60"
+      }`}
+      title={
+        isEffective
+          ? undefined
+          : "この採点方式では効きません（方式を戻すとまた効きます）"
+      }
     >
       <div className="flex items-start gap-1.5">
         <button
@@ -72,7 +87,7 @@ export function RubricItemEntry({
           <span className="min-w-0 flex-1">
             <span className="flex items-baseline gap-1">
               <span className="shrink-0 font-semibold text-gray-800">
-                {rubricEffectLabel(rubricItem)}
+                {effectLabel}
               </span>
               {rubricItem.label && (
                 <span className="truncate text-gray-700">

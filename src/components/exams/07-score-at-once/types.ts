@@ -105,9 +105,13 @@ export type ScoringBehavior = (typeof SCORING_BEHAVIORS)[number]
  * - 採点ステータス: クリックで該当ステータスを適用
  * - "select": クリックで選択トグル（採点しない）
  * - "partial_modal": クリックで部分点入力モーダルを開く
+ * - "scale_level": クリックで類型を付ける（類型方式の設問だけ。どの類型かは別の状態 `mouseScaleLevelId` が持つ）
  */
 export type MouseBrushAction =
-  Exclude<ScoringStatus, "unscored"> | "select" | "partial_modal"
+  | Exclude<ScoringStatus, "unscored">
+  | "select"
+  | "partial_modal"
+  | "scale_level"
 
 /**
  * 模範解答表示モード

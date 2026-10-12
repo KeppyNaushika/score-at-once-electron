@@ -17,6 +17,7 @@ import {
 import { AI_GRADING_CONFIDENCE_LABELS } from "./confidenceLabels"
 import {
   AI_GRADING_OUTPUT_STATUSES,
+  AI_GRADING_SCALE_OUTPUT_STATUSES,
   type AiGradingOutputStatus,
   type GradingJsonSchema,
   strictObject,
@@ -32,10 +33,24 @@ import {
   formatRubricItemsSection,
   OUTPUT_STATUS_LABELS,
 } from "./rubricItemsText"
-import { STAGE2_SYSTEM_TEXT } from "./stage2SystemText"
+import {
+  formatScaleLevelsSection,
+  type ScaleLevelForPrompt,
+  scaleLevelLabelText,
+} from "./scaleLevelsText"
+import {
+  STAGE2_SCALE_SYSTEM_TEXT,
+  STAGE2_SYSTEM_TEXT,
+} from "./stage2SystemText"
 
 /** 2段目の指示の版 */
 export const STAGE2_TEMPLATE_VERSION = "stage2-5"
+/** 類型方式の設問の2段目の指示の版（`STAGE2_SCALE_SYSTEM_TEXT` の文言を変えたら上げる） */
+export const STAGE2_SCALE_TEMPLATE_VERSION = "stage2-scale-1"
+
+/** 設問の方式で使う2段目の指示の版（類型方式の設問か） */
+export const stage2TemplateVersionFor = (isScaleQuestion: boolean): string =>
+  isScaleQuestion ? STAGE2_SCALE_TEMPLATE_VERSION : STAGE2_TEMPLATE_VERSION
 
 /** 案の名前・説明・助言の文案・選択肢の理由の字数の上限 */
 export const STAGE2_LABEL_MAX_LENGTH = 30
@@ -50,6 +65,8 @@ export const STAGE2_MAX_OPTIONS = 4
 export interface Stage2AnswerInput {
   readonly status: AiGradingOutputStatus
   readonly partialScore: number | null
+  /** 類型方式の設問で1段目が選んだ類型（evaluated のときだけ） */
+  readonly scaleLevelId: string | null
   readonly confidence: AiGradingConfidence
   readonly transcription: string
   readonly observation: string
@@ -60,6 +77,11 @@ interface Stage2RequestInput {
   prompt: PromptTextFields
   points: number | null
   rubricItems: readonly RubricItemForPrompt[]
+  /**
+   * 類型方式の設問の類型（並び順）。類型方式でない設問は省くか空。あれば配点の代わりに
+   * 類型の節を置き、類型方式の指示にする
+   */
+  scaleLevels?: readonly ScaleLevelForPrompt[]
   /**
    * 送る答案（この並びで A1, A2, … を振る）。教員の「その他」の指示は再採点（1段目）への
    * 指示なので、ここには送らない
@@ -72,12 +94,33 @@ export function stage2AnswerKey(answerIndex: number): string {
   return `A${answerIndex + 1}`
 }
 
-/** 答案1件を数行の文にする（画像は無いので、読み取りと所見がすべて） */
-function formatAnswer(answer: Stage2AnswerInput, answerIndex: number): string {
+/**
+ * 仮の判定の書き方。類型を選んだ答案は点の代わりに類型の記号を書く（類型の点数は送らない）
+ */
+function formatVerdict(
+  answer: Stage2AnswerInput,
+  scaleLevels: readonly ScaleLevelForPrompt[]
+): string {
+  if (answer.status === "evaluated") {
+    const scaleLevel = scaleLevels.find(
+      (candidate) => candidate.id === answer.scaleLevelId
+    )
+    return `仮の評価: ${scaleLevel ? `類型 ${scaleLevelLabelText(scaleLevel)}` : "類型（不明）"}`
+  }
   const scoreText =
     answer.partialScore === null ? "" : `（${answer.partialScore}点）`
+  const heading = scaleLevels.length > 0 ? "仮の評価" : "仮の判定"
+  return `${heading}: ${OUTPUT_STATUS_LABELS[answer.status]}${scoreText}`
+}
+
+/** 答案1件を数行の文にする（画像は無いので、読み取りと所見がすべて） */
+function formatAnswer(
+  answer: Stage2AnswerInput,
+  answerIndex: number,
+  scaleLevels: readonly ScaleLevelForPrompt[]
+): string {
   const lines = [
-    `[${stage2AnswerKey(answerIndex)}] 仮の判定: ${OUTPUT_STATUS_LABELS[answer.status]}${scoreText} ／ 確信度: ${AI_GRADING_CONFIDENCE_LABELS[answer.confidence]}`,
+    `[${stage2AnswerKey(answerIndex)}] ${formatVerdict(answer, scaleLevels)} ／ 確信度: ${AI_GRADING_CONFIDENCE_LABELS[answer.confidence]}`,
     `読み取り: ${answer.transcription.trim() === "" ? "（なし）" : answer.transcription.trim()}`,
     `所見: ${answer.observation.trim()}`,
   ]
@@ -94,16 +137,23 @@ export function buildStage2RequestParts(
   input: Stage2RequestInput
 ): GradingRequestParts & { answerKeys: string[] } {
   const { prompt, answers } = input
+  const scaleLevels = input.scaleLevels ?? []
   return {
-    systemText: STAGE2_SYSTEM_TEXT,
+    systemText:
+      scaleLevels.length > 0 ? STAGE2_SCALE_SYSTEM_TEXT : STAGE2_SYSTEM_TEXT,
     fixedParts: joinPromptSegments([
-      formatPointsSection(input.points),
+      formatScaleLevelsSection(scaleLevels) ??
+        formatPointsSection(input.points),
       textSection("問題文", prompt.questionText),
       textSection("模範解答", prompt.modelAnswerText),
       textSection("採点基準", prompt.rubricText),
       textSection("助言の文案の指示", prompt.annotationInstruction),
-      formatRubricItemsSection(input.rubricItems),
-      `## 答案の一覧（${answers.length}件）\n${answers.map(formatAnswer).join("\n\n")}`,
+      formatRubricItemsSection(input.rubricItems, scaleLevels),
+      `## 答案の一覧（${answers.length}件）\n${answers
+        .map((answer, answerIndex) =>
+          formatAnswer(answer, answerIndex, scaleLevels)
+        )
+        .join("\n\n")}`,
     ]),
     answerKeys: answers.map((_answer, answerIndex) =>
       stage2AnswerKey(answerIndex)
@@ -111,11 +161,51 @@ export function buildStage2RequestParts(
   }
 }
 
-/** 2段目の出力の形。答案の番号は送った番号の enum で縛る */
+/** 類型方式の設問の選択肢の形。効き方は set だけで、類型の id を足す（点は null） */
+const SCALE_OPTION_SCHEMA = strictObject({
+  effectKind: {
+    type: "string",
+    enum: ["set"],
+    description: "類型方式の設問では常に set",
+  },
+  pointDelta: {
+    type: ["number", "null"],
+    description: "類型方式の設問では常に null",
+  },
+  setStatus: {
+    type: ["string", "null"],
+    description: `決める判定（${AI_GRADING_SCALE_OUTPUT_STATUSES.join(" / ")}）。evaluated=類型にする`,
+  },
+  setScore: {
+    type: ["number", "null"],
+    description: "類型方式の設問では常に null",
+  },
+  setScaleLevelId: {
+    type: ["string", "null"],
+    description:
+      "evaluated のときだけ、その類型の id（「類型」の節の id）。それ以外は null",
+  },
+  rationale: {
+    type: "string",
+    description: `教員向けの一言の理由（${STAGE2_RATIONALE_MAX_LENGTH}字以内）`,
+  },
+  recommended: {
+    type: "boolean",
+    description: "推奨の選択肢か（案ごとにちょうど1つ）",
+  },
+})
+
+/**
+ * 2段目の出力の形。答案の番号は送った番号の enum で縛る。
+ *
+ * 類型方式の設問（`isScaleQuestion`）は、選択肢を類型にする形（`SCALE_OPTION_SCHEMA`）にする。
+ * 類型の id は enum を null と組めないので、検証（`stage2OptionValidator.ts`）で確かめる
+ */
 export function buildStage2OutputSchema(
-  answerKeys: readonly string[]
+  answerKeys: readonly string[],
+  isScaleQuestion = false
 ): GradingJsonSchema {
-  const option = strictObject({
+  const pointOption = strictObject({
     effectKind: {
       type: "string",
       enum: RUBRIC_EFFECT_KINDS,
@@ -170,7 +260,7 @@ export function buildStage2OutputSchema(
     },
     options: {
       type: "array",
-      items: option,
+      items: isScaleQuestion ? SCALE_OPTION_SCHEMA : pointOption,
       description: `選択肢（1〜${STAGE2_MAX_OPTIONS}個、推奨はちょうど1つ）`,
     },
   })

@@ -9,6 +9,9 @@
  *
  * 付けられるのは、その設問が使っている類型評価の類型だけ。採点者は認証ストアの操作者で、
  * renderer から利用者 id を受け取らない（ルーブリック採点の書き込みと同じ）。
+ *
+ * 採点項目を当てているマスで類型のキーを押すと、項目より優先する手での上書きになる
+ * （`overridesRubric`。点の採点の書き込みの `rubricOverrideFor` と同じ決め方。§4-5・§4-8-6）
  */
 
 import { recordAuditLog } from "./auditLog"
@@ -16,6 +19,10 @@ import { resolveExamScopeByCropRegion } from "./auditScope"
 import { cropRegionAuditTarget } from "./auditTargets"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
+
+/** そのマスに採点項目の適用があれば、キーで付けた類型は項目より優先する（手での上書き） */
+const rubricOverrideFor = (row: { rubricApplications: unknown[] }) =>
+  row.rubricApplications.length > 0
 
 export interface SetScaleLevelsInput {
   cropRegionId: string
@@ -62,6 +69,7 @@ export async function setScaleLevels(
       userId: actorUserId,
       examStudentId: { in: input.examStudentIds },
     },
+    include: { rubricApplications: true },
   })
   const existingByExamStudentId = new Map(
     existingRows.map((row) => [row.examStudentId, row])
@@ -79,7 +87,7 @@ export async function setScaleLevels(
             status: "unscored",
             scaleLevelId: null,
             partialScore: null,
-            overridesRubric: false,
+            overridesRubric: rubricOverrideFor(existing),
           },
         })
       )
@@ -93,7 +101,7 @@ export async function setScaleLevels(
               status: "evaluated",
               scaleLevelId: scaleLevel.id,
               partialScore: null,
-              overridesRubric: false,
+              overridesRubric: rubricOverrideFor(existing),
             },
           })
         : await prisma.questionScore.create({

@@ -10,11 +10,21 @@
 import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-/** 答案に付ける点（判定と、部分点・保留の点） */
+import {
+  type ScaleLevelChoice,
+  scaleLevelColorsAt,
+} from "../../ScaleLevel/utils/scaleLevelAppearance"
+
+/** 答案に付ける点（判定と、部分点・保留の点。類型方式の設問では類型） */
 export interface QuestioningScore {
   status: ScoringStatus
   partialScore: number | null
+  /** 類型（evaluated のときだけ値を持つ） */
+  scaleLevelId: string | null
 }
+
+/** 点の言葉と札に要る類型（設問の類型表の類型。並び順のまま。類型方式でなければ空） */
+export type QuestioningScaleLevel = Pick<ScaleLevelChoice, "id" | "label">
 
 /** 問いに入る答案1件 */
 export interface QuestioningMember {
@@ -126,13 +136,30 @@ export function optionOfDecision(
   )
 }
 
-/** 点を「正答 3点」「部分点 1点」「保留」のように（配点があれば点を添える） */
+/** 類型の記号（類型が消えた・ほかの類型表の類型なら「類型（なし）」） */
+export function scaleLevelLabelOf(
+  scaleLevelId: string | null,
+  scaleLevels: readonly QuestioningScaleLevel[]
+): string {
+  return (
+    scaleLevels.find((scaleLevel) => scaleLevel.id === scaleLevelId)?.label ??
+    "類型（なし）"
+  )
+}
+
+/**
+ * 点を「正答 3点」「部分点 1点」「保留」のように（配点があれば点を添える）。
+ * 類型は記号だけ（「A」。点数は類型表の点数から読むので添えない）
+ */
 export function describeScore(
   score: QuestioningScore,
-  points: number | null
+  points: number | null,
+  scaleLevels: readonly QuestioningScaleLevel[] = []
 ): string {
   const label = SCORING_STATUS_LABELS[score.status]
   switch (score.status) {
+    case "evaluated":
+      return scaleLevelLabelOf(score.scaleLevelId, scaleLevels)
     case "correct":
       return points === null ? label : `${label} ${points}点`
     case "incorrect":
@@ -148,12 +175,15 @@ export function describeScore(
   }
 }
 
-/** 2つの点が同じか（部分点は 0.01 単位で比べる） */
+/** 2つの点が同じか（部分点は 0.01 単位で比べる。類型は id で比べ、点数が同じでも類型が違えば違う） */
 export function isSameQuestioningScore(
   left: QuestioningScore,
   right: QuestioningScore
 ): boolean {
   if (left.status !== right.status) return false
+  if (left.status === "evaluated") {
+    return left.scaleLevelId === right.scaleLevelId
+  }
   const keepsScore = left.status === "partial" || left.status === "pending"
   if (!keepsScore) return true
   if (left.partialScore === null || right.partialScore === null) {
@@ -169,10 +199,18 @@ export interface QuestioningDecisionBadge {
   label: string
   /** 判定の色で出すときの判定。色を持たない札（自分で採点・再採点・このまま・採点方式）は null */
   status: ScoringStatus | null
+  /** 類型で決めた札の、類型の色（類型の並び順の色。§4-8-5）。類型でなければ null */
+  scaleColors: { bg: string; text: string } | null
 }
 
-/** 札に出す点（正答・誤答・無答は判定だけ。部分点・保留は点を添える） */
-function badgeLabelOf(score: QuestioningScore): string {
+/** 札に出す点（正答・誤答・無答は判定だけ。部分点・保留は点を添える。類型は記号） */
+function badgeLabelOf(
+  score: QuestioningScore,
+  scaleLevels: readonly QuestioningScaleLevel[]
+): string {
+  if (score.status === "evaluated") {
+    return scaleLevelLabelOf(score.scaleLevelId, scaleLevels)
+  }
   const label = SCORING_STATUS_LABELS[score.status]
   const keepsScore = score.status === "partial" || score.status === "pending"
   return keepsScore && score.partialScore !== null
@@ -180,18 +218,37 @@ function badgeLabelOf(score: QuestioningScore): string {
     : label
 }
 
+/** 類型の札の色（類型の並び順の色）。類型でない・類型表に無い類型なら null */
+export function scaleColorsOf(
+  score: QuestioningScore,
+  scaleLevels: readonly QuestioningScaleLevel[]
+): { bg: string; text: string } | null {
+  if (score.status !== "evaluated") return null
+  const order = scaleLevels.findIndex(
+    (scaleLevel) => scaleLevel.id === score.scaleLevelId
+  )
+  return order < 0 ? null : scaleLevelColorsAt(order)
+}
+
 /** 決めたことの札 */
 export function decisionBadgeOf(
   step: Pick<QuestioningStep, "options">,
-  decision: QuestioningDecision
+  decision: QuestioningDecision,
+  scaleLevels: readonly QuestioningScaleLevel[] = []
 ): QuestioningDecisionBadge {
   switch (decision.kind) {
     case "option": {
       const option = optionOfDecision(step, decision)
-      if (!option) return { label: "選択肢が消えました", status: null }
+      if (!option) {
+        return { label: "選択肢が消えました", status: null, scaleColors: null }
+      }
       return option.score
-        ? { label: badgeLabelOf(option.score), status: option.score.status }
-        : { label: option.label, status: null }
+        ? {
+            label: badgeLabelOf(option.score, scaleLevels),
+            status: option.score.status,
+            scaleColors: scaleColorsOf(option.score, scaleLevels),
+          }
+        : { label: option.label, status: null, scaleColors: null }
     }
     case "manual":
       return {
@@ -200,9 +257,10 @@ export function decisionBadgeOf(
             ? `自分で採点 ${decision.scores.size}件`
             : "自分で採点（未入力）",
         status: null,
+        scaleColors: null,
       }
     case "instruction":
-      return { label: "再採点を指示", status: null }
+      return { label: "再採点を指示", status: null, scaleColors: null }
   }
 }
 

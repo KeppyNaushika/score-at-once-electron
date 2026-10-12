@@ -6,6 +6,7 @@
  * - 自分が未採点のマスに提案があれば、提案の状態の色の斜線で塗る（斜線 = 未確定）
  * - 自分が採点したマスは、確定の塗りつぶしのまま（提案があっても斜線にしない）
  * - 提案を渡さなければ（一覧表示・採点確定）、これまでどおり斜線は無い
+ * - 斜線の色の指定（類型方式の設問の類型の色）があれば、状態の色の代わりにその色で引く
  */
 
 import { render } from "@testing-library/react"
@@ -61,7 +62,8 @@ function answerWithStatus(status: ScoringStatus): ScoringData {
 
 function renderCell(
   status: ScoringStatus,
-  proposalStatus: ScoringStatus | null | undefined
+  proposalStatus: ScoringStatus | null | undefined,
+  hatchColor?: string | null
 ) {
   const { container } = render(
     <GridCell
@@ -74,6 +76,7 @@ function renderCell(
       scoringColors={DEFAULT_SCORING_STATUS_COLORS}
       onMouseDown={() => {}}
       proposalStatus={proposalStatus}
+      hatchColor={hatchColor}
     />
   )
   const cell = container.querySelector<HTMLElement>("[data-answer-id]")
@@ -95,5 +98,16 @@ describe("GridCell の未確定の提案の塗り", () => {
   it("提案を渡さなければ斜線は無い（一覧表示・採点確定）", () => {
     expect(renderCell("unscored", undefined).style.backgroundImage).toBe("")
     expect(renderCell("unscored", null).style.backgroundImage).toBe("")
+  })
+})
+
+describe("GridCell の斜線の色の指定", () => {
+  it("類型の色を渡せば、類型採点済みの状態の色ではなくその色で斜線を引く", () => {
+    const levelColored = renderCell("unscored", "evaluated", "rgb(30, 58, 138)")
+    const statusColored = renderCell("unscored", "evaluated")
+    expect(levelColored.style.backgroundImage).toContain("rgb(30, 58, 138)")
+    expect(statusColored.style.backgroundImage).not.toContain(
+      "rgb(30, 58, 138)"
+    )
   })
 })

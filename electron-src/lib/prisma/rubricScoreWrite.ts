@@ -13,10 +13,18 @@
  * - 行がもう無い（答案ごと消された）なら飛ばし、`deletedQuestionScoreIds` で返す
  * - renderer が読んだあとに採点キーで上書きされた行（`overridesRubric` が立っている）は、
  *   上書きを解除する指示（`clearsOverride`）が無ければ飛ばし、`skippedOverriddenIds` で返す
+ *
+ * **類型方式の設問**（docs/vlm-grading-design.md §4-8-6）では、類型にする項目から計算した類型も書く。
+ * 判定が設問の方式と合わない書き込みは拒み、`evaluated` はその設問の組の類型だけを受ける
+ * （07 の類型の書き込み `scaleLevelScoreWrite.ts` と同じ確かめ方）。ほかの判定では類型を null に戻す
  */
 
 import { Prisma } from "@prisma/client"
 
+import {
+  isStatusCompatibleWithScoringMethod,
+  toScoringMethod,
+} from "@/types/rubric.types"
 import {
   isScoringStatus,
   type ScoringStatus,
@@ -32,6 +40,8 @@ export interface RubricScoreWrite {
   status: ScoringStatus
   /** 部分点。判定そのものが点を決めるときは null */
   partialScore: number | null
+  /** 類型表の類型（evaluated のときだけ値を持つ） */
+  scaleLevelId: string | null
   /** 手での上書きを解除して書く（上書きを解除する操作のとき true） */
   clearsOverride: boolean
 }
@@ -56,6 +66,9 @@ export async function writeRubricScores(
   const result = await prisma.$transaction(async (tx) => {
     const existingRows = await tx.questionScore.findMany({
       where: { id: { in: writes.map((write) => write.questionScoreId) } },
+      include: {
+        cropRegion: { include: { scoreScale: { include: { levels: true } } } },
+      },
     })
     const existingById = new Map(existingRows.map((row) => [row.id, row]))
     const written: { id: string; userId: string; cropRegionId: string }[] = []
@@ -72,14 +85,17 @@ export async function writeRubricScores(
         skippedOverriddenIds.push(write.questionScoreId)
         continue
       }
+      const scaleLevelId = checkedScaleLevelId(write, existing.cropRegion)
       await tx.questionScore.update({
         where: { id: write.questionScoreId },
         data: {
           status: write.status,
+          // 類型方式の点は類型の点数から読むので、部分点は書かない
           partialScore:
-            write.partialScore === null
+            write.partialScore === null || scaleLevelId !== null
               ? null
               : new Prisma.Decimal(write.partialScore),
+          scaleLevelId,
           overridesRubric: false,
         },
       })
@@ -95,6 +111,38 @@ export async function writeRubricScores(
     deletedQuestionScoreIds: result.deletedQuestionScoreIds,
     skippedOverriddenIds: result.skippedOverriddenIds,
   }
+}
+
+/**
+ * 書き込みの判定と類型が設問に合うかを確かめ、書く類型を返す。
+ * 合わなければ投げる（トランザクションごと書かない。renderer の計算と main の規則の食い違いは
+ * 黙って直さず表に出す）
+ */
+function checkedScaleLevelId(
+  write: RubricScoreWrite,
+  cropRegion: {
+    scoringMethod: string
+    scoreScale: { levels: { id: string }[] } | null
+  }
+): string | null {
+  const scoringMethod = toScoringMethod(cropRegion.scoringMethod)
+  if (!isStatusCompatibleWithScoringMethod(scoringMethod, write.status)) {
+    throw new Error(
+      scoringMethod === "scale"
+        ? "類型方式の設問には、正答・誤答・部分点を書けません"
+        : "類型方式でない設問には、類型を書けません"
+    )
+  }
+  if (write.status !== "evaluated") return null
+  if (
+    write.scaleLevelId === null ||
+    !cropRegion.scoreScale?.levels.some(
+      (scaleLevel) => scaleLevel.id === write.scaleLevelId
+    )
+  ) {
+    throw new Error("この設問の類型表の類型ではありません")
+  }
+  return write.scaleLevelId
 }
 
 /**

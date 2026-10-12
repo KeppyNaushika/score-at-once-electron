@@ -124,11 +124,11 @@ export function attemptsOutsideProposals<
   )
 }
 
-/** 選択肢の効き方（RubricItem と同じ形）。項目を作る・変えるときの値 */
+/** 選択肢の効き方（RubricItem と同じ形。類型にする選択肢は類型も）。項目を作る・変えるときの値 */
 export function optionEffectOf(
   option: Pick<
     AiRubricProposalOptionRow,
-    "effectKind" | "pointDelta" | "setStatus" | "setScore"
+    "effectKind" | "pointDelta" | "setStatus" | "setScore" | "setScaleLevelId"
   >
 ): RubricItemEffect {
   return {
@@ -136,6 +136,7 @@ export function optionEffectOf(
     pointDelta: option.pointDelta,
     setStatus: option.setStatus,
     setScore: option.setScore,
+    setScaleLevelId: option.setScaleLevelId,
   }
 }
 

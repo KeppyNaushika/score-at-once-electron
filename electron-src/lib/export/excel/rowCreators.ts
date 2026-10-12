@@ -8,6 +8,7 @@ import {
   applyCellStyle,
   getExcelColumnLetter,
   getScoreCellSymbol,
+  isScoreCellHighlighted,
 } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"
 
@@ -172,8 +173,8 @@ function setQuestionCells(
         cell.value =
           score.score !== null && score.score !== undefined ? score.score : 0
       }
-      // 部分点・保留の場合は赤色に設定
-      if (score.status === "partial" || score.status === "pending") {
+      // 得点が確かでない採点（部分点・保留）は赤字にする
+      if (isScoreCellHighlighted(score)) {
         cell.font = { color: { argb: "FFFF0000" } }
       }
     } else {
@@ -185,8 +186,8 @@ function setQuestionCells(
         // 採点済みの場合は記号を表示（類型評価は類型を見せ方に従って出す）
         cell.value = getScoreCellSymbol(score, sheet.scaleValueDisplay)
       }
-      // 部分点・保留の場合は赤色に設定
-      if (score.status === "partial" || score.status === "pending") {
+      // 得点が確かでない採点（部分点・保留）は赤字にする
+      if (isScoreCellHighlighted(score)) {
         cell.font = { color: { argb: "FFFF0000" } }
       }
     }

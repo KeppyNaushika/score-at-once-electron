@@ -19,6 +19,8 @@ import {
 interface Judgement {
   status: ScoringStatus
   partialScore: number | null
+  /** 類型（類型方式の設問の evaluated のときだけ値を持つ） */
+  scaleLevelId: string | null
 }
 
 /**
@@ -67,7 +69,8 @@ export function isScored(questionScore: QuestionScoreRow | undefined): boolean {
 /**
  * 判定の点。配点が無い設問では正答の点を決められないので null。
  * 部分点・保留で点が無い（点の無い保留）ときも null（成績の扱い `actualScore` と同じく欠測）。
- * 未採点・Wマークは点を持たないものとして 0 にする
+ * 未採点・Wマークは点を持たないものとして 0 にする。類型は点数を類型表から読むので、ここでは null
+ * （比べるときは類型の id で比べる。{@link isSameJudgement}）
  */
 export function scoreOfJudgement(
   judgement: Judgement,
@@ -84,7 +87,6 @@ export function scoreOfJudgement(
     case "double_mark":
     case "unscored":
       return 0
-    // AI は類型を判定しない（類型評価の設問は AI採点の対象外。§4-8-7 の S6 で足す）
     case "evaluated":
       return null
   }
@@ -97,8 +99,15 @@ export function judgementOfQuestionScore(
   return {
     status: toScoringStatus(questionScore.status),
     partialScore: questionScore.partialScore,
+    scaleLevelId: questionScore.scaleLevelId,
   }
 }
+
+/** 判定が同じか（類型は id まで。類型方式の設問では、点数が同じでも類型が違えば違う判定） */
+const isSameStatus = (judgementA: Judgement, judgementB: Judgement) =>
+  judgementA.status === judgementB.status &&
+  (judgementA.status !== "evaluated" ||
+    judgementA.scaleLevelId === judgementB.scaleLevelId)
 
 /** 判定と点がどちらも同じか（一致率の「完全一致」） */
 export function isSameJudgement(
@@ -107,13 +116,13 @@ export function isSameJudgement(
   points: number | null
 ): boolean {
   return (
-    judgementA.status === judgementB.status &&
+    isSameStatus(judgementA, judgementB) &&
     scoreOfJudgement(judgementA, points) ===
       scoreOfJudgement(judgementB, points)
   )
 }
 
-/** 点の差が1点以内か。配点が無く点を決められないときは判定が同じかで代える */
+/** 点の差が1点以内か。配点が無く点を決められないとき・類型は判定が同じかで代える */
 export function isWithinOnePoint(
   judgementA: Judgement,
   judgementB: Judgement,
@@ -122,7 +131,7 @@ export function isWithinOnePoint(
   const scoreA = scoreOfJudgement(judgementA, points)
   const scoreB = scoreOfJudgement(judgementB, points)
   if (scoreA === null || scoreB === null) {
-    return judgementA.status === judgementB.status
+    return isSameStatus(judgementA, judgementB)
   }
   return Math.abs(scoreA - scoreB) <= 1
 }

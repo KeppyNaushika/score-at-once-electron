@@ -1,10 +1,12 @@
 /**
  * 1段目（答案ごとの判定）の応答を、記録する前に検証する（docs/vlm-grading-design.md §6-1）
  *
- * - 形: `buildStage1OutputSchema()` の6項目がそろい、余分な項目が無く、型が合う
+ * - 形: `buildStage1OutputSchema()` の6項目（類型方式の設問は7項目）がそろい、余分な項目が無く、型が合う
  * - 字数: 読み取り・所見が上限以内（守れなかった出力は採用しない。§12）
  * - 判定と点: `applyStatusScoreRules`（採点の検証と同じ規則）
  * - 当てはまる項目: 送った項目の id だけ。重なりは1つにまとめて notes に残す
+ * - 類型方式の設問（類型を送ったとき。§4-8-6）: 判定は evaluated / no_answer / pending で、点は持たない。
+ *   evaluated は送った類型の id（`scaleLevelId`）を必ず持ち、ほかの判定では null
  */
 
 import {
@@ -13,12 +15,12 @@ import {
 } from "@/types/aiGrading.types"
 
 import {
-  AI_GRADING_OUTPUT_STATUSES,
   type AiGradingOutputStatus,
+  aiGradingOutputStatusesFor,
 } from "./gradingSchema"
 import {
   applyStatusScoreRules,
-  isAiGradingOutputStatus,
+  isAiGradingOutputStatusFor,
   isRecord,
   readBoundedString,
 } from "./responseRules"
@@ -34,6 +36,8 @@ interface ValidatedStage1Response {
   readonly observation: string
   readonly status: AiGradingOutputStatus
   readonly partialScore: number | null
+  /** 類型方式の設問で選んだ類型（evaluated のときだけ値を持つ） */
+  readonly scaleLevelId: string | null
   readonly matchedRubricItemIds: readonly string[]
   readonly confidence: AiGradingConfidence
 }
@@ -51,10 +55,41 @@ export interface Stage1ValidationContext {
   readonly maxPoints: number | null
   /** 送った項目の id */
   readonly rubricItemIds: readonly string[]
+  /**
+   * 送った類型の id（類型方式の設問だけ。ほかの設問は空）。空でなければ類型方式の応答として検証する。
+   * バッチの結果は時間を置いて届くので、送った一覧の文（`AiPrompt.renderedScaleLevels`）から読み戻して渡す
+   */
+  readonly scaleLevelIds: readonly string[]
 }
 
-const OUTPUT_KEYS: readonly string[] =
-  buildStage1OutputSchema([]).required ?? []
+/** 類型方式の設問の判定と類型を確かめる（点は持たない） */
+function readScaleVerdict(
+  response: Record<string, unknown>,
+  status: AiGradingOutputStatus,
+  scaleLevelIds: readonly string[],
+  reasons: string[]
+): string | null {
+  if (response.partialScore !== null) {
+    reasons.push("類型方式の設問では partialScore を null にします")
+  }
+  const { scaleLevelId } = response
+  if (status !== "evaluated") {
+    if (scaleLevelId !== null) {
+      reasons.push(`${status} には scaleLevelId を付けられません`)
+    }
+    return null
+  }
+  if (
+    typeof scaleLevelId !== "string" ||
+    !scaleLevelIds.includes(scaleLevelId)
+  ) {
+    reasons.push(
+      `evaluated の scaleLevelId が送った類型の id ではありません: ${String(scaleLevelId)}`
+    )
+    return null
+  }
+  return scaleLevelId
+}
 
 /** 当てはまる項目の id を読む。知らない id は理由に、重なりは notes に足す */
 function readMatchedIds(
@@ -93,13 +128,16 @@ export function validateStage1Response(
   }
   const reasons: string[] = []
   const notes: string[] = []
+  const isScaleQuestion = context.scaleLevelIds.length > 0
+  const outputKeys: readonly string[] =
+    buildStage1OutputSchema([], context.scaleLevelIds).required ?? []
 
-  const missingKeys = OUTPUT_KEYS.filter((key) => !(key in response))
+  const missingKeys = outputKeys.filter((key) => !(key in response))
   if (missingKeys.length > 0) {
     reasons.push(`項目が足りません: ${missingKeys.join(", ")}`)
   }
   const unknownKeys = Object.keys(response).filter(
-    (key) => !OUTPUT_KEYS.includes(key)
+    (key) => !outputKeys.includes(key)
   )
   if (unknownKeys.length > 0) {
     reasons.push(`知らない項目があります: ${unknownKeys.join(", ")}`)
@@ -138,11 +176,35 @@ export function validateStage1Response(
     reasons.push("partialScore が数でも null でもありません")
   }
 
-  if (!isAiGradingOutputStatus(response.status)) {
+  if (!isAiGradingOutputStatusFor(response.status, isScaleQuestion)) {
     reasons.push(
-      `status が ${AI_GRADING_OUTPUT_STATUSES.join(" / ")} のいずれでもありません: ${String(response.status)}`
+      `status が ${aiGradingOutputStatusesFor(isScaleQuestion).join(" / ")} のいずれでもありません: ${String(response.status)}`
     )
     return { ok: false, reasons }
+  }
+  if (isScaleQuestion) {
+    const scaleLevelId = readScaleVerdict(
+      response,
+      response.status,
+      context.scaleLevelIds,
+      reasons
+    )
+    if (reasons.length > 0 || !isAiGradingConfidence(confidence)) {
+      return { ok: false, reasons }
+    }
+    return {
+      ok: true,
+      value: {
+        transcription,
+        observation,
+        status: response.status,
+        partialScore: null,
+        scaleLevelId,
+        matchedRubricItemIds,
+        confidence,
+      },
+      notes,
+    }
   }
   const { status, partialScore } = applyStatusScoreRules({
     status: response.status,
@@ -163,6 +225,7 @@ export function validateStage1Response(
       observation,
       status,
       partialScore,
+      scaleLevelId: null,
       matchedRubricItemIds,
       confidence,
     },

@@ -23,7 +23,11 @@ import { createGradingJobRunner } from "@/electron-src/lib/aiGrading/gradingJobR
 import type { GradingRequest } from "@/electron-src/lib/aiGrading/providers/types"
 import { listAiRubricProposalRunsByCropRegion } from "@/electron-src/lib/prisma/aiRubricProposal"
 import { createRubricItem } from "@/electron-src/lib/prisma/rubricItem"
-import { STAGE2_TEMPLATE_VERSION } from "@/lib/shared/aiGrading/stage2Grouping"
+import { STAGE1_SCALE_TEMPLATE_VERSION } from "@/lib/shared/aiGrading/stage1Grading"
+import {
+  STAGE2_SCALE_TEMPLATE_VERSION,
+  STAGE2_TEMPLATE_VERSION,
+} from "@/lib/shared/aiGrading/stage2Grouping"
 
 import {
   cleanupTestDatabase,
@@ -249,6 +253,7 @@ describe("1段目の採点項目", () => {
         pointDelta: -2,
         setStatus: null,
         setScore: null,
+        setScaleLevelId: null,
       },
       fixture.exam.user.id
     )
@@ -337,5 +342,167 @@ describe("1段目の採点項目", () => {
     })
     await gradeAndGroup(colleague, fixture.otherUser.id)
     expect(textOf(colleague.gradeRequests[0])).not.toContain("教員の指示")
+  })
+})
+
+describe("類型方式の設問", () => {
+  /** 設問を類型方式にし、類型表（A・B）を作る */
+  async function setUpScaleQuestion() {
+    const scale = await testPrisma.scoreScale.create({
+      data: {
+        examId: fixture.exam.exam.id,
+        name: "記述の類型",
+        levels: {
+          create: [
+            {
+              label: "A",
+              description: "解を2つとも書いている",
+              score: 5,
+              sortOrder: 0,
+            },
+            { label: "B", description: "因数分解まで", score: 3, sortOrder: 1 },
+          ],
+        },
+      },
+      include: { levels: { orderBy: { sortOrder: "asc" } } },
+    })
+    await testPrisma.cropRegion.update({
+      where: { id: fixture.cropRegion.id },
+      data: { scoringMethod: "scale", scoreScaleId: scale.id },
+    })
+    return { levelA: scale.levels[0], levelB: scale.levels[1] }
+  }
+
+  it("類型を送って類型を選ばせ、試行に類型を書き、2段目の選択肢を類型にする", async () => {
+    const { levelA, levelB } = await setUpScaleQuestion()
+    const fake = createFakeProvider({
+      respond: async () =>
+        completedResponse({
+          ...PARTIAL_JUDGEMENT,
+          status: "evaluated",
+          partialScore: null,
+          scaleLevelId: levelB.id,
+        }),
+      respondGrouping: async () =>
+        completedResponse({
+          proposals: [
+            {
+              label: "解が無い",
+              description: "因数分解までで解を書いていない",
+              adviceDraft: "最後に解を書こう。",
+              matchedRubricItemId: null,
+              memberAnswerKeys: ["A1", "A2", "A3"],
+              options: [
+                {
+                  effectKind: "set",
+                  pointDelta: null,
+                  setStatus: "evaluated",
+                  setScore: null,
+                  setScaleLevelId: levelB.id,
+                  rationale: "因数分解まで",
+                  recommended: true,
+                },
+                {
+                  effectKind: "set",
+                  pointDelta: null,
+                  setStatus: "evaluated",
+                  setScore: null,
+                  setScaleLevelId: levelA.id,
+                  rationale: "解は明らか",
+                  recommended: false,
+                },
+              ],
+            },
+          ],
+          notes: "",
+        }),
+    })
+    const { gradeRun } = await gradeAndGroup(fake)
+
+    const [stage1Request] = fake.gradeRequests
+    const stage1Text = textOf(stage1Request)
+    expect(stage1Text).toContain(
+      `- id: ${levelA.id} ／ A ／ 解を2つとも書いている`
+    )
+    expect(stage1Text).not.toContain("## 配点")
+    expect(JSON.stringify(stage1Request.outputSchema)).toContain("scaleLevelId")
+    expect(gradeRun.templateVersion).toBe(STAGE1_SCALE_TEMPLATE_VERSION)
+
+    // 送った類型の一覧の文を採点指示の新しい行に写す
+    const sendingPrompt = await testPrisma.aiPrompt.findUniqueOrThrow({
+      where: { id: gradeRun.promptId },
+    })
+    expect(sendingPrompt.parentPromptId).toBe(fixture.prompt.id)
+    expect(sendingPrompt.renderedScaleLevels).toContain(levelB.id)
+
+    const attempts = await testPrisma.aiGradingAttempt.findMany({
+      where: { runId: gradeRun.id },
+    })
+    expect(attempts).toHaveLength(3)
+    attempts.forEach((attempt) => {
+      expect(attempt).toMatchObject({
+        state: "succeeded",
+        status: "evaluated",
+        scaleLevelId: levelB.id,
+        partialScore: null,
+      })
+    })
+
+    expect(textOf(fake.groupingRequests[0])).toContain("仮の評価: 類型 B")
+    const groupRun = await testPrisma.aiGradingRun.findFirstOrThrow({
+      where: { purpose: "group" },
+    })
+    expect(groupRun).toMatchObject({
+      status: "ended",
+      templateVersion: STAGE2_SCALE_TEMPLATE_VERSION,
+    })
+    const options = await testPrisma.aiRubricProposalOption.findMany({
+      orderBy: { sortOrder: "asc" },
+    })
+    expect(
+      options.map((option) => [option.setStatus, option.setScaleLevelId])
+    ).toEqual([
+      ["evaluated", levelB.id],
+      ["evaluated", levelA.id],
+    ])
+  })
+
+  it("送っていない類型を返した判定は外し、試行を失敗にする", async () => {
+    await setUpScaleQuestion()
+    const fake = createFakeProvider({
+      respond: async () =>
+        completedResponse({
+          ...PARTIAL_JUDGEMENT,
+          status: "evaluated",
+          partialScore: null,
+          scaleLevelId: crypto.randomUUID(),
+        }),
+    })
+    const { gradeRun } = await gradeAndGroup(fake)
+    const attempts = await testPrisma.aiGradingAttempt.findMany({
+      where: { runId: gradeRun.id },
+    })
+    attempts.forEach((attempt) => {
+      expect(attempt.state).toBe("errored")
+      expect(attempt.scaleLevelId).toBeNull()
+    })
+  })
+
+  it("類型表に類型が無い類型方式の設問では始めない", async () => {
+    await testPrisma.cropRegion.update({
+      where: { id: fixture.cropRegion.id },
+      data: { scoringMethod: "scale", scoreScaleId: null },
+    })
+    const fake = createFakeProvider({
+      respond: async () => completedResponse(PARTIAL_JUDGEMENT),
+    })
+    const runner = createGradingJobRunner(
+      createTestDependencies(fake.provider, fixture.dataDirectory)
+    )
+    await expect(
+      runner.startGradingRun(startInput(), fixture.exam.user.id)
+    ).rejects.toThrow("類型表に類型がありません")
+    expect(fake.gradeRequests).toHaveLength(0)
+    expect(await testPrisma.aiGradingRun.count()).toBe(0)
   })
 })

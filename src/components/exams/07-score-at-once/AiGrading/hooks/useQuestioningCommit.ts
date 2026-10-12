@@ -8,6 +8,10 @@
  *
  * 直接採点のまま判定を決める案（set）に答えたときは、項目を作って当てたうえで、項目の決める判定を
  * そのまま点として書く（直接採点では項目から点を計算しないため。あとで減点・加点方式にしても同じ点になる）。
+ *
+ * 類型方式の設問（§4-8-6）では、類型にする選択肢から作った項目が類型を決め、計算した類型
+ * （`scaleLevelId`）を書く。項目の検証と点の計算には、書く直前に読み直した設問の類型表の類型を使う
+ * （`fetchRubricScoringRegion`。類型表を読み込み中のまま計算して保留に倒れることがない）。
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -31,6 +35,7 @@ import { toScoringMethod } from "@/types/rubric.types"
 
 import { useRubricAdviceSync } from "../../Rubric/hooks/useRubricAdviceSync"
 import { useRubricRecalculation } from "../../Rubric/hooks/useRubricRecalculation"
+import { fetchRubricScoringRegion } from "../../Rubric/hooks/useRubricScoringRegion"
 import { useScoringKeysPausedWhile } from "../../Rubric/hooks/useScoringKeysPausedWhile"
 import type { RubricScoredRow } from "../../Rubric/types"
 import { withEditedRubricItem } from "../../Rubric/utils/rubricRecalculation"
@@ -132,10 +137,11 @@ export function useQuestioningCommit({
         const rubricItems = await queryClient.fetchQuery(
           rubricItemsQuery(examId, cropRegion.id)
         )
-        const region =
-          scoringMethod === "points"
-            ? { ...cropRegion, scoringMethod: "deduction" }
-            : { ...cropRegion, scoringMethod }
+        const region = await fetchRubricScoringRegion(queryClient, examId, {
+          ...cropRegion,
+          scoringMethod:
+            scoringMethod === "points" ? "deduction" : scoringMethod,
+        })
         const writes = touchedRows.flatMap((row) => {
           const outcome = computeRubricScore(region, rubricItems, row)
           if (outcome.kind !== "computed") return []
@@ -146,7 +152,11 @@ export function useQuestioningCommit({
             return []
           }
           return isSameRubricScore(
-            { status: row.status, partialScore: row.partialScore },
+            {
+              status: row.status,
+              partialScore: row.partialScore,
+              scaleLevelId: row.scaleLevelId,
+            },
             outcome.result
           )
             ? []
@@ -155,6 +165,7 @@ export function useQuestioningCommit({
                   questionScoreId: row.id,
                   status: outcome.result.status,
                   partialScore: outcome.result.partialScore,
+                  scaleLevelId: outcome.result.scaleLevelId,
                   clearsOverride: false,
                 },
               ]
@@ -204,6 +215,11 @@ export function useQuestioningCommit({
       rubricItemsQuery(examId, cropRegion.id)
     )
     const livingIds = new Set(livingItems.map((item) => item.id))
+    const scoringRegion = await fetchRubricScoringRegion(
+      queryClient,
+      examId,
+      cropRegion
+    )
     // 選び直しで効き方が変わる共有の項目（他の採点者の点も変わる）
     const editedEffects = plan.proposalCommits.flatMap((proposalCommit) => {
       const proposal = proposals.find(
@@ -220,7 +236,7 @@ export function useQuestioningCommit({
       if (answerPlan.kind !== "update" || !option) return []
       const validation = validateRubricItemEffect(
         optionEffectOf(option),
-        cropRegion.points
+        scoringRegion
       )
       return validation.ok
         ? [{ rubricItemId: answerPlan.rubricItemId, effect: validation.value }]

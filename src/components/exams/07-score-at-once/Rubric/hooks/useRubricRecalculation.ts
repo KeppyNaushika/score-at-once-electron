@@ -22,6 +22,7 @@ import {
   type RubricRecalculationSource,
   type RubricRecalculationSummary,
   summarizeRubricRecalculation,
+  toRubricRecalculationSource,
   toRubricScoreWrites,
 } from "../utils/rubricRecalculation"
 
@@ -73,7 +74,10 @@ export function useRubricRecalculation({
         rubricRecalculationSourceQuery(examId, cropRegionId)
       )
       const changes = source
-        ? planRubricRecalculation(request.transform(source), request.options)
+        ? planRubricRecalculation(
+            request.transform(toRubricRecalculationSource(source)),
+            request.options
+          )
         : []
       const summary = summarizeRubricRecalculation(changes, currentUserId)
 

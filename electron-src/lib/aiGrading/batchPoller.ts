@@ -12,6 +12,7 @@
  */
 
 import { parseRubricItemIds } from "@/lib/shared/aiGrading/rubricItemsText"
+import { parseScaleLevelIds } from "@/lib/shared/aiGrading/scaleLevelsText"
 
 import {
   closePendingAiGradingAttempts,
@@ -76,10 +77,11 @@ export function createBatchCollector(
         .filter((attempt) => attempt.state === "pending")
         .map((attempt) => attempt.id)
     )
-    // 当てはまる項目は、送った一覧に載っていた id と照らす（回収までに項目が変わりうる）
+    // 当てはまる項目・選んだ類型は、送った一覧に載っていた id と照らす（回収までに項目・類型が変わりうる）
     const validationContext = {
       maxPoints: run.points === null ? null : run.points.toNumber(),
       rubricItemIds: parseRubricItemIds(run.prompt.renderedRubricItems),
+      scaleLevelIds: parseScaleLevelIds(run.prompt.renderedScaleLevels),
     }
     let succeededCount = run.attempts.filter(
       (attempt) => attempt.state === "succeeded"

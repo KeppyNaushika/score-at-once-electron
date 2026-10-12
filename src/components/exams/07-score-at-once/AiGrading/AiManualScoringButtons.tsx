@@ -9,6 +9,9 @@ import { Kbd } from "@/components/ui/kbd"
 import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import type { ScaleQuestionState } from "../ScaleLevel/hooks/useScaleScoringGate"
+import { ScaleLevelButtons } from "../ScaleLevel/ScaleLevelButtons"
+
 interface AiManualScoringButtonsProps {
   /** 自分で採点している最中か（焦点の答案があるときだけ押せる） */
   isEnabled: boolean
@@ -16,6 +19,10 @@ interface AiManualScoringButtonsProps {
   onScore: (status: ScoringStatus) => void
   /** 部分点の入力欄を開く（数字キーと同じ） */
   onOpenPartialScore: () => void
+  /** 設問が類型方式か・その類型（類型方式なら類型のボタンと保留・無答などを並べる） */
+  scaleQuestion: ScaleQuestionState
+  /** 焦点の答案に類型を付ける（数字キーと同じ。下書き） */
+  onScoreWithScaleLevel: (scaleLevelId: string) => void
 }
 
 /** ボタンを押したあと、Enter などのキーがボタンに吸われないよう焦点を外す */
@@ -27,12 +34,15 @@ function releaseButtonFocus() {
 
 /**
  * 問いかけの「自分で採点する」の採点ボタン（docs/vlm-grading-design.md §3-5）。
- * 採点キーと同じく焦点の答案に**下書き**の点を付け、見直しの「確定する」で入る
+ * 採点キーと同じく焦点の答案に**下書き**の点を付け、見直しの「確定する」で入る。
+ * 類型方式の設問（§4-8-6）では、部分点の入力と正答・誤答・部分点のボタンの代わりに類型のボタンを並べる
  */
 export function AiManualScoringButtons({
   isEnabled,
   onScore,
   onOpenPartialScore,
+  scaleQuestion,
+  onScoreWithScaleLevel,
 }: AiManualScoringButtonsProps) {
   const { keyBindings } = useKeyBindings()
   const partialOpenKeys = `${formatKeyForDisplay(keyBindings["scoring.openPartialWith0"])}〜${formatKeyForDisplay(keyBindings["scoring.openPartialWith9"])}`
@@ -40,22 +50,36 @@ export function AiManualScoringButtons({
     <section aria-label="自分で採点" className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <p className="font-medium text-gray-800">自分で採点</p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => {
-            onOpenPartialScore()
+        {!scaleQuestion.isScaleQuestion && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              onOpenPartialScore()
+              releaseButtonFocus()
+            }}
+            disabled={!isEnabled}
+          >
+            <Calculator className="h-3.5 w-3.5" />
+            部分点入力
+            <Kbd variant="tiny">{partialOpenKeys}</Kbd>
+          </Button>
+        )}
+      </div>
+      {scaleQuestion.isScaleQuestion && (
+        <ScaleLevelButtons
+          scaleLevels={scaleQuestion.scaleLevels}
+          isScaleLevelsLoading={scaleQuestion.isScaleLevelsLoading}
+          selectedAnswersCount={isEnabled ? 1 : 0}
+          onApplyScaleLevel={(scaleLevelId) => {
+            onScoreWithScaleLevel(scaleLevelId)
             releaseButtonFocus()
           }}
-          disabled={!isEnabled}
-        >
-          <Calculator className="h-3.5 w-3.5" />
-          部分点入力
-          <Kbd variant="tiny">{partialOpenKeys}</Kbd>
-        </Button>
-      </div>
+        />
+      )}
       <KeyboardScoringButtons
+        isScaleQuestion={scaleQuestion.isScaleQuestion}
         selectedAnswersCount={isEnabled ? 1 : 0}
         onScore={(status) => {
           onScore(status)

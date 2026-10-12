@@ -4,6 +4,7 @@ import { MessageSquareWarning } from "lucide-react"
 
 import type { RubricItemRow } from "@/queries/rubric"
 
+import type { ScaleLevelChoice } from "../ScaleLevel/utils/scaleLevelAppearance"
 import type { DecidedAdviceCombination } from "./hooks/useRubricAdviceChoice"
 import { adviceRuleLabel } from "./utils/rubricAdviceOptions"
 import type { UndecidedAdviceCombination } from "./utils/rubricAdviceText"
@@ -11,6 +12,8 @@ import { rubricItemName } from "./utils/rubricEffectLabel"
 
 interface RubricAdviceSectionProps {
   rubricItems: readonly RubricItemRow[]
+  /** 設問の類型表の類型（類型にする項目の呼び名を引く。類型方式でなければ空） */
+  scaleLevels: readonly ScaleLevelChoice[]
   undecided: readonly UndecidedAdviceCombination[]
   decided: readonly DecidedAdviceCombination[]
   /** 未決定の組み合わせに振っている番号（項目の続き。場面の外なら null） */
@@ -27,6 +30,7 @@ interface RubricAdviceSectionProps {
  */
 export function RubricAdviceSection({
   rubricItems,
+  scaleLevels,
   undecided,
   decided,
   numberOfUndecided,
@@ -38,7 +42,9 @@ export function RubricAdviceSection({
     const rubricItem = rubricItems.find(
       (listedItem) => listedItem.id === rubricItemId
     )
-    return rubricItem ? `「${rubricItemName(rubricItem)}」` : "（消えた項目）"
+    return rubricItem
+      ? `「${rubricItemName(rubricItem, scaleLevels)}」`
+      : "（消えた項目）"
   }
   const namesOf = (itemIds: readonly string[]) => itemIds.map(nameOf).join("＋")
 

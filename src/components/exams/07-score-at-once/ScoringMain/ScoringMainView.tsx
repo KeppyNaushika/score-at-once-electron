@@ -95,6 +95,7 @@ function ScoringMainViewContent() {
     masterAnswerVisible,
     masterPageImages,
     mouseBrush,
+    mouseScaleLevelId,
     openPartialScoreModal,
     pageSize,
     partialScoreInput,
@@ -105,6 +106,7 @@ function ScoringMainViewContent() {
     scaleQuestion,
     scoringBehavior,
     selectMode,
+    selectMouseScaleLevel,
     selectableCropRegions,
     selectedScoringDataIds,
     selectedStudentAnswerImageIds,
@@ -422,6 +424,8 @@ function ScoringMainViewContent() {
                 onScoringOperationModeChange={setScoringOperationMode}
                 mouseBrush={mouseBrush}
                 onMouseBrushChange={setMouseBrush}
+                mouseScaleLevelId={mouseScaleLevelId}
+                onMouseScaleLevelSelect={selectMouseScaleLevel}
                 visibleUnscoredCount={visibleUnscoredCount}
                 hiddenUnscoredCount={hiddenUnscoredCount}
                 onBatchScoreVisibleUnscored={handleBatchScoreVisibleUnscored}

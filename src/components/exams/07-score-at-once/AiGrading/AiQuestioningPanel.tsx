@@ -62,6 +62,7 @@ export function AiQuestioningPanel({
           position={states.indexOf(currentState) + 1}
           total={states.length}
           flow={flow}
+          scaleLevels={questioning.scaleQuestion.scaleLevels}
         />
       )
     }
@@ -123,6 +124,7 @@ export function AiQuestioningPanel({
         currentStepId={currentState?.step.id ?? null}
         onOpen={flow.openStep}
         adviceTextOf={flow.adviceTextOf}
+        scaleLevels={questioning.scaleQuestion.scaleLevels}
       />
       {content}
       {currentState && (
@@ -130,6 +132,8 @@ export function AiQuestioningPanel({
           isEnabled={questioning.isManualActive}
           onScore={questioning.scoreCursor}
           onOpenPartialScore={() => partialScore.openPartialScoreModal()}
+          scaleQuestion={questioning.scaleQuestion}
+          onScoreWithScaleLevel={questioning.scoreCursorWithScaleLevel}
         />
       )}
 

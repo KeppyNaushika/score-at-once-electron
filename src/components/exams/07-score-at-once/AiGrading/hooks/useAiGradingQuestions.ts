@@ -28,6 +28,7 @@ import {
 } from "../utils/questioningFlow"
 import type {
   QuestioningDecision,
+  QuestioningScaleLevel,
   QuestioningStep,
 } from "../utils/questioningSteps"
 import { latestEndedProposalRun } from "../utils/rubricProposals"
@@ -40,12 +41,15 @@ interface UseAiGradingQuestionsOptions {
   cropRegion: QuestionAnswerRegionRow
   /** 設問の自分の実行（試行と、案の外の問いかけの答え付き） */
   runs: readonly AiGradingRunRow[]
+  /** 設問の類型表の類型（並び順のまま。類型方式でなければ空）。類型の選択肢の言葉に使う */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 export function useAiGradingQuestions({
   examId,
   cropRegion,
   runs,
+  scaleLevels,
 }: UseAiGradingQuestionsOptions) {
   const { data: proposalRuns = NO_PROPOSAL_RUNS } = useQuery(
     aiRubricProposalsQuery(examId, cropRegion.id)
@@ -62,8 +66,9 @@ export function useAiGradingQuestions({
           : null,
         scoringMethod,
         points: cropRegion.points,
+        scaleLevels,
       }),
-    [proposalRun, runs, scoringMethod, cropRegion.points]
+    [proposalRun, runs, scoringMethod, cropRegion.points, scaleLevels]
   )
 
   const { mutateAsync: recordProposalDraft } = useMutation(

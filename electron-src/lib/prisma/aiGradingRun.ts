@@ -190,6 +190,8 @@ export interface AiGradingAttemptResult {
   state: Exclude<AiGradingAttemptState, "pending">
   status: ScoringStatus
   partialScore: number | null
+  /** 類型方式の設問で選んだ類型（evaluated のときだけ。送った類型の id だけ。検証済み） */
+  scaleLevelId: string | null
   transcription: string
   observation: string
   /** 1段目が当てはまると返した項目（送った項目の id だけ。検証済み） */
@@ -208,6 +210,8 @@ export interface AiGradingAttemptResult {
  *
  * 当てはまる項目は `AiAttemptRubricMatch` に書く。送ったあとに消された項目は、記録できる
  * 行が無いので飛ばす（送った一覧は `AiPrompt.renderedRubricItems` に残っている）。
+ * 選んだ類型も同じく、送ったあとに消されていれば null にして書く（判定は evaluated のまま。
+ * 送った一覧は `AiPrompt.renderedScaleLevels` に残っている）。
  *
  * @returns 書いたら true
  */
@@ -217,10 +221,17 @@ export async function recordAiGradingAttemptResult(
 ): Promise<boolean> {
   const { matchedRubricItemIds, ...columns } = result
   return prisma.$transaction(async (tx) => {
+    const livingScaleLevel =
+      columns.scaleLevelId === null
+        ? null
+        : await tx.scoreScaleLevel.findUnique({
+            where: { id: columns.scaleLevelId },
+          })
     const { count } = await tx.aiGradingAttempt.updateMany({
       where: { id: attemptId, state: "pending" },
       data: {
         ...columns,
+        scaleLevelId: livingScaleLevel?.id ?? null,
         partialScore:
           columns.partialScore === null
             ? null

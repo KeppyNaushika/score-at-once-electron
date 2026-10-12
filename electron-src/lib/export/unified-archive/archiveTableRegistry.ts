@@ -583,6 +583,7 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     references: [
       required("runId", "AiGradingRun"),
       required("examStudentId", "ExamStudent"),
+      nullable("scaleLevelId", "ScoreScaleLevel"),
     ],
   },
   // 1段目の当てはまりと2段目の項目の案（§5-3）。試行・実行・案に従う。項目（教員の層）は
@@ -609,7 +610,10 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     role: "optional",
     option: "aiGradingRecords",
     owner: ["proposalId"],
-    references: [required("proposalId", "AiRubricProposal")],
+    references: [
+      required("proposalId", "AiRubricProposal"),
+      nullable("setScaleLevelId", "ScoreScaleLevel"),
+    ],
   },
   AiRubricProposalMember: {
     role: "optional",
@@ -658,13 +662,17 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     references: [
       required("responseId", "AiRubricProposalResponse"),
       required("attemptId", "AiGradingAttempt"),
+      nullable("scaleLevelId", "ScoreScaleLevel"),
     ],
   },
   AiAttemptResponse: {
     role: "optional",
     option: "aiGradingRecords",
     owner: ["attemptId"],
-    references: [required("attemptId", "AiGradingAttempt")],
+    references: [
+      required("attemptId", "AiGradingAttempt"),
+      nullable("scaleLevelId", "ScoreScaleLevel"),
+    ],
   },
   // 監査ログの対象。ログに従う（対象側の targetId は外部キーではない多態参照）
   AuditLogTarget: {

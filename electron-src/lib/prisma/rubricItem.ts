@@ -47,9 +47,14 @@ export async function listRubricItemsByCropRegion(cropRegionId: string) {
 /** 項目の効き方を書く列の値へ（検証を通ったものだけを受ける） */
 const toEffectColumns = (
   effect: RubricItemEffect,
-  maxPoints: number | null
+  cropRegion: CropRegionForEffect
 ) => {
-  const validation = validateRubricItemEffect(effect, maxPoints)
+  const validation = validateRubricItemEffect(effect, {
+    points: cropRegion.points,
+    scoringMethod: cropRegion.scoringMethod,
+    scaleLevelIds:
+      cropRegion.scoreScale?.levels.map((scaleLevel) => scaleLevel.id) ?? [],
+  })
   if (!validation.ok) throw new Error(validation.reasons.join("・"))
   const { value } = validation
   return {
@@ -59,13 +64,24 @@ const toEffectColumns = (
     setStatus: value.setStatus,
     setScore:
       value.setScore === null ? null : new Prisma.Decimal(value.setScore),
+    setScaleLevelId: value.setScaleLevelId,
   }
 }
 
-/** 設問の配点（検証の上限）。設問が無ければ投げる */
+/** 検証が読む設問の木（配点・方式と、類型表の類型） */
+const cropRegionForEffectInclude = {
+  scoreScale: { include: { levels: true } },
+} satisfies Prisma.CropRegionInclude
+
+type CropRegionForEffect = Prisma.CropRegionGetPayload<{
+  include: typeof cropRegionForEffectInclude
+}>
+
+/** 設問の配点・方式・類型（検証の材料）。設問が無ければ投げる */
 async function findCropRegionOrThrow(cropRegionId: string) {
   const cropRegion = await prisma.cropRegion.findUnique({
     where: { id: cropRegionId },
+    include: cropRegionForEffectInclude,
   })
   if (!cropRegion) throw new Error("設問が見つかりません")
   return cropRegion
@@ -92,7 +108,7 @@ export async function createRubricItem(
       adviceText: data.adviceText,
       sortOrder: data.sortOrder,
       createdByUserId: actorUserId,
-      ...toEffectColumns(data, cropRegion.points),
+      ...toEffectColumns(data, cropRegion),
     },
     include: rubricItemInclude,
   })
@@ -123,7 +139,7 @@ export interface UpdateRubricItemData {
   effect?: RubricItemEffect
 }
 
-/** 監査ログの差分に載せる項目の値（Decimal は数へ） */
+/** 監査ログの差分に載せる項目の値（Decimal は数へ、類型は記号へ） */
 const auditedRubricItemFields = (item: {
   label: string
   adviceText: string
@@ -132,6 +148,7 @@ const auditedRubricItemFields = (item: {
   pointDelta: Prisma.Decimal | null
   setStatus: string | null
   setScore: Prisma.Decimal | null
+  setScaleLevel: { label: string } | null
 }) => ({
   label: item.label,
   adviceText: item.adviceText,
@@ -140,6 +157,7 @@ const auditedRubricItemFields = (item: {
   pointDelta: item.pointDelta === null ? null : item.pointDelta.toNumber(),
   setStatus: item.setStatus,
   setScore: item.setScore === null ? null : item.setScore.toNumber(),
+  setScaleLevel: item.setScaleLevel?.label ?? null,
 })
 
 /** 項目を直す。他の採点者の点の計算し直しは、renderer が続けて行う */
@@ -150,7 +168,10 @@ export async function updateRubricItem(
 ) {
   const before = await prisma.rubricItem.findUnique({
     where: { id: rubricItemId },
-    include: { cropRegion: true },
+    include: {
+      cropRegion: { include: cropRegionForEffectInclude },
+      setScaleLevel: true,
+    },
   })
   if (!before) throw new Error("採点項目が見つかりません")
 
@@ -160,16 +181,21 @@ export async function updateRubricItem(
       label: data.label,
       adviceText: data.adviceText,
       sortOrder: data.sortOrder,
-      ...(data.effect
-        ? toEffectColumns(data.effect, before.cropRegion.points)
-        : {}),
+      ...(data.effect ? toEffectColumns(data.effect, before.cropRegion) : {}),
     },
     include: rubricItemInclude,
   })
+  // 監査ログの差分の類型は記号で残す（返す行には同梱しない。画面は類型表の一覧から引く）
+  const updatedScaleLevel =
+    updated.setScaleLevelId === null
+      ? null
+      : (before.cropRegion.scoreScale?.levels.find(
+          (scaleLevel) => scaleLevel.id === updated.setScaleLevelId
+        ) ?? null)
 
   const changes: AuditChange[] = diffFields(
     auditedRubricItemFields(before),
-    auditedRubricItemFields(updated),
+    auditedRubricItemFields({ ...updated, setScaleLevel: updatedScaleLevel }),
     [
       { field: "label", label: "判断理由" },
       { field: "adviceText", label: "助言" },
@@ -178,6 +204,7 @@ export async function updateRubricItem(
       { field: "pointDelta", label: "加減" },
       { field: "setStatus", label: "判定" },
       { field: "setScore", label: "点" },
+      { field: "setScaleLevel", label: "類型" },
     ]
   )
   const scope = await resolveExamScopeByCropRegion(before.cropRegionId)

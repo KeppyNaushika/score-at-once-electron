@@ -488,7 +488,7 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 - **S2 済み**（PR #1469）。`SCORING_STATUSES` に `evaluated`。類型の書き込みは `set-scale-levels`
   （`electron-src/lib/prisma/scaleLevelScoreWrite.ts`）で、点の採点の書き込みは `evaluated` を拒み `scaleLevelId` を null に戻す。
   07 の画面は `src/components/exams/07-score-at-once/ScaleLevel/`（類型のボタン・数字キー・マスの色）。
-  未採点に戻すのは既存の点の採点の書き込みで行う。AI 採点の作業画面は類型評価の設問では開かない
+  未採点に戻すのは既存の点の採点の書き込みで行う。AI 採点の作業画面は類型評価の設問では開かない（S6 で開くようにした）
 - 実装の途中で決めたこと（OWNER）: 呼び名は「類型評価」「類型」「説明」「点数」で、類型評価に「ルーブリック」「段階」の語を使わない。
   減点・加点方式の `RubricItem` は画面では「採点項目」（AI へ送る指示文の語は「ルーブリック項目」のまま）。類型は割合でなく点数を持つ。
   試験とのつながりは設問の `scoreScaleId` から求め、中間の表は作らない。用語集は #1465
@@ -529,8 +529,31 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 - 大きくなったファイルを分けた: `useScoringScreen.ts`（616→318行。範囲・設定・答案の一覧・キー入力のフックへ）、`useFinalizeScreen.ts`
   （563→192行。マスの一覧・選択・覚え書き・確定の書き込み・キーのフックへ）、`pdfExport.ts`（506→233行。ページごとの組み立て
   `pdfExportPageData.ts` と PDF の逐次書き出し `pdfStreamingSession.ts` へ）
-- 残っている小さなこと: Excel のセルの赤字は判定（部分点・保留）で決めたまま。
-  マウスモードのブラシの並びに正答・部分点が残る（押しても書かずに知らせる）。
+- **S6 済み**（2026-10-13）。呼び名は #1492 の決定に従う（採点方式 `scale` は「類型方式」、`ScoreScale` は「類型表」、`evaluated` は
+  「類型採点済み」、`RubricItem` は AI への指示文でも「採点項目」）。
+  - 採点項目: 類型方式の設問の項目は判定を決めるもの（`set`）だけで、判定は「類型にする」（`evaluated`＋`setScaleLevelId`。
+    設問の類型表の類型に限る）・無答・保留。点（`setScore`）は持たない。加減の項目は作れない。類型方式でない設問では
+    `evaluated` も類型も使えない。検証は `validateRubricItemEffect(効き方, { points, scoringMethod, scaleLevelIds })` で、main と画面が同じ規則を通す
+  - 点の計算（`computeRubricScore`）: 類型方式の設問では方式と合う `set` の項目だけを見て、並び順が先の項目の判定と類型を採る
+    （結果は `{ status, partialScore, scaleLevelId }`）。方式を変える前の加減・正答の項目は行を残したまま効かない（パネルでは薄く出す）。
+    類型が消えた・ほかの類型表の類型を指す項目は保留に倒す。計算は設問の今の類型表の類型の id を要るので、書き込みの直前に
+    `fetchRubricScoringRegion` で類型表を読み終えてから計算する。計算し直しの材料（`getRubricRecalculationSource`）も類型表を同梱する
+  - 書き込み: `writeRubricScores` は類型を受け、方式と合わない判定・ほかの類型表の類型を拒む。類型のキー（`setScaleLevels`）も
+    点の採点キーと同じく、適用のあるマスでは手での上書き（`overridesRubric`）になる
+  - 07: 類型方式の設問でも左に採点項目のパネルを出す。項目の編集は判定のボタンが「類型にする・無答・保留」で、「類型にする」なら類型を選ぶ
+  - AI採点: 表に類型の列を足した（migration `20261013120000`。`AiPrompt.renderedScaleLevels`・`AiGradingAttempt.scaleLevelId`・
+    `AiRubricProposalOption.setScaleLevelId`・`AiRubricProposalResponseScore.scaleLevelId`・`AiAttemptResponse.scaleLevelId`）。
+    類型は採点項目と同じく id で送り（「## 類型」の節。記号と説明だけで点数は送らない。`scaleLevelsText.ts`）、送った一覧を
+    `renderedScaleLevels` に写す（違えば採点指示の行を作り直す）。類型方式の設問は類型の一覧を送ったことで見分け、
+    1段目は `evaluated`／無答／保留と類型の id を返させ、2段目の選択肢は「類型にする」・無答・保留だけ（加減と採点方式の問いは無い）。
+    指示文は類型方式用に分け、版も別（`stage1-scale-1`・`stage2-scale-1`）。類型表に類型が無い設問は実行を断る
+  - 問いかけ: 選択肢は「A にする」（類型の色）、決めたことの札と一覧の「→ A」も類型の記号と色。自分で採点するでは数字キーが類型を選ぶ。
+    確定は類型にする採点項目を作って当て、教員が直接決めた類型は類型の書き込みで書く。AIチェックは判定と類型の id で比べ、
+    類型が違えば点数が同じでも食い違いとして問う（「あなたは A、AI は B と判定しました」）
+- 小さな残りも済ませた（2026-10-13）:
+  - Excel の赤字は `isScoreCellHighlighted`（部分点・保留だけ。類型採点済みは赤字にしない）1か所で決める。行の書式（`applyCellStyle`）が
+    文字の色を上書きして赤字がどこにも出ていなかったので、色を残すようにした
+  - マウスモードのブラシは、類型方式の設問では正答・誤答・部分点の代わりに類型のブラシを並べる
 
 #### 4-8-8. 実装の細目（着手前に読む）
 
@@ -705,6 +728,9 @@ AI が返した JSON は、記録する前に必ず検証する。置き場所: 
 - `partial` のときは `partialScore` が必ずあり、`pending` のときは任意。それ以外では null。点があれば 0〜配点に収まり、0.01 単位
 - 配点の無い設問では点を付けない。満点の `partial` は `correct` に寄せる
 - `matchedRubricItemIds` は送った項目の id だけを含む
+- **類型方式の設問**（§4-8-6。類型の一覧を送った依頼）では、`status` は `evaluated` / `no_answer` / `pending` のいずれかで、
+  `partialScore` は常に null。`scaleLevelId` は `evaluated` のときだけ値を持ち、送った類型の id（`AiPrompt.renderedScaleLevels`
+  から読み戻す。バッチの結果は送ってから時間を置いて届くため）に限る。ほかの判定では null
 
 ### 6-2. 2段目
 
@@ -712,6 +738,8 @@ AI が返した JSON は、記録する前に必ず検証する。置き場所: 
 - 判定が `correct` でない答案は、少なくとも1つの案に入るか、既存の項目に当たる。どこにも入らない答案は「判断できない」として残す
 - 案ごとに選択肢が1つ以上、推奨はちょうど1つ。選択肢の点の範囲と刻みは 6-1 と同じ規則
 - 文字数に上限を設ける（案の名前・助言の文案・説明）。助言の文案は一文
+- 類型方式の設問では、選択肢は `set` だけで、`setStatus` は `evaluated` / `no_answer` / `pending`。`evaluated` は送った類型の
+  `setScaleLevelId` を持ち、`setScore` は null。1段目と2段目の間に採点方式が変わっていれば、2段目を断る
 
 ### 6-3. まとめた一文
 
@@ -721,6 +749,8 @@ AI が返した JSON は、記録する前に必ず検証する。置き場所: 
 
 - `adjust` は `pointDelta` があり `setStatus`・`setScore` が null。`set` はその逆で、`setStatus` は `correct` / `partial` / `incorrect` / `no_answer` / `pending`
 - 点の範囲と刻みは 6-1 と同じ規則
+- 類型方式の設問では `set` だけで、`setStatus` は `evaluated`（`setScaleLevelId` に設問の類型表の類型）/ `no_answer` / `pending`、
+  `setScore` は null。類型方式でない設問では `evaluated` も `setScaleLevelId` も使えない（`validateRubricItemEffect`。§4-8-7 の S6）
 
 ---
 
@@ -773,6 +803,22 @@ interface GradingProvider {
          notes: string }
 
 まとめた一文: { drafts: [ { rubricItemIds: string[], text: string } ] }
+```
+
+類型方式の設問（§4-8-6）では、1段目・2段目の形を次のように替える。ほかの設問の形は上のまま変えない。類型は採点項目と同じく
+「## 類型」の節に id・記号・説明で送り（点数は送らない）、配点の節は送らない。`scaleLevelId` は enum で縛らず
+（共通の書き方の規約で enum は文字列だけの節に限るため）、検証（§6-1・§6-2）で送った id に限る。指示文の版は
+`stage1-scale-1`・`stage2-scale-1` と分ける。
+
+```
+1段目: { transcription, observation,
+         status: "evaluated" | "no_answer" | "pending",
+         partialScore: null, scaleLevelId: string | null,
+         matchedRubricItemIds, confidence }
+
+2段目の選択肢: { effectKind: "set", pointDelta: null,
+                 setStatus: "evaluated" | "no_answer" | "pending",
+                 setScore: null, setScaleLevelId: string | null, rationale, recommended }
 ```
 
 ### 7-3. 事業者ごと（API）

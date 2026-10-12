@@ -16,6 +16,7 @@ import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-s
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { toScoringMethod } from "@/types/rubric.types"
 
+import type { ScaleQuestionState } from "../../ScaleLevel/hooks/useScaleScoringGate"
 import type { AdviceTextPreviewRequest } from "../utils/adviceTextPreview"
 import { SCORING_METHOD_STEP_ID } from "../utils/gradingQuestions"
 import { draftScoresOf } from "../utils/questioningDraftScores"
@@ -63,6 +64,8 @@ interface UseAiQuestioningOptions {
   ownScoreOf: (examStudentId: string) => QuestioningScore | null
   /** AI採点の案（選び直しの洗い出しと、点を加減する選択肢の点に使う）。チェックでは空 */
   proposals: readonly AiRubricProposalRow[]
+  /** 設問が類型方式か・その類型（自分で採点の数字キーと採点ボタン、決めたことの札に使う） */
+  scaleQuestion: ScaleQuestionState
   onAnnotationsChanged?: () => void
 }
 
@@ -99,6 +102,7 @@ export function useAiQuestioning({
   discardInstructionTexts,
   ownScoreOf,
   proposals,
+  scaleQuestion,
   onAnnotationsChanged,
 }: UseAiQuestioningOptions) {
   const isEnabled = mode !== null
@@ -144,16 +148,18 @@ export function useAiQuestioning({
     isManualActive && currentState && manualDraft
       ? (currentState.step.members[manualDraft.cursor] ?? null)
       : null
-  const { partialScore, scoreCursor } = useQuestioningManualKeys({
-    isActive: isManualActive,
-    cropRegion,
-    cursorExamStudentId: cursorMember?.examStudentId ?? null,
-    cursorScore: cursorMember
-      ? (manualDraft?.scores.get(cursorMember.examStudentId) ?? null)
-      : null,
-    onMove: flow.moveManualCursor,
-    onScore: flow.scoreManualCursor,
-  })
+  const { partialScore, scoreCursor, scoreCursorWithScaleLevel } =
+    useQuestioningManualKeys({
+      isActive: isManualActive,
+      cropRegion,
+      scaleQuestion,
+      cursorExamStudentId: cursorMember?.examStudentId ?? null,
+      cursorScore: cursorMember
+        ? (manualDraft?.scores.get(cursorMember.examStudentId) ?? null)
+        : null,
+      onMove: flow.moveManualCursor,
+      onScore: flow.scoreManualCursor,
+    })
 
   // ── 中央の一覧とのつなぎ ─────────────────────────────
   const cursorExamStudentId = cursorMember?.examStudentId ?? null
@@ -260,6 +266,9 @@ export function useAiQuestioning({
     /** 自分で採点している最中か（採点ボタンを押せるか） */
     isManualActive: cursorMember !== null,
     scoreCursor,
+    /** 焦点のある答案に類型を付ける（類型方式の設問の類型のボタン・数字キー。下書き） */
+    scoreCursorWithScaleLevel,
+    scaleQuestion,
     summary,
     isMethodUnanswered,
     committedInstructionMembers,
@@ -268,13 +277,8 @@ export function useAiQuestioning({
     pinnedExamStudentIds,
     /** 助言の欄の下見（いまの問いの答案と欄の文）。助言の欄のある問いを開いていなければ null */
     advicePreview,
-    /** 受験者 → 確定すると付く予定の状態（一覧のマスに斜線で重ねる） */
-    draftStatusByExamStudentId: new Map(
-      [...draftScores].map(([examStudentId, score]) => [
-        examStudentId,
-        score.status,
-      ])
-    ),
+    /** 受験者 → 確定すると付く予定の点（一覧のマスに斜線で重ね、類型なら記号の札を添える） */
+    draftScoreByExamStudentId: draftScores,
     /**
      * 自分で採点しているあいだ、一覧の選択の代わりに使うもの: 焦点の答案を選んでいる
      * ものとして出し、マスを選ぶと焦点をその答案へ移す（問いの外の答案へは移らない）。それ以外は null

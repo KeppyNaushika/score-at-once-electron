@@ -38,6 +38,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiGradingGrid } from "@/components/exams/07-score-at-once/AiGrading/AiGradingGrid"
@@ -56,6 +57,8 @@ import type {
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
 import type { AiRubricProposalRow } from "@/components/exams/07-score-at-once/AiGrading/utils/rubricProposals"
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
+import { useScaleQuestion } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleQuestion"
+import { POINT_VERDICT_ON_SCALE_NOTICE } from "@/components/exams/07-score-at-once/ScaleLevel/scaleLevelMessages"
 import { ShortcutProvider } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import { DEFAULT_KEYBINDINGS } from "@/lib/scoringKeybindings"
@@ -95,7 +98,10 @@ const currentUser: PublicUser = {
   updatedAt: FIXED_DATE,
 }
 
-function makeCropRegion(scoringMethod: string): QuestionAnswerRegionRow {
+function makeCropRegion(
+  scoringMethod: string,
+  scoreScaleId: string | null = null
+): QuestionAnswerRegionRow {
   return {
     id: CROP_REGION_ID,
     examPageId: EXAM_PAGE_ID,
@@ -108,7 +114,7 @@ function makeCropRegion(scoringMethod: string): QuestionAnswerRegionRow {
     points: 4,
     orderIndex: 0,
     scoringMethod,
-    scoreScaleId: null,
+    scoreScaleId,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     examPage: {
@@ -135,6 +141,7 @@ function makeOption(
     pointDelta: null,
     setStatus: "incorrect",
     setScore: null,
+    setScaleLevelId: null,
     rationale: "",
     recommended: false,
     sortOrder: 0,
@@ -299,6 +306,11 @@ let runs: AiGradingRunRow[] = []
 let responseCount = 0
 let adviceWriteCount = 0
 let instructionWriteCount = 0
+/** 試験で選べる類型表（類型方式の設問の試験だけが持つ） */
+let scoreScales: {
+  id: string
+  levels: { id: string; label: string; description: string; score: number }[]
+}[] = []
 
 const updateProposal = (
   proposalId: string,
@@ -325,6 +337,7 @@ const fakeAiGradingApi = {
         attemptId: string
         status: string
         partialScore: number | null
+        scaleLevelId: string | null
       }[]
     }) => {
       responseCount += 1
@@ -345,6 +358,7 @@ const fakeAiGradingApi = {
           attemptId: score.attemptId,
           status: score.status,
           partialScore: score.partialScore,
+          scaleLevelId: score.scaleLevelId,
           createdAt: LATER_DATE,
           updatedAt: LATER_DATE,
         })),
@@ -420,6 +434,7 @@ const fakeAiGradingApi = {
         choice: string
         status: string | null
         partialScore: number | null
+        scaleLevelId: string | null
       }[]
     }) => {
       runs = runs.map((run) => ({
@@ -500,6 +515,7 @@ const fakeRubricApi = {
   getAdviceSource: vi.fn(async () => null),
   syncAdviceAnnotations: vi.fn(),
   measureInk: vi.fn(async () => []),
+  listScoreScales: vi.fn(async () => scoreScales),
 }
 const fakeScoringApi = {
   setQuestionScore: vi.fn(async () => ({})),
@@ -567,16 +583,28 @@ function QuestioningHarness({
   const { data: loadedRuns = [] } = useQuery(
     aiGradingRunsQuery("exam-1", cropRegion.id, false)
   )
+  const questionScores = useMemo(
+    () => answers.flatMap((answer) => answer.questionScore ?? []),
+    [answers]
+  )
+  const { scaleAppearanceOf, ...scaleQuestion } = useScaleQuestion({
+    examId: "exam-1",
+    currentUserId: CURRENT_USER_ID,
+    currentCropRegion: cropRegion,
+    questionScores,
+  })
   const grading = useAiGradingQuestions({
     examId: "exam-1",
     cropRegion,
     runs: loadedRuns,
+    scaleLevels: scaleQuestion.scaleLevels,
   })
   const check = useAiCheckQuestions({
     examId: "exam-1",
     cropRegion,
     runs: loadedRuns,
     answers,
+    scaleLevels: scaleQuestion.scaleLevels,
   })
   const selected = mode === "grade" ? grading : check
   const questioning = useAiQuestioning({
@@ -594,6 +622,7 @@ function QuestioningHarness({
     ownScoreOf: check.ownScoreOf,
     proposals:
       mode === "grade" ? (grading.proposalRun?.rubricProposals ?? []) : [],
+    scaleQuestion,
   })
   const reviewedAnswers = useMemo(
     () =>
@@ -665,7 +694,9 @@ function QuestioningHarness({
               : grid.setSelection(new Set(ids))
           }
           totalCount={reviewedAnswers.length}
-          draftStatusByExamStudentId={questioning.draftStatusByExamStudentId}
+          draftScoreByExamStudentId={questioning.draftScoreByExamStudentId}
+          scaleLevels={scaleQuestion.scaleLevels}
+          scaleAppearanceOf={scaleAppearanceOf}
           pageAnswerImages={answers.map((answer) => answer.studentAnswerImage)}
           advicePreview={questioning.advicePreview}
         />
@@ -753,6 +784,7 @@ beforeEach(() => {
   responseCount = 0
   adviceWriteCount = 0
   instructionWriteCount = 0
+  scoreScales = []
   proposalRuns = [makeProposalRun([makeSignProposal(), makeUnitProposal()])]
   runs = [
     makeRun({
@@ -906,7 +938,14 @@ describe("AI 採点の問いかけ", () => {
     })
     expect(fakeAiGradingApi.writeQuestioningScores).toHaveBeenCalledWith({
       cropRegionId: CROP_REGION_ID,
-      scores: [{ examStudentId: "s-d", status: "correct", partialScore: null }],
+      scores: [
+        {
+          examStudentId: "s-d",
+          status: "correct",
+          partialScore: null,
+          scaleLevelId: null,
+        },
+      ],
     })
     expect(fakeAiGradingApi.markQuestioningCommitted).toHaveBeenCalledWith({
       proposalResponseIds: [],
@@ -951,8 +990,18 @@ describe("AI 採点の問いかけ", () => {
         optionId: null,
         freeText: "",
         manualScores: [
-          { attemptId: attemptC.id, status: "incorrect", partialScore: null },
-          { attemptId: attemptB.id, status: "partial", partialScore: 3 },
+          {
+            attemptId: attemptC.id,
+            status: "incorrect",
+            partialScore: null,
+            scaleLevelId: null,
+          },
+          {
+            attemptId: attemptB.id,
+            status: "partial",
+            partialScore: 3,
+            scaleLevelId: null,
+          },
         ],
       })
     )
@@ -995,8 +1044,18 @@ describe("AI 採点の問いかけ", () => {
         optionId: null,
         freeText: "",
         manualScores: [
-          { attemptId: attemptC.id, status: "incorrect", partialScore: null },
-          { attemptId: attemptB.id, status: "partial", partialScore: 3 },
+          {
+            attemptId: attemptC.id,
+            status: "incorrect",
+            partialScore: null,
+            scaleLevelId: null,
+          },
+          {
+            attemptId: attemptB.id,
+            status: "partial",
+            partialScore: 3,
+            scaleLevelId: null,
+          },
         ],
       })
     )
@@ -1266,7 +1325,12 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         optionId: null,
         freeText: "",
         manualScores: [
-          { attemptId: attemptC.id, status: "incorrect", partialScore: null },
+          {
+            attemptId: attemptC.id,
+            status: "incorrect",
+            partialScore: null,
+            scaleLevelId: null,
+          },
         ],
       })
     )
@@ -1360,7 +1424,12 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         optionId: null,
         freeText: "",
         manualScores: [
-          { attemptId: attemptC.id, status: "incorrect", partialScore: null },
+          {
+            attemptId: attemptC.id,
+            status: "incorrect",
+            partialScore: null,
+            scaleLevelId: null,
+          },
         ],
       })
     )
@@ -1621,12 +1690,14 @@ describe("AI チェックの問いかけ", () => {
             choice: "rescore",
             status: "incorrect",
             partialScore: null,
+            scaleLevelId: null,
           },
           {
             attemptId: "check-s-b",
             choice: "rescore",
             status: "incorrect",
             partialScore: null,
+            scaleLevelId: null,
           },
         ],
       })
@@ -1654,7 +1725,12 @@ describe("AI チェックの問いかけ", () => {
       expect(fakeAiGradingApi.writeQuestioningScores).toHaveBeenCalledWith({
         cropRegionId: CROP_REGION_ID,
         scores: [
-          { examStudentId: "s-a", status: "incorrect", partialScore: null },
+          {
+            examStudentId: "s-a",
+            status: "incorrect",
+            partialScore: null,
+            scaleLevelId: null,
+          },
         ],
       })
     )
@@ -1662,5 +1738,242 @@ describe("AI チェックの問いかけ", () => {
       expect(fakeAiGradingApi.markQuestioningCommitted).toHaveBeenCalled()
     )
     expect(fakeAiGradingApi.commitProposalResponse).not.toHaveBeenCalled()
+  })
+})
+
+describe("類型方式の設問の問いかけ（§4-8-6）", () => {
+  const SCALE_ID = "scale-1"
+  const LEVEL_A = "level-a"
+  const LEVEL_B = "level-b"
+  const REASONS = "根拠を2つ挙げている"
+
+  /** 類型にする案（答案3件）。A が推奨 */
+  function makeScaleProposal(): AiRubricProposalRow {
+    return {
+      ...makeSignProposal(),
+      id: "proposal-scale",
+      label: REASONS,
+      description: "",
+      adviceDraft: "",
+      options: [
+        makeOption({
+          id: "option-scale-a",
+          proposalId: "proposal-scale",
+          setStatus: "evaluated",
+          setScaleLevelId: LEVEL_A,
+          recommended: true,
+        }),
+        makeOption({
+          id: "option-scale-b",
+          proposalId: "proposal-scale",
+          setStatus: "evaluated",
+          setScaleLevelId: LEVEL_B,
+          sortOrder: 1,
+        }),
+        makeOption({
+          id: "option-scale-no-answer",
+          proposalId: "proposal-scale",
+          setStatus: "no_answer",
+          sortOrder: 2,
+        }),
+      ],
+      members: [
+        makeMember("proposal-scale", attemptA),
+        makeMember("proposal-scale", attemptB),
+        makeMember("proposal-scale", attemptC),
+      ],
+    }
+  }
+
+  beforeEach(() => {
+    scoreScales = [
+      {
+        id: SCALE_ID,
+        levels: [
+          { id: LEVEL_A, label: "A", description: "根拠が2つ", score: 4 },
+          { id: LEVEL_B, label: "B", description: "根拠が1つ", score: 2 },
+        ],
+      },
+    ]
+    proposalRuns = [makeProposalRun([makeScaleProposal()])]
+  })
+
+  const scaleCropRegion = () => makeCropRegion("scale", SCALE_ID)
+  const draftLevelChipOf = (examStudentId: string) =>
+    within(cellOf(examStudentId)).queryByTestId("ai-draft-scale-level")
+
+  it("選択肢は「A にする」のように類型の記号で出し、採点方式は問わない。付く予定の類型をマスに添える", async () => {
+    renderView({ cropRegion: scaleCropRegion(), answers: gradeAnswers() })
+    const question = await card(REASONS)
+    const options = within(question).getByRole("listbox", { name: "選択肢" })
+    await waitFor(() =>
+      expect(within(options).getByText("A にする")).toBeInTheDocument()
+    )
+    expect(within(options).getByText("B にする")).toBeInTheDocument()
+    expect(within(options).getByText("無答 0点")).toBeInTheDocument()
+    expect(focusedOption()).toHaveTextContent("A にする")
+    expect(
+      screen.queryByRole("region", { name: "問いかけ: 採点方式" })
+    ).toBeNull()
+
+    await waitFor(() => expect(draftStatusOf("s-c")).toBe("evaluated"))
+    expect(draftLevelChipOf("s-c")).toHaveTextContent("→ A")
+    // 斜線も付ける予定の類型（A は並びの先頭の色）で引く
+    expect(cellOf("s-c").style.backgroundImage).toContain("rgb(30, 58, 138)")
+    await userEvent.keyboard("{ArrowDown}")
+    await waitFor(() =>
+      expect(draftLevelChipOf("s-c")).toHaveTextContent("→ B")
+    )
+
+    // 決めたことの札は類型の記号
+    await userEvent.keyboard("{Enter}")
+    const row = await logRow(REASONS)
+    expect(row).toHaveTextContent("B")
+    expectNoTeacherLayerWrites()
+  })
+
+  it("「自分で採点する」では数字キーが類型を選び、正答・誤答のキーは付けずに知らせる", async () => {
+    renderView({ cropRegion: scaleCropRegion(), answers: gradeAnswers() })
+    await card(REASONS)
+    await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
+    const scoringSection = () =>
+      screen.getByRole("region", { name: "自分で採点" })
+    // 類型方式の設問では部分点の入力も正答・誤答のボタンも出さず、類型のボタンを出す
+    expect(
+      within(scoringSection()).queryByRole("button", { name: /^部分点入力/ })
+    ).toBeNull()
+    expect(
+      within(scoringSection()).queryByRole("button", { name: /^誤答$/ })
+    ).toBeNull()
+    await waitFor(() =>
+      expect(
+        within(scoringSection()).getByRole("group", { name: "類型" })
+      ).toBeInTheDocument()
+    )
+
+    // A・B・無答の次が「自分で採点する」
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}")
+    await waitFor(() => expect(selectedIdsShown()).toBe("s-c"))
+    await userEvent.keyboard("2")
+    await waitFor(() =>
+      expect(draftLevelChipOf("s-c")).toHaveTextContent("→ B")
+    )
+    expect(selectedIdsShown()).toBe("s-b")
+    // 誤答のキーは付けない（07 と同じ知らせ）
+    await userEvent.keyboard("o")
+    expect(toast.info).toHaveBeenCalledWith(POINT_VERDICT_ON_SCALE_NOTICE, {
+      id: "scale-point-verdict",
+    })
+    expect(draftStatusOf("s-b")).toBeNull()
+    expect(selectedIdsShown()).toBe("s-b")
+    await userEvent.keyboard("1")
+    await waitFor(() =>
+      expect(draftLevelChipOf("s-b")).toHaveTextContent("→ A")
+    )
+
+    await userEvent.keyboard("{Enter}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledWith({
+        proposalId: "proposal-scale",
+        optionId: null,
+        freeText: "",
+        manualScores: [
+          {
+            attemptId: attemptC.id,
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: LEVEL_B,
+          },
+          {
+            attemptId: attemptB.id,
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: LEVEL_A,
+          },
+        ],
+      })
+    )
+    expectNoTeacherLayerWrites()
+  })
+
+  it("AIチェックは類型で比べ、違う類型を「あなたは A、AI は B と判定しました」と問い、直すと類型で書く", async () => {
+    runs = [
+      makeRun({
+        id: "check-run-1",
+        purpose: "check",
+        status: "ended",
+        attempts: [
+          makeAttempt({
+            id: "check-s-a",
+            examStudentId: "s-a",
+            runId: "check-run-1",
+            status: "evaluated",
+            scaleLevelId: LEVEL_B,
+            transcription: "葉緑体",
+            observation: "根拠が1つ",
+          }),
+          // 同じ類型なら問わない
+          makeAttempt({
+            id: "check-s-b",
+            examStudentId: "s-b",
+            runId: "check-run-1",
+            status: "evaluated",
+            scaleLevelId: LEVEL_A,
+            transcription: "葉緑素",
+          }),
+        ],
+      }),
+    ]
+    proposalRuns = []
+    const answers = ["s-a", "s-b"].map((examStudentId) =>
+      makeAnswer(examStudentId, {
+        questionScore: makeQuestionScore({
+          examStudentId,
+          status: "evaluated",
+          scaleLevelId: LEVEL_A,
+        }),
+      })
+    )
+    renderView({ mode: "check", cropRegion: scaleCropRegion(), answers })
+    await card("あなたは A、AI は B と判定しました")
+    expect(focusedOption()).toHaveTextContent("B に直す")
+    expect(
+      screen.queryByRole("region", { name: /問いかけ: あなたは A、AI は A/ })
+    ).toBeNull()
+
+    await userEvent.keyboard("{Enter}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordAttemptResponses).toHaveBeenCalledWith({
+        responses: [
+          {
+            attemptId: "check-s-a",
+            choice: "rescore",
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: LEVEL_B,
+          },
+        ],
+      })
+    )
+    const review = await screen.findByRole("region", { name: "見直し" })
+    await waitFor(() =>
+      expect(review).toHaveTextContent("1件を採点に反映します")
+    )
+    await userEvent.click(
+      within(review).getByRole("button", { name: "採点に反映する" })
+    )
+    await waitFor(() =>
+      expect(fakeAiGradingApi.writeQuestioningScores).toHaveBeenCalledWith({
+        cropRegionId: CROP_REGION_ID,
+        scores: [
+          {
+            examStudentId: "s-a",
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: LEVEL_B,
+          },
+        ],
+      })
+    )
   })
 })

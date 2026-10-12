@@ -4,6 +4,7 @@ import { AiDecisionBadge } from "./AiDecisionBadge"
 import {
   decisionBadgeOf,
   memberCountLabelOf,
+  type QuestioningScaleLevel,
   type QuestioningStepState,
 } from "./utils/questioningSteps"
 
@@ -14,6 +15,8 @@ interface AiQuestioningLogProps {
   onOpen: (stepId: string) => void
   /** 問いの助言の欄の文（助言の無い問いは ""） */
   adviceTextOf: (stepId: string) => string
+  /** 設問の類型表の類型（類型で決めた札を記号と類型の色で出す。類型方式でなければ空） */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 /**
@@ -27,6 +30,7 @@ export function AiQuestioningLog({
   currentStepId,
   onOpen,
   adviceTextOf,
+  scaleLevels,
 }: AiQuestioningLogProps) {
   if (states.length === 0) return null
   return (
@@ -73,7 +77,7 @@ export function AiQuestioningLog({
               <AiDecisionBadge
                 badge={
                   state.decision
-                    ? decisionBadgeOf(state.step, state.decision)
+                    ? decisionBadgeOf(state.step, state.decision, scaleLevels)
                     : null
                 }
               />

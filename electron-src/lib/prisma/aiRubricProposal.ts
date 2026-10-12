@@ -18,7 +18,9 @@ import type { ValidatedStage2Proposal } from "@/lib/shared/aiGrading/stage2Respo
 
 import {
   assertQuestioningScores,
+  questioningRegionInclude,
   type QuestioningScoreInput,
+  toQuestioningScoreRegion,
 } from "./aiQuestioningScore"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion } from "./auditScope"
@@ -29,7 +31,10 @@ import { createRubricItem, updateRubricItem } from "./rubricItem"
 
 /**
  * 2段目が返した案を書く。答案の番号（A1, A2, …）は `attemptIdByAnswerKey` で試行の id へ戻す。
- * 案は返ってきた順に `sortOrder` を振る
+ * 案は返ってきた順に `sortOrder` を振る。
+ *
+ * 類型方式の設問の選択肢は、その類型（`setScaleLevelId`）も書く。送ったあとに消された類型は
+ * 書ける行が無いので null にする（その選択肢は確定のときに項目の検証で外れ、画面で知らせる）
  */
 export async function recordAiRubricProposals(
   runId: string,
@@ -37,6 +42,20 @@ export async function recordAiRubricProposals(
   attemptIdByAnswerKey: ReadonlyMap<string, string>
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    const optionScaleLevelIds = proposals.flatMap((proposal) =>
+      proposal.options.flatMap((option) =>
+        option.setScaleLevelId === null ? [] : [option.setScaleLevelId]
+      )
+    )
+    const livingScaleLevelIds = new Set(
+      optionScaleLevelIds.length === 0
+        ? []
+        : (
+            await tx.scoreScaleLevel.findMany({
+              where: { id: { in: optionScaleLevelIds } },
+            })
+          ).map((scaleLevel) => scaleLevel.id)
+    )
     for (const [proposalIndex, proposal] of proposals.entries()) {
       await tx.aiRubricProposal.create({
         data: {
@@ -58,6 +77,11 @@ export async function recordAiRubricProposals(
                 option.setScore === null
                   ? null
                   : new Prisma.Decimal(option.setScore),
+              setScaleLevelId:
+                option.setScaleLevelId !== null &&
+                livingScaleLevelIds.has(option.setScaleLevelId)
+                  ? option.setScaleLevelId
+                  : null,
               rationale: option.rationale,
               recommended: option.recommended,
               sortOrder: optionIndex,
@@ -173,7 +197,13 @@ async function findProposalForAnswer(proposalId: string) {
   const proposal = await prisma.aiRubricProposal.findUnique({
     where: { id: proposalId },
     include: {
-      run: { include: { prompt: { include: { cropRegion: true } } } },
+      run: {
+        include: {
+          prompt: {
+            include: { cropRegion: { include: questioningRegionInclude } },
+          },
+        },
+      },
       options: true,
       members: { include: { attempt: true } },
       responses: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
@@ -232,8 +262,10 @@ export async function recordAiRubricProposalDraft(
   ) {
     throw new Error("案に入っていない答案の点が含まれています")
   }
-  const points = proposal.run.prompt.cropRegion.points
-  assertQuestioningScores(input.manualScores, points)
+  assertQuestioningScores(
+    input.manualScores,
+    toQuestioningScoreRegion(proposal.run.prompt.cropRegion)
+  )
 
   return prisma.aiRubricProposalResponse.create({
     data: {
@@ -248,6 +280,7 @@ export async function recordAiRubricProposalDraft(
             score.partialScore === null
               ? null
               : new Prisma.Decimal(score.partialScore),
+          scaleLevelId: score.scaleLevelId,
         })),
       },
     },
@@ -413,6 +446,7 @@ export async function commitAiRubricProposalResponse(
       option.pointDelta === null ? null : option.pointDelta.toNumber(),
     setStatus: option.setStatus,
     setScore: option.setScore === null ? null : option.setScore.toNumber(),
+    setScaleLevelId: option.setScaleLevelId,
   }
 
   // 教員が直した助言（null は直していない）。項目の助言と同じなら書かない

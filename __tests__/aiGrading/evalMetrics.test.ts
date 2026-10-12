@@ -247,6 +247,7 @@ describe("項目を送った1段目の当てはまりの指標", () => {
       pointDelta: null,
       setStatus: "correct" as const,
       setScore: null,
+      setScaleLevelId: null,
     },
     {
       id: "item-unit",
@@ -255,6 +256,7 @@ describe("項目を送った1段目の当てはまりの指標", () => {
       pointDelta: -1,
       setStatus: null,
       setScore: null,
+      setScaleLevelId: null,
     },
     {
       id: "item-wrong",
@@ -263,6 +265,7 @@ describe("項目を送った1段目の当てはまりの指標", () => {
       pointDelta: null,
       setStatus: "incorrect" as const,
       setScore: null,
+      setScaleLevelId: null,
     },
   ]
 

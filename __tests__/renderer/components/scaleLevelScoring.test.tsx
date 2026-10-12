@@ -192,6 +192,7 @@ function ScoringKeys({
       filteredScoringDataIds: [],
       replaceSelection: noop,
       setGradingMode: noop,
+      mouseScaleLevelId: null,
     },
     currentCropRegion: cropRegion,
     scaleQuestion: scale,

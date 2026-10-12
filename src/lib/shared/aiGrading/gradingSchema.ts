@@ -34,7 +34,7 @@ export interface GradingJsonSchema {
 }
 
 /**
- * AI に返させる判定。`unscored`（未採点）と `double_mark`（二重マーク）は返させない
+ * 類型方式でない設問で AI に返させる判定。`unscored`（未採点）と `double_mark`（二重マーク）は返させない
  * （前者は判定ではなく、後者はマークシートの読み取りの結果で、記述の採点では起きない）
  */
 export const AI_GRADING_OUTPUT_STATUSES = [
@@ -44,7 +44,30 @@ export const AI_GRADING_OUTPUT_STATUSES = [
   "no_answer",
   "pending",
 ] as const satisfies readonly ScoringStatus[]
-export type AiGradingOutputStatus = (typeof AI_GRADING_OUTPUT_STATUSES)[number]
+
+/**
+ * 類型方式の設問で AI に返させる判定（docs/vlm-grading-design.md §4-8-6）。
+ * 正誤を持たないので correct / partial / incorrect は返させず、類型を選んだ答案は evaluated
+ * （類型採点済み）にして類型の id を添える。無答・保留はほかの方式と同じ
+ */
+export const AI_GRADING_SCALE_OUTPUT_STATUSES = [
+  "evaluated",
+  "no_answer",
+  "pending",
+] as const satisfies readonly ScoringStatus[]
+
+/** AI に返させる判定（どちらかの方式のもの） */
+export type AiGradingOutputStatus =
+  | (typeof AI_GRADING_OUTPUT_STATUSES)[number]
+  | (typeof AI_GRADING_SCALE_OUTPUT_STATUSES)[number]
+
+/** 設問の方式で AI に返させる判定（類型方式の設問か） */
+export const aiGradingOutputStatusesFor = (
+  isScaleQuestion: boolean
+): readonly AiGradingOutputStatus[] =>
+  isScaleQuestion
+    ? AI_GRADING_SCALE_OUTPUT_STATUSES
+    : AI_GRADING_OUTPUT_STATUSES
 
 /** 部分点（partialScore）を持ちうる判定（partial は必ず持ち、pending は任意） */
 export const AI_GRADING_SCORED_STATUSES = [

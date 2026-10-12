@@ -4,6 +4,7 @@
  * - 送った答案の番号・送った項目の id だけを含む（知らないものは拒む）
  * - 案ごとに選択肢が 1〜上限個、推奨はちょうど1つ。選択肢の形は種類で決まる（§6-4）
  * - 点の範囲と刻みは1段目と同じ規則（`applyStatusScoreRules`）
+ * - 類型方式の設問では、選択肢は類型にする set だけ（`stage2OptionValidator.ts`）
  * - 字数に上限があり、助言の文案は改行の無い一文
  *
  * 判定が correct でない答案のうち、どの案にも入らず既存の項目にも当たらないものは
@@ -50,6 +51,8 @@ type Stage2ResponseValidation =
 interface Stage2ValidationContext {
   readonly maxPoints: number | null
   readonly rubricItemIds: readonly string[]
+  /** 送った類型の id（類型方式の設問だけ。ほかの設問は空）。空でなければ選択肢を類型方式として検証する */
+  readonly scaleLevelIds: readonly string[]
   /** 送った答案（この並びが仮の番号 A1, A2, … になる） */
   readonly answers: readonly Stage2AnswerInput[]
 }
@@ -154,6 +157,7 @@ function validateProposal(
   const options = validateStage2Options(proposal.options, {
     path,
     maxPoints: context.maxPoints,
+    scaleLevelIds: context.scaleLevelIds,
     reasons,
     adjustments,
   })

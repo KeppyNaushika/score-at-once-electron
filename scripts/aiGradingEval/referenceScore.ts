@@ -46,7 +46,7 @@ function toVerdict(
         ? null
         : calculateActualScore(
             { status, partialScore, scaleLevel: null },
-            // AI採点を評価するのは点の採点の設問だけ（類型評価の設問では AI採点を開かない）
+            // このスクリプトが評価するのは類型方式でない設問の AI採点だけ
             { points: maxPoints, scoringMethod: "points" }
           ),
   }

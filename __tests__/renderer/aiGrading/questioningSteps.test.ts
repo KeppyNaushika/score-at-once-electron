@@ -37,7 +37,7 @@ const FIXED_DATE = new Date("2026-10-01T00:00:00.000Z")
 const score = (
   status: ScoringStatus,
   partialScore: number | null = null
-): QuestioningScore => ({ status, partialScore })
+): QuestioningScore => ({ status, partialScore, scaleLevelId: null })
 
 /** 先生の今の採点（受験者 → 点） */
 const ownScores =
@@ -85,6 +85,7 @@ describe("AI チェックの問い", () => {
         d: score("correct"),
       }),
       points: 3,
+      scaleLevels: [],
     })
     expect(states).toHaveLength(1)
     const [{ step }] = states
@@ -121,6 +122,7 @@ describe("AI チェックの問い", () => {
         same: score("correct"),
       }),
       points: 3,
+      scaleLevels: [],
     })
     expect(states.map(({ step }) => step.id)).toEqual([
       "diff:check-high",
@@ -152,6 +154,7 @@ describe("AI チェックの問い", () => {
       checkRun: run,
       ownScoreOf,
       points: 3,
+      scaleLevels: [],
     })
     const rows = attemptResponsesForDecision(state.step, {
       kind: "option",
@@ -163,12 +166,14 @@ describe("AI チェックの問い", () => {
         choice: "rescore",
         status: "incorrect",
         partialScore: null,
+        scaleLevelId: null,
       },
       {
         attemptId: "check-b",
         choice: "rescore",
         status: "incorrect",
         partialScore: null,
+        scaleLevelId: null,
       },
     ])
     const responseOf = (
@@ -325,7 +330,12 @@ describe("見直しと確定", () => {
         },
       ],
       directScores: [
-        { examStudentId: "c", status: "partial", partialScore: 2 },
+        {
+          examStudentId: "c",
+          status: "partial",
+          partialScore: 2,
+          scaleLevelId: null,
+        },
       ],
       proposalResponseIdsToMark: ["draft-2"],
       attemptResponseIdsToMark: ["attempt-response-d"],
@@ -389,14 +399,17 @@ describe("問いの一覧の行", () => {
     expect(badgeOf("option-correct")).toEqual({
       label: "正答",
       status: "correct",
+      scaleColors: null,
     })
     expect(badgeOf("option-partial")).toEqual({
       label: "部分点 4点",
       status: "partial",
+      scaleColors: null,
     })
     expect(badgeOf("option-incorrect")).toEqual({
       label: "誤答",
       status: "incorrect",
+      scaleColors: null,
     })
   })
 
@@ -406,10 +419,18 @@ describe("問いの一覧の行", () => {
         kind: "manual",
         scores: new Map([["a", score("correct", null)]]),
       })
-    ).toEqual({ label: "自分で採点 1件", status: null })
+    ).toEqual({
+      label: "自分で採点 1件",
+      status: null,
+      scaleColors: null,
+    })
     expect(
       decisionBadgeOf(scoredStep, { kind: "instruction", text: "指示" })
-    ).toEqual({ label: "再採点を指示", status: null })
+    ).toEqual({
+      label: "再採点を指示",
+      status: null,
+      scaleColors: null,
+    })
     expect(memberCountLabelOf(scoredStep)).toBe("2件")
     expect(
       memberCountLabelOf(

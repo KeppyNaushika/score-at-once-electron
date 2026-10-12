@@ -2,6 +2,9 @@
 
 import { TriangleAlert } from "lucide-react"
 
+import type { ScaleQuestionState } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleScoringGate"
+import { scaleLevelColorsAt } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleLevelAppearance"
+import { isMouseBrushCompatibleWithScale } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleMouseBrush"
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -20,21 +23,108 @@ import {
   STATUS_MAP,
 } from "./scoringToolbarButtons"
 
-/** マウスモードの採点ブラシの選択と、表示中の未採点の一括採点 */
+/** ブラシのボタンの見た目（採点状態のブラシと類型のブラシで揃える） */
+const BRUSH_ITEM_CLASS_NAME =
+  "flex h-12 flex-col gap-1 rounded-md border-2 shadow-xs data-[state=off]:opacity-60 data-[state=off]:hover:opacity-80 data-[state=on]:ring-2 data-[state=on]:ring-blue-500 data-[state=on]:ring-offset-1"
+
+/** 類型方式でない設問の類型（毎回作り直さない） */
+const NO_SCALE_LEVELS: ScaleQuestionState["scaleLevels"] = []
+
+/**
+ * マウスモードの採点ブラシの選択と、表示中の未採点の一括採点。
+ *
+ * 類型方式の設問では、選択のあとに類型ごとのブラシ（記号・点数を類型の色で）を並べ、
+ * 正答・誤答・部分点・部分点入力のブラシは出さない（保留・無答・Wマークは残す。docs/vlm-grading-design.md §4-8-6）
+ */
 export function MouseBrushControls({
   mouseBrush,
   onMouseBrushChange,
+  mouseScaleLevelId,
+  onMouseScaleLevelSelect,
+  scaleQuestion,
   visibleUnscoredCount,
   hiddenUnscoredCount,
   onBatchScoreVisibleUnscored,
 }: {
+  /** 今の設問で効くブラシ（効かないブラシは「選択」に読み替え済み） */
   mouseBrush: MouseBrushAction
   onMouseBrushChange?: (brush: MouseBrushAction) => void
+  /** 類型のブラシが付ける類型（類型のブラシのときだけ値を持つ） */
+  mouseScaleLevelId: string | null
+  onMouseScaleLevelSelect?: (scaleLevelId: string) => void
+  scaleQuestion?: ScaleQuestionState
   visibleUnscoredCount: number
   hiddenUnscoredCount: number
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
 }) {
   const scoringColors = useScoringStatusColors()
+  const isScaleQuestion = scaleQuestion?.isScaleQuestion ?? false
+  const scaleLevels = scaleQuestion?.isScaleQuestion
+    ? scaleQuestion.scaleLevels
+    : NO_SCALE_LEVELS
+  const brushButtons = isScaleQuestion
+    ? MOUSE_BRUSH_BUTTONS.filter((button) =>
+        isMouseBrushCompatibleWithScale(button.status)
+      )
+    : MOUSE_BRUSH_BUTTONS
+  // 選択を先頭に、類型のブラシをそのすぐ後に並べる
+  const selectButtons = brushButtons.filter(
+    (button) => button.status === "select"
+  )
+  const statusButtons = brushButtons.filter(
+    (button) => button.status !== "select"
+  )
+  const selectedScaleLevel =
+    mouseBrush === "scale_level"
+      ? scaleLevels.find((scaleLevel) => scaleLevel.id === mouseScaleLevelId)
+      : undefined
+  // 類型のブラシは類型の id を値にする（状態は「類型のブラシ」と「どの類型か」を分けて持つ）
+  const toggleValue =
+    mouseBrush === "scale_level" ? (selectedScaleLevel?.id ?? "") : mouseBrush
+  const selectBrush = ignoreDeselect(MOUSE_BRUSH_ACTIONS, (brush) =>
+    onMouseBrushChange?.(brush)
+  )
+  const batchLabel =
+    mouseBrush === "scale_level"
+      ? selectedScaleLevel?.label
+      : mouseBrush === "select" || mouseBrush === "partial_modal"
+        ? undefined
+        : (BRUSH_BUTTONS.find((button) => button.status === mouseBrush)
+            ?.label ?? mouseBrush)
+
+  const renderBrushButton = (button: (typeof MOUSE_BRUSH_BUTTONS)[number]) => {
+    const Icon = button.icon
+    const colors =
+      button.status === "select"
+        ? { bg: "#e5e7eb", text: "#374151" }
+        : button.status === "partial_modal"
+          ? scoringColors[STATUS_MAP.partial]
+          : scoringColors[STATUS_MAP[button.status]]
+    return (
+      <Tooltip key={button.status}>
+        <TooltipTrigger asChild>
+          <ToggleGroupItem
+            value={button.status}
+            className={BRUSH_ITEM_CLASS_NAME}
+            style={{
+              backgroundColor: colors.bg,
+              color: colors.text,
+              borderColor: colors.bg,
+            }}
+          >
+            <Icon className="h-4 w-4" />
+            <div className="text-xs">{button.label}</div>
+          </ToggleGroupItem>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="text-center">
+            <div className="font-medium">{button.description}</div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
   return (
     <>
       {/* ブラシ選択 */}
@@ -46,53 +136,58 @@ export function MouseBrushControls({
         <ToggleGroup
           type="single"
           rovingFocus={false}
-          value={mouseBrush}
+          value={toggleValue}
           aria-label="クリック時の採点ブラシ"
           className="grid w-full grid-cols-4 gap-2"
-          onValueChange={ignoreDeselect(MOUSE_BRUSH_ACTIONS, (brush) =>
-            onMouseBrushChange?.(brush)
-          )}
+          onValueChange={(value) => {
+            const scaleLevel = scaleLevels.find(
+              (candidate) => candidate.id === value
+            )
+            if (scaleLevel) {
+              onMouseScaleLevelSelect?.(scaleLevel.id)
+              return
+            }
+            selectBrush(value)
+          }}
         >
-          {MOUSE_BRUSH_BUTTONS.map((button) => {
-            const Icon = button.icon
-            const colors =
-              button.status === "select"
-                ? { bg: "#e5e7eb", text: "#374151" }
-                : button.status === "partial_modal"
-                  ? scoringColors[STATUS_MAP.partial]
-                  : scoringColors[STATUS_MAP[button.status]]
+          {selectButtons.map(renderBrushButton)}
+          {scaleLevels.map((scaleLevel, order) => {
+            const colors = scaleLevelColorsAt(order)
             return (
-              <Tooltip key={button.status}>
+              <Tooltip key={scaleLevel.id}>
                 <TooltipTrigger asChild>
                   <ToggleGroupItem
-                    value={button.status}
-                    className="flex h-12 flex-col gap-1 rounded-md border-2 shadow-xs data-[state=off]:opacity-60 data-[state=off]:hover:opacity-80 data-[state=on]:ring-2 data-[state=on]:ring-blue-500 data-[state=on]:ring-offset-1"
+                    value={scaleLevel.id}
+                    aria-label={`類型 ${scaleLevel.label}（${scaleLevel.score}点）`}
+                    className={BRUSH_ITEM_CLASS_NAME}
                     style={{
                       backgroundColor: colors.bg,
                       color: colors.text,
                       borderColor: colors.bg,
                     }}
                   >
-                    <Icon className="h-4 w-4" />
-                    <div className="text-xs">{button.label}</div>
+                    <div className="text-sm font-bold">{scaleLevel.label}</div>
+                    <div className="text-xs">{scaleLevel.score}点</div>
                   </ToggleGroupItem>
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-center">
-                    <div className="font-medium">{button.description}</div>
+                    <div className="font-medium">
+                      {scaleLevel.description || scaleLevel.label}
+                    </div>
                   </div>
                 </TooltipContent>
               </Tooltip>
             )
           })}
+          {statusButtons.map(renderBrushButton)}
         </ToggleGroup>
       </div>
 
-      {/* 一括採点ボタン（採点ブラシ選択時のみ） */}
+      {/* 一括採点ボタン（付けられるブラシの選択時のみ） */}
       {onBatchScoreVisibleUnscored &&
         visibleUnscoredCount > 0 &&
-        mouseBrush !== "select" &&
-        mouseBrush !== "partial_modal" && (
+        batchLabel !== undefined && (
           <div className="space-y-1">
             <Button
               variant="outline"
@@ -100,10 +195,7 @@ export function MouseBrushControls({
               className="w-full text-xs"
               onClick={() => onBatchScoreVisibleUnscored(mouseBrush)}
             >
-              表示中の未採点{visibleUnscoredCount}件を
-              {BRUSH_BUTTONS.find((button) => button.status === mouseBrush)
-                ?.label ?? mouseBrush}
-              にする
+              表示中の未採点{visibleUnscoredCount}件を{batchLabel}にする
             </Button>
             {hiddenUnscoredCount > 0 && (
               <div className="flex items-center gap-1 text-[10px] text-amber-600">

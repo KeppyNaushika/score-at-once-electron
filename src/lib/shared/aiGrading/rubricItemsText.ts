@@ -15,6 +15,10 @@ import {
 } from "@/types/rubric.types"
 
 import type { AiGradingOutputStatus } from "./gradingSchema"
+import {
+  type ScaleLevelForPrompt,
+  scaleLevelLabelText,
+} from "./scaleLevelsText"
 
 /** 項目の行（境界を越えたもの、または main で Decimal を数にしたもの）から、送る値へ */
 export function toRubricItemForPrompt(rubricItem: {
@@ -24,6 +28,7 @@ export function toRubricItemForPrompt(rubricItem: {
   pointDelta: number | null
   setStatus: string | null
   setScore: number | null
+  setScaleLevelId: string | null
 }): RubricItemForPrompt {
   return {
     id: rubricItem.id,
@@ -35,6 +40,7 @@ export function toRubricItemForPrompt(rubricItem: {
         ? rubricItem.setStatus
         : null,
     setScore: rubricItem.setScore,
+    setScaleLevelId: rubricItem.setScaleLevelId,
   }
 }
 
@@ -47,6 +53,7 @@ export const OUTPUT_STATUS_LABELS: Readonly<
   incorrect: "誤答",
   no_answer: "無答",
   pending: "保留",
+  evaluated: "類型採点済み",
 }
 
 /** 点の加減を符号つきで書く（+1点 / −0.5点） */
@@ -54,14 +61,25 @@ function formatPointDelta(pointDelta: number): string {
   return pointDelta < 0 ? `−${Math.abs(pointDelta)}点` : `+${pointDelta}点`
 }
 
-/** 項目の効き目を1語で書く */
-function formatEffect(rubricItem: RubricItemForPrompt): string {
+/** 項目の効き目を1語で書く。類型にする項目は、送る類型の一覧から記号を引く */
+function formatEffect(
+  rubricItem: RubricItemForPrompt,
+  scaleLevels: readonly ScaleLevelForPrompt[]
+): string {
   if (rubricItem.effectKind === "adjust") {
     return rubricItem.pointDelta === null
       ? "加減（点なし）"
       : formatPointDelta(rubricItem.pointDelta)
   }
   if (rubricItem.setStatus === null) return "判定（未設定）"
+  if (rubricItem.setStatus === "evaluated") {
+    const scaleLevel = scaleLevels.find(
+      (candidate) => candidate.id === rubricItem.setScaleLevelId
+    )
+    return scaleLevel
+      ? `類型を${scaleLevelLabelText(scaleLevel)}にする`
+      : "類型（未設定）"
+  }
   const statusLabel = OUTPUT_STATUS_LABELS[rubricItem.setStatus]
   return rubricItem.setScore === null
     ? `判定を${statusLabel}にする`
@@ -70,19 +88,23 @@ function formatEffect(rubricItem: RubricItemForPrompt): string {
 
 /**
  * 項目の一覧の節。項目が無ければ null（節ごと省く）。
- * 1行1項目で「id・効き目・名前」を並べる
+ * 1行1項目で「id・効き目・名前」を並べる。類型方式の設問では、類型にする項目の効き目に
+ * 類型の記号を書くので、送る類型の一覧（`scaleLevels`）を渡す（ほかの設問は空）
  */
 export function formatRubricItemsSection(
-  rubricItems: readonly RubricItemForPrompt[]
+  rubricItems: readonly RubricItemForPrompt[],
+  scaleLevels: readonly ScaleLevelForPrompt[] = []
 ): string | null {
   if (rubricItems.length === 0) return null
   const lines = rubricItems.map(
     (rubricItem) =>
-      `- id: ${rubricItem.id} ／ ${formatEffect(rubricItem)} ／ ${rubricItem.label.trim()}`
+      `- id: ${rubricItem.id} ／ ${formatEffect(rubricItem, scaleLevels)} ／ ${rubricItem.label.trim()}`
   )
   return [
     "## 採点項目",
-    "教員が定めた、点を動かす基準の項目です。",
+    scaleLevels.length > 0
+      ? "教員が定めた、類型を決める根拠の項目です。"
+      : "教員が定めた、点を動かす基準の項目です。",
     ...lines,
   ].join("\n")
 }
