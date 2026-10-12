@@ -270,7 +270,6 @@ export function useCanvasInteraction({
     setRectangleEditMode,
     setDrawingElements,
     updateDrawingElements,
-    hitTestElement,
   })
 
   // 矩形選択

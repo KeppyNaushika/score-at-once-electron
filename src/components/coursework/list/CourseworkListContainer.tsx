@@ -17,6 +17,7 @@ import { EntityListPage } from "@/components/common/EntityListPage"
 import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import { getCourseworkStatus } from "@/lib/courseworkStatus"
 import { collectClassroomOptions } from "@/lib/filterOptions"
@@ -83,6 +84,10 @@ export function CourseworkListContainer() {
   const courseworkDeletion = useDialogTarget<CourseworkSummary>()
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
 
+  // 押せなくするのは isPending だが、それが描画に届く前の連打はここで止める
+  const { tryAcquire: tryStartCreate, release: finishCreate } =
+    useInFlightGuard()
+
   /**
    * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
    *
@@ -93,6 +98,7 @@ export function CourseworkListContainer() {
    * id は renderer が振る（規約）。失敗したときは遷移しない。
    */
   const handleCreate = useCallback(async () => {
+    if (!tryStartCreate()) return
     const courseworkId = crypto.randomUUID()
     try {
       await createCoursework.mutateAsync({
@@ -102,8 +108,10 @@ export function CourseworkListContainer() {
       router.push(`/coursework/${courseworkId}`)
     } catch {
       // 失敗の通知は MutationCache が出す
+    } finally {
+      finishCreate()
     }
-  }, [createCoursework, router])
+  }, [createCoursework, router, tryStartCreate, finishCreate])
 
   const handleDelete = (coursework: CourseworkSummary) =>
     // 成績算出で使われていて断られたときも、失敗の通知は MutationCache が出す
@@ -151,11 +159,17 @@ export function CourseworkListContainer() {
         create: entityListCreateAction({
           label: "新規作成",
           onClick: () => void handleCreate(),
+          disabled: createCoursework.isPending,
         }),
         archiveImport: importToolbarAction,
         bulkTag: bulkTagAction,
       }),
-    [bulkTagAction, handleCreate, importToolbarAction]
+    [
+      bulkTagAction,
+      createCoursework.isPending,
+      handleCreate,
+      importToolbarAction,
+    ]
   )
 
   return (
@@ -193,7 +207,11 @@ export function CourseworkListContainer() {
           icon: ClipboardList,
           message: "試験外成績資料がありません",
           action: (
-            <Button variant="outline" onClick={() => void handleCreate()}>
+            <Button
+              variant="outline"
+              onClick={() => void handleCreate()}
+              disabled={createCoursework.isPending}
+            >
               <Plus className="mr-2 h-4 w-4" />
               最初の資料を作成
             </Button>

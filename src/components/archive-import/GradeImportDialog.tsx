@@ -1,7 +1,6 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { TriangleAlert } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +10,7 @@ import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
 import { CourseworkDecisionList } from "./CourseworkDecisionList"
 import { useCourseworkImportDecisions } from "./hooks/useCourseworkImportDecisions"
+import { ImportWarningList } from "./ImportWarningList"
 import { LegacyArchiveImportDialogFrame } from "./LegacyArchiveImportDialogFrame"
 import { toastImportWarnings } from "./toastImportWarnings"
 
@@ -145,19 +145,10 @@ export function GradeImportDialog({
         )}
 
         {/* 変換で失われるデータの警告（取り込み前に見せる） */}
-        {preview.warnings.length > 0 && (
-          <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950/40">
-            <div className="mb-1 flex items-center gap-1.5 font-medium text-amber-800 dark:text-amber-300">
-              <TriangleAlert className="h-4 w-4" />
-              取り込み時に失われるデータがあります
-            </div>
-            <ul className="list-disc space-y-0.5 pl-5 text-muted-foreground">
-              {preview.warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <ImportWarningList
+          warnings={preview.warnings}
+          heading="取り込み時に失われるデータがあります"
+        />
         {/* 資料ごとの判断 */}
         <CourseworkDecisionList
           courseworkMatches={preview.courseworkMatches}

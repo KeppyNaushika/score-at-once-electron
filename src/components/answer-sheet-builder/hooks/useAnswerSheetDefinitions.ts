@@ -26,7 +26,7 @@ export function useAnswerSheetDefinitions(userId: string) {
   const { data: definitions = EMPTY_DEFINITIONS, isPending: isLoading } =
     useQuery(answerSheetDefinitionListQuery())
 
-  const { mutateAsync: removeDefinition } = useMutation(
+  const { mutateAsync: removeDefinition, isPending: isDeleting } = useMutation(
     deleteAnswerSheetDefinitionMutation()
   )
   const { mutateAsync: copyDefinition } = useMutation(
@@ -58,6 +58,8 @@ export function useAnswerSheetDefinitions(userId: string) {
     definitions,
     isLoading,
     deleteDefinition,
+    /** 削除の書き込みを送っている間（確認窓のボタンを止める） */
+    isDeleting,
     duplicateDefinition,
   }
 }

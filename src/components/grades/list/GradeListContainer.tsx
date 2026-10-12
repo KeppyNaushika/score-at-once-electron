@@ -18,6 +18,7 @@ import { EntityListPage } from "@/components/common/EntityListPage"
 import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
@@ -84,6 +85,10 @@ export function GradeListContainer() {
   // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
   const gradeDeletion = useDialogTarget<GradeSummary>()
 
+  // 押せなくするのは isPending だが、それが描画に届く前の連打はここで止める
+  const { tryAcquire: tryStartCreate, release: finishCreate } =
+    useInFlightGuard()
+
   /**
    * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
    *
@@ -94,14 +99,17 @@ export function GradeListContainer() {
    * id は renderer が振る（規約）。失敗したときは遷移しない。
    */
   const handleCreate = useCallback(async () => {
+    if (!tryStartCreate()) return
     const gradeId = crypto.randomUUID()
     try {
       await createGrade.mutateAsync({ id: gradeId, name: "新しい成績" })
       router.push(`/grades/${gradeId}`)
     } catch {
       // 失敗の通知は MutationCache が出す
+    } finally {
+      finishCreate()
     }
-  }, [createGrade, router])
+  }, [createGrade, router, tryStartCreate, finishCreate])
 
   const handleDelete = (grade: GradeSummary) =>
     deleteFromEntityList({
@@ -156,11 +164,12 @@ export function GradeListContainer() {
         create: entityListCreateAction({
           label: "新規作成",
           onClick: () => void handleCreate(),
+          disabled: createGrade.isPending,
         }),
         archiveImport: importToolbarAction,
         bulkTag: bulkTagAction,
       }),
-    [bulkTagAction, handleCreate, importToolbarAction]
+    [bulkTagAction, createGrade.isPending, handleCreate, importToolbarAction]
   )
 
   return (
@@ -195,7 +204,11 @@ export function GradeListContainer() {
           icon: ChartColumn,
           message: "成績算出がありません",
           action: (
-            <Button variant="outline" onClick={() => void handleCreate()}>
+            <Button
+              variant="outline"
+              onClick={() => void handleCreate()}
+              disabled={createGrade.isPending}
+            >
               <Plus className="mr-2 h-4 w-4" />
               最初の成績算出を作成
             </Button>

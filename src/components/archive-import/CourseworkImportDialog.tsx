@@ -12,6 +12,7 @@ import type { ImportAction } from "@/types/importAction.types"
 
 import { CourseworkDecisionList } from "./CourseworkDecisionList"
 import { useCourseworkImportDecisions } from "./hooks/useCourseworkImportDecisions"
+import { ImportWarningList } from "./ImportWarningList"
 import { LegacyArchiveImportDialogFrame } from "./LegacyArchiveImportDialogFrame"
 import { toastImportWarnings } from "./toastImportWarnings"
 
@@ -77,6 +78,12 @@ export function CourseworkImportDialog({
       />
 
       <ScrollArea className="max-h-[60vh] pr-4">
+        {/* 版の確認・変換で失われるデータの警告（取り込み前に見せる。
+            取り込んだ後のトーストには版の確認の警告は入らない） */}
+        <ImportWarningList
+          warnings={preview.warnings}
+          heading="取り込む前に確認してください"
+        />
         <CourseworkDecisionList
           courseworkMatches={preview.matches}
           effectiveSelections={effectiveSelections}
