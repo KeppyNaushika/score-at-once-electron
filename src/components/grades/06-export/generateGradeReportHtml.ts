@@ -14,6 +14,9 @@ import type {
   ComparisonMarksByCell,
 } from "../comparison-marks/types"
 
+/** 表（項目別評価・資料の内訳）の列数の上限。試験の個人票（TableColumns）と同じ 10 */
+export const MAX_TABLE_COLUMNS = 10
+
 /**
  * 複数生徒分の個人成績通知書HTMLをページ区切りで結合
  *
@@ -247,7 +250,10 @@ function renderItemGradesSection(
     gradeLabel: options.itemGradeColumnGradeLabel,
   }
   const fontSize = options.itemGradeFontSize
-  const columns = Math.max(1, Math.min(5, options.itemGradeTableColumns))
+  const columns = Math.max(
+    1,
+    Math.min(MAX_TABLE_COLUMNS, options.itemGradeTableColumns)
+  )
 
   const buildHeaderRow = (): string => {
     const headerCols = ["<th>評価項目</th>"]
@@ -321,7 +327,10 @@ function renderSourceBreakdownSection(
   }
   const label = options.dataSourceLabel || "成績資料"
   const fontSize = options.sourceBreakdownFontSize
-  const columns = Math.max(1, Math.min(5, options.sourceBreakdownTableColumns))
+  const columns = Math.max(
+    1,
+    Math.min(MAX_TABLE_COLUMNS, options.sourceBreakdownTableColumns)
+  )
 
   // rowspan対応の行データを構築
   type BreakdownRow = {

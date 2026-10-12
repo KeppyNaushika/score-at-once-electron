@@ -10,7 +10,10 @@
  * エンティティ別の挿入ロジックはドメイン単位で別モジュールへ分割している:
  * - importExamCore: Exam根・ExamPage・CropRegion・参加情報
  * - importSubtotals: Subtotal・CropSubtotal
- * - importExamAttachments: 採点マーク/出力設定・OMR・複合解答構造・タグ・学級関連
+ * - importExamExportSettings: 採点マーク/出力設定
+ * - importAnswerStructures: OMR・複合解答構造
+ * - importExamTags: タグ
+ * - importExamClassrooms: 学級関連
  * - importScoring: QuestionScore・ScoreDecision・CompoundAnswerScore
  * - importSyncRecords: DrawingAnnotation・Membership
  */
@@ -28,11 +31,9 @@ import { executeIdChanges } from "./idChangeExecutor"
 import { copyImportImages, createImportImageRecords } from "./imageImporter"
 import {
   processCompoundAnswers,
-  processExamClassrooms,
-  processExamExportSettings,
   processOmrConfigs,
-  processTags,
-} from "./importExamAttachments"
+} from "./importAnswerStructures"
+import { processExamClassrooms } from "./importExamClassrooms"
 import {
   processCropRegions,
   processExam,
@@ -41,6 +42,8 @@ import {
   processExamSubtotalGroups,
   processUserExam,
 } from "./importExamCore"
+import { processExamExportSettings } from "./importExamExportSettings"
+import { processTags } from "./importExamTags"
 import {
   processCompoundAnswerScores,
   processCropRegionAssignments,

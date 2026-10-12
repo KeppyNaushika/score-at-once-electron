@@ -115,7 +115,7 @@ export function CourseworkStudentsContainer({
             firstName: courseworkStudent.student.firstName,
             kana: `${courseworkStudent.student.lastNameKana} ${courseworkStudent.student.firstNameKana}`,
             classroomInfo: {
-              className: membership?.classroom.name ?? null,
+              classroom: membership?.classroom ?? null,
               attendanceNumber: membership?.attendanceNumber ?? null,
               classroomOrder: membership
                 ? (classroomOrderMap.get(membership.classroomId) ?? null)

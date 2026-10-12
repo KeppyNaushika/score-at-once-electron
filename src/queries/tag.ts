@@ -136,7 +136,7 @@ export const addTagToExamsMutation = () =>
           // **担当でないものをここへ渡さないこと。** タグ付けも担当の確認を通るように
           // なったので、渡すとこの catch が
           // 「弾かれた」も一緒に握り潰し、利用者に伝わらないまま一部だけ付く。
-          // 呼ぶ側（AnswerSheetDefinitionList）が担当分に絞り、外した件数を伝える。
+          // 呼ぶ側（AnswerSheetDefinitionList）は担当分しか選べない（`isSelectable`）。
         }
       }
     },

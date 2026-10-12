@@ -1,35 +1,16 @@
 "use client"
 
 import { type LucideIcon, UserCheck, Users, UserX } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import type {
   RosterColumn,
-  RosterFilter,
   RosterRow,
   RosterTableSlots,
 } from "@/components/common/roster-table"
-import {
-  RosterDragOverlay,
-  RosterTableFilters,
-  RosterTableHeader,
-  RosterTableRow,
-  useRosterTable,
-} from "@/components/common/roster-table"
-import { SortableTableProvider } from "@/components/common/sortable-table"
+import { RosterTableView } from "@/components/common/roster-table/RosterTableView"
 import type { SortableStudentTableProps } from "@/components/exams/05-students/components/sortable-student-table/types"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -37,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Table, TableBody } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 import { ignoreDeselect } from "@/lib/toggleSelection"
@@ -92,9 +72,7 @@ function toRosterRow(
     firstName: student.firstName,
     kana: `${student.lastNameKana} ${student.firstNameKana}`,
     classroomInfo: {
-      className: placement?.classroom?.name ?? null,
-      classroomCode: placement?.classroom?.classroomCode ?? null,
-      grade: placement?.classroom?.grade ?? null,
+      classroom: placement?.classroom ?? null,
       attendanceNumber: placement?.attendanceNumber ?? null,
       classroomOrder: placement?.order ?? null,
     },
@@ -106,8 +84,8 @@ function toRosterRow(
  * 受験生徒管理テーブル
  *
  * 共通 roster-table の表示部品（ヘッダー/行/フィルタ/ドラッグ）を用い、
- * 試験固有の「答案枚数列」「受験状態列」「受験状態フィルタ」をスロットで差し込む。
- * 状態・選択・フィルタは従来どおりページ側フック（props）で制御する。
+ * 試験固有の「答案枚数列」「受験状態列」をスロットで、「受験状態フィルタ」の UI を
+ * 表示だけの枠で差し込む。状態・選択・絞り込みはページ側フック（props）が持つ。
  */
 export function SortableStudentTableContainer(
   props: SortableStudentTableProps
@@ -130,9 +108,6 @@ export function SortableStudentTableContainer(
     statusFilter,
     onStatusChange,
   } = props
-
-  const [showResetDialog, setShowResetDialog] = useState(false)
-  const [isResetting, setIsResetting] = useState(false)
 
   const allRows = useMemo(
     () =>
@@ -163,23 +138,6 @@ export function SortableStudentTableContainer(
     [filteredStudents]
   )
 
-  const {
-    sortedRows,
-    activeRow,
-    handleDragStart,
-    handleDragEnd,
-    handleToggleSelection,
-    handleSelectAll,
-    handleResetOrder,
-  } = useRosterTable({
-    allRows,
-    filteredRows,
-    selectedIds: selectedStudents,
-    onSelectionChange: onStudentSelectionChange,
-    onSelectAll,
-    onOrderUpdate: (rowOrders) => onStudentOrderUpdate(examId, rowOrders),
-  })
-
   // 答案枚数列（スロット）
   const additionalColumns: RosterColumn[] = useMemo(
     () => [
@@ -202,30 +160,6 @@ export function SortableStudentTableContainer(
       },
     ],
     [examStudentByStudentId]
-  )
-
-  // 受験状態フィルタ（スロット）
-  const additionalFilters: RosterFilter[] = useMemo(
-    () => [
-      {
-        render: () => (
-          <Select value={statusFilter} onValueChange={onStatusChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべての受験状態</SelectItem>
-              <SelectItem value="participating">受験</SelectItem>
-              <SelectItem value="expected">見込</SelectItem>
-              <SelectItem value="absent">欠席</SelectItem>
-            </SelectContent>
-          </Select>
-        ),
-        // フィルタはページ側 filteredStudents で適用済みのため常に true
-        predicate: () => true,
-      },
-    ],
-    [statusFilter, onStatusChange]
   )
 
   // 受験状態ボタン列（スロット）
@@ -262,106 +196,38 @@ export function SortableStudentTableContainer(
     [onStudentStatusUpdate, examStudentByStudentId]
   )
 
-  const handleConfirmReset = async () => {
-    setIsResetting(true)
-    try {
-      await handleResetOrder()
-    } finally {
-      setIsResetting(false)
-      setShowResetDialog(false)
-    }
-  }
-
   return (
     <div className="space-y-4">
-      {/* フィルター行 */}
-      <div className="flex items-center gap-3">
-        <RosterTableFilters
-          searchTerm={searchTerm}
-          onSearchChange={onSearchChange}
-          selectedClassroomId={selectedClassroomId}
-          onClassroomChange={onClassroomChange}
-          classrooms={classrooms}
-          additionalFilters={additionalFilters}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowResetDialog(true)}
-        >
-          並び順をリセット
-        </Button>
-      </div>
-
-      {/* テーブル */}
-      <div className="min-h-96 rounded-md border">
-        <SortableTableProvider
-          items={sortedRows.map((row) => row.id)}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          dragOverlay={
-            <RosterDragOverlay
-              activeRow={activeRow}
-              selectedIds={selectedStudents}
-            />
-          }
-        >
-          <Table>
-            <RosterTableHeader
-              sortedRows={sortedRows}
-              selectedIds={selectedStudents}
-              onSelectAll={handleSelectAll}
-              additionalColumns={additionalColumns}
-              rowActionButtons={rowActionButtons}
-            />
-            <TableBody>
-              {sortedRows.map((row) => (
-                <RosterTableRow
-                  key={row.id}
-                  row={row}
-                  isSelected={selectedStudents.has(row.id)}
-                  onToggleSelection={(studentId) =>
-                    handleToggleSelection(studentId)
-                  }
-                  additionalColumns={additionalColumns}
-                  rowActionButtons={rowActionButtons}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </SortableTableProvider>
-      </div>
-
-      {/* 並び順リセット確認ダイアログ */}
-      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>並び順をリセットしますか？</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                手動で設定した並び順を、学級の関連付け設定に基づいて再設定します（検索・フィルタ中でも全生徒が対象になります）。
-              </span>
-              <span className="block font-medium">リセット後の並び順：</span>
-              <span className="block pl-4 text-muted-foreground">
-                1. 学級の関連付け順（上から順）
-                <br />
-                2. 学級内の出席番号順
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isResetting}>
-              キャンセル
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmReset}
-              disabled={isResetting}
-            >
-              {isResetting ? "リセット中..." : "リセット"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RosterTableView
+        allRows={allRows}
+        filteredRows={filteredRows}
+        selectedIds={selectedStudents}
+        onSelectionChange={onStudentSelectionChange}
+        onSelectAll={onSelectAll}
+        onOrderUpdate={(rowOrders) => onStudentOrderUpdate(examId, rowOrders)}
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        selectedClassroomId={selectedClassroomId}
+        onClassroomChange={onClassroomChange}
+        classrooms={classrooms}
+        // 受験状態の絞り込みはページ側（filteredStudents）で済んでいる。ここは選ぶ UI だけ
+        extraFilterControls={
+          <Select value={statusFilter} onValueChange={onStatusChange}>
+            <SelectTrigger className="w-40" aria-label="受験状態で絞り込む">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべての受験状態</SelectItem>
+              <SelectItem value="participating">受験</SelectItem>
+              <SelectItem value="expected">見込</SelectItem>
+              <SelectItem value="absent">欠席</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+        additionalColumns={additionalColumns}
+        rowActionButtons={rowActionButtons}
+        showResetButtonIcon={false}
+      />
     </div>
   )
 }

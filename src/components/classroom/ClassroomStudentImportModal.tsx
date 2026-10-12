@@ -1,10 +1,16 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { CircleAlert, ClipboardPaste, TriangleAlert } from "lucide-react"
+import { ClipboardPaste } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import ClassroomStudentImportTable from "@/components/classroom/ClassroomStudentImportTable"
+import {
+  type ClassroomStudentImportRow,
+  validateClassroomStudentImportRows,
+} from "@/components/classroom/classroomStudentImportValidation"
+import ImportValidationMessages from "@/components/common/ImportValidationMessages"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { summarizeStudentNumbers } from "@/lib/studentNumberSummary"
 import {
   addStudentToClassroomMutation,
   endStudentMembershipMutation,
@@ -27,65 +34,6 @@ interface ClassroomStudentImportModalProps {
   classroomId: string
   className: string
 }
-
-interface ClassroomStudentImportRow {
-  studentId: string
-  attendanceNumber: string
-  startDate: string
-  endDate: string
-}
-
-const ValidationMessages = ({
-  validation,
-}: {
-  validation: { valid: number; errors: string[]; warnings: string[] }
-}) => (
-  <div className="space-y-2">
-    {validation.errors.length > 0 && (
-      <div className="rounded-md bg-red-50 p-3">
-        <div className="flex">
-          <CircleAlert className="h-5 w-5 text-red-400" />
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">エラー</h3>
-            <div className="mt-2 text-sm text-red-700">
-              <ul className="list-disc space-y-1 pl-5">
-                {validation.errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {validation.warnings.length > 0 && (
-      <div className="rounded-md bg-yellow-50 p-3">
-        <div className="flex">
-          <TriangleAlert className="h-5 w-5 text-yellow-400" />
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-yellow-800">警告</h3>
-            <div className="mt-2 text-sm text-yellow-700">
-              <ul className="list-disc space-y-1 pl-5">
-                {validation.warnings.map((warning, index) => (
-                  <li key={index}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {validation.valid > 0 && (
-      <div className="rounded-md bg-green-50 p-3">
-        <div className="text-sm text-green-700">
-          ✅ {validation.valid}件の学籍番号が有効です
-        </div>
-      </div>
-    )}
-  </div>
-)
 
 export default function ClassroomStudentImportModal({
   isOpen,
@@ -101,97 +49,24 @@ export default function ClassroomStudentImportModal({
   const queryClient = useQueryClient()
   const addStudentToClassroom = useMutation(addStudentToClassroomMutation())
   const endStudentMembership = useMutation(endStudentMembershipMutation())
-  const [validation, setValidation] = useState<{
-    valid: number
-    errors: string[]
-    warnings: string[]
-  }>({ valid: 0, errors: [], warnings: [] })
+  // 開いた直後は何も言わない（空の1行を検証すると「未入力」のエラーが出てしまう）
+  const [validation, setValidation] = useState<
+    ReturnType<typeof validateClassroomStudentImportRows>
+  >({ validRows: [], errors: [], warnings: [] })
+  const validCount = validation.validRows.length
 
-  const isValidDate = (dateStr: string): boolean => {
-    const regex = /^\d{4}\/\d{1,2}\/\d{1,2}$/
-    if (!regex.test(dateStr)) return false
-    const date = new Date(dateStr.replace(/\//g, "-"))
-    return date instanceof Date && !isNaN(date.getTime())
-  }
-
-  const validateData = (data: ClassroomStudentImportRow[]) => {
-    const errors: string[] = []
-    const warnings: string[] = []
-    let validCount = 0
-
-    const nonEmptyData = data.filter(
-      (row) =>
-        row.studentId.trim() !== "" ||
-        row.attendanceNumber.trim() !== "" ||
-        row.startDate.trim() !== "" ||
-        row.endDate.trim() !== ""
-    )
-
-    if (nonEmptyData.length === 0) {
-      errors.push("学籍番号が入力されていません。")
-      return { valid: 0, errors, warnings }
-    }
-
-    const studentIds = new Set<string>()
-
-    nonEmptyData.forEach((row, index) => {
-      const studentId = row.studentId.trim()
-      const attendanceNumber = row.attendanceNumber.trim()
-
-      if (!studentId) {
-        errors.push(`行${index + 1}: 学籍番号が入力されていません。`)
-        return
-      }
-
-      if (attendanceNumber && isNaN(parseInt(attendanceNumber))) {
-        errors.push(`行${index + 1}: 出席番号は数値で入力してください。`)
-        return
-      }
-
-      // 日付のバリデーション
-      if (row.startDate.trim() && !isValidDate(row.startDate.trim())) {
-        errors.push(
-          `行${index + 1}: 開始日の形式が不正です。YYYY/M/D形式で入力してください。`
-        )
-        return
-      }
-
-      if (row.endDate.trim() && !isValidDate(row.endDate.trim())) {
-        errors.push(
-          `行${index + 1}: 終了日の形式が不正です。YYYY/M/D形式で入力してください。`
-        )
-        return
-      }
-
-      if (studentIds.has(studentId)) {
-        errors.push(
-          `行${index + 1}: 学籍番号「${studentId}」が重複しています。`
-        )
-        return
-      }
-
-      studentIds.add(studentId)
-      validCount++
-    })
-
-    return { valid: validCount, errors, warnings }
-  }
-
-  const handleDataChange = (data: ClassroomStudentImportRow[]) => {
-    setStudentData(data)
-    const validationResult = validateData(data)
-    setValidation(validationResult)
+  const handleDataChange = (rows: ClassroomStudentImportRow[]) => {
+    setStudentData(rows)
+    setValidation(validateClassroomStudentImportRows(rows))
   }
 
   const handleImport = async () => {
-    if (validation.errors.length > 0 || validation.valid === 0) {
+    if (validation.errors.length > 0 || validCount === 0) {
       return
     }
 
     setIsProcessing(true)
     try {
-      const validRows = studentData.filter((row) => row.studentId.trim() !== "")
-
       // 生徒一覧を一度だけ取得（N+1問題の修正）
       const students = await queryClient.fetchQuery(studentListQuery())
       const studentByNumber = new Map(
@@ -199,23 +74,25 @@ export default function ClassroomStudentImportModal({
       )
 
       let successCount = 0
-      const notFoundStudents: string[] = []
+      const notFoundStudentNumbers: string[] = []
+      const failedStudentNumbers: string[] = []
 
-      for (const row of validRows) {
+      // 検証を通った行だけを取り込む（表示した件数と一致させる）
+      for (const row of validation.validRows) {
+        const studentNumber = row.studentId.trim()
+        const student = studentByNumber.get(studentNumber)
+
+        if (!student) {
+          notFoundStudentNumbers.push(studentNumber)
+          continue
+        }
+
         try {
-          const studentNumber = row.studentId.trim()
           const attendanceNumber = row.attendanceNumber.trim()
-          const student = studentByNumber.get(studentNumber)
-
-          if (!student) {
-            notFoundStudents.push(studentNumber)
-            continue
-          }
-
           const startDate = row.startDate.trim()
             ? new Date(row.startDate.trim().replace(/\//g, "-"))
             : new Date()
-          const endDateStr = row.endDate.trim()
+          const endDateText = row.endDate.trim()
 
           // バックエンド側で重複チェック・既存所属終了を処理
           const membership = await addStudentToClassroom.mutateAsync({
@@ -228,38 +105,43 @@ export default function ClassroomStudentImportModal({
           })
 
           // 終了日が指定されている場合は所属を終了
-          if (endDateStr) {
+          if (endDateText) {
             await endStudentMembership.mutateAsync({
               membershipId: membership.id,
-              endDate: new Date(endDateStr.replace(/\//g, "-")),
+              endDate: new Date(endDateText.replace(/\//g, "-")),
             })
           }
 
           successCount++
         } catch (error) {
-          console.error(`学籍番号 ${row.studentId} の追加に失敗:`, error)
-          alert(
-            `学籍番号 ${row.studentId} の追加中にエラーが発生しました: ${error}`
-          )
+          // 1件ごとの失敗は書き込みの共通のトーストが知らせる。ここでは番号を集めて最後にまとめる
+          console.error(`学籍番号 ${studentNumber} の追加に失敗:`, error)
+          failedStudentNumbers.push(studentNumber)
         }
       }
 
-      if (notFoundStudents.length > 0) {
-        alert(
-          `次の学籍番号の生徒が見つかりませんでした:\n${notFoundStudents.join(", ")}\n\nまず生徒マスターに登録してください。`
+      if (notFoundStudentNumbers.length > 0) {
+        toast.error(
+          `${notFoundStudentNumbers.length}名の学籍番号が生徒管理に見つかりませんでした。先に生徒管理で登録してください`,
+          { description: summarizeStudentNumbers(notFoundStudentNumbers) }
+        )
+      }
+
+      if (failedStudentNumbers.length > 0) {
+        toast.error(
+          `${failedStudentNumbers.length}名の生徒を学級に追加できませんでした`,
+          { description: summarizeStudentNumbers(failedStudentNumbers) }
         )
       }
 
       if (successCount > 0) {
-        alert(`${successCount}名の生徒を学級に追加しました。`)
-        await onImportSuccess()
+        toast.success(`${successCount}名の生徒を学級に追加しました`)
+        onImportSuccess()
         onClose()
-      } else if (notFoundStudents.length === 0) {
-        alert("追加する生徒がありません。")
       }
     } catch (error) {
       console.error("学級への生徒追加に失敗:", error)
-      alert("学級への生徒追加に失敗しました。")
+      toast.error("生徒を学級に追加できませんでした")
     } finally {
       setIsProcessing(false)
     }
@@ -287,7 +169,14 @@ export default function ClassroomStudentImportModal({
             />
           </div>
 
-          <ValidationMessages validation={validation} />
+          <ImportValidationMessages
+            validation={{
+              valid: validCount,
+              errors: validation.errors,
+              warnings: validation.warnings,
+            }}
+            validRowNoun="学籍番号"
+          />
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4">
@@ -297,12 +186,10 @@ export default function ClassroomStudentImportModal({
           <Button
             onClick={handleImport}
             disabled={
-              validation.errors.length > 0 ||
-              validation.valid === 0 ||
-              isProcessing
+              validation.errors.length > 0 || validCount === 0 || isProcessing
             }
           >
-            {isProcessing ? "追加中..." : `${validation.valid}名を追加`}
+            {isProcessing ? "追加中..." : `${validCount}名を追加`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,27 +1,24 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { ClipboardList, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useMemo } from "react"
 
-import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
-import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
-import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
+import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
+import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
+import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
+import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
-import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
-import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
-import { useRowSelection } from "@/hooks/useRowSelection"
+import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import { getCourseworkStatus } from "@/lib/courseworkStatus"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import {
@@ -71,34 +68,17 @@ const EMPTY_COURSEWORKS: CourseworkSummary[] = []
  */
 export function CourseworkListContainer() {
   const router = useRouter()
-  const queryClient = useQueryClient()
   const deleteCoursework = useMutation(deleteCourseworkMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToCourseworks = useMutation(addTagToCourseworksMutation())
   const createCoursework = useMutation(createCourseworkMutation())
   const { data: courseworks = EMPTY_COURSEWORKS, isPending: isLoading } =
     useQuery(courseworkListQuery())
-  const archiveImport = useArchiveImportLauncher()
-  const { start: startArchiveImport, isOpening: isOpeningArchive } =
-    archiveImport
-  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
-  const [unifiedExportSelection, setUnifiedExportSelection] =
-    useState<UnifiedArchiveExportInitialSelection | null>(null)
+  const archive = useEntityListArchive()
+  const { importToolbarAction, openUnifiedExport } = archive
   // 押しただけでは消さず、確認で決めてもらう
   const courseworkDeletion = useDialogTarget<CourseworkSummary>()
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const refreshTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
-    [queryClient]
-  )
-
-  const loadCourseworks = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: courseworkListQuery().queryKey,
-      }),
-    [queryClient]
-  )
 
   /**
    * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
@@ -122,17 +102,14 @@ export function CourseworkListContainer() {
     }
   }, [createCoursework, router])
 
-  const handleDelete = async (coursework: CourseworkSummary) => {
-    try {
-      await deleteCoursework.mutateAsync(coursework.id)
-    } catch {
-      // 失敗の通知（成績算出で使われていて断られたときも）は MutationCache が出す。
-      // 確認は開いたままにする
-      return
-    }
-    courseworkDeletion.close()
-    toast.success("資料を削除しました", { description: coursework.name })
-  }
+  const handleDelete = (coursework: CourseworkSummary) =>
+    // 成績算出で使われていて断られたときも、失敗の通知は MutationCache が出す
+    deleteFromEntityList({
+      remove: () => deleteCoursework.mutateAsync(coursework.id),
+      closeDialog: courseworkDeletion.close,
+      successMessage: "資料を削除しました",
+      entityName: coursework.name,
+    })
 
   const classroomOptions = useMemo(
     () =>
@@ -144,87 +121,28 @@ export function CourseworkListContainer() {
     [courseworks]
   )
 
-  const {
-    filteredItems: filteredCourseworks,
-    searchTerm,
-    setSearchTerm,
-    filterTagIds,
-    toggleTagId,
-    clearTagIds,
-    filterClassroomIds,
-    toggleClassroomId,
-    clearClassroomIds,
-    dateFrom,
-    setDateFrom,
-    dateTo,
-    setDateTo,
-    updatedFrom,
-    setUpdatedFrom,
-    updatedTo,
-    setUpdatedTo,
-  } = useListFilter(courseworks, COURSEWORK_FILTER_ACCESSORS)
+  const { selectedIds, addTagToSelection, listProps } = useEntityListControls(
+    courseworks,
+    COURSEWORK_FILTER_ACCESSORS,
+    {
+      rowNoun: "資料",
+      searchPlaceholder: "資料名・タグ・学級で検索",
+      tagOptions: allTags,
+      classroomOptions,
+    }
+  )
 
-  const {
-    selectedIds,
-    toggleSelect,
-    toggleSelectAll,
-    allSelected,
-    clearSelection,
-  } = useRowSelection(filteredCourseworks)
-
-  // 選択中の各資料へ、既存タグを保持したままタグを追加する
+  // 既存タグを保ったまま1件ずつ足す（全置換 setTags による stale 消失を回避）
   const handleBulkAddTag = useCallback(
-    async (tagName: string) => {
-      try {
-        const tag = await findOrCreateTag.mutateAsync(tagName)
-        const targetCourseworks = courseworks.filter((coursework) =>
-          selectedIds.has(coursework.id)
-        )
-        // 既存タグを保持したまま1件ずつ追加（全置換 setTags による stale 消失を回避）
+    (tagName: string) =>
+      addTagToSelection(tagName, async (trimmedTagName, courseworkIds) => {
+        const tag = await findOrCreateTag.mutateAsync(trimmedTagName)
         await addTagToCourseworks.mutateAsync({
-          courseworkIds: targetCourseworks.map((coursework) => coursework.id),
+          courseworkIds,
           tagId: tag.id,
         })
-        toast.success("タグを追加しました", {
-          description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
-        })
-        clearSelection()
-        await refreshTags()
-        await loadCourseworks()
-      } catch (error) {
-        console.error("Error bulk adding tag:", error)
-        toast.error("タグの追加に失敗しました")
-      }
-    },
-    [
-      addTagToCourseworks,
-      clearSelection,
-      courseworks,
-      findOrCreateTag,
-      loadCourseworks,
-      refreshTags,
-      selectedIds,
-    ]
-  )
-
-  const tagFilterConfig = useMemo(
-    () => ({
-      options: allTags,
-      selectedIds: filterTagIds,
-      onToggle: toggleTagId,
-      onClear: clearTagIds,
-    }),
-    [allTags, filterTagIds, toggleTagId, clearTagIds]
-  )
-
-  const classroomFilterConfig = useMemo(
-    () => ({
-      options: classroomOptions,
-      selectedIds: filterClassroomIds,
-      onToggle: toggleClassroomId,
-      onClear: clearClassroomIds,
-    }),
-    [classroomOptions, filterClassroomIds, toggleClassroomId, clearClassroomIds]
+      }),
+    [addTagToSelection, findOrCreateTag, addTagToCourseworks]
   )
 
   const actions = useMemo<ToolbarAction[]>(() => {
@@ -236,11 +154,7 @@ export function CourseworkListContainer() {
         label: "新規作成",
         onClick: () => void handleCreate(),
       }),
-      archiveImportToolbarAction({
-        priority: 70,
-        isOpening: isOpeningArchive,
-        onClick: () => void startArchiveImport(),
-      }),
+      importToolbarAction,
     ]
 
     if (selectedIds.size > 0) {
@@ -259,16 +173,15 @@ export function CourseworkListContainer() {
     allTags,
     handleBulkAddTag,
     handleCreate,
-    isOpeningArchive,
+    importToolbarAction,
     selectedIds,
-    startArchiveImport,
   ])
 
   return (
     <>
       <EntityListPage<CourseworkSummary>
+        {...listProps}
         title="試験外成績資料"
-        rows={filteredCourseworks}
         totalCount={courseworks.length}
         isLoading={isLoading}
         name={(coursework) => coursework.name}
@@ -287,7 +200,7 @@ export function CourseworkListContainer() {
           <CourseworkRowMenu
             coursework={coursework}
             onUnifiedExport={() =>
-              setUnifiedExportSelection({
+              openUnifiedExport({
                 roots: { Coursework: [coursework.id] },
               })
             }
@@ -295,29 +208,6 @@ export function CourseworkListContainer() {
           />
         )}
         actions={actions}
-        search={{
-          term: searchTerm,
-          onChange: setSearchTerm,
-          placeholder: "資料名・タグ・学級で検索",
-        }}
-        tagFilter={tagFilterConfig}
-        classroomFilter={classroomFilterConfig}
-        dateFilter={{
-          from: dateFrom,
-          to: dateTo,
-          onFromChange: setDateFrom,
-          onToChange: setDateTo,
-        }}
-        updatedAtFilter={{
-          from: updatedFrom,
-          to: updatedTo,
-          onFromChange: setUpdatedFrom,
-          onToChange: setUpdatedTo,
-        }}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
-        onToggleSelectAll={toggleSelectAll}
-        allSelected={allSelected}
         empty={{
           icon: ClipboardList,
           message: "試験外成績資料がありません",
@@ -344,15 +234,7 @@ export function CourseworkListContainer() {
         loading={deleteCoursework.isPending}
       />
 
-      <UnifiedArchiveExportDialog
-        open={unifiedExportSelection !== null}
-        onOpenChange={(open) => {
-          if (!open) setUnifiedExportSelection(null)
-        }}
-        initialSelection={unifiedExportSelection ?? {}}
-      />
-
-      <ArchiveImportScreens launcher={archiveImport} />
+      <EntityListArchiveDialogs archive={archive} />
     </>
   )
 }

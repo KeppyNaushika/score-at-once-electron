@@ -33,15 +33,12 @@ export function useAnswerSheetDefinitions(userId: string) {
     duplicateAnswerSheetDefinitionMutation()
   )
 
+  /**
+   * 消す。失敗は投げる（確認窓を開いたままにするかを呼び手が決めるため）。
+   * 成功の知らせも、何を消したかを知っている呼び手が出す
+   */
   const deleteDefinition = useCallback(
-    async (definitionId: string) => {
-      try {
-        await removeDefinition({ definitionId, userId })
-        toast.success("解答用紙を削除しました")
-      } catch {
-        // 失敗の通知は MutationCache が出す
-      }
-    },
+    (definitionId: string) => removeDefinition({ definitionId, userId }),
     [userId, removeDefinition]
   )
 

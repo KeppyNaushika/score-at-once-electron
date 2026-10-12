@@ -9,7 +9,7 @@
  * - 起動時（SQL の migration の後、同期の初期化より前）: {@link convertPendingAnswerOverlayLengths}
  * - 統合アーカイブ（.sao）を開いて migration を当てた後: {@link convertArchiveAnswerOverlayLengths}
  * - 旧アーカイブの取り込みで行を書くとき: {@link readRepresentativeAnswerImage} と
- *   {@link convertOverlayRowToMm}（`importExamAttachments.ts`）
+ *   {@link convertOverlayRowToMm}（`importExamExportSettings.ts`）
  *
  * 変換の式は描画の式（mm × 画像の幅 ÷ 用紙の幅）のちょうど逆（`convertPixelLengthsToMm`）。
  * 代表の画像に描かれる画素は変換の前後で一致する。用紙サイズのラベルが実際の画像と食い違う

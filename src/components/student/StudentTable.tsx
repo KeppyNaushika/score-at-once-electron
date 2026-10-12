@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
@@ -19,11 +19,12 @@ import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useA
 import { CheckboxDropdown } from "@/components/common/CheckboxDropdown"
 import { Combobox } from "@/components/common/Combobox"
 import { ListSearchInput } from "@/components/common/ListFilterControls"
-import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
+import { SelectableListTable } from "@/components/common/SelectableListTable"
+import type { ColumnHeadDefinition } from "@/components/common/SortableColumnHeads"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import {
@@ -36,26 +37,10 @@ import {
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import StudentModal from "@/components/student/StudentModal"
 import { StudentTableRow } from "@/components/student/StudentTableRow"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { SortableTableHead } from "@/components/ui/SortableTableHead"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { useListPagination } from "@/hooks/useListPagination"
+import { useRowSelection } from "@/hooks/useRowSelection"
 import {
   classroomListQuery,
   createStudentMutation,
@@ -72,17 +57,22 @@ const EMPTY_STUDENTS: StudentWithMemberships[] = []
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 
-/** 1行の高さの見積もり（px）。「自動」の件数はこれで割る。はみ出すより余らせる */
 /** 所属状況の絞り込みの選択肢 */
 const MEMBERSHIP_STATUS_OPTIONS = STUDENT_MEMBERSHIP_STATUSES.map((status) => ({
   value: status,
   label: STUDENT_MEMBERSHIP_STATUS_LABELS[status],
 }))
 
-const STUDENT_TABLE_ROW_HEIGHT = 60
-
-/** 行の上に居座る見出し行の高さ（`h-12`） */
-const STUDENT_TABLE_HEADER_HEIGHT = 48
+/** 先頭のチェックボックス列より後ろの見出し */
+const STUDENT_COLUMNS: ColumnHeadDefinition<
+  "studentNumber" | "fullName" | "enrollmentYear"
+>[] = [
+  { label: "学籍番号", sortKey: "studentNumber" },
+  { label: "氏名", sortKey: "fullName" },
+  { label: "入学年度", sortKey: "enrollmentYear" },
+  { label: "所属学級" },
+  { label: "操作", className: "text-right" },
+]
 
 export default function StudentTable() {
   const queryClient = useQueryClient()
@@ -100,11 +90,6 @@ export default function StudentTable() {
     ReadonlySet<StudentMembershipStatus>
   >(DEFAULT_STUDENT_MEMBERSHIP_STATUSES)
   const [filterClassroomId, setFilterClassroomId] = useState<string>("all")
-
-  // Selection states
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
-    new Set()
-  )
 
   // Modal states
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
@@ -138,50 +123,16 @@ export default function StudentTable() {
     sortConfig.key ?? "",
     sortConfig.direction ?? "",
   ].join("|")
+  // 全選択・全解除は、表示中のものだけを対象にする
   const {
-    pageRows,
-    pageNumber,
-    pageSize,
-    pageSizeChoice,
-    setPageSizeChoice,
-    pageCount,
-    setPageNumber,
-    firstRowNumber,
-    lastRowNumber,
-    viewportRef,
-  } = useListPagination(sortedData, {
-    rowHeight: STUDENT_TABLE_ROW_HEIGHT,
-    reservedHeight: STUDENT_TABLE_HEADER_HEIGHT,
-    resetKey: paginationResetKey,
-  })
-
-  // Selection handlers
-  const filteredIds = useMemo(
-    () => sortedData.map((row) => row.id),
-    [sortedData]
-  )
-
-  const isAllSelected =
-    filteredIds.length > 0 &&
-    filteredIds.every((id) => selectedStudentIds.has(id))
+    selectedIds: selectedStudentIds,
+    toggleSelect: setStudentSelected,
+    toggleSelectAll,
+    allSelected: isAllSelected,
+  } = useRowSelection(sortedData)
 
   const isSomeSelected =
-    !isAllSelected && filteredIds.some((id) => selectedStudentIds.has(id))
-
-  // 全選択・全解除は、表示中のものだけを対象にする
-  const toggleSelectAll = () => {
-    const nextSelected = new Set(selectedStudentIds)
-    filteredIds.forEach((id) =>
-      isAllSelected ? nextSelected.delete(id) : nextSelected.add(id)
-    )
-    setSelectedStudentIds(nextSelected)
-  }
-
-  const toggleSelectStudent = (studentId: string) => {
-    const nextSelected = new Set(selectedStudentIds)
-    if (!nextSelected.delete(studentId)) nextSelected.add(studentId)
-    setSelectedStudentIds(nextSelected)
-  }
+    !isAllSelected && sortedData.some((row) => selectedStudentIds.has(row.id))
 
   // Event handlers
   const handleAddNewStudent = () => {
@@ -195,11 +146,7 @@ export default function StudentTable() {
   }
 
   const handleStudentDeleted = (studentId: string) => {
-    setSelectedStudentIds((prev) => {
-      const remaining = new Set(prev)
-      remaining.delete(studentId)
-      return remaining
-    })
+    setStudentSelected(studentId, false)
   }
 
   const handleCreateStudent = (studentData: Prisma.StudentCreateInput) => {
@@ -349,97 +296,35 @@ export default function StudentTable() {
         actions={toolbarActions}
       />
 
-      {/* Students Table */}
-      <div className="min-h-0 flex-1 p-4">
-        <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/50 shadow-sm">
-          {/* 「自動」はこの箱の高さを1行の高さで割る。縦に流すのは中の Table の側 */}
-          <div ref={viewportRef} className="min-h-0 flex-1">
-            <Table wrapperClassName="h-full">
-              <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={
-                        isAllSelected
-                          ? true
-                          : isSomeSelected
-                            ? "indeterminate"
-                            : false
-                      }
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="全選択"
-                    />
-                  </TableHead>
-                  <SortableTableHead
-                    sortKey="studentNumber"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    学籍番号
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="fullName"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    氏名
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="enrollmentYear"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    入学年度
-                  </SortableTableHead>
-                  <TableHead>所属学級</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageRows.map(({ original: student }) => (
-                  <StudentTableRow
-                    key={student.id}
-                    student={student}
-                    isSelected={selectedStudentIds.has(student.id)}
-                    onOpen={() => router.push(`/students/${student.id}`)}
-                    onToggleSelect={() => toggleSelectStudent(student.id)}
-                    onEdit={() => handleEditStudent(student)}
-                    onDelete={() => studentDeletion.openWith(student)}
-                  />
-                ))}
-                {sortedData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6}>
-                      <Empty>
-                        <EmptyHeader>
-                          <EmptyMedia variant="icon">
-                            <Users />
-                          </EmptyMedia>
-                          <EmptyTitle>該当する生徒が見つかりません</EmptyTitle>
-                        </EmptyHeader>
-                      </Empty>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <ListPaginationFooter
-            total={sortedData.length}
-            firstRowNumber={firstRowNumber}
-            lastRowNumber={lastRowNumber}
-            pageSize={pageSize}
-            pageSizeChoice={pageSizeChoice}
-            onPageSizeChoiceChange={setPageSizeChoice}
-            pageNumber={pageNumber}
-            pageCount={pageCount}
-            onPageChange={setPageNumber}
+      <SelectableListTable
+        rows={sortedData}
+        renderRow={({ original: student }) => (
+          <StudentTableRow
+            key={student.id}
+            student={student}
+            isSelected={selectedStudentIds.has(student.id)}
+            onOpen={() => router.push(`/students/${student.id}`)}
+            onToggleSelect={() =>
+              setStudentSelected(
+                student.id,
+                !selectedStudentIds.has(student.id)
+              )
+            }
+            onEdit={() => handleEditStudent(student)}
+            onDelete={() => studentDeletion.openWith(student)}
           />
-        </div>
-      </div>
+        )}
+        columns={STUDENT_COLUMNS}
+        currentSortKey={sortConfig.key}
+        currentDirection={sortConfig.direction}
+        onSort={requestSort}
+        allSelected={isAllSelected}
+        someSelected={isSomeSelected}
+        onToggleSelectAll={toggleSelectAll}
+        paginationResetKey={paginationResetKey}
+        emptyIcon={Users}
+        emptyMessage="該当する生徒が見つかりません"
+      />
 
       {/* Modals */}
       <DeleteStudentModal
