@@ -57,8 +57,9 @@ interface GridCellProps {
   /** 採点マーク（状態のアイコン）の左隣に置くもの（AI採点モードの AI の判定の札）。模範解答には出さない */
   beforeStatusMark?: ReactNode
   /**
-   * 類型の見せ方（類型評価の設問で類型を付けたマス・方式と合わない採点のマス）。
-   * 類型を付けたマスは類型の並び順の色で塗り、採点マークの代わりに類型の記号を出す
+   * 類型の見せ方（類型評価の設問で類型を付けたマス）。
+   * 類型を付けたマスは類型の並び順の色で塗り、採点マークの代わりに類型の記号を出す。
+   * 方式と合わない採点のマスは未採点と同じに見せる（§4-8-8。状態は呼び出し側で未採点に読み替える）
    */
   scaleAppearance?: ScaleCellAppearance | null
 }
@@ -86,9 +87,7 @@ export function GridCell({
     ? answer.status
     : "unscored"
   const statusOnlyConfig = statusConfig[statusKey]
-  const levelAppearance =
-    scaleAppearance?.kind === "level" ? scaleAppearance : null
-  const isIncompatibleScore = scaleAppearance?.kind === "incompatible"
+  const levelAppearance = scaleAppearance ?? null
   // 類型を付けたマスは、採点状態の色の代わりに類型の色で塗る
   const config = levelAppearance
     ? {
@@ -240,13 +239,7 @@ export function GridCell({
           </span>
 
           {!isMaster && answer.status !== "unscored" && (
-            <Badge
-              variant="outline"
-              className={`h-4 px-1 text-xs ${
-                // 方式と合わない採点は得点にしない（取り消し線で示す）
-                isIncompatibleScore ? "line-through opacity-60" : ""
-              }`}
-            >
+            <Badge variant="outline" className="h-4 px-1 text-xs">
               {getScoreDisplay()}
             </Badge>
           )}
@@ -264,12 +257,10 @@ export function GridCell({
         {!isMaster && (
           <div className="flex shrink-0 items-center gap-1">
             {beforeStatusMark}
-            {scaleAppearance && <ScaleCellMark appearance={scaleAppearance} />}
-            {!levelAppearance && (
-              <Icon
-                className={`h-3 w-3 shrink-0 ${isIncompatibleScore ? "opacity-50" : ""}`}
-                style={config.iconStyle}
-              />
+            {levelAppearance ? (
+              <ScaleCellMark appearance={levelAppearance} />
+            ) : (
+              <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
             )}
           </div>
         )}

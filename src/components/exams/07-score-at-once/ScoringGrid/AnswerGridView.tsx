@@ -83,7 +83,7 @@ interface AnswerGridViewProps {
   draftStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
-  /** マスの類型の見せ方（類型評価の設問の類型・方式と合わない採点） */
+  /** マスの類型の見せ方（類型評価の設問の類型） */
   scaleAppearanceOf?: (answer: GridAnswerItem) => ScaleCellAppearance | null
   /**
    * 助言の朱書きの下見（重なった助言の決まりを選ぶとき・AI 採点の問いかけで助言を直すとき）。

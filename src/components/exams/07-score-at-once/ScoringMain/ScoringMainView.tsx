@@ -151,6 +151,7 @@ function ScoringMainViewContent() {
   const unreflectedAiQuestionIds = useUnreflectedAiQuestionIds({
     examId,
     currentUserId: currentUser.id,
+    cropRegions,
     questionScoresByCropRegionId,
     isAiGradingAvailable: unlockedProviders.length > 0,
   })

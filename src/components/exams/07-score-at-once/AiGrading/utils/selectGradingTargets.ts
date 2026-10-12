@@ -7,6 +7,8 @@
  * 問いかけで決まった答案は採点済みになるので、未採点を送れば次の往復では決まっていない答案だけが残る。
  */
 
+import type { CropRegion } from "@prisma/client"
+
 import type { QuestionScoreRow } from "@/queries/scoring"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
@@ -46,8 +48,11 @@ interface GradingTargetAnswer {
 }
 
 export interface GradingTargetSelectionInput {
-  /** 採点する設問。空なら投げる（全員が未採点に見える失敗を防ぐ） */
-  cropRegionId: string
+  /**
+   * 採点する設問。id が空なら投げる（全員が未採点に見える失敗を防ぐ）。
+   * 方式と合わない自分の採点は未採点として読む（§4-8-8）
+   */
+  cropRegion: Pick<CropRegion, "id" | "scoringMethod">
   currentUserId: string
   answers: readonly GradingTargetAnswer[]
   /** 設問の採点行（誰の採点も混ざっていてよい。自分の分だけを見る） */
@@ -61,13 +66,13 @@ export function selectGradingTargets(
   input: GradingTargetSelectionInput,
   scope: GradingTargetScope
 ): string[] {
-  if (input.cropRegionId === "") {
+  if (input.cropRegion.id === "") {
     throw new Error("設問の id が空のまま採点の対象を選ぼうとしました")
   }
   const ownQuestionScoreOf = (examStudentId: string) =>
     findOwnQuestionScore(
       input.questionScores,
-      input.cropRegionId,
+      input.cropRegion,
       examStudentId,
       input.currentUserId
     )

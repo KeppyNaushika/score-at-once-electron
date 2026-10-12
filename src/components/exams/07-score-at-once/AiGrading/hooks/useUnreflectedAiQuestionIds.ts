@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
 import { aiGradingRunsOfExamQuery } from "@/queries/aiGrading"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 
 import type { AiGradingRunOfExamRow } from "../types"
@@ -21,11 +22,14 @@ const NO_RUNS: AiGradingRunOfExamRow[] = []
 export function useUnreflectedAiQuestionIds({
   examId,
   currentUserId,
+  cropRegions,
   questionScoresByCropRegionId,
   isAiGradingAvailable,
 }: {
   examId: string
   currentUserId: string
+  /** 試験の設問（方式と合わない採点を未採点として読むのに方式を引く） */
+  cropRegions: readonly QuestionAnswerRegionRow[]
   questionScoresByCropRegionId: ReadonlyMap<string, readonly QuestionScoreRow[]>
   isAiGradingAvailable: boolean
 }): ReadonlySet<string> {
@@ -37,12 +41,14 @@ export function useUnreflectedAiQuestionIds({
     () =>
       selectQuestionsWithUnreflectedAiJudgements(
         isAiGradingAvailable ? runsOfExam : NO_RUNS,
+        cropRegions,
         questionScoresByCropRegionId,
         currentUserId
       ),
     [
       isAiGradingAvailable,
       runsOfExam,
+      cropRegions,
       questionScoresByCropRegionId,
       currentUserId,
     ]

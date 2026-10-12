@@ -5,10 +5,7 @@ import { type ReactNode, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatScaleValue } from "@/lib/shared/scaleValueDisplay"
 import { cn } from "@/lib/utils"
-import {
-  isStatusCompatibleWithScoringMethod,
-  type ScaleValueDisplay,
-} from "@/types/rubric.types"
+import type { ScaleValueDisplay } from "@/types/rubric.types"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
 import { useItemAnalysis } from "../hooks/useItemAnalysis"
@@ -54,7 +51,7 @@ type ExcelPreviewScore = ExcelPreviewData["rows"][number]["scores"][number]
 /**
  * 正誤一覧のマスの中身。類型評価で類型を付けた設問は、正誤の記号ではなく類型を見せ方に従って出す
  * （Excel の `getScoreCellSymbol` と同じ。docs/vlm-grading-design.md §4-8-8）。方式と合わない採点は
- * 点にならないので「-」
+ * 解決（`resolveEffectiveScores`）で未採点として読んであるので、ここへは届かない
  */
 function getResultCellText(
   score: ExcelPreviewScore,
@@ -69,18 +66,12 @@ function getResultCellText(
       scaleValueDisplay
     )
   }
-  if (!isStatusCompatibleWithScoringMethod(score.scoringMethod, score.status)) {
-    return "-"
-  }
   return getStatusSymbol(score.status, score.score)
 }
 
-/** 正誤一覧のマスの色。類型は正誤ではないので記号の色を付けず、方式と合わない採点は無答と同じ灰色 */
+/** 正誤一覧のマスの色。類型は正誤ではないので記号の色を付けない */
 function getResultCellColor(score: ExcelPreviewScore): string {
   if (score.scaleLevel) return "text-foreground"
-  if (!isStatusCompatibleWithScoringMethod(score.scoringMethod, score.status)) {
-    return "text-gray-400"
-  }
   return getStatusColor(score.status)
 }
 

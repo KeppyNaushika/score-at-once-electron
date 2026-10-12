@@ -277,4 +277,82 @@ describe("裁定サマリと出力", () => {
     ])
     expect(exportAfter.scoringData[0].scores[0].score).toBe(6)
   })
+
+  it("方式と合わない提案・確定は提案にも食い違いにも確定にも数えず、方式を戻すとまた数える", async () => {
+    const otherUser = await testPrisma.user.create({
+      data: { username: `other_${crypto.randomUUID()}`, name: "別の採点者" },
+    })
+    await testPrisma.userExam.create({
+      data: { userId: otherUser.id, examId: fixture.exam.id, role: "EDITOR" },
+    })
+    // 類型評価の設問に、類型（合う）と正答（合わない）。確定も合わない正答で残す
+    await testPrisma.questionScore.createMany({
+      data: [
+        {
+          cropRegionId: scaleRegionId(),
+          examStudentId: examStudentId(),
+          userId: fixture.user.id,
+          status: "evaluated",
+          scaleLevelId: levelA.id,
+        },
+        {
+          cropRegionId: scaleRegionId(),
+          examStudentId: examStudentId(),
+          userId: otherUser.id,
+          status: "correct",
+        },
+      ],
+    })
+    await testPrisma.scoreDecision.create({
+      data: {
+        cropRegionId: scaleRegionId(),
+        examStudentId: examStudentId(),
+        verdict: "correct",
+        decidedByUserId: fixture.user.id,
+      },
+    })
+
+    const findQuestion = async () => {
+      const summary = await getExamDecisionSummary(
+        fixture.exam.id,
+        fixture.user.id
+      )
+      const question = summary.questions.find(
+        (candidate) => candidate.cropRegionId === scaleRegionId()
+      )
+      return { summary, question }
+    }
+
+    const onScale = await findQuestion()
+    expect(onScale.summary.conflictCount).toBe(0)
+    expect(onScale.summary.decidedCount).toBe(0)
+    expect(onScale.summary.graderCount).toBe(1)
+    expect(onScale.question?.cells).toEqual([])
+    expect(onScale.question?.decidedCount).toBe(0)
+    // 出力は合う類型の点数（合わない確定は無かったものとして読む）
+    const exportOnScale = await fetchExportData(fixture.exam.id, [
+      examStudentId(),
+    ])
+    expect(exportOnScale.scoringData[0].scores[0]).toMatchObject({
+      status: "evaluated",
+      score: 12,
+    })
+
+    // 方式を点に戻すと、残しておいた正答と確定がまた数えられる
+    await testPrisma.cropRegion.update({
+      where: { id: scaleRegionId() },
+      data: { scoringMethod: "points" },
+    })
+    const onPoints = await findQuestion()
+    expect(onPoints.summary.decidedCount).toBe(1)
+    expect(onPoints.question?.cells).toHaveLength(1)
+    expect(onPoints.question?.cells[0].reason).toBe("decided")
+    expect(
+      onPoints.question?.cells[0].proposals.map((proposal) => proposal.userId)
+    ).toEqual([otherUser.id])
+    const exportOnPoints = await fetchExportData(fixture.exam.id, [
+      examStudentId(),
+    ])
+    expect(exportOnPoints.scoringData[0].scores[0].status).toBe("correct")
+  })
 })

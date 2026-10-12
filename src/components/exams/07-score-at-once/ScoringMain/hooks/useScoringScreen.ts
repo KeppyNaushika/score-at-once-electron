@@ -1,30 +1,21 @@
-import { useCallback, useMemo, useState } from "react"
-import { toast } from "sonner"
+import { useMemo, useState } from "react"
 
-import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import { useScaleQuestion } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleQuestion"
-import { useAnswerSelection } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerSelection"
-import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
-import { useAssignedCropRegions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions"
 import { useDecisionEntry } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useDecisionEntry"
-import { useGridZoom } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useGridZoom"
 import { useGuardedScoring } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useGuardedScoring"
-import { useIndividualNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useIndividualNavigation"
 import { useMasterAnswerPages } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerPages"
 import { useMasterAnswerVisibility } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerVisibility"
 import { useRubricAnswerFlow } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useRubricAnswerFlow"
-import { useScoringActions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringActions"
+import { useScoringAnswerList } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringAnswerList"
 import { useScoringDataLoader } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringDataLoader"
 import { useScoringEffects } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringEffects"
-import { useScoringFilter } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringFilter"
 import { useScoringMainState } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMainState"
 import { useScoringMode } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMode"
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
-import { useScoringPreferences } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringPreferences"
-import { useScoringScreenBindings } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringScreenBindings"
+import { useScoringScope } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringScope"
+import { useScoringScreenKeyboard } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringScreenKeyboard"
+import { useScoringScreenSettings } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringScreenSettings"
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
-import type { AssignmentScope } from "@/components/exams/07-score-at-once/ScoringSidePanel/AssignmentScopeNotice"
-import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useRouteParams } from "@/hooks/useRouteParams"
 import type { QuestionScoreRow } from "@/queries/scoring"
@@ -43,6 +34,9 @@ interface UseScoringScreenOptions {
 /**
  * 採点画面（07）の配線。データ・利用者の設定・選択・絞り込み・採点の口・キー操作を
  * つなぎ、画面（`ScoringMainView`）が描くものだけを返す。描き方は画面が持つ。
+ *
+ * 各フックの返り値のうち、ここで配線にだけ使うものを名前で取り出し、残りは
+ * そのまま画面へ渡す（`...rest` で返すものが、画面が描くものである）。
  */
 export function useScoringScreen({
   isAiGradingAvailable,
@@ -52,15 +46,9 @@ export function useScoringScreen({
   const currentUser = useCurrentUser()
 
   /** 操作モード管理 */
-  const {
-    scoringOperationMode,
-    showModeSelectionModal,
-    selectMode,
-    setScoringOperationMode,
-    closeModeSelectionModal,
-    mouseBrush,
-    setMouseBrush,
-  } = useScoringMode(currentUser.id)
+  const { scoringOperationMode, ...scoringModeControls } = useScoringMode(
+    currentUser.id
+  )
   const effectiveMode = scoringOperationMode ?? "keyboard"
 
   /** データローダーフック */
@@ -72,118 +60,41 @@ export function useScoringScreen({
     questionScoresByCropRegionId,
   } = useScoringDataLoader(examId)
 
-  /** 採点担当の「すべて表示」。画面にいる間だけの切り替えで、憶えない */
-  const [showAllAssignments, setShowAllAssignments] = useState(false)
-
   /**
-   * 受験生徒の担当による答案の絞り込み。**ここから先は絞った答案だけを扱う**
-   * （一覧・個別・選択・前後移動・進み具合のどれも、自分の担当の生徒の答案になる）。
+   * 採点担当と匿名採点で扱う範囲を決める。**ここから先は絞った答案だけを扱う**
+   * （名前と並びも匿名採点の置き換え済み）
    */
-  const { isVisibleExamStudent, isAssignedToMe } = useAssignedExamStudents({
+  const {
+    studentAnswerImages,
+    isEnforcedForMe,
+    selectableCropRegions,
+    memberCount,
+    canDecideScores,
+    ...assignmentFilter
+  } = useScoringScope({
     examId,
     userId: currentUser.id,
-    showAll: showAllAssignments,
-  })
-  /**
-   * 匿名採点（docs/scoring-scope-and-permissions-design.md §3-5）。名前を仮の名前に、
-   * 並び（customOrder）を名簿と関係ない順に置き換えた答案を、ここから先へ渡す。
-   * 一覧・個別・AI 採点のどれも名前と並びをこの行から取るので、ここ1か所で効く。
-   * 書き込みは id で行うので、置き換えた名前や並びが DB へ戻ることはない
-   */
-  const { isAnonymous, isEnforcedForMe, pseudonymOf, anonymousOrderOf } =
-    useScoringAnonymity()
-  const studentAnswerImages = useMemo(() => {
-    const assignedAnswerImages = loadedStudentAnswerImages.filter(
-      (answerImage) => isVisibleExamStudent(answerImage.examStudentId)
-    )
-    if (!isAnonymous) return assignedAnswerImages
-    return assignedAnswerImages.map((answerImage) => ({
-      ...answerImage,
-      examStudent: {
-        ...answerImage.examStudent,
-        customOrder: anonymousOrderOf(answerImage.examStudentId),
-        student: {
-          ...answerImage.examStudent.student,
-          studentNumber: "",
-          lastName: pseudonymOf(answerImage.examStudentId),
-          firstName: "",
-          lastNameKana: "",
-          firstNameKana: "",
-        },
-      },
-    }))
-  }, [
     loadedStudentAnswerImages,
-    isVisibleExamStudent,
-    isAnonymous,
-    pseudonymOf,
-    anonymousOrderOf,
-  ])
+    cropRegions,
+  })
 
-  /** 設定管理フック */
-  const { scoringSettings, clickScoringConfig, setClickAction } =
-    useScoringPreferences(currentUser.id)
-  const {
-    itemsPerLine,
-    autoScroll,
-    showStudentNames: preferredShowStudentNames,
-    layoutDirection,
-    answerSortOrder,
-    expandMargin,
-    clickScoringDebounceMs,
-    masterAnswerDisplayMode,
-    masterAnswerOpacity,
-    masterAnswerKeyBehavior,
-    scoringBehavior,
-    setItemsPerLine,
-    setAutoScroll,
-    setShowStudentNames: setPreferredShowStudentNames,
-    setLayoutDirection,
-    setAnswerSortOrder,
-    setExpandMargin,
-    setClickScoringDebounceMs,
-    setMasterAnswerDisplayMode,
-    setMasterAnswerOpacity,
-    setMasterAnswerKeyBehavior,
-    setScoringBehavior,
-  } = scoringSettings
-
-  /** 名前を出すか。試験の固定が効いていれば出さない（自分の設定より優先） */
-  const showStudentNames = preferredShowStudentNames && !isEnforcedForMe
-  /** 名前の表示の切り替え。試験の固定が効いているあいだは自分では解除できない */
-  const setShowStudentNames = useCallback(
-    (show: boolean) => {
-      if (isEnforcedForMe) {
-        toast.info(
-          "この試験では匿名採点が固定されています。名前を出せるのは、オーナーが固定を外したときだけです"
-        )
-        return
-      }
-      setPreferredShowStudentNames(show)
-    },
-    [isEnforcedForMe, setPreferredShowStudentNames]
-  )
+  /** 利用者ごとの設定（名前の表示は匿名採点の固定が優先） */
+  const { setItemsPerLine, handleToggleStudentNames, ...scoringPreferences } =
+    useScoringScreenSettings({ userId: currentUser.id, isEnforcedForMe })
 
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
 
   /** メイン状態管理 */
   const {
-    /** 個別の状態 */
     gradingMode: chosenGradingMode,
     selectedStudentAnswerImageIds,
     currentCropRegionId,
-    showKeyboardHelp,
-    showSidePanel,
-    /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
     setCurrentCropRegionId,
-    setShowKeyboardHelp,
-    setShowSidePanel,
-    /** ヘルパー関数 */
-    handleAnswerSelect,
     replaceSelection,
     manualSelectionVersion,
+    ...panelState
   } = useScoringMainState()
 
   /**
@@ -200,68 +111,6 @@ export function useScoringScreen({
     (cropRegion) => cropRegion.id === currentCropRegionId
   )
 
-  /**
-   * 採点担当による設問の絞り込み。
-   * 自動選択・前後移動・設問ナビゲーターの選択肢だけをこの集合に置き換える
-   * （描画やスコア引き当ては全設問を見る必要があるため差し替えない）。
-   */
-  const {
-    selectableCropRegions,
-    memberCount,
-    canDecideScores,
-    isFiltered: isQuestionSetFiltered,
-    assignedCropRegionCount,
-  } = useAssignedCropRegions({
-    examId,
-    userId: currentUser.id,
-    cropRegions,
-    showAll: showAllAssignments,
-  })
-
-  /** 担当の範囲と「すべて表示」（サイドパネルが知らせる） */
-  const assignmentScope = useMemo<AssignmentScope>(() => {
-    const examStudentIds = new Set(
-      loadedStudentAnswerImages.map((answerImage) => answerImage.examStudentId)
-    )
-    return {
-      showAll: showAllAssignments,
-      onShowAllChange: setShowAllAssignments,
-      questions: {
-        assigned: assignedCropRegionCount,
-        total: cropRegions.length,
-      },
-      students: {
-        assigned: [...examStudentIds].filter(isAssignedToMe).length,
-        total: examStudentIds.size,
-      },
-    }
-  }, [
-    loadedStudentAnswerImages,
-    showAllAssignments,
-    assignedCropRegionCount,
-    cropRegions.length,
-    isAssignedToMe,
-  ])
-
-  /** 白さ順ソート用: 一覧表示中のページの白さを先読みする */
-  const { whitenessByAnswerId, isWhitenessReady } = useAnswerWhiteness({
-    studentAnswerImages,
-    cropRegions,
-    currentExamPageId: currentCropRegion?.examPageId ?? null,
-    enabled: gradingMode === "grid",
-  })
-
-  /**
-   * 白さ順・濃さ順は、並べる材料が揃うまで答案を出さない（表示も選択もしない）。
-   * 表示順で並べて見せておくと、算出が終わった瞬間に並びが総入れ替えになり、
-   * 見ていた答案と操作の対象がずれる。並び順は利用者ごとに憶えているので、
-   * 常用している人は一覧を開いた時点でこの状態から始まる。
-   */
-  const isWhitenessPending =
-    gradingMode === "grid" &&
-    (answerSortOrder === "whiteness" || answerSortOrder === "darkness") &&
-    !isWhitenessReady
-
   /** Effect処理フック */
   useScoringEffects({
     gradingMode,
@@ -276,10 +125,9 @@ export function useScoringScreen({
 
   /** 生徒・答案管理フック */
   const {
-    examStudents,
-    handleStudentChange,
     handleIndividualNextStudent,
     handleIndividualPrevStudent,
+    ...studentSwitching
   } = useStudentAnswerManagement({
     studentAnswerImages,
     selectedStudentAnswerImageIds,
@@ -289,90 +137,42 @@ export function useScoringScreen({
   })
 
   /** 採点確定の段への導線と、裁定待ちの件数（裁定そのものは「8. 採点確定」の段） */
-  const { showDecisionEntry, pendingDecisionCount } = useDecisionEntry(
+  const decisionEntry = useDecisionEntry(
     examId,
     currentUser.id,
     memberCount,
     canDecideScores
   )
 
-  /** フィルタリング管理hook */
-  const {
-    /** 新しいデータ構造 */
-    allScoringData,
-    masterAnswerData,
-    filteredScoringDataIds,
-    selectedScoringDataIds,
-
-    /** 従来の互換性維持 */
-    filterSettings,
-    visibleAnswers,
-    setRecentlyScoredAnswers,
-    getGridAnswerData,
-    handleRefreshFilter,
-    handleToggleFilter,
-  } = useScoringFilter({
-    studentAnswerImages,
-    cropRegions,
-    questionScoresByCropRegionId,
-    currentCropRegionId: currentCropRegionId,
-    currentUserId: currentUser.id,
-    selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
-    setSelectedPageImageIds: setSelectedPageImageIds,
-    exam,
-    gradingMode,
-    questionChangeVersion,
-    manualSelectionVersion,
-    answerSortOrder,
-    whitenessByAnswerId,
-    isWhitenessPending,
-  })
-
-  const { handleReplaceSelection, handleSelectAll, handleSelectUnscored } =
-    useAnswerSelection({
-      allScoringData,
-      filteredScoringDataIds,
-      filterSettings,
-      handleToggleFilter,
+  /** 一覧に出す答案（白さの先読み・採点状態での絞り込みと並び・選択） */
+  const { setRecentlyScoredAnswers, getGridAnswerData, ...answerList } =
+    useScoringAnswerList({
+      studentAnswerImages,
+      cropRegions,
+      questionScoresByCropRegionId,
+      currentCropRegionId,
+      currentExamPageId: currentCropRegion?.examPageId ?? null,
+      currentUserId: currentUser.id,
+      selectedStudentAnswerImageIds,
+      setSelectedPageImageIds,
       replaceSelection,
+      exam,
+      gradingMode,
+      questionChangeVersion,
+      manualSelectionVersion,
+      answerSortOrder: scoringPreferences.answerSortOrder,
     })
 
-  const { handleNextQuestion, handlePrevQuestion, handleGridNavigation } =
-    useScoringNavigation({
-      answerSheetsLength: studentAnswerImages.length,
-      currentCropRegionId: currentCropRegionId,
-      setCurrentCropRegionId: setCurrentCropRegionId,
-      selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
-      setSelectedPageImageIds: setSelectedPageImageIds,
-      layoutDirection: layoutDirection,
-      getGridAnswerData,
-      effectiveColumns: itemsPerLine[0],
-      cropRegions: selectableCropRegions,
-    })
-
-  /** 1行あたりの表示件数を増減（ショートカットキー =/-） */
-  const { handleZoomIn, handleZoomOut, handleResetZoom } = useGridZoom(
-    itemsPerLine,
-    setItemsPerLine
-  )
-
-  /** 個別モード用ナビゲーション（レイアウト方向に応じて次/前の生徒へ） */
-  const handleIndividualNavigation = useIndividualNavigation({
-    layoutDirection,
-    handleIndividualNextStudent,
-    handleIndividualPrevStudent,
-  })
-
-  /** 採点アクションフック */
-  const {
-    handleToggleStudentNames,
-    handleItemsPerLineChange,
-    handleAutoScrollChange,
-  } = useScoringActions({
-    showStudentNames,
-    setShowStudentNames,
-    setItemsPerLine,
-    setAutoScroll,
+  const questionNavigation = useScoringNavigation({
+    answerSheetsLength: studentAnswerImages.length,
+    currentCropRegionId,
+    setCurrentCropRegionId,
+    selectedStudentAnswerImageIds,
+    setSelectedPageImageIds,
+    layoutDirection: scoringPreferences.layoutDirection,
+    getGridAnswerData,
+    effectiveColumns: scoringPreferences.itemsPerLine[0],
+    cropRegions: selectableCropRegions,
   })
 
   /** 今の設問が類型評価なら、その類型と一覧のマスの見せ方 */
@@ -386,25 +186,7 @@ export function useScoringScreen({
       : NO_QUESTION_SCORES,
   })
 
-  const {
-    guardScoring,
-    calculateQuestionProgress,
-    handleBatchScoreWithProgress,
-    applyScaleLevel,
-    partialScoreInput,
-    showPartialScoreModal,
-    openPartialScoreModal,
-    handlePartialScoreInput,
-    handlePartialScoreConfirm,
-    handlePartialScoreCancel,
-    handlePartialScoreBackspace,
-    handlePartialScoreChange,
-    handleClickScoring,
-    handleMouseScoring,
-    handleBatchScoreVisibleUnscored,
-    visibleUnscoredCount,
-    hiddenUnscoredCount,
-  } = useGuardedScoring({
+  const { calculateQuestionProgress, ...guardedScoring } = useGuardedScoring({
     scoringData: {
       examId,
       currentUserId: currentUser.id,
@@ -416,17 +198,17 @@ export function useScoringScreen({
     progress: {
       selectedAnswers: selectedStudentAnswerImageIds,
       gradingMode,
-      scoringBehavior,
+      scoringBehavior: scoringPreferences.scoringBehavior,
       setRecentlyScoredAnswers,
       getGridAnswerData,
       setSelectedAnswers: setSelectedPageImageIds,
       handleNextStudent: handleIndividualNextStudent,
-      handleNextQuestion,
+      handleNextQuestion: questionNavigation.handleNextQuestion,
     },
     clickScoring: {
-      clickScoringConfig,
-      allScoringData,
-      filteredScoringDataIds,
+      clickScoringConfig: scoringPreferences.clickScoringConfig,
+      allScoringData: answerList.allScoringData,
+      filteredScoringDataIds: answerList.filteredScoringDataIds,
       replaceSelection,
       setGradingMode,
     },
@@ -434,60 +216,47 @@ export function useScoringScreen({
     scaleQuestion,
   })
 
-  /** 表示モード切り替え（グリッド⇔個別） */
-  const handleToggleViewMode = useCallback(
-    () => setGradingMode((prev) => (prev === "grid" ? "individual" : "grid")),
-    [setGradingMode]
-  )
-
   /** 模範解答の表示（トグル／押している間だけ） */
-  const {
-    masterAnswerVisible,
-    handleToggleMasterAnswer,
-    handleMasterAnswerShow,
-    handleMasterAnswerHide,
-  } = useMasterAnswerVisibility({
-    masterAnswerDisplayMode,
-    masterAnswerKeyBehavior,
+  const masterAnswerVisibility = useMasterAnswerVisibility({
+    masterAnswerDisplayMode: scoringPreferences.masterAnswerDisplayMode,
+    masterAnswerKeyBehavior: scoringPreferences.masterAnswerKeyBehavior,
     gradingMode,
   })
 
   /** 用紙サイズと、全ページの模範解答画像URL（ページ番号順） */
-  const { pageSize, allMasterImageUrls } = useMasterAnswerPages(exam?.examPages)
+  const masterAnswerPages = useMasterAnswerPages(exam?.examPages)
 
   /** キー操作の文脈・ショートカット・担当外の設問からの退避 */
-  useScoringScreenBindings({
+  useScoringScreenKeyboard({
     gradingMode,
     // AI採点モードでは一覧の選択は見えていない。見えない選択に採点キーを効かせない
     hasSelectedAnswers:
       gradingMode !== "ai" && selectedStudentAnswerImageIds.size > 0,
-    partialScoreModalOpen: showPartialScoreModal,
+    partialScoreModalOpen: guardedScoring.showPartialScoreModal,
     scoringOperationMode: effectiveMode,
     currentCropRegionId,
     selectableCropRegions,
     setCurrentCropRegionId,
+    itemsPerLine: scoringPreferences.itemsPerLine,
+    setItemsPerLine,
+    layoutDirection: scoringPreferences.layoutDirection,
+    setGradingMode,
+    handleIndividualNextStudent,
+    handleIndividualPrevStudent,
+    handlePartialScoreConfirm: guardedScoring.handlePartialScoreConfirm,
     shortcuts: {
       handleToggleStudentNames,
-      handleRefreshFilter,
-      handleNextQuestion,
-      handlePrevQuestion,
-      handleGridNavigation,
-      handleIndividualNavigation,
-      handleZoomIn,
-      handleZoomOut,
-      handleResetZoom,
-      handlePartialScoreInput,
-      handlePartialScoreConfirmPartial: () =>
-        handlePartialScoreConfirm("partial"),
-      handlePartialScoreConfirmPending: () =>
-        handlePartialScoreConfirm("pending"),
-      handlePartialScoreCancel,
-      handlePartialScoreBackspace,
-      handleScore: handleBatchScoreWithProgress,
-      handleToggleFilter,
-      handleSelectAll,
-      handleToggleViewMode: handleToggleViewMode,
-      handleToggleMasterAnswer,
+      handleRefreshFilter: answerList.handleRefreshFilter,
+      handleNextQuestion: questionNavigation.handleNextQuestion,
+      handlePrevQuestion: questionNavigation.handlePrevQuestion,
+      handleGridNavigation: questionNavigation.handleGridNavigation,
+      handlePartialScoreInput: guardedScoring.handlePartialScoreInput,
+      handlePartialScoreCancel: guardedScoring.handlePartialScoreCancel,
+      handlePartialScoreBackspace: guardedScoring.handlePartialScoreBackspace,
+      handleScore: guardedScoring.handleBatchScoreWithProgress,
+      handleToggleFilter: answerList.handleToggleFilter,
+      handleSelectAll: answerList.handleSelectAll,
+      handleToggleMasterAnswer: masterAnswerVisibility.handleToggleMasterAnswer,
     },
   })
 
@@ -516,15 +285,17 @@ export function useScoringScreen({
   })
 
   return {
-    allMasterImageUrls,
-    applyScaleLevel,
-    assignmentScope,
-    allScoringData,
-    answerSortOrder,
-    autoScroll,
-    clickScoringConfig,
-    clickScoringDebounceMs,
-    closeModeSelectionModal,
+    ...scoringModeControls,
+    ...assignmentFilter,
+    ...scoringPreferences,
+    ...panelState,
+    ...studentSwitching,
+    ...decisionEntry,
+    ...answerList,
+    ...questionNavigation,
+    ...guardedScoring,
+    ...masterAnswerVisibility,
+    ...masterAnswerPages,
     cropRegions,
     currentCropRegion,
     currentExamStudentId,
@@ -532,85 +303,16 @@ export function useScoringScreen({
     effectiveMode,
     exam,
     examId,
-    examStudents,
-    expandMargin,
-    filterSettings,
-    filteredScoringDataIds,
     gradingMode,
-    guardScoring,
-    handleAnswerSelect,
-    handleAutoScrollChange,
-    handleBatchScoreVisibleUnscored,
-    handleBatchScoreWithProgress,
-    handleClickScoring,
-    handleGridNavigation,
-    handleItemsPerLineChange,
-    handleMasterAnswerHide,
-    handleMasterAnswerShow,
-    handleMouseScoring,
-    handleNextQuestion,
-    handlePartialScoreBackspace,
-    handlePartialScoreCancel,
-    handlePartialScoreChange,
-    handlePartialScoreConfirm,
-    handlePartialScoreInput,
-    handlePrevQuestion,
-    handleRefreshFilter,
-    handleReplaceSelection,
-    handleSelectAll,
-    handleSelectUnscored,
-    handleStudentChange,
-    handleToggleFilter,
-    handleToggleMasterAnswer,
-    hiddenUnscoredCount,
-    isQuestionSetFiltered,
-    isWhitenessPending,
-    isWhitenessReady,
-    itemsPerLine,
-    layoutDirection,
     loading,
-    masterAnswerData,
-    masterAnswerDisplayMode,
-    masterAnswerKeyBehavior,
-    masterAnswerOpacity,
-    masterAnswerVisible,
-    mouseBrush,
-    openPartialScoreModal,
-    pageSize,
-    partialScoreInput,
-    pendingDecisionCount,
     questionProgress,
     questionScoresByCropRegionId,
     rubricAnswerFlow,
     scaleQuestion,
-    scoringBehavior,
-    selectMode,
     selectableCropRegions,
-    selectedScoringDataIds,
     selectedStudentAnswerImageIds,
-    setAnswerSortOrder,
-    setClickAction,
-    setClickScoringDebounceMs,
     setCurrentCropRegionId,
-    setExpandMargin,
     setGradingMode,
-    setLayoutDirection,
-    setMasterAnswerDisplayMode,
-    setMasterAnswerKeyBehavior,
-    setMasterAnswerOpacity,
-    setMouseBrush,
-    setScoringBehavior,
-    setScoringOperationMode,
-    setShowKeyboardHelp,
-    setShowSidePanel,
-    showDecisionEntry,
-    showKeyboardHelp,
-    showModeSelectionModal,
-    showPartialScoreModal,
-    showSidePanel,
-    showStudentNames,
     studentAnswerImages,
-    visibleAnswers,
-    visibleUnscoredCount,
   }
 }

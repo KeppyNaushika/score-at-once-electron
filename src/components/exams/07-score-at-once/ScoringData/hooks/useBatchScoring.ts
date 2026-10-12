@@ -10,6 +10,7 @@ import {
   setQuestionScoreMutation,
   updateQuestionScoreMutation,
 } from "@/queries/scoring"
+import { isScoreCountedForScoringMethod } from "@/types/rubric.types"
 import {
   isScoringStatus,
   type ScoringStatus,
@@ -105,10 +106,19 @@ export function useBatchScoring({
         )
 
         // 部分点は入力があればそれ、無ければ今の値を引き継ぐ。それ以外の
-        // 状態（正解・不正解・無解答・未採点）は部分点を持たない
+        // 状態（正解・不正解・無解答・未採点）は部分点を持たない。
+        // 方式と合わない採点は未採点として読むので、その点は引き継がない（§4-8-8）
+        const inheritedPartialScore =
+          currentScore &&
+          isScoreCountedForScoringMethod(
+            currentCropRegion.scoringMethod,
+            currentScore.status
+          )
+            ? currentScore.partialScore
+            : null
         const nextPartialScore =
           status === "partial" || status === "pending"
-            ? (inputPartialScore ?? currentScore?.partialScore ?? null)
+            ? (inputPartialScore ?? inheritedPartialScore)
             : null
 
         if (currentScore?.id) {

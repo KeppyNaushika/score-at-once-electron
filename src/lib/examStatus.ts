@@ -12,6 +12,7 @@ import {
   type WorkflowNextStep,
   type WorkflowStepId,
 } from "@/lib/shared/workflowSteps"
+import { isScoreCountedForScoringMethod } from "@/types/rubric.types"
 
 /**
  * 進捗計算 getExamProgress が読む最小入力形。
@@ -25,6 +26,8 @@ export interface ExamProgressSource {
   /** 平坦化済み採点領域（type と採点状況、確定） */
   cropRegions?: {
     type: string
+    /** 採点方式。方式と合わない採点は採点済みにも提案にも数えない（§4-8-8） */
+    scoringMethod: string
     /**
      * 採点者ごとの提案。**更新時刻まで持つ**のは「8. 採点確定」が済んだかを
      * 判定するため（{@link getExamProgress}）。確定より新しい提案が入っていたら、
@@ -141,13 +144,21 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
   // 分母（expectedScoringCount）と同じ受験者集合で数えないと、分子が分母を超えて
   // 進捗が100%を超える。
   // partial/pending は partialScore が入力済みの場合のみ採点済みとする。
+  // 設問の方式と合わない採点は未採点として読む（行は残すだけ。§4-8-8）。
   const actualScoringCount =
     exam.cropRegions
       ?.filter(
         (cropRegion) =>
           cropRegion.type === "QUESTION_ANSWER" && cropRegion.questionScores
       )
-      .flatMap((cropRegion) => cropRegion.questionScores)
+      .flatMap((cropRegion) =>
+        cropRegion.questionScores.filter((questionScore) =>
+          isScoreCountedForScoringMethod(
+            cropRegion.scoringMethod,
+            questionScore.status
+          )
+        )
+      )
       .filter(
         (questionScore) =>
           questionScore.status !== "unscored" &&
@@ -197,7 +208,8 @@ type ProgressCropRegion = NonNullable<ExamProgressSource["cropRegions"]>[number]
  *
  * 食い違いの規則は出力側のリゾルバ（`scoreResolution.ts`）と同じにする:
  *
- * - `unscored` は採点の意思表示ではないので数に入れない
+ * - `unscored` は採点の意思表示ではないので数に入れない。設問の方式と合わない採点も、
+ *   未採点として読むので数に入れない（§4-8-8）
  * - 残った提案の**判定と部分点が全行一致していれば合意**（採点者が何人いても済み）。
  *   採点者ごとに1行なので、1人で使っている試験はここで必ず解決する
  * - 一致しなければ食い違い。確定があれば解消
@@ -231,6 +243,14 @@ function countPendingDecisions(
       >()
       cropRegion.questionScores.forEach((questionScore) => {
         if (questionScore.status === "unscored") return
+        if (
+          !isScoreCountedForScoringMethod(
+            cropRegion.scoringMethod,
+            questionScore.status
+          )
+        ) {
+          return
+        }
         if (!scorableIdSet.has(questionScore.examStudentId)) return
         const proposals = proposalsByExamStudentId.get(
           questionScore.examStudentId

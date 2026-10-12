@@ -95,7 +95,7 @@ describe("食い違いの判断", () => {
   })
 
   it("設問の id が空なら投げる", () => {
-    expect(() => findOwnQuestionScore([], "", "s", "user-1")).toThrow()
+    expect(() => findOwnQuestionScore([], { id: "", scoringMethod: "points" }, "s", "user-1")).toThrow()
   })
 })
 

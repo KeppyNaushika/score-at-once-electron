@@ -118,7 +118,6 @@ describe("マスの類型の見せ方", () => {
         scaleLevels,
       })
     ).toEqual({
-      kind: "level",
       label: "B",
       score: 6,
       colors: SCALE_LEVEL_PALETTE[1],
@@ -144,7 +143,7 @@ describe("マスの類型の見せ方", () => {
     ).toBeNull()
   })
 
-  it("類型評価の設問の正答・部分点、点の採点の設問の評価済みは方式と合わない", () => {
+  it("方式と合わない採点（類型評価の設問の正答・部分点、点の採点の設問の評価済み）は未採点と同じに、類型の見せ方にしない", () => {
     for (const status of ["correct", "incorrect", "partial"] as const) {
       expect(
         scaleCellAppearanceOf({
@@ -153,7 +152,7 @@ describe("マスの類型の見せ方", () => {
           scaleLevelId: null,
           scaleLevels,
         })
-      ).toEqual({ kind: "incompatible" })
+      ).toBeNull()
     }
     expect(
       scaleCellAppearanceOf({
@@ -162,7 +161,7 @@ describe("マスの類型の見せ方", () => {
         scaleLevelId: "level-a",
         scaleLevels: [],
       })
-    ).toEqual({ kind: "incompatible" })
+    ).toBeNull()
   })
 
   it("保留・無答・未採点、点の採点の正答は採点状態の見せ方のまま", () => {

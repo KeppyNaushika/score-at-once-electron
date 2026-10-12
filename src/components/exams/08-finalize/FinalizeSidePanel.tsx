@@ -11,8 +11,8 @@ import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSid
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import { DecisionVerdictButtons } from "@/components/exams/08-finalize/DecisionVerdictButtons"
 import type { DecisionGridItem } from "@/components/exams/08-finalize/hooks/useFinalizeData"
-import type { DecisionVerdict } from "@/components/exams/08-finalize/hooks/useFinalizeScreen"
 import { SelectedCellDetail } from "@/components/exams/08-finalize/SelectedCellDetail"
+import type { DecisionVerdict } from "@/components/exams/08-finalize/types"
 import type {
   DecisionFilterSettings,
   ScaleAppearanceOfVerdict,

@@ -13,6 +13,7 @@ import { toAppImageUrl } from "@/lib/appImageUrl"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { ExamWithPages } from "@/types/prismaExtensions"
+import { countedStatusOf } from "@/types/rubric.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 /** 採点行がまだ1つも無い設問のための空値（毎回新しい配列を作らない） */
@@ -75,6 +76,12 @@ export function useQuestionScoringData({
           currentUserId
         )
         const { student } = pageImage.examStudent
+        // 方式と合わない採点は未採点として読む（行は残すだけ。§4-8-8）
+        const status = countedStatusOf(
+          currentCropRegion.scoringMethod,
+          toScoringStatus(score?.status)
+        )
+        const isCounted = status !== "unscored"
 
         return {
           id: pageImage.id,
@@ -84,11 +91,13 @@ export function useQuestionScoringData({
             ? toAppImageUrl(pageImage.imagePath)
             : "",
           currentScore:
-            score?.partialScore !== undefined && score?.partialScore !== null
+            isCounted &&
+            score?.partialScore !== undefined &&
+            score?.partialScore !== null
               ? Number(score.partialScore)
               : undefined,
           maxScore: currentCropRegion.points ?? 0,
-          status: toScoringStatus(score?.status),
+          status,
           questionRegion: currentCropRegion,
           customOrder: pageImage.examStudent.customOrder ?? 999999,
         }

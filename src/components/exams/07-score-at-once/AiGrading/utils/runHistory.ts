@@ -5,6 +5,8 @@
  * 一覧に出す実行を選ぶのにも使う（選んだ実行の試行を、各答案の表示に使う）。
  */
 
+import type { CropRegion } from "@prisma/client"
+
 import type { QuestionScoreRow } from "@/queries/scoring"
 import {
   type AiGradingStage1Purpose,
@@ -37,7 +39,8 @@ interface RunHistoryEntry {
 interface RunHistoryInput {
   runs: readonly AiGradingRunRow[]
   questionScores: readonly QuestionScoreRow[]
-  cropRegionId: string
+  /** 設問（方式と合わない自分の採点は未採点として読み、比べない。§4-8-8） */
+  cropRegion: Pick<CropRegion, "id" | "scoringMethod">
   currentUserId: string
   points: number | null
 }
@@ -64,7 +67,7 @@ function gradeRunsNewestFirst(
 export function summarizeRunHistory({
   runs,
   questionScores,
-  cropRegionId,
+  cropRegion,
   currentUserId,
   points,
 }: RunHistoryInput): RunHistoryEntry[] {
@@ -75,7 +78,7 @@ export function summarizeRunHistory({
     const comparisons = succeededAttempts.flatMap((attempt) => {
       const questionScore = findOwnQuestionScore(
         questionScores,
-        cropRegionId,
+        cropRegion,
         attempt.examStudentId,
         currentUserId
       )

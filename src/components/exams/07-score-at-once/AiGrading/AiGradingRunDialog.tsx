@@ -113,7 +113,7 @@ function AiGradingRunForm({
 
   const targetIdsByScope = useMemo(() => {
     const selectionInput = {
-      cropRegionId: cropRegion.id,
+      cropRegion,
       currentUserId,
       answers: reviewedAnswers.map((reviewedAnswer) => reviewedAnswer.answer),
       questionScores,
@@ -126,7 +126,7 @@ function AiGradingRunForm({
       ])
     )
   }, [
-    cropRegion.id,
+    cropRegion,
     currentUserId,
     reviewedAnswers,
     questionScores,

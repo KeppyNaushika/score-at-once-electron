@@ -16,7 +16,7 @@ import {
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { examScoreScalesQuery } from "@/queries/scoreScale"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import { toScoringMethod } from "@/types/rubric.types"
+import { countedStatusOf, toScoringMethod } from "@/types/rubric.types"
 
 import { cropRegionScoreDisplayOf } from "../../utils/cropRegionScoreDisplay"
 import type { CropRegionWithStatus } from "../core/types"
@@ -68,10 +68,10 @@ export function useCropRegionsWithStatus({
         examStudentId,
         currentUserId
       )
-      const status = getScoringStatus(
-        questionScores,
-        examStudentId,
-        currentUserId
+      // 方式と合わない採点は未採点として読む（マークも点数も出さない。§4-8-8）
+      const status = countedStatusOf(
+        cropRegion.scoringMethod,
+        getScoringStatus(questionScores, examStudentId, currentUserId)
       )
       // 点数は出力と同じ得点化で求める。類型評価の評価済みは類型の記号と点数を出す
       const scaleLevels =

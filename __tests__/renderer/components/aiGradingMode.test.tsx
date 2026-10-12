@@ -552,7 +552,7 @@ function RunHistoryHarness({
       purpose={purpose}
       runs={runs}
       questionScores={[]}
-      cropRegionId={CROP_REGION_ID}
+      cropRegion={{ id: CROP_REGION_ID, scoringMethod: "points" }}
       currentUserId={CURRENT_USER_ID}
       points={4}
       promptNumberById={new Map([["prompt-1", 1]])}

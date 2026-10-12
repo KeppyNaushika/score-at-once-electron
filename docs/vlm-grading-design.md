@@ -487,7 +487,7 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
   `owned`（持ち主は null になりうる `examId`）で登録した
 - **S2 済み**（PR #1469）。`SCORING_STATUSES` に `evaluated`。類型の書き込みは `set-scale-levels`
   （`electron-src/lib/prisma/scaleLevelScoreWrite.ts`）で、点の採点の書き込みは `evaluated` を拒み `scaleLevelId` を null に戻す。
-  07 の画面は `src/components/exams/07-score-at-once/ScaleLevel/`（類型のボタン・数字キー・マスの色・方式と合わない採点の印）。
+  07 の画面は `src/components/exams/07-score-at-once/ScaleLevel/`（類型のボタン・数字キー・マスの色）。
   未採点に戻すのは既存の点の採点の書き込みで行う。AI 採点の作業画面は類型評価の設問では開かない
 - 実装の途中で決めたこと（OWNER）: 呼び名は「類型評価」「類型」「説明」「点数」で、類型評価に「ルーブリック」「段階」の語を使わない。
   減点・加点方式の `RubricItem` は画面では「採点項目」（AI へ送る指示文の語は「ルーブリック項目」のまま）。類型は割合でなく点数を持つ。
@@ -522,8 +522,15 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
   - 08 の類型評価の設問は、07 と同じく類型のボタンと数字キー（1=A…）で確定する。正答・誤答・部分点のキーは効かず 07 と同じ
     知らせを出す。保留・無答は効き、保留は点数の入力なしで確定する（`useFinalizeScaleQuestion.ts`）
   - 案を押して確定する操作は 08 に元々無いので足していない
-- 残っている小さなこと: 進み具合の数え方は方式と合わない採点も採点済みに数える。Excel のセルの赤字は判定（部分点・保留）で決めたまま。
-  マウスモードのブラシの並びに正答・部分点が残る（押しても書かずに知らせる）。`useScoringScreen.ts` が 616行、`useFinalizeScreen.ts` が 563行
+- **方式と合わない採点を未採点として読む**（S5 のあと、OWNER の判断。§4-8-8「採点方式の切り替え」）。リゾルバ（`resolveEffectiveScores`）は
+  設問を受け取り、合わない提案を未採点として、合わない確定を無いものとして読む（方式を戻せば確定が効き直す）。08 の一覧は合わない提案・
+  確定を除く。07 は `useQuestionScoringData` で `countedStatusOf` を通し、マス・絞り込み・進み具合・個別表示・AI 採点の対象が未採点として
+  扱う。試験の進み具合（`examStatus.ts`）も数えない。合わない採点の印（`incompatible`）はどこからも出なくなったので消した
+- 大きくなったファイルを分けた: `useScoringScreen.ts`（616→318行。範囲・設定・答案の一覧・キー入力のフックへ）、`useFinalizeScreen.ts`
+  （563→192行。マスの一覧・選択・覚え書き・確定の書き込み・キーのフックへ）、`pdfExport.ts`（506→233行。ページごとの組み立て
+  `pdfExportPageData.ts` と PDF の逐次書き出し `pdfStreamingSession.ts` へ）
+- 残っている小さなこと: Excel のセルの赤字は判定（部分点・保留）で決めたまま。
+  マウスモードのブラシの並びに正答・部分点が残る（押しても書かずに知らせる）。
 
 #### 4-8-8. 実装の細目（着手前に読む）
 
@@ -550,8 +557,11 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 - 方式は 03 の行の中（4-8-3a）と、今の 07 の `ScoringMethodSection` の両方から変えられる。どちらも同じ書き込み（`CropRegion.scoringMethod`・
   `scoreScaleId`）を使う
 - 採点済みの答案がある設問で方式を変えても、**採点の行は消さない・書き換えない**。方式と合わない行（`scale` の設問の `correct` /
-  `incorrect` / `partial`、`scale` 以外の設問の `evaluated`）は、得点にしない（null。欠測）で数え、画面に「方式と合わない採点 N件」と出す。
-  方式を戻せば元の点に戻る。切り替えの前に件数を示して確かめる
+  `incorrect` / `partial`、`scale` 以外の設問の `evaluated`）は、**DB に行として残すだけで、どこでも未採点として読む**（OWNER の判断）。
+  採点済みに数えず（進み具合・確定の対象）、画面（07・08 のマス・案）にも結果（合計・Excel・PDF の採点マーク・個人票・統計・成績算出）
+  にも出さない。方式を戻したときにだけ元の採点として表に出る。読み替えは `isScoreCountedForScoringMethod` / `countedStatusOf`
+  （`src/types/rubric.types.ts`）で、出力・集計はリゾルバ（`resolveEffectiveScores`）が設問の方式を受け取って1か所で行う。
+  新しい方式で採点し直すと、その行は上書きされる。切り替えの前に、数えなくなる件数を示して確かめる
 
 **書き込み（IPC）**
 

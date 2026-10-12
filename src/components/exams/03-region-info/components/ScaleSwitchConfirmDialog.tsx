@@ -22,7 +22,7 @@ interface ScaleSwitchConfirmDialogProps {
 
 /**
  * 類型評価をまたいで方式を変える前の、方式と合わない採点の件数の確認（§4-8-8）。
- * 採点は消さないので、戻せば元の点に戻ることを添える
+ * その採点は未採点として扱うこと、採点は消さないので戻せば元の採点に戻ることを添える
  */
 export function ScaleSwitchConfirmDialog({
   cropRegionLabel,
@@ -41,7 +41,7 @@ export function ScaleSwitchConfirmDialog({
           <AlertDialogTitle>採点方式を変えますか</AlertDialogTitle>
           <AlertDialogDescription>
             {pending
-              ? `${cropRegionLabel} を「${SCORING_METHOD_LABELS[pending.nextMethod]}」にします。方式と合わない採点が ${pending.incompatibleCount}件あります。採点は消さずに残し、方式を戻せば元の点に戻ります。それまでは点に数えません。`
+              ? `${cropRegionLabel} を「${SCORING_METHOD_LABELS[pending.nextMethod]}」にします。方式と合わない採点が ${pending.incompatibleCount}件あります。それまでは未採点として扱い、画面にも出力にも出しません。採点は消さずに残すので、方式を戻せば元の採点に戻ります。`
               : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>

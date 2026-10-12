@@ -21,13 +21,13 @@ import {
 } from "../lib/printUtils"
 import { recordAuditLog } from "../lib/prisma/auditLog"
 import { resolveExamScope } from "../lib/prisma/auditScope"
+import { getPdfExportData } from "../lib/prisma/pdfExport"
 import {
   addPageToStreamingSession,
   cancelStreamingSession,
   createPdfStreamingSession,
   finalizeStreamingSession,
-  getPdfExportData,
-} from "../lib/prisma/pdfExport"
+} from "../lib/prisma/pdfStreamingSession"
 import {
   captureReturnSnapshot,
   getReturnDiff,

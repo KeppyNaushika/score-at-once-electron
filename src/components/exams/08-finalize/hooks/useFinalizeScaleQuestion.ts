@@ -54,7 +54,7 @@ export function useFinalizeScaleQuestion(
     [isScaleQuestion, scaleLevels, isPending]
   )
 
-  /** 判定と類型の見せ方（類型の記号と色・方式と合わない採点の印）。採点状態のままでよければ null */
+  /** 判定と類型の見せ方（類型の記号と色）。採点状態のままでよければ null */
   const scaleAppearanceOfVerdict = useCallback<ScaleAppearanceOfVerdict>(
     (status, scaleLevelId) =>
       scaleCellAppearanceOf({

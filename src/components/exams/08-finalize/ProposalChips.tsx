@@ -43,9 +43,6 @@ export function ProposalChips({
           result.status,
           result.scaleLevelId
         )
-        const levelAppearance =
-          scaleAppearance?.kind === "level" ? scaleAppearance : null
-        const isIncompatibleScore = scaleAppearance?.kind === "incompatible"
         const graderNames = result.proposals
           .map((proposal) => proposal.userName)
           .join("・")
@@ -58,22 +55,19 @@ export function ProposalChips({
             title={`${verdictLabelOf(result.status, result.scaleLevel)} ${result.scoreValue ?? "-"}点（${graderNames}）`}
             className="inline-flex max-w-full items-center gap-0.5 rounded border bg-white px-1 text-[10px] leading-4"
             style={
-              levelAppearance
+              scaleAppearance
                 ? {
-                    borderColor: levelAppearance.colors.text,
-                    backgroundColor: levelAppearance.colors.bg,
+                    borderColor: scaleAppearance.colors.text,
+                    backgroundColor: scaleAppearance.colors.bg,
                   }
                 : { borderColor: config.iconStyle.color }
             }
           >
-            {scaleAppearance && <ScaleCellMark appearance={scaleAppearance} />}
-            {!levelAppearance && (
-              <Icon
-                className={`h-3 w-3 shrink-0 ${isIncompatibleScore ? "opacity-50" : ""}`}
-                style={config.iconStyle}
-              />
+            {scaleAppearance ? (
+              <ScaleCellMark appearance={scaleAppearance} />
+            ) : (
+              <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
             )}
-            {/* 方式と合わない採点は得点にしない（実得点は null で「-」になる） */}
             <span className="shrink-0 font-medium">
               {result.scoreValue ?? "-"}
             </span>

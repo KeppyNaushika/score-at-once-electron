@@ -1,25 +1,22 @@
-import * as crypto from "crypto"
-import * as fsPromises from "fs/promises"
-import * as path from "path"
-import { PageSizes, PDFDocument } from "pdf-lib"
-
-import { calculateActualScore } from "@/lib/shared/actualScore"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
-import {
-  isStatusCompatibleWithScoringMethod,
-  type ScoringMethod,
-  toScoringMethod,
-} from "@/types/rubric.types"
+import type { ScoringMethod } from "@/types/rubric.types"
 
 import type { DrawingAnnotation } from "../../../src/types/drawingAnnotation.types"
 import { getAbsolutePathFromSharedFiles } from "../dataManager"
 import { pathExists } from "../pathExists"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
-import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
 import { getCropRegionsByExamId } from "./cropRegion"
-import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 import { getExamById } from "./exam"
 import { getStudentsForExam } from "./examStudent"
+import {
+  buildScoredRegions,
+  buildScoringData,
+  buildSubtotalData,
+  buildTotalScoreData,
+  calculateTotalScore,
+  collectAnnotations,
+  readImageAsDataUrl,
+} from "./pdfExportPageData"
 import { getQuestionScoresForExam } from "./questionScore"
 import { getScoreDecisionsForExam } from "./scoreDecision"
 import { getStudentAnswersByExamId } from "./studentAnswer/crud"
@@ -131,7 +128,8 @@ export async function getPdfExportData(options: {
   const decisionsResult = await getScoreDecisionsForExam(examId)
   const { resolved: allScores } = resolveEffectiveScores(
     scoresResult,
-    decisionsResult
+    decisionsResult,
+    cropRegions
   )
 
   // 受験者を取得（ExamStudent 実体のまま保持する）
@@ -170,163 +168,35 @@ export async function getPdfExportData(options: {
         (cropRegion) => cropRegion.examPageId === studentAnswer.examPageId
       )
 
-      // このページの採点領域と、そこに解決済みの有効スコアがあるものだけを組にする。
-      // 有効スコアが1件も無い領域はこの受験者について描くものが何も無い
-      const scoredRegions = pageRegions.flatMap((region) => {
-        // examPageは必ず存在する（getCropRegionsByExamIdでincludeしている）
-        const { examPage } = region
-        if (!examPage) {
-          console.warn(`CropRegion ${region.id} has no examPage, skipping`)
-          return []
-        }
-        const effectiveScore = allScores.find(
-          (resolvedScore) =>
-            resolvedScore.cropRegionId === region.id &&
-            resolvedScore.examStudentId === examStudent.id
-        )
-        if (!effectiveScore) return []
-        return [{ region, examPage, effectiveScore }]
+      const scoredRegions = buildScoredRegions(
+        pageRegions,
+        allScores,
+        examStudent.id
+      )
+      const scoringData = buildScoringData(scoredRegions)
+      const annotations = await collectAnnotations(scoredRegions)
+
+      const imageUrl = await readImageAsDataUrl(imagePath)
+      if (imageUrl === null) continue // この画像をスキップ
+
+      const subtotalData = await buildSubtotalData({
+        examId,
+        examStudentId: examStudent.id,
+        pageRegions,
+        allScores,
+        cropRegions,
       })
 
-      // 採点データを構築（提案行が無くても確定で採点済みのセルはマークを描画する）
-      const scoringData = scoredRegions.map(
-        ({ region, examPage, effectiveScore }) => {
-          const scoringMethod = toScoringMethod(region.scoringMethod)
-          const isPrintableScaleLevel =
-            effectiveScore.status === "evaluated" &&
-            isStatusCompatibleWithScoringMethod(
-              scoringMethod,
-              effectiveScore.status
-            )
-          return {
-            status: effectiveScore.status,
-            partialScore: effectiveScore.partialScore,
-            scaleLevel:
-              isPrintableScaleLevel && effectiveScore.scaleLevel
-                ? {
-                    label: effectiveScore.scaleLevel.label,
-                    score: effectiveScore.scaleLevel.score,
-                  }
-                : null,
-            cropRegion: {
-              id: region.id,
-              x: region.x,
-              y: region.y,
-              width: region.width,
-              height: region.height,
-              label: region.label,
-              maxScore: region.points !== null ? Number(region.points) : null,
-              pageNumber: examPage.pageNumber,
-              scoringMethod,
-            },
-          }
-        }
+      const { totalScore, totalMaxScore } = calculateTotalScore(
+        cropRegions,
+        allScores,
+        examStudent.id
       )
-
-      // アノテーションを取得（行をそのまま持つ）。どの採点行の注釈を印刷するかは
-      // リゾルバが決める（確定したセルはそのセルの全行 = 当面すべて表示する）
-      const annotations: PdfExportPageData["annotations"] = []
-      for (const { effectiveScore } of scoredRegions) {
-        for (const questionScoreId of effectiveScore.annotationQuestionScoreIds) {
-          annotations.push(
-            ...(await getDrawingAnnotationsByQuestionScore(questionScoreId))
-          )
-        }
-      }
-
-      // 画像をbase64データURLに変換（Canvasのtainted問題を回避）
-      let imageUrl: string
-      try {
-        const imageBuffer = await fsPromises.readFile(imagePath)
-        const ext = path.extname(imagePath).toLowerCase()
-        const mimeType =
-          ext === ".png"
-            ? "image/png"
-            : ext === ".jpg" || ext === ".jpeg"
-              ? "image/jpeg"
-              : "image/png"
-        imageUrl = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
-      } catch (imgError) {
-        console.error(`Failed to read image: ${imagePath}`, imgError)
-        continue // この画像をスキップ
-      }
-
-      // 小計点領域を取得（このページのSUBTOTAL_SCORE領域）
-      const subtotalRegions = pageRegions.filter(
-        (cropRegion) => cropRegion.type === "SUBTOTAL_SCORE"
+      const totalScoreData = buildTotalScoreData(
+        pageRegions,
+        totalScore,
+        totalMaxScore
       )
-
-      // 小計点データを計算
-      const subtotalData: PdfExportPageData["subtotalData"] = []
-      for (const subtotalRegion of subtotalRegions) {
-        if (!subtotalRegion.examPage) continue
-
-        // 小計点を計算
-        const subtotalResult = await calculateSubtotalScoreForStudent(
-          examStudent.id,
-          examId,
-          subtotalRegion.id,
-          allScores,
-          cropRegions
-        )
-
-        subtotalData.push({
-          regionId: subtotalRegion.id,
-          label: subtotalRegion.label,
-          score: subtotalResult.score,
-          x: subtotalRegion.x,
-          y: subtotalRegion.y,
-          width: subtotalRegion.width,
-          height: subtotalRegion.height,
-          pageNumber: subtotalRegion.examPage.pageNumber,
-        })
-      }
-
-      // 合計点を計算（全設問の合計）
-      const questionRegions = cropRegions.filter(
-        (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
-      )
-      let totalScore = 0
-      let totalMaxScore = 0
-      let hasScoredQuestion = false
-      for (const region of questionRegions) {
-        const score = allScores.find(
-          (resolvedScore) =>
-            resolvedScore.cropRegionId === region.id &&
-            resolvedScore.examStudentId === examStudent.id
-        )
-        if (score) {
-          totalMaxScore += region.points ?? 0
-          const actualScore = calculateActualScore(score, region)
-          if (actualScore !== null) {
-            hasScoredQuestion = true
-            totalScore += actualScore
-          }
-        }
-      }
-
-      // 合計点領域を取得（このページのTOTAL_SCORE領域）
-      const totalScoreRegions = pageRegions.filter(
-        (cropRegion) => cropRegion.type === "TOTAL_SCORE"
-      )
-
-      // 合計点領域データを構築
-      const finalTotalScore = hasScoredQuestion ? totalScore : null
-      const totalScoreData: PdfExportPageData["totalScoreData"] = []
-      for (const totalRegion of totalScoreRegions) {
-        if (!totalRegion.examPage) continue
-
-        totalScoreData.push({
-          regionId: totalRegion.id,
-          score: finalTotalScore,
-          maxScore: totalMaxScore,
-          x: totalRegion.x,
-          y: totalRegion.y,
-          width: totalRegion.width,
-          height: totalRegion.height,
-          pageNumber: totalRegion.examPage.pageNumber,
-        })
-      }
 
       pages.push({
         examStudentId: examStudent.id,
@@ -338,7 +208,7 @@ export async function getPdfExportData(options: {
         scoringData,
         subtotalData,
         totalScoreData,
-        totalScore: finalTotalScore,
+        totalScore,
         totalMaxScore,
         annotations,
       })
@@ -360,146 +230,4 @@ export async function getPdfExportData(options: {
   })
 
   return { examName: exam.examName, pages }
-}
-
-// ============================================================
-// ストリーミングPDF生成API
-// ============================================================
-
-import type { PDFImage, PDFPage } from "pdf-lib"
-
-/** ストリーミングセッションの状態 */
-interface PdfStreamingSession {
-  pdfDoc: PDFDocument
-  pages: PDFPage[]
-  pageSize: [number, number]
-  embeddedImages: Map<number, PDFImage>
-  totalPages: number
-}
-
-/** アクティブなストリーミングセッション */
-const streamingSessions = new Map<string, PdfStreamingSession>()
-
-/**
- * ストリーミングPDF生成用のセッションを作成
- * 全ページ分の空ページを事前に作成する
- */
-export async function createPdfStreamingSession(options: {
-  totalPages: number
-  pdfOrientation?: "portrait" | "landscape"
-}): Promise<string> {
-  const { totalPages, pdfOrientation = "portrait" } = options
-
-  const pdfDoc = await PDFDocument.create()
-  const pageSize: [number, number] =
-    pdfOrientation === "landscape"
-      ? [PageSizes.A4[1], PageSizes.A4[0]]
-      : [PageSizes.A4[0], PageSizes.A4[1]]
-
-  // 全ページ分の空ページを作成
-  const pages: PDFPage[] = []
-  for (let i = 0; i < totalPages; i++) {
-    const page = pdfDoc.addPage(pageSize)
-    pages.push(page)
-  }
-
-  // セッションIDを生成
-  const randomSuffix = crypto.randomBytes(8).toString("hex")
-  const sessionId = `pdf-stream-${Date.now()}-${randomSuffix}`
-
-  // セッションを保存
-  streamingSessions.set(sessionId, {
-    pdfDoc,
-    pages,
-    pageSize,
-    embeddedImages: new Map(),
-    totalPages,
-  })
-
-  return sessionId
-}
-
-/**
- * ストリーミングでページに画像を描画
- * 空ページに画像を追加する
- */
-export async function addPageToStreamingSession(options: {
-  sessionId: string
-  pageIndex: number
-  imageData: ArrayBuffer
-}): Promise<void> {
-  const { sessionId, pageIndex, imageData } = options
-
-  const session = streamingSessions.get(sessionId)
-  if (!session) {
-    throw new Error("セッションが見つかりません")
-  }
-
-  if (pageIndex < 0 || pageIndex >= session.totalPages) {
-    throw new Error(`ページインデックスが範囲外です: ${pageIndex}`)
-  }
-
-  const page = session.pages[pageIndex]
-  const { width: pageWidth, height: pageHeight } = page.getSize()
-
-  // 画像を埋め込み
-  const imageBytes = new Uint8Array(imageData)
-  const image = await session.pdfDoc.embedPng(imageBytes)
-  session.embeddedImages.set(pageIndex, image)
-
-  // 画像をページにフィットさせる
-  const imageAspectRatio = image.width / image.height
-  const pageAspectRatio = pageWidth / pageHeight
-
-  let imageWidth: number
-  let imageHeight: number
-
-  if (imageAspectRatio > pageAspectRatio) {
-    imageWidth = pageWidth
-    imageHeight = pageWidth / imageAspectRatio
-  } else {
-    imageHeight = pageHeight
-    imageWidth = pageHeight * imageAspectRatio
-  }
-
-  const imageX = (pageWidth - imageWidth) / 2
-  const imageY = (pageHeight - imageHeight) / 2
-
-  page.drawImage(image, {
-    x: imageX,
-    y: imageY,
-    width: imageWidth,
-    height: imageHeight,
-  })
-}
-
-/**
- * ストリーミングセッションを完了してPDFを保存
- */
-export async function finalizeStreamingSession(options: {
-  sessionId: string
-  outputPath: string
-}): Promise<void> {
-  const { sessionId, outputPath } = options
-
-  const session = streamingSessions.get(sessionId)
-  if (!session) {
-    throw new Error("セッションが見つかりません")
-  }
-
-  try {
-    // PDFを保存
-    const pdfBytes = await session.pdfDoc.save()
-    await fsPromises.writeFile(outputPath, pdfBytes)
-  } finally {
-    // 保存の成否によらずセッションを解放する（失敗したセッションを抱え続けない）
-    streamingSessions.delete(sessionId)
-  }
-}
-
-/**
- * ストリーミングセッションをキャンセル
- */
-export function cancelStreamingSession(sessionId: string): void {
-  streamingSessions.delete(sessionId)
 }

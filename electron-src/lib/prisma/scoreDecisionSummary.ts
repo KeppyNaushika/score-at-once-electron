@@ -7,6 +7,7 @@
  * 出力の解決ルール自体には一切手を入れない — ここは表示のための派生計算に徹する。
  */
 import { calculateActualScore } from "@/lib/shared/actualScore"
+import { isScoreCountedForScoringMethod } from "@/types/rubric.types"
 import type {
   AssignedGrader,
   ExamDecisionSummary,
@@ -86,7 +87,25 @@ export const getExamDecisionSummary = async (
   // 行を作ったのはここなので、Decimal→number と判定の絞り込みもここで1回だけ済ませる。
   // 以降このファイルに生の Decimal も生 string の判定も現れない。
   const allScores = questionScoreRows.map(toSerializedQuestionScore)
-  const decisions = scoreDecisionRows.map(toSerializedScoreDecision)
+
+  const regionById = new Map(
+    questionRegions.map((cropRegion) => [cropRegion.id, cropRegion])
+  )
+  /**
+   * 設問の採点方式に合う判定か（docs/vlm-grading-design.md §4-8-8）。合わない行は DB に残るだけで、
+   * 未採点と同じに読む — 提案として並べず、進み具合にも、確定の数にも入れない。
+   * 解決（`resolveEffectiveScores`）も同じ規則で読むので、競合・stale もこれに従う
+   */
+  const isCounted = (cropRegionId: string, status: string): boolean => {
+    const cropRegion = regionById.get(cropRegionId)
+    return (
+      cropRegion !== undefined &&
+      isScoreCountedForScoringMethod(cropRegion.scoringMethod, status)
+    )
+  }
+  const decisions = scoreDecisionRows
+    .map(toSerializedScoreDecision)
+    .filter((decision) => isCounted(decision.cropRegionId, decision.verdict))
 
   /**
    * 採点の対象になる受験者。**答案画像があるかどうかだけで決める。**
@@ -107,7 +126,11 @@ export const getExamDecisionSummary = async (
     scorableExamStudentIds.has(score.examStudentId)
   )
 
-  const { resolved, conflicts } = resolveEffectiveScores(scores, decisions)
+  const { resolved, conflicts } = resolveEffectiveScores(
+    scores,
+    decisions,
+    questionRegions
+  )
 
   // 裁定対象セル: 解決できなかった競合と、確定後に新しい提案が入ったもの。
   // 加えて確定済みのセルも、確定し直せるように載せる
@@ -141,9 +164,6 @@ export const getExamDecisionSummary = async (
       })),
   ]
 
-  const regionById = new Map(
-    questionRegions.map((cropRegion) => [cropRegion.id, cropRegion])
-  )
   const decisionByCell = new Map(
     decisions.map((decision) => [
       cellKey(decision.examStudentId, decision.cropRegionId),
@@ -157,7 +177,7 @@ export const getExamDecisionSummary = async (
     ])
   )
 
-  // セルごとの提案（unscored は採点の意思表示ではないので除く）と、
+  // セルごとの提案（unscored は採点の意思表示ではないので除く。方式と合わない行も未採点と同じに除く）と、
   // 設問ごとの進捗（担当者別／全体）を1周で集める。
   const proposalsByCell = new Map<string, typeof scores>()
   const gradedUserIds = new Set<string>()
@@ -168,6 +188,7 @@ export const getExamDecisionSummary = async (
 
   for (const score of scores) {
     if (score.status === "unscored") continue
+    if (!isCounted(score.cropRegionId, score.status)) continue
     gradedUserIds.add(score.userId)
 
     const key = cellKey(score.examStudentId, score.cropRegionId)

@@ -31,12 +31,16 @@ interface QuestionScoreSeed {
 }
 
 /** 1ページ・1設問・答案1枚。その1マスに任意の採点行をぶら下げる */
-function buildProgress(questionScoreSeeds: QuestionScoreSeed[]) {
+function buildProgress(
+  questionScoreSeeds: QuestionScoreSeed[],
+  scoringMethod = "points"
+) {
   const cropRegions = [
     {
       id: CROP_REGION_ID,
       examPageId: EXAM_PAGE_ID,
       label: "問1",
+      scoringMethod,
     },
   ] as unknown as QuestionAnswerRegionRow[]
 
@@ -208,5 +212,35 @@ describe("同じマスに同じ利用者の行が2つある（同期のマージ
 
     expect(forward.gradedAnswers).toBe(1)
     expect(backward.gradedAnswers).toBe(1)
+  })
+})
+
+/**
+ * 方式と合わない採点（類型評価の設問の正答・誤答・部分点、点の採点の設問の評価済み）は
+ * 行が残っていても未採点として読む（docs/vlm-grading-design.md §4-8-8）
+ */
+describe("calculateQuestionProgress の方式と合わない採点", () => {
+  it("類型評価の設問の正答・部分点は採点済みに数えない", () => {
+    expect(
+      buildProgress([{ status: "correct", partialScore: null }], "scale")
+    ).toMatchObject({ gradedAnswers: 0, finalizedAnswers: 0, percentage: 0 })
+    expect(
+      buildProgress([{ status: "partial", partialScore: 3 }], "scale")
+    ).toMatchObject({ gradedAnswers: 0, finalizedAnswers: 0 })
+  })
+
+  it("点の採点の設問の評価済みは採点済みに数えない", () => {
+    expect(
+      buildProgress([{ status: "evaluated", partialScore: 6 }], "points")
+    ).toMatchObject({ gradedAnswers: 0, finalizedAnswers: 0 })
+  })
+
+  it("方式に合う採点は数える（類型評価の評価済み・どの方式でも合う無答）", () => {
+    expect(
+      buildProgress([{ status: "evaluated", partialScore: 6 }], "scale")
+    ).toMatchObject({ gradedAnswers: 1, finalizedAnswers: 1 })
+    expect(
+      buildProgress([{ status: "no_answer", partialScore: null }], "scale")
+    ).toMatchObject({ gradedAnswers: 1, finalizedAnswers: 1 })
   })
 })

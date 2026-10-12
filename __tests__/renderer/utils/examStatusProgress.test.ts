@@ -44,6 +44,7 @@ function buildExam(examStudents: { id: string; status: string }[]) {
     cropRegions: [
       {
         type: "QUESTION_ANSWER",
+        scoringMethod: "points",
         questionScores: [
           questionScore({ examStudentId: EXAM_STUDENT_A, status: "correct" }),
         ],
@@ -83,6 +84,7 @@ describe("getExamProgress の受験者スコープ", () => {
       cropRegions: [
         {
           type: "QUESTION_ANSWER",
+          scoringMethod: "points",
           // 採点行だけ Student.id で持っている（取り違え）
           questionScores: [
             questionScore({ examStudentId: "student-a", status: "correct" }),
@@ -116,6 +118,7 @@ describe("getExamProgress の受験者集合", () => {
       cropRegions: [
         {
           type: "QUESTION_ANSWER",
+          scoringMethod: "points",
           questionScores: [
             questionScore({
               examStudentId: EXAM_STUDENT_A,
@@ -164,6 +167,7 @@ describe("getExamProgress の採点確定", () => {
       cropRegions: [
         {
           type: "QUESTION_ANSWER",
+          scoringMethod: "points",
           questionScores: proposals,
           scoreDecisions,
         },
@@ -305,6 +309,7 @@ describe("getExamProgress の採点確定", () => {
       cropRegions: [
         {
           type: "QUESTION_ANSWER",
+          scoringMethod: "points",
           questionScores: [
             questionScore({
               examStudentId: EXAM_STUDENT_B,
@@ -339,6 +344,7 @@ describe("getExamProgress の採点確定", () => {
       cropRegions: [
         {
           type: "QUESTION_ANSWER",
+          scoringMethod: "points",
           questionScores: [
             questionScore({
               examStudentId: EXAM_STUDENT_B,
@@ -375,6 +381,7 @@ describe("getExamProgress の採点確定", () => {
       cropRegions: [
         {
           type: "QUESTION_ANSWER",
+          scoringMethod: "points",
           questionScores: [
             questionScore({
               examStudentId: EXAM_STUDENT_B,
@@ -433,5 +440,71 @@ describe("getExamWorkflowStatus の採点確定", () => {
     const workflow = getExamWorkflowStatus(progressAfterScoring(0), "exam-1")
 
     expect(workflow.url).toBe("/exams/exam-1/09-export")
+  })
+})
+
+/**
+ * 方式と合わない採点（類型評価の設問の正答・誤答・部分点、点の採点の設問の評価済み）は、
+ * 行が残っていても未採点として読む（docs/vlm-grading-design.md §4-8-8）。
+ * 採点済みにも、裁定の要る提案にも数えない
+ */
+describe("getExamProgress の方式と合わない採点", () => {
+  function buildQuestion(
+    scoringMethod: string,
+    proposals: ReturnType<typeof questionScore>[]
+  ) {
+    return getExamProgress({
+      examPages: [{ id: "page-1" }],
+      answerImages: [{ examStudentId: EXAM_STUDENT_A }],
+      cropRegions: [
+        {
+          type: "QUESTION_ANSWER",
+          scoringMethod,
+          questionScores: proposals,
+          scoreDecisions: [],
+        },
+      ],
+      examStudents: [{ id: EXAM_STUDENT_A, status: "participating" }],
+      examSubtotalGroups: [],
+    })
+  }
+
+  it("類型評価の設問の正答は採点済みに数えない", () => {
+    const progress = buildQuestion("scale", [
+      questionScore({ examStudentId: EXAM_STUDENT_A, status: "correct" }),
+    ])
+
+    expect(progress.actualScoringCount).toBe(0)
+    expect(progress.hasScoring).toBe(false)
+  })
+
+  it("点の採点の設問の評価済みは採点済みに数えない", () => {
+    const progress = buildQuestion("points", [
+      questionScore({ examStudentId: EXAM_STUDENT_A, status: "evaluated" }),
+    ])
+
+    expect(progress.actualScoringCount).toBe(0)
+  })
+
+  it("方式に合う採点はこれまでどおり数える", () => {
+    expect(
+      buildQuestion("scale", [
+        questionScore({ examStudentId: EXAM_STUDENT_A, status: "evaluated" }),
+      ]).actualScoringCount
+    ).toBe(1)
+    expect(
+      buildQuestion("scale", [
+        questionScore({ examStudentId: EXAM_STUDENT_A, status: "no_answer" }),
+      ]).actualScoringCount
+    ).toBe(1)
+  })
+
+  it("方式と合わない提案は食い違いに数えない", () => {
+    const progress = buildQuestion("scale", [
+      questionScore({ examStudentId: EXAM_STUDENT_A, status: "evaluated" }),
+      questionScore({ examStudentId: EXAM_STUDENT_A, status: "incorrect" }),
+    ])
+
+    expect(progress.pendingDecisionCount).toBe(0)
   })
 })

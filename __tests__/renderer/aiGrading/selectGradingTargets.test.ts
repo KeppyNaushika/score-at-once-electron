@@ -28,7 +28,7 @@ function buildInput(
   overrides: Partial<GradingTargetSelectionInput> = {}
 ): GradingTargetSelectionInput {
   return {
-    cropRegionId: CROP_REGION_ID,
+    cropRegion: { id: CROP_REGION_ID, scoringMethod: "points" },
     currentUserId: CURRENT_USER_ID,
     answers: [
       makeAnswer("s-none"),
@@ -139,7 +139,7 @@ describe("selectGradingTargets", () => {
 
   it("設問の id が空なら投げる（全員が未採点に見える失敗を防ぐ）", () => {
     expect(() =>
-      selectGradingTargets(buildInput({ cropRegionId: "" }), "all")
+      selectGradingTargets(buildInput({ cropRegion: { id: "", scoringMethod: "points" } }), "all")
     ).toThrow()
   })
 })

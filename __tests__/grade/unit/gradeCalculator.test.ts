@@ -1533,8 +1533,18 @@ describe("calculateGrades - subtotal 型データソース", () => {
         id: "page1",
         examId: EXAM_ID,
         cropRegions: [
-          { id: "q1", type: "QUESTION_ANSWER", points: 10 },
-          { id: "q2", type: "QUESTION_ANSWER", points: 10 },
+          {
+            id: "q1",
+            type: "QUESTION_ANSWER",
+            points: 10,
+            scoringMethod: "points",
+          },
+          {
+            id: "q2",
+            type: "QUESTION_ANSWER",
+            points: 10,
+            scoringMethod: "points",
+          },
         ],
       },
     ])
