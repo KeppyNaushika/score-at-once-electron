@@ -3,6 +3,8 @@ import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-s
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
+import { countedStatusOf } from "@/types/rubric.types"
+import { toScoringStatus } from "@/types/scoringStatus.types"
 
 /** 採点行を持たない設問のための空値（毎回新しい配列を作らない） */
 const EMPTY_SCORES: QuestionScoreRow[] = []
@@ -52,19 +54,26 @@ export function calculateQuestionProgress(
         pageImage.examStudentId,
         currentUserId
       )
+      // 方式と合わない採点は未採点として読む（行は残すだけ。§4-8-8）
+      const status = score
+        ? countedStatusOf(
+            cropRegion.scoringMethod,
+            toScoringStatus(score.status)
+          )
+        : "unscored"
       const isGraded =
         score &&
-        score.status !== "unscored" &&
+        status !== "unscored" &&
         // partial/pending は partialScore が入力済みの場合のみ採点済みとする
         !(
-          (score.status === "partial" || score.status === "pending") &&
+          (status === "partial" || status === "pending") &&
           score.partialScore === null
         )
 
       if (isGraded) {
         gradedAnswers++
         // 保留は採点済みだが確定ではない
-        if (score.status !== "pending") {
+        if (status !== "pending") {
           finalizedAnswers++
         }
       }

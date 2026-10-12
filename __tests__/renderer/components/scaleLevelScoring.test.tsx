@@ -8,7 +8,7 @@
  * - 点の採点の設問では、数字キーはこれまでどおり部分点の入力を始め、正答のキーも効く
  * - 採点パネルは、部分点の欄と正答・誤答・部分点のボタンの代わりに類型のボタンを並べる
  * - 類型の組が選ばれていなければ知らせる
- * - 一覧のマスは類型の記号と点数を類型の色で出し、方式と合わない採点に印を付ける
+ * - 一覧のマスは類型の記号と点数を類型の色で出し、方式と合わない採点は未採点と同じに見せる
  *
  * window.electronAPI は偽物で、実データには触れない。
  */
@@ -430,7 +430,6 @@ function renderCell(
 describe("一覧のマスの類型", () => {
   it("類型を付けたマスは、類型の記号と点数を類型の色で出す", () => {
     const cell = renderCell("evaluated", {
-      kind: "level",
       label: "B",
       score: 6,
       colors: SCALE_LEVEL_PALETTE[1],
@@ -448,16 +447,5 @@ describe("一覧のマスの類型", () => {
     expect(within(cell).getByText("-/10")).toBeInTheDocument()
     // 評価済みの既定の色（#F1F5F9）
     expect(cell.style.backgroundColor).toBe("rgb(241, 245, 249)")
-  })
-
-  it("方式と合わない採点には印を付け、点に取り消し線を引く", () => {
-    const cell = renderCell("correct", { kind: "incompatible" })
-
-    expect(
-      within(cell).getByRole("img", {
-        name: "方式と合わない採点（得点にしません）",
-      })
-    ).toBeInTheDocument()
-    expect(within(cell).getByText("10/10")).toHaveClass("line-through")
   })
 })

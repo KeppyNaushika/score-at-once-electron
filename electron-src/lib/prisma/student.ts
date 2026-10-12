@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 
 import { calculateActualScore } from "@/lib/shared/actualScore"
+import { isScoreCountedForScoringMethod } from "@/types/rubric.types"
 
 import { buildStudentDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
 import { diffFields, recordAuditLog } from "./auditLog"
@@ -282,9 +283,14 @@ export const getStudentExamResults = async (
           let questionScore = 0
           let isScored = false
 
+          // 設問の採点方式と合わない採点は、行が在っても未採点と同じに読む（§4-8-8）
           if (
             questionScoreRecord &&
-            questionScoreRecord.status !== "unscored"
+            questionScoreRecord.status !== "unscored" &&
+            isScoreCountedForScoringMethod(
+              region.scoringMethod,
+              questionScoreRecord.status
+            )
           ) {
             isScored = true
             scoredCount++

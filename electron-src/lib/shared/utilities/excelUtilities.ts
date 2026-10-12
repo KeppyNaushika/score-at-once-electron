@@ -2,10 +2,7 @@
 import type * as ExcelJS from "exceljs"
 
 import { formatScaleValue } from "@/lib/shared/scaleValueDisplay"
-import {
-  isStatusCompatibleWithScoringMethod,
-  type ScaleValueDisplay,
-} from "@/types/rubric.types"
+import type { ScaleValueDisplay } from "@/types/rubric.types"
 
 import type { ScoreDetail } from "../types"
 
@@ -46,9 +43,9 @@ export function getStatusSymbol(status: string, score?: number): string {
 
 /**
  * 正誤一覧の設問セルの記号。類型評価で類型を付けた設問は、正誤の記号ではなく類型を見せ方
- * （`scaleValueDisplay`）に従って出す（docs/vlm-grading-design.md §4-8-8）。類型評価の設問の
- * 方式と合わない採点（正答・誤答・部分点）は点にならないので、正誤の記号も出さず「-」にする。
- * それ以外（保留・無答・Wマーク・点の設問）は正誤の記号
+ * （`scaleValueDisplay`）に従って出す（docs/vlm-grading-design.md §4-8-8）。
+ * それ以外（保留・無答・Wマーク・点の設問）は正誤の記号。方式と合わない採点は、解決
+ * （`resolveEffectiveScores`）で未採点として読んであるので、ここへは届かない
  */
 export function getScoreCellSymbol(
   score: Pick<ScoreDetail, "status" | "score" | "scoringMethod" | "scaleLevel">,
@@ -62,9 +59,6 @@ export function getScoreCellSymbol(
       },
       scaleValueDisplay
     )
-  }
-  if (!isStatusCompatibleWithScoringMethod(score.scoringMethod, score.status)) {
-    return "-"
   }
   return getStatusSymbol(score.status, score.score ?? undefined)
 }

@@ -9,6 +9,7 @@
 import type { RubricItem } from "@prisma/client"
 
 import type { Serialized } from "./prismaExtensions"
+import type { ScoringStatus } from "./scoringStatus.types"
 import { defineStringUnion } from "./stringUnion"
 
 /**
@@ -60,6 +61,24 @@ export const isStatusCompatibleWithScoringMethod = (
   scoringMethod === "scale"
     ? !POINT_VERDICT_STATUSES.has(status)
     : status !== "evaluated"
+
+/**
+ * 方式と合わない採点を未採点として読む。行は DB に残すだけで、採点済みにも数えず、画面にも出力にも
+ * 出さない。方式を戻したときにだけ、元の採点として表に出る（docs/vlm-grading-design.md §4-8-8）。
+ * 採点行の状態を読む所（解決・進み具合・表示・出力）は、生の status でなくこれを通す
+ */
+export const isScoreCountedForScoringMethod = (
+  scoringMethod: string,
+  status: string
+): boolean =>
+  isStatusCompatibleWithScoringMethod(toScoringMethod(scoringMethod), status)
+
+/** 方式と合わない採点を未採点に読み替えた状態（{@link isScoreCountedForScoringMethod}） */
+export const countedStatusOf = (
+  scoringMethod: string,
+  status: ScoringStatus
+): ScoringStatus =>
+  isScoreCountedForScoringMethod(scoringMethod, status) ? status : "unscored"
 
 /**
  * 類型評価の値の見せ方（§4-8-8）。points は「8」（点数だけ）、label_points は「A (8)」（記号と点数）、

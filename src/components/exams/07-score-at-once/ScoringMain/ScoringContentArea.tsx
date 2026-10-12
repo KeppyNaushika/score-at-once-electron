@@ -66,7 +66,7 @@ interface ScoringContentAreaProps {
   renderBeforeStatusMark?: ComponentProps<
     typeof AnswerGridView
   >["renderBeforeStatusMark"]
-  /** 一覧のマスの類型の見せ方（類型評価の設問の類型・方式と合わない採点） */
+  /** 一覧のマスの類型の見せ方（類型評価の設問の類型） */
   scaleAppearanceOf?: ComponentProps<typeof AnswerGridView>["scaleAppearanceOf"]
 }
 

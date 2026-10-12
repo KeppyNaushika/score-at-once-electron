@@ -428,7 +428,6 @@ describe("答案の下の結果", () => {
           )
           if (status !== "evaluated" || order < 0) return null
           return {
-            kind: "level",
             label: scaleLevels[order].label,
             score: scaleLevels[order].score,
             colors: [

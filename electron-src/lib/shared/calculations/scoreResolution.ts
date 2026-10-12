@@ -26,6 +26,14 @@
  * からで、掃き残しへの応急処置ではない。注釈（DrawingAnnotation）は親の採点行を必須で
  * 持つので、「注釈だけ付けて採点はまだ」を表すには `unscored` の行が要る。行は在るが
  * 提案ではない、という状態はこれからも正しく起こる。
+ *
+ * **設問の採点方式と合わない行は、解決の前に未採点として読む**（docs/vlm-grading-design.md
+ * §4-8-8）。類型評価の設問に付いた ○×△、点数の設問に付いた類型は、行として DB に残るだけで、
+ * どの結果にも出力にも現れない。
+ * - 提案: 判定を `unscored`、点数と類型を空にしてから束ねる。よって競合も作らず、合う提案に勝ちもしない
+ * - 確定: 無かったものとして読む。そのセルは合う提案から解決し直す（方式を変えたあとに付けた
+ *   採点がそのまま結果になる）。確定の行は消さないので、方式を戻せば元の確定がまた勝つ
+ * 方式を戻したときにすべてが元に戻るよう、行は書き換えず読み方だけを変える
  */
 
 import type { CropRegion } from "@prisma/client"
@@ -35,6 +43,7 @@ import type {
   SerializedQuestionScore,
   SerializedScoreDecision,
 } from "@/types/prismaExtensions"
+import { isScoreCountedForScoringMethod } from "@/types/rubric.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
@@ -125,12 +134,44 @@ const proposalToEffective = (
   isStale,
 })
 
+/** 解決に要る設問の列。行がどの方式の設問に付いたかを引く */
+type ResolvableCropRegion = Pick<CropRegion, "id" | "scoringMethod">
+
 export function resolveEffectiveScores(
   scores: ResolvableQuestionScore[],
-  decisions: ResolvableScoreDecision[] = []
+  decisions: ResolvableScoreDecision[],
+  cropRegions: ResolvableCropRegion[]
 ): ResolveResult {
+  const scoringMethodByCropRegionId = new Map(
+    cropRegions.map((cropRegion) => [cropRegion.id, cropRegion.scoringMethod])
+  )
+  // 行の設問は外部キーで必ず在る。見つからないのは呼び出し側が設問を渡し漏らしたときで、
+  // 方式を判定できないまま読むと合わない採点が結果に漏れるので、黙って進めない
+  const isCounted = (cropRegionId: string, status: string): boolean => {
+    const scoringMethod = scoringMethodByCropRegionId.get(cropRegionId)
+    if (scoringMethod === undefined) {
+      throw new Error(
+        `有効スコアの解決に設問 ${cropRegionId} の採点方式が渡されていません`
+      )
+    }
+    return isScoreCountedForScoringMethod(scoringMethod, status)
+  }
+
   const groups = new Map<string, ResolvableQuestionScore[]>()
-  for (const score of scores) {
+  for (const rawScore of scores) {
+    // 方式と合わない提案は未採点の行として束ねる（注釈をぶら下げただけの行と同じ扱い）
+    const score: ResolvableQuestionScore = isCounted(
+      rawScore.cropRegionId,
+      rawScore.status
+    )
+      ? rawScore
+      : {
+          ...rawScore,
+          status: "unscored",
+          partialScore: null,
+          scaleLevelId: null,
+          scaleLevel: null,
+        }
     const key = cellKey(score.examStudentId, score.cropRegionId)
     const group = groups.get(key)
     if (group) {
@@ -146,6 +187,8 @@ export function resolveEffectiveScores(
 
   // 1) 明示的な確定（ScoreDecision）が最優先
   for (const decision of decisions) {
+    // 方式と合わない確定は無かったものとして読み、そのセルは提案から解決する
+    if (!isCounted(decision.cropRegionId, decision.verdict)) continue
     const key = cellKey(decision.examStudentId, decision.cropRegionId)
     if (decidedCells.has(key)) continue // 不正データ耐性（uniqueにより通常は発生しない）
     decidedCells.add(key)

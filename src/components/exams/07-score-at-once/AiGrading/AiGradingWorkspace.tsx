@@ -239,7 +239,7 @@ export function AiGradingWorkspace({
       purpose={purpose}
       runs={runs}
       questionScores={questionScores}
-      cropRegionId={cropRegion.id}
+      cropRegion={cropRegion}
       currentUserId={currentUserId}
       points={points}
       promptNumberById={promptNumberById}

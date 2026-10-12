@@ -75,25 +75,17 @@ export function scaleLevelOfDigit(
   return scaleLevels[Number(key) - 1] ?? null
 }
 
-/**
- * 一覧のマスの類型の見せ方。
- *
- * - `level`: 類型を付けたマス。類型の記号・点数と、並び順の色で出す
- * - `incompatible`: 方式と合わない採点（類型評価の設問の正答・誤答・部分点、点の採点の設問の
- *   評価済み）。得点にしないことを示す
- */
-export type ScaleCellAppearance =
-  | {
-      kind: "level"
-      label: string
-      score: number
-      colors: ScaleLevelColors
-    }
-  | { kind: "incompatible" }
+/** 一覧のマスの類型の見せ方（類型を付けたマス。類型の記号・点数と、並び順の色で出す） */
+export interface ScaleCellAppearance {
+  label: string
+  score: number
+  colors: ScaleLevelColors
+}
 
 /**
  * マスを類型の見せ方で出すなら、その見せ方。採点状態の見せ方のままでよいマスは null
- * （類型が消えた評価済みも、評価済みの既定の見せ方に任せる）
+ * （類型が消えた評価済みも、評価済みの既定の見せ方に任せる）。
+ * 方式と合わない採点はどこでも未採点として読むので（docs/vlm-grading-design.md §4-8-8）、類型の見せ方にもしない
  */
 export function scaleCellAppearanceOf({
   scoringMethod,
@@ -106,9 +98,7 @@ export function scaleCellAppearanceOf({
   scaleLevelId: string | null
   scaleLevels: readonly ScaleLevelChoice[]
 }): ScaleCellAppearance | null {
-  if (!isStatusCompatibleWithScoringMethod(scoringMethod, status)) {
-    return { kind: "incompatible" }
-  }
+  if (!isStatusCompatibleWithScoringMethod(scoringMethod, status)) return null
   if (status !== "evaluated" || scaleLevelId === null) return null
   const order = scaleLevels.findIndex(
     (scaleLevel) => scaleLevel.id === scaleLevelId
@@ -116,7 +106,6 @@ export function scaleCellAppearanceOf({
   if (order < 0) return null
   const scaleLevel = scaleLevels[order]
   return {
-    kind: "level",
     label: scaleLevel.label,
     score: scaleLevel.score,
     colors: scaleLevelColorsAt(order),

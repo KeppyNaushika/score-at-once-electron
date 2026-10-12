@@ -165,9 +165,9 @@ describe("Excel のシート", () => {
     expect(studentRow(scoreSheet, 0).getCell(firstQuestionColumn).value).toBe(
       12
     )
-    // 方式と合わない正答は、正誤一覧で記号にせず・点数一覧で 0 点にしない
+    // 方式と合わない正答は未採点と同じ — 正誤一覧も点数一覧も空欄（記号も 0 点も出さない）
     expect(studentRow(resultSheet, 2).getCell(firstQuestionColumn).value).toBe(
-      "-"
+      ""
     )
     expect(studentRow(scoreSheet, 2).getCell(firstQuestionColumn).value).toBe(
       ""
@@ -192,6 +192,33 @@ describe("Excel のシート", () => {
     expect(pointRow.getCell(3).value).toBeCloseTo(66.7, 1)
     expect(pointRow.getCell(7).value).toBe("")
     expect(findRow(worksheet, "平均").getCell(3).value).toBeCloseTo(22.2, 1)
+  })
+
+  it("点の設問に残った類型は未採点と同じで、問題分析も手を付けていない設問と同じに読む", async () => {
+    await writeScores()
+    // 問3 にだけ方式と合わない類型を残す（問4 は誰も採点していない）
+    await writeScore(0, 2, { status: "evaluated", scaleLevelId: levelA.id })
+    const exportData = await fetchExportData(fixture.exam.id, [])
+    const firstStudent = exportData.scoringData.find(
+      (scoringData) => scoringData.examStudentId === fixture.examStudents[0].id
+    )!
+    expect(firstStudent.scores[2]).toMatchObject({
+      status: "unscored",
+      score: null,
+      scaleLevel: null,
+    })
+
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = await createItemAnalysisSheet(
+      workbook,
+      exportData.questionRegions,
+      exportData.scoreScales,
+      exportData.scoringData
+    )
+    const leftoverRow = findRow(worksheet, "問3")
+    const untouchedRow = findRow(worksheet, "問4")
+    expect(leftoverRow.getCell(3).value).toBe(untouchedRow.getCell(3).value)
+    expect(leftoverRow.getCell(4).value).toBe(untouchedRow.getCell(4).value)
   })
 
   it("S-P 表に類型評価の設問を入れない", async () => {

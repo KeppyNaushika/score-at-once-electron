@@ -65,12 +65,23 @@ function decision(
 
 const pointsRegion = { points: 10, scoringMethod: "points" }
 
+// リゾルバは行の設問の採点方式を必ず受け取る（方式と合わない採点を未採点として読むため）
+const pointsCropRegions = ["region-1", "r1", "r2"].map((cropRegionId) => ({
+  id: cropRegionId,
+  scoringMethod: "points",
+}))
+const scaleCropRegions = [{ id: "region-1", scoringMethod: "scale" }]
+
 // ================== resolveEffectiveScores: 提案のみ ==================
 
 describe("resolveEffectiveScores - 提案のみ", () => {
   it("単一の提案はそのまま解決される", () => {
     const scoreRow = score({ status: "correct" })
-    const { resolved, conflicts } = resolveEffectiveScores([scoreRow])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [scoreRow],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(1)
     expect(resolved[0]).toMatchObject({
       examStudentId: "student-1",
@@ -88,11 +99,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     const scoreA = score({ examStudentId: "s1", cropRegionId: "r1" })
     const scoreB = score({ examStudentId: "s1", cropRegionId: "r2" })
     const scoreC = score({ examStudentId: "s2", cropRegionId: "r1" })
-    const { resolved, conflicts } = resolveEffectiveScores([
-      scoreA,
-      scoreB,
-      scoreC,
-    ])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [scoreA, scoreB, scoreC],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(3)
     expect(conflicts).toEqual([])
   })
@@ -101,7 +112,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     // 注釈をぶら下げるために用意された行（採点の意思表示ではない）を想定
     const initRow = score({ status: "unscored" })
     const scored = score({ status: "correct" })
-    const { resolved, conflicts } = resolveEffectiveScores([initRow, scored])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [initRow, scored],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(1)
     expect(resolved[0].annotationQuestionScoreIds).toEqual([scored.id])
     expect(conflicts).toEqual([])
@@ -110,7 +125,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   it("全行unscoredなら1件だけ残る", () => {
     const scoreA = score({ status: "unscored" })
     const scoreB = score({ status: "unscored" })
-    const { resolved, conflicts } = resolveEffectiveScores([scoreA, scoreB])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [scoreA, scoreB],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(1)
     expect(resolved[0].status).toBe("unscored")
     expect(conflicts).toEqual([])
@@ -119,7 +138,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   it("複数採点者の判定と点数が一致していれば合意として解決される", () => {
     const teacherA = score({ status: "partial", partialScore: 3 })
     const teacherB = score({ status: "partial", partialScore: 3 })
-    const { resolved, conflicts } = resolveEffectiveScores([teacherA, teacherB])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [teacherA, teacherB],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(1)
     expect(resolved[0].partialScore).toBe(3)
     expect(conflicts).toEqual([])
@@ -128,7 +151,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   it("点数が一致してもstatusが異なれば競合になる", () => {
     const teacherA = score({ status: "partial", partialScore: 3 })
     const teacherB = score({ status: "pending", partialScore: 3 })
-    const { resolved, conflicts } = resolveEffectiveScores([teacherA, teacherB])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [teacherA, teacherB],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toEqual([])
     expect(conflicts).toHaveLength(1)
   })
@@ -136,7 +163,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   it("複数採点者の点数が食い違えば競合になり値を出さない", () => {
     const teacherA = score({ status: "partial", partialScore: 3 })
     const teacherB = score({ status: "partial", partialScore: 7 })
-    const { resolved, conflicts } = resolveEffectiveScores([teacherA, teacherB])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [teacherA, teacherB],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toEqual([])
     expect(conflicts).toEqual([
       {
@@ -159,8 +190,16 @@ describe("resolveEffectiveScores - 提案のみ", () => {
       status: "correct",
       updatedAt: timestamp,
     })
-    const result1 = resolveEffectiveScores([scoreA, scoreB])
-    const result2 = resolveEffectiveScores([scoreB, scoreA])
+    const result1 = resolveEffectiveScores(
+      [scoreA, scoreB],
+      [],
+      pointsCropRegions
+    )
+    const result2 = resolveEffectiveScores(
+      [scoreB, scoreA],
+      [],
+      pointsCropRegions
+    )
     expect(result1.resolved[0].annotationQuestionScoreIds).toEqual(["id-zzz"])
     expect(result2.resolved[0].annotationQuestionScoreIds).toEqual(["id-zzz"])
   })
@@ -174,7 +213,11 @@ describe("resolveEffectiveScores - 提案のみ", () => {
       status: toScoringStatus("not-a-scoring-status"),
       partialScore: 5,
     })
-    const { resolved, conflicts } = resolveEffectiveScores([unknownStatusRow])
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [unknownStatusRow],
+      [],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(1)
     expect(resolved[0].status).toBe("unscored")
     expect(conflicts).toEqual([])
@@ -191,7 +234,8 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const decisionRow = decision({ verdict: "partial", score: 5 })
     const { resolved, conflicts } = resolveEffectiveScores(
       [teacherA, teacherB],
-      [decisionRow]
+      [decisionRow],
+      pointsCropRegions
     )
     expect(resolved).toHaveLength(1)
     expect(resolved[0]).toMatchObject({
@@ -205,7 +249,11 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
 
   it("提案が無いセルの確定も解決される", () => {
     const decisionRow = decision()
-    const { resolved } = resolveEffectiveScores([], [decisionRow])
+    const { resolved } = resolveEffectiveScores(
+      [],
+      [decisionRow],
+      pointsCropRegions
+    )
     expect(resolved).toHaveLength(1)
     expect(resolved[0].source).toBe("decision")
     expect(resolved[0].annotationQuestionScoreIds).toEqual([])
@@ -219,7 +267,8 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const decisionRow = decision({ verdict: "correct", score: null })
     const { resolved } = resolveEffectiveScores(
       [teacherA, teacherB],
-      [decisionRow]
+      [decisionRow],
+      pointsCropRegions
     )
     expect(resolved[0].annotationQuestionScoreIds).toEqual(["qs-a", "qs-b"])
   })
@@ -233,7 +282,11 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const decisionRow = decision({
       decidedAt: new Date("2026-06-02T10:00:00Z"),
     })
-    const { resolved } = resolveEffectiveScores([newer], [decisionRow])
+    const { resolved } = resolveEffectiveScores(
+      [newer],
+      [decisionRow],
+      pointsCropRegions
+    )
     expect(resolved[0].isStale).toBe(true)
     // 値は確定のまま
     expect(resolved[0].partialScore).toBe(5)
@@ -248,7 +301,11 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const decisionRow = decision({
       decidedAt: new Date("2026-06-02T10:00:00Z"),
     })
-    const { resolved } = resolveEffectiveScores([older], [decisionRow])
+    const { resolved } = resolveEffectiveScores(
+      [older],
+      [decisionRow],
+      pointsCropRegions
+    )
     expect(resolved[0].isStale).toBe(false)
   })
 
@@ -258,7 +315,8 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const decisionRow = decision({ cropRegionId: "r1" })
     const { resolved } = resolveEffectiveScores(
       [decided, undecided],
-      [decisionRow]
+      [decisionRow],
+      pointsCropRegions
     )
     expect(resolved).toHaveLength(2)
     const region2Score = resolved.find(
@@ -280,7 +338,11 @@ describe("resolveEffectiveScores - 類型評価", () => {
       scaleLevelId: "level-a",
       scaleLevel: levelA,
     })
-    const { resolved } = resolveEffectiveScores([scoreRow])
+    const { resolved } = resolveEffectiveScores(
+      [scoreRow],
+      [],
+      scaleCropRegions
+    )
     expect(resolved[0]).toMatchObject({
       status: "evaluated",
       scaleLevelId: "level-a",
@@ -289,33 +351,41 @@ describe("resolveEffectiveScores - 類型評価", () => {
   })
 
   it("同じ類型なら合意、類型が違えば点数が同じでも競合", () => {
-    const agreed = resolveEffectiveScores([
-      score({
-        status: "evaluated",
-        scaleLevelId: "level-a",
-        scaleLevel: levelA,
-      }),
-      score({
-        status: "evaluated",
-        scaleLevelId: "level-a",
-        scaleLevel: levelA,
-      }),
-    ])
+    const agreed = resolveEffectiveScores(
+      [
+        score({
+          status: "evaluated",
+          scaleLevelId: "level-a",
+          scaleLevel: levelA,
+        }),
+        score({
+          status: "evaluated",
+          scaleLevelId: "level-a",
+          scaleLevel: levelA,
+        }),
+      ],
+      [],
+      scaleCropRegions
+    )
     expect(agreed.conflicts).toEqual([])
     expect(agreed.resolved[0].scaleLevel).toEqual(levelA)
 
-    const disagreed = resolveEffectiveScores([
-      score({
-        status: "evaluated",
-        scaleLevelId: "level-a",
-        scaleLevel: levelA,
-      }),
-      score({
-        status: "evaluated",
-        scaleLevelId: "level-s",
-        scaleLevel: { label: "S", score: 10 },
-      }),
-    ])
+    const disagreed = resolveEffectiveScores(
+      [
+        score({
+          status: "evaluated",
+          scaleLevelId: "level-a",
+          scaleLevel: levelA,
+        }),
+        score({
+          status: "evaluated",
+          scaleLevelId: "level-s",
+          scaleLevel: { label: "S", score: 10 },
+        }),
+      ],
+      [],
+      scaleCropRegions
+    )
     expect(disagreed.resolved).toEqual([])
     expect(disagreed.conflicts).toHaveLength(1)
   })
@@ -330,13 +400,145 @@ describe("resolveEffectiveScores - 類型評価", () => {
           scaleLevelId: "level-a",
           scaleLevel: levelA,
         }),
-      ]
+      ],
+      scaleCropRegions
     )
     expect(resolved[0]).toMatchObject({
       source: "decision",
       scaleLevelId: "level-a",
       scaleLevel: levelA,
     })
+  })
+})
+
+// ================== resolveEffectiveScores: 方式と合わない採点 ==================
+
+// 方式と合わない採点（類型評価の設問の ○×△、点数の設問の類型）は DB に残るだけで、
+// 未採点と同じに読む。方式を戻せば元の採点として表に出る（docs/vlm-grading-design.md §4-8-8）
+describe("resolveEffectiveScores - 方式と合わない採点", () => {
+  const levelA = { label: "A", score: 10 }
+
+  it("方式と合わない提案だけなら未採点として解決される（点数・類型も空）", () => {
+    const pointVerdict = score({ status: "partial", partialScore: 3 })
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [pointVerdict],
+      [],
+      scaleCropRegions
+    )
+    expect(conflicts).toEqual([])
+    expect(resolved).toHaveLength(1)
+    expect(resolved[0]).toMatchObject({
+      status: "unscored",
+      partialScore: null,
+      scaleLevelId: null,
+      scaleLevel: null,
+      source: "proposal",
+    })
+  })
+
+  it("点数の設問に付いた類型も未採点として読む", () => {
+    const evaluated = score({
+      status: "evaluated",
+      scaleLevelId: "level-a",
+      scaleLevel: levelA,
+    })
+    const { resolved } = resolveEffectiveScores(
+      [evaluated],
+      [],
+      pointsCropRegions
+    )
+    expect(resolved[0]).toMatchObject({
+      status: "unscored",
+      scaleLevelId: null,
+      scaleLevel: null,
+    })
+  })
+
+  it("合う提案と並べても競合にならず、合う提案が採用される", () => {
+    const pointVerdict = score({ status: "correct", userId: "user-a" })
+    const evaluated = score({
+      status: "evaluated",
+      userId: "user-b",
+      scaleLevelId: "level-a",
+      scaleLevel: levelA,
+    })
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [pointVerdict, evaluated],
+      [],
+      scaleCropRegions
+    )
+    expect(conflicts).toEqual([])
+    expect(resolved).toHaveLength(1)
+    expect(resolved[0]).toMatchObject({
+      status: "evaluated",
+      scaleLevel: levelA,
+      annotationQuestionScoreIds: [evaluated.id],
+    })
+
+    // 方式を戻すと、今度は類型の行が読まれなくなり、元の正答が採用される
+    const switchedBack = resolveEffectiveScores(
+      [pointVerdict, evaluated],
+      [],
+      pointsCropRegions
+    )
+    expect(switchedBack.conflicts).toEqual([])
+    expect(switchedBack.resolved[0]).toMatchObject({
+      status: "correct",
+      annotationQuestionScoreIds: [pointVerdict.id],
+    })
+  })
+
+  it("方式と合わない確定は無かったものとして読み、セルは提案から解決する。方式を戻せば確定がまた勝つ", () => {
+    const evaluated = score({
+      status: "evaluated",
+      scaleLevelId: "level-a",
+      scaleLevel: levelA,
+      updatedAt: new Date("2026-06-03T10:00:00Z"),
+    })
+    const pointDecision = decision({ verdict: "partial", score: 5 })
+
+    const onScale = resolveEffectiveScores(
+      [evaluated],
+      [pointDecision],
+      scaleCropRegions
+    )
+    expect(onScale.resolved).toHaveLength(1)
+    expect(onScale.resolved[0]).toMatchObject({
+      source: "proposal",
+      status: "evaluated",
+      scaleLevel: levelA,
+      isStale: false,
+    })
+
+    const onPoints = resolveEffectiveScores(
+      [evaluated],
+      [pointDecision],
+      pointsCropRegions
+    )
+    expect(onPoints.resolved).toHaveLength(1)
+    expect(onPoints.resolved[0]).toMatchObject({
+      source: "decision",
+      status: "partial",
+      partialScore: 5,
+      // 類型の提案は点数の設問では採点として読まないので、確定より新しくても stale にしない
+      isStale: false,
+    })
+  })
+
+  it("方式と合わない確定しか無いセルは解決結果に現れない", () => {
+    const { resolved, conflicts } = resolveEffectiveScores(
+      [],
+      [decision({ verdict: "correct", score: null })],
+      scaleCropRegions
+    )
+    expect(resolved).toEqual([])
+    expect(conflicts).toEqual([])
+  })
+
+  it("設問の採点方式が渡されていない行は黙って読まずに止める", () => {
+    expect(() =>
+      resolveEffectiveScores([score({ cropRegionId: "missing" })], [], [])
+    ).toThrow()
   })
 })
 

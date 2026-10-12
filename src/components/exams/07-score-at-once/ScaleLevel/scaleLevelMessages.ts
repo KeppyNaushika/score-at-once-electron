@@ -5,6 +5,3 @@ export const SCALE_NOT_SELECTED_NOTICE =
 /** 類型評価の設問で、正答・誤答・部分点を付けようとしたときの知らせ */
 export const POINT_VERDICT_ON_SCALE_NOTICE =
   "類型評価の設問では、正答・誤答・部分点は付けません。数字キーか類型のボタンで類型を選んでください"
-
-/** 方式と合わない採点（類型評価の設問の正答・誤答・部分点、点の採点の設問の評価済み）の説明 */
-export const INCOMPATIBLE_SCORE_TITLE = "方式と合わない採点（得点にしません）"

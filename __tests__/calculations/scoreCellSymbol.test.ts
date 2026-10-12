@@ -33,20 +33,6 @@ describe("getScoreCellSymbol", () => {
     expect(getScoreCellSymbol(score, "label_points")).toBe("B (7.5)")
   })
 
-  it("類型評価の設問の方式と合わない採点（正答など）は正誤の記号を出さず「-」", () => {
-    expect(
-      getScoreCellSymbol(
-        {
-          status: "correct",
-          score: null,
-          scoringMethod: "scale",
-          scaleLevel: null,
-        },
-        "label_points"
-      )
-    ).toBe("-")
-  })
-
   it("類型評価の設問の保留・Wマークは正誤の記号", () => {
     expect(
       getScoreCellSymbol(

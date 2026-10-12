@@ -30,8 +30,8 @@ interface UseScaleQuestionOptions {
  * 今の設問が類型評価か、その類型（並び順）と、一覧のマスの類型の見せ方
  * （docs/vlm-grading-design.md §4-8-5・§4-8-6）。
  *
- * 類型の組は類型評価の設問でだけ読む。マスの見せ方はどの方式の設問でも返す
- * （点の採点の設問に残った評価済みも、方式と合わない採点として示すため）
+ * 類型の組は類型評価の設問でだけ読む。マスの状態は方式と合わない採点を未採点に読み替えた後の
+ * もの（`countedStatusOf`）なので、方式と合わない採点のマスは未採点と同じに見える（§4-8-8）
  */
 export function useScaleQuestion({
   examId,

@@ -51,7 +51,7 @@ describe("実行の履歴", () => {
         makeQuestionScore({ examStudentId: "s2" }),
         makeQuestionScore({ examStudentId: "s3" }),
       ],
-      cropRegionId: CROP_REGION_ID,
+      cropRegion: { id: CROP_REGION_ID, scoringMethod: "points" },
       currentUserId: CURRENT_USER_ID,
       points: 4,
     })

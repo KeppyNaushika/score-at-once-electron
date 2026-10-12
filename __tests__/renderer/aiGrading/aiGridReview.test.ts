@@ -253,6 +253,9 @@ describe("一覧のマス", () => {
 
 describe("設問一覧の印（AI の判定が未反映）", () => {
   const otherCropRegionId = "crop-region-other"
+  /** 点の採点の設問（方式を引くためだけに渡す） */
+  const cropRegionsOf = (cropRegionIds: string[]) =>
+    cropRegionIds.map((id) => ({ id, scoringMethod: "points" }))
 
   it("自分の成功した判定があり、自分が未採点の答案がある設問だけを返す", () => {
     const unscoredWithJudgement = makeAttemptWithRun({ examStudentId: "s1" })
@@ -290,6 +293,7 @@ describe("設問一覧の印（AI の判定が未反映）", () => {
     expect(
       selectQuestionsWithUnreflectedAiJudgements(
         [unscoredWithJudgement.run, scoredRun, failedRun],
+        cropRegionsOf([CROP_REGION_ID, otherCropRegionId, "crop-region-failed"]),
         questionScoresByCropRegionId,
         CURRENT_USER_ID
       )
@@ -336,6 +340,7 @@ describe("設問一覧の印（AI の判定が未反映）", () => {
           runOn(scoredByOtherUser, otherCropRegionId),
           runOn(revision, "crop-region-revise"),
         ],
+        cropRegionsOf([CROP_REGION_ID, otherCropRegionId, "crop-region-revise"]),
         questionScoresByCropRegionId,
         CURRENT_USER_ID
       )

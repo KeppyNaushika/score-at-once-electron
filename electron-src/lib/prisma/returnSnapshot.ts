@@ -157,7 +157,11 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
 
   const scoresResult = await getQuestionScoresForExam(examId)
   const decisionsResult = await getScoreDecisionsForExam(examId)
-  const { resolved } = resolveEffectiveScores(scoresResult, decisionsResult)
+  const { resolved } = resolveEffectiveScores(
+    scoresResult,
+    decisionsResult,
+    cropRegions
+  )
 
   const effectiveByExamStudent = new Map<string, EffectiveScore[]>()
   const printedQuestionScoreIds = new Set<string>()

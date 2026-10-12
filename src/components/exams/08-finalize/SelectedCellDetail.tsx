@@ -120,10 +120,9 @@ export function SelectedCellDetail({
             return (
               <li key={result.key} className="text-xs">
                 <div className="flex items-center gap-1">
-                  {scaleAppearance && (
+                  {scaleAppearance ? (
                     <ScaleCellMark appearance={scaleAppearance} />
-                  )}
-                  {scaleAppearance?.kind !== "level" && (
+                  ) : (
                     <Icon
                       className="h-3.5 w-3.5 shrink-0"
                       style={config.iconStyle}

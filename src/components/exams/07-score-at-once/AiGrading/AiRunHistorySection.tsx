@@ -9,6 +9,7 @@ import {
 } from "@/components/common/AiRunOptionToggles"
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { cn } from "@/lib/utils"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
 
@@ -24,7 +25,7 @@ interface AiRunHistorySectionProps {
   purpose: AiGradingStage1Purpose
   runs: AiGradingRunRow[]
   questionScores: QuestionScoreRow[]
-  cropRegionId: string
+  cropRegion: Pick<QuestionAnswerRegionRow, "id" | "scoringMethod">
   currentUserId: string
   points: number | null
   /** 採点指示の id → 採点指示の番号 */
@@ -63,7 +64,7 @@ export function AiRunHistorySection({
   purpose,
   runs,
   questionScores,
-  cropRegionId,
+  cropRegion,
   currentUserId,
   points,
   promptNumberById,
@@ -75,11 +76,11 @@ export function AiRunHistorySection({
       summarizeRunHistory({
         runs,
         questionScores,
-        cropRegionId,
+        cropRegion,
         currentUserId,
         points,
       }),
-    [runs, questionScores, cropRegionId, currentUserId, points]
+    [runs, questionScores, cropRegion, currentUserId, points]
   )
   const runNumberById = useMemo(
     () => numberRunsByPurpose(runHistory),

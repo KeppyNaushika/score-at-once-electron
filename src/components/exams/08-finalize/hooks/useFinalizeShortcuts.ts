@@ -1,7 +1,7 @@
 import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { usePartialScoreShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/shortcuts/usePartialScoreShortcuts"
 
-import type { DecisionVerdict } from "./useFinalizeScreen"
+import type { DecisionVerdict } from "../types"
 
 interface FinalizeShortcutHandlers {
   decide: (verdict: DecisionVerdict) => void

@@ -165,7 +165,7 @@ function setQuestionCells(
         // 未採点の場合は空欄
         cell.value = ""
       } else if (score.scoringMethod === "scale" && score.score === null) {
-        // 類型評価で点にならない採点（類型が無い・方式と合わない）は 0 点ではなく空欄
+        // 類型評価で点にならない採点（類型が無い）は 0 点ではなく空欄
         cell.value = ""
       } else {
         // 採点済みの場合は0点でも表示

@@ -96,7 +96,8 @@ export async function buildGradeCalcContext(gradeId: string) {
         // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
         const { resolved: resolvedScores } = resolveEffectiveScores(
           examStudentRow.questionScores.map(toSerializedQuestionScore),
-          examStudentRow.scoreDecisions.map(toSerializedScoreDecision)
+          examStudentRow.scoreDecisions.map(toSerializedScoreDecision),
+          cropRegions
         )
         return {
           examStudentId: examStudentRow.id,

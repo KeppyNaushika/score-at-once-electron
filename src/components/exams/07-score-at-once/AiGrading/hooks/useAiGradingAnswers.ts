@@ -52,7 +52,7 @@ export function useAiGradingAnswers({
         studentAnswerImage,
         questionScore: findOwnQuestionScore(
           questionScores,
-          cropRegion.id,
+          cropRegion,
           studentAnswerImage.examStudentId,
           currentUserId
         ),
@@ -64,8 +64,7 @@ export function useAiGradingAnswers({
             ?.get(cropRegion.id) ?? null,
       }))
   }, [
-    cropRegion.examPageId,
-    cropRegion.id,
+    cropRegion,
     currentUserId,
     studentAnswerImages,
     questionScores,

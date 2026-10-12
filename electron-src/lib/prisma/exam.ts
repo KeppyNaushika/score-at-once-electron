@@ -78,6 +78,8 @@ export const toExamProgressSource = (
   cropRegions: exam.examPages.flatMap((examPage) =>
     examPage.cropRegions.map((cropRegion) => ({
       type: cropRegion.type,
+      // 方式と合わない採点を採点済みに数えないため（docs/vlm-grading-design.md §4-8-8）
+      scoringMethod: cropRegion.scoringMethod,
       questionScores: cropRegion.questionScores.map((questionScore) => ({
         status: toScoringStatus(questionScore.status),
         examStudentId: questionScore.examStudentId,

@@ -9,10 +9,10 @@ import { useShortcutContext } from "@/components/exams/07-score-at-once/ScoringM
 import { ShortcutProvider } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
 import { FinalizeSidePanel } from "@/components/exams/08-finalize/FinalizeSidePanel"
-import type { DecisionVerdict } from "@/components/exams/08-finalize/hooks/useFinalizeScreen"
 import { useFinalizeScreen } from "@/components/exams/08-finalize/hooks/useFinalizeScreen"
 import { useFinalizeShortcuts } from "@/components/exams/08-finalize/hooks/useFinalizeShortcuts"
 import { ProposalChips } from "@/components/exams/08-finalize/ProposalChips"
+import type { DecisionVerdict } from "@/components/exams/08-finalize/types"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useRouteParams } from "@/hooks/useRouteParams"
 
