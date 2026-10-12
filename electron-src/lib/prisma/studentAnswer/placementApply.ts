@@ -397,6 +397,7 @@ export async function applyStudentAnswerPlacements(
                 data: {
                   verdict: source.verdict,
                   score: source.score,
+                  scaleLevelId: source.scaleLevelId,
                   comment: source.comment,
                   decidedByUserId: source.decidedByUserId,
                   decidedAt: source.decidedAt,

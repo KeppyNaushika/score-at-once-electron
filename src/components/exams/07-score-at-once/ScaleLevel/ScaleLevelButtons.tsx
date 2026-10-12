@@ -22,6 +22,8 @@ interface ScaleLevelButtonsProps {
   /** 組を読み込み中（読み込み終わるまで「組が選ばれていない」とは言わない） */
   isScaleLevelsLoading: boolean
   selectedAnswersCount: number
+  /** 選んでいても押せないとき（08 で確定できない利用者・成績算出のロック中） */
+  disabled?: boolean
   onApplyScaleLevel: (scaleLevelId: string) => void
 }
 
@@ -36,6 +38,7 @@ export function ScaleLevelButtons({
   scaleLevels,
   isScaleLevelsLoading,
   selectedAnswersCount,
+  disabled = false,
   onApplyScaleLevel,
 }: ScaleLevelButtonsProps) {
   const { keyBindings } = useKeyBindings()
@@ -52,7 +55,7 @@ export function ScaleLevelButtons({
     )
   }
 
-  const isDisabled = selectedAnswersCount === 0
+  const isDisabled = disabled || selectedAnswersCount === 0
   return (
     <div className="space-y-1" role="group" aria-label="類型">
       <div className="flex items-center gap-1 text-xs text-gray-500">

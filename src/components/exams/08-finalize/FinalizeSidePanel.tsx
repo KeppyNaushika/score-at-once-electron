@@ -3,6 +3,7 @@
 import { Gavel, PanelsTopLeft, RefreshCw, SquarePen } from "lucide-react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
+import type { ScaleQuestionState } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleScoringGate"
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
 import QuestionNavigator from "@/components/exams/07-score-at-once/ScoringSidePanel/QuestionNavigator"
 import { ShortcutTooltip } from "@/components/exams/07-score-at-once/ScoringSidePanel/ShortcutTooltip"
@@ -12,7 +13,10 @@ import { DecisionVerdictButtons } from "@/components/exams/08-finalize/DecisionV
 import type { DecisionGridItem } from "@/components/exams/08-finalize/hooks/useFinalizeData"
 import type { DecisionVerdict } from "@/components/exams/08-finalize/hooks/useFinalizeScreen"
 import { SelectedCellDetail } from "@/components/exams/08-finalize/SelectedCellDetail"
-import type { DecisionFilterSettings } from "@/components/exams/08-finalize/types"
+import type {
+  DecisionFilterSettings,
+  ScaleAppearanceOfVerdict,
+} from "@/components/exams/08-finalize/types"
 import { Button } from "@/components/ui/button"
 import { examWorkflowSteps, workflowStepHref } from "@/lib/shared/workflowSteps"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -67,6 +71,10 @@ interface FinalizeSidePanelProps {
   singleSelectedItem: DecisionGridItem | null
   readOnlyReason: string | null
   onDecide: (verdict: DecisionVerdict) => void
+  /** 今の設問の類型評価（類型評価の設問では類型を選んで確定する） */
+  scaleQuestion: ScaleQuestionState
+  onDecideScaleLevel: (scaleLevelId: string) => void
+  scaleAppearanceOfVerdict: ScaleAppearanceOfVerdict
   decisionComment: string
   onDecisionCommentChange: (comment: string) => void
   onDecisionCommentCommit: () => void
@@ -99,6 +107,9 @@ export function FinalizeSidePanel({
   singleSelectedItem,
   readOnlyReason,
   onDecide,
+  scaleQuestion,
+  onDecideScaleLevel,
+  scaleAppearanceOfVerdict,
   decisionComment,
   onDecisionCommentChange,
   onDecisionCommentCommit,
@@ -259,7 +270,10 @@ export function FinalizeSidePanel({
       >
         <DecisionVerdictButtons
           disabled={readOnlyReason !== null || selectedCount === 0}
+          selectedCount={selectedCount}
           onDecide={onDecide}
+          scaleQuestion={scaleQuestion}
+          onDecideScaleLevel={onDecideScaleLevel}
         />
       </SidePanelSection>
 
@@ -272,6 +286,7 @@ export function FinalizeSidePanel({
         onCommentChange={onDecisionCommentChange}
         onCommentCommit={onDecisionCommentCommit}
         editable={readOnlyReason === null}
+        scaleAppearanceOfVerdict={scaleAppearanceOfVerdict}
       />
     </div>
   )

@@ -5,13 +5,17 @@ import { useRef, useState } from "react"
 
 import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
+import { ScaleCellMark } from "@/components/exams/07-score-at-once/ScaleLevel/ScaleCellMark"
 import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import type { DecisionGridItem } from "@/components/exams/08-finalize/hooks/useFinalizeData"
-import { groupProposalsByResult } from "@/components/exams/08-finalize/utils/proposedResults"
+import type { ScaleAppearanceOfVerdict } from "@/components/exams/08-finalize/types"
+import {
+  groupProposalsByResult,
+  verdictLabelOf,
+} from "@/components/exams/08-finalize/utils/proposedResults"
 import { Textarea } from "@/components/ui/textarea"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 interface SelectedCellDetailProps {
@@ -25,6 +29,8 @@ interface SelectedCellDetailProps {
   /** 確定済みの答案の覚え書きを書き直す */
   onCommentCommit: () => void
   editable: boolean
+  /** 類型評価の結果を類型の記号と色で出す */
+  scaleAppearanceOfVerdict: ScaleAppearanceOfVerdict
 }
 
 const formatDateTime = (isoString: string): string =>
@@ -48,6 +54,7 @@ export function SelectedCellDetail({
   onCommentChange,
   onCommentCommit,
   editable,
+  scaleAppearanceOfVerdict,
 }: SelectedCellDetailProps) {
   const { keyBindings } = useKeyBindings()
   const statusConfig = getDynamicScoreStatusConfig(useScoringStatusColors())
@@ -106,15 +113,24 @@ export function SelectedCellDetail({
           {groupProposalsByResult(cell.proposals).map((result) => {
             const config = statusConfig[result.status]
             const Icon = config.icon
+            const scaleAppearance = scaleAppearanceOfVerdict(
+              result.status,
+              result.scaleLevelId
+            )
             return (
               <li key={result.key} className="text-xs">
                 <div className="flex items-center gap-1">
-                  <Icon
-                    className="h-3.5 w-3.5 shrink-0"
-                    style={config.iconStyle}
-                  />
+                  {scaleAppearance && (
+                    <ScaleCellMark appearance={scaleAppearance} />
+                  )}
+                  {scaleAppearance?.kind !== "level" && (
+                    <Icon
+                      className="h-3.5 w-3.5 shrink-0"
+                      style={config.iconStyle}
+                    />
+                  )}
                   <span className="font-medium">
-                    {SCORING_STATUS_LABELS[result.status]}{" "}
+                    {verdictLabelOf(result.status, result.scaleLevel)}{" "}
                     {result.scoreValue ?? "-"}/{maxScore}点
                   </span>
                 </div>
@@ -137,7 +153,8 @@ export function SelectedCellDetail({
         </ul>
         {cell.decision && (
           <p className="mt-2 text-[10px] text-gray-500">
-            確定: {SCORING_STATUS_LABELS[cell.decision.verdict]}（
+            確定:{" "}
+            {verdictLabelOf(cell.decision.verdict, cell.decision.scaleLevel)}（
             {cell.decision.decidedByName}・
             {formatDateTime(cell.decision.decidedAt)}）
           </p>

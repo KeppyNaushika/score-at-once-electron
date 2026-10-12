@@ -2,23 +2,33 @@
 
 import { MessageSquare } from "lucide-react"
 
+import { ScaleCellMark } from "@/components/exams/07-score-at-once/ScaleLevel/ScaleCellMark"
 import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
-import { groupProposalsByResult } from "@/components/exams/08-finalize/utils/proposedResults"
+import type { ScaleAppearanceOfVerdict } from "@/components/exams/08-finalize/types"
+import {
+  groupProposalsByResult,
+  verdictLabelOf,
+} from "@/components/exams/08-finalize/utils/proposedResults"
 import { Badge } from "@/components/ui/badge"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import type { ScoreDecisionCell } from "@/types/scoreDecision.types"
 
 interface ProposalChipsProps {
   cell: ScoreDecisionCell
+  /** 類型評価の結果を類型の記号と色で出す（07 の一覧のマスと同じ見せ方） */
+  scaleAppearanceOfVerdict: ScaleAppearanceOfVerdict
 }
 
 /**
  * 一覧の答案の下に出す、採点者ごとの結果。**同じ結果は1枚に束ねる**
  * （色と判定で見比べ、誰が付けたかは添えるだけ）。覚え書きがある結果には印を付け、
  * 中身は右パネルで読む（答案の下を文字で埋めない）。
+ * 類型評価の結果は、判定のアイコンの代わりに類型の記号を類型の色で出す。
  */
-export function ProposalChips({ cell }: ProposalChipsProps) {
+export function ProposalChips({
+  cell,
+  scaleAppearanceOfVerdict,
+}: ProposalChipsProps) {
   const statusConfig = getDynamicScoreStatusConfig(useScoringStatusColors())
 
   return (
@@ -29,6 +39,13 @@ export function ProposalChips({ cell }: ProposalChipsProps) {
       {groupProposalsByResult(cell.proposals).map((result) => {
         const config = statusConfig[result.status]
         const Icon = config.icon
+        const scaleAppearance = scaleAppearanceOfVerdict(
+          result.status,
+          result.scaleLevelId
+        )
+        const levelAppearance =
+          scaleAppearance?.kind === "level" ? scaleAppearance : null
+        const isIncompatibleScore = scaleAppearance?.kind === "incompatible"
         const graderNames = result.proposals
           .map((proposal) => proposal.userName)
           .join("・")
@@ -38,11 +55,25 @@ export function ProposalChips({ cell }: ProposalChipsProps) {
         return (
           <span
             key={result.key}
-            title={`${SCORING_STATUS_LABELS[result.status]} ${result.scoreValue ?? "-"}点（${graderNames}）`}
+            title={`${verdictLabelOf(result.status, result.scaleLevel)} ${result.scoreValue ?? "-"}点（${graderNames}）`}
             className="inline-flex max-w-full items-center gap-0.5 rounded border bg-white px-1 text-[10px] leading-4"
-            style={{ borderColor: config.iconStyle.color }}
+            style={
+              levelAppearance
+                ? {
+                    borderColor: levelAppearance.colors.text,
+                    backgroundColor: levelAppearance.colors.bg,
+                  }
+                : { borderColor: config.iconStyle.color }
+            }
           >
-            <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
+            {scaleAppearance && <ScaleCellMark appearance={scaleAppearance} />}
+            {!levelAppearance && (
+              <Icon
+                className={`h-3 w-3 shrink-0 ${isIncompatibleScore ? "opacity-50" : ""}`}
+                style={config.iconStyle}
+              />
+            )}
+            {/* 方式と合わない採点は得点にしない（実得点は null で「-」になる） */}
             <span className="shrink-0 font-medium">
               {result.scoreValue ?? "-"}
             </span>

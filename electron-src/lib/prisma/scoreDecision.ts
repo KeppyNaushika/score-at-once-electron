@@ -3,6 +3,10 @@ import { Prisma } from "@prisma/client"
 
 import type { Serialized } from "@/types/prismaExtensions"
 import {
+  isStatusCompatibleWithScoringMethod,
+  toScoringMethod,
+} from "@/types/rubric.types"
+import {
   type ScoringStatus,
   toScoringStatus,
 } from "@/types/scoringStatus.types"
@@ -73,13 +77,17 @@ export type UpsertScoreDecisionData = Required<
     | "decidedAt"
     | "verdict"
     | "score"
-    // 類型の確定は 08 を類型評価に対応させるとき（docs/vlm-grading-design.md §4-8-7 の S5）に足す
     | "scaleLevelId"
   >
 > & {
   verdict: ScoringStatus
   /** 確定点。verdict 自体が点を決める（正解など）ときは null */
   score: number | null
+  /**
+   * 確定した類型（docs/vlm-grading-design.md §4-8-5）。verdict が `evaluated` のときだけ値を持ち、
+   * そのとき score は null（点は類型の点数から読む）。ほかの verdict では null
+   */
+  scaleLevelId: string | null
 }
 
 /**
@@ -108,6 +116,48 @@ export const canDecideExamScores = async (
     allowed: false,
     reason: "採点結果の確定は試験の所有者（OWNER）のみが行えます",
   }
+}
+
+/**
+ * 確定の判定・類型が設問の採点方式に合うかを確かめ、書く類型を返す
+ * （docs/vlm-grading-design.md §4-8-5）。
+ *
+ * 類型評価の設問では正解・不正解・部分点を確定できず、点の設問では類型評価を確定できない。
+ * `evaluated` は設問が今使っている類型評価の類型を要する（07 の類型の書き込み
+ * `scaleLevelScoreWrite.ts` と同じ確かめ方）。ほかの判定では類型を書かない。
+ */
+const resolveDecidedScaleLevel = async (
+  decisionData: UpsertScoreDecisionData
+) => {
+  const cropRegion = await prisma.cropRegion.findUnique({
+    where: { id: decisionData.cropRegionId },
+  })
+  if (!cropRegion) throw new Error("採点領域が見つかりません")
+
+  const scoringMethod = toScoringMethod(cropRegion.scoringMethod)
+  if (
+    !isStatusCompatibleWithScoringMethod(scoringMethod, decisionData.verdict)
+  ) {
+    throw new Error(
+      scoringMethod === "scale"
+        ? "類型評価の設問は、類型を選んで確定してください"
+        : "この設問は類型評価ではないため、類型では確定できません"
+    )
+  }
+
+  if (decisionData.verdict !== "evaluated") return null
+
+  if (decisionData.scaleLevelId === null) {
+    throw new Error("確定する類型を選んでください")
+  }
+  const scaleLevel = await prisma.scoreScaleLevel.findUnique({
+    where: { id: decisionData.scaleLevelId },
+  })
+  if (!scaleLevel) throw new Error("類型が見つかりません")
+  if (scaleLevel.scaleId !== cropRegion.scoreScaleId) {
+    throw new Error("この設問の類型評価の類型ではありません")
+  }
+  return scaleLevel
 }
 
 /** 設問（採点領域）から試験を引いて確定権限をチェックする */
@@ -143,8 +193,13 @@ export const upsertScoreDecision = async (
     throw new Error(permission.reason ?? "権限がありません")
   }
 
+  const scaleLevel = await resolveDecidedScaleLevel(decisionData)
+
+  // 類型評価の点は類型の点数から読むので、確定点は書かない
   const score =
-    decisionData.score !== null ? new Prisma.Decimal(decisionData.score) : null
+    scaleLevel === null && decisionData.score !== null
+      ? new Prisma.Decimal(decisionData.score)
+      : null
 
   // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
   await assertCropRegionsInSameExam([
@@ -162,6 +217,7 @@ export const upsertScoreDecision = async (
         examStudentId: decisionData.examStudentId,
       },
     },
+    include: { scaleLevel: true },
   })
 
   // 作成でも更新でも同じ内容を書く。確定は毎回セルの結果全体を決め直す操作なので、
@@ -169,6 +225,7 @@ export const upsertScoreDecision = async (
   const decidedColumns = {
     verdict: decisionData.verdict,
     score,
+    scaleLevelId: scaleLevel?.id ?? null,
     comment: decisionData.comment,
     decidedByUserId: decisionData.decidedByUserId,
     decidedAt: new Date(),
@@ -189,6 +246,7 @@ export const upsertScoreDecision = async (
     update: decidedColumns,
     include: {
       decidedBy: { omit: PUBLIC_USER_OMIT },
+      scaleLevel: true,
     },
   })
 
@@ -221,6 +279,17 @@ export const upsertScoreDecision = async (
         after: verdictLabel(decisionData.verdict),
       },
       { field: "score", label: "得点", before: prevScore, after: newScore },
+      // 類型は類型評価の確定（前か後のどちらか）にだけ記録する。点の設問に空の差分を並べない
+      ...(previous?.scaleLevel || scaleLevel
+        ? [
+            {
+              field: "scaleLevel",
+              label: "類型",
+              before: previous?.scaleLevel?.label ?? null,
+              after: scaleLevel?.label ?? null,
+            },
+          ]
+        : []),
     ],
     targets,
   })
