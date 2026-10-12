@@ -85,6 +85,7 @@ function decisionGridItemOf(
     maxScore: 4,
     questionRegion: cropRegion,
     customOrder: index,
+    scaleLevelId: null,
     cell: {
       examStudentId,
       studentName: `生徒 ${index + 1}`,

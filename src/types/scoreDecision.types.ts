@@ -7,6 +7,12 @@
  */
 import type { ScoringStatus } from "./scoringStatus.types"
 
+/** 提案・確定に付いた類型の、画面が見せる分（記号と点数） */
+interface ScaleLevelOfDecision {
+  label: string
+  score: number
+}
+
 /** 裁定対象セルにおける採点者ごとの提案 */
 export interface ScoreProposal {
   questionScoreId: string
@@ -14,7 +20,10 @@ export interface ScoreProposal {
   userName: string
   status: ScoringStatus
   partialScore: number | null
-  /** status と partialScore から算出した実得点（未採点は null） */
+  /** 類型評価で付けた類型（評価済みのときだけ）。類型が違えば点数が同じでも別の提案 */
+  scaleLevelId: string | null
+  scaleLevel: ScaleLevelOfDecision | null
+  /** status と partialScore（類型評価なら類型の点数）から算出した実得点（未採点・方式と合わない採点は null） */
   scoreValue: number | null
   /**
    * その採点者がその点にした理由の覚え書き（`QuestionScore.comment`）。
@@ -31,6 +40,9 @@ export interface ScoreProposal {
 interface ScoreDecisionSnapshot {
   verdict: ScoringStatus
   score: number | null
+  /** 確定した類型（verdict が evaluated のときだけ） */
+  scaleLevelId: string | null
+  scaleLevel: ScaleLevelOfDecision | null
   comment: string | null
   decidedByName: string
   decidedAt: string

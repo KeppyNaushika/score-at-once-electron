@@ -46,22 +46,27 @@ function ScoreFinalizeContent() {
     partialScore,
   } = screen
 
-  /** 部分点・保留はボタンからも点を入れる欄を開く（キーと同じ） */
+  /** 部分点・保留はボタンからも点を入れる欄を開く（キーと同じ。類型評価の保留はそのまま確定） */
   const handleVerdictButton = useCallback(
     (verdict: DecisionVerdict) => {
-      if (verdict === "partial" || verdict === "pending") {
-        partialScore.openPartialScoreModal()
+      if (verdict === "partial") {
+        screen.openPartialScoreModal()
+        return
+      }
+      if (verdict === "pending") {
+        screen.openPendingInput()
         return
       }
       screen.decide(verdict)
     },
-    [partialScore, screen]
+    [screen]
   )
 
   useFinalizeShortcuts({
     decide: screen.decide,
-    openPartialScoreModal: () => partialScore.openPartialScoreModal(),
-    handlePartialScoreInput: partialScore.handlePartialScoreInput,
+    openPartialScoreModal: screen.openPartialScoreModal,
+    openPendingInput: screen.openPendingInput,
+    handlePartialScoreInput: screen.handleDigitKey,
     handlePartialScoreConfirm: partialScore.handlePartialScoreConfirm,
     handlePartialScoreCancel: partialScore.handlePartialScoreCancel,
     handlePartialScoreBackspace: partialScore.handlePartialScoreBackspace,
@@ -123,9 +128,15 @@ function ScoreFinalizeContent() {
         showStudentNames
         expandMargin={scoringSettings.expandMargin}
         currentUserId={currentUser.id}
+        scaleAppearanceOf={screen.scaleAppearanceOf}
         renderCellDetail={(answer) => {
           const cell = cellById.get(answer.id)
-          return cell ? <ProposalChips cell={cell} /> : null
+          return cell ? (
+            <ProposalChips
+              cell={cell}
+              scaleAppearanceOfVerdict={screen.scaleAppearanceOfVerdict}
+            />
+          ) : null
         }}
         className="p-4"
       />
@@ -165,6 +176,9 @@ function ScoreFinalizeContent() {
             singleSelectedItem={screen.singleSelectedItem}
             readOnlyReason={screen.readOnlyReason}
             onDecide={handleVerdictButton}
+            scaleQuestion={screen.scaleQuestion}
+            onDecideScaleLevel={screen.decideScaleLevel}
+            scaleAppearanceOfVerdict={screen.scaleAppearanceOfVerdict}
             decisionComment={screen.decisionComment}
             onDecisionCommentChange={screen.changeDecisionComment}
             onDecisionCommentCommit={screen.saveDecisionComment}

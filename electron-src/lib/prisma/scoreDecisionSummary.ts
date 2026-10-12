@@ -235,6 +235,10 @@ export const getExamDecisionSummary = async (
     userName: userNameById.get(score.userId) ?? score.userId,
     status: score.status,
     partialScore: score.partialScore,
+    scaleLevelId: score.scaleLevelId,
+    scaleLevel: score.scaleLevel
+      ? { label: score.scaleLevel.label, score: score.scaleLevel.score }
+      : null,
     scoreValue: calculateActualScore(score, cropRegion),
     comment: score.comment,
     updatedAt: score.updatedAt.toISOString(),
@@ -279,6 +283,13 @@ export const getExamDecisionSummary = async (
         ? {
             verdict: decision.verdict,
             score: decision.score,
+            scaleLevelId: decision.scaleLevelId,
+            scaleLevel: decision.scaleLevel
+              ? {
+                  label: decision.scaleLevel.label,
+                  score: decision.scaleLevel.score,
+                }
+              : null,
             comment: decision.comment,
             decidedByName: decision.decidedBy.name,
             decidedAt: decision.decidedAt.toISOString(),

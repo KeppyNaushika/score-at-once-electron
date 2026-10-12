@@ -230,6 +230,9 @@ export async function processScoreDecisions(
           data: {
             verdict: scoreDecision.verdict,
             score: scoreDecision.score ? parseFloat(scoreDecision.score) : null,
+            // 旧形式のアーカイブは類型を持たない（類型評価より前の凍結形式）。確定は
+            // セルの結果全体を決め直すので、置き換えるなら前の確定の類型も残さない
+            scaleLevelId: null,
             comment: scoreDecision.comment,
             decidedByUserId,
             decidedAt: incomingDecidedAt,

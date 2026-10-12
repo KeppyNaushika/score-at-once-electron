@@ -5,7 +5,11 @@ import type { DecisionVerdict } from "./useFinalizeScreen"
 
 interface FinalizeShortcutHandlers {
   decide: (verdict: DecisionVerdict) => void
+  /** 部分点の欄を開く（類型評価の設問では開かずに知らせる） */
   openPartialScoreModal: () => void
+  /** 保留（点の採点の設問は点を入れる欄を開き、類型評価の設問はそのまま確定する） */
+  openPendingInput: () => void
+  /** 数字キー（類型評価の設問は類型を選んで確定し、ほかの設問は部分点の入力を始める） */
   handlePartialScoreInput: (key: string) => void
   handlePartialScoreConfirm: (confirmType: "partial" | "pending") => void
   handlePartialScoreCancel: () => void
@@ -24,11 +28,13 @@ interface FinalizeShortcutHandlers {
  * 「8. 採点確定」のキー操作。**07 と同じキーで同じことが起きる**ようにする
  * （E で正答、WASD で移動、Shift+A/D で設問、数字で部分点…）。
  * 違いは、書く先が自分の採点ではなく確定であることだけ。
+ * 類型評価の設問でも 07 と同じく、数字で類型を選び、正答・誤答・部分点は効かない。
  */
 export function useFinalizeShortcuts(handlers: FinalizeShortcutHandlers) {
   const {
     decide,
     openPartialScoreModal,
+    openPendingInput,
     handleGridNavigation,
     handleNextQuestion,
     handlePrevQuestion,
@@ -52,13 +58,14 @@ export function useFinalizeShortcuts(handlers: FinalizeShortcutHandlers) {
     metadata: { title: "Wマークで確定", category: "確定" },
   })
 
-  // 部分点・保留は点を入れる欄を開く（欄の中では同じキーが確定になる）
+  // 部分点・保留は点を入れる欄を開く（欄の中では同じキーが確定になる）。
+  // 類型評価の設問の正答・誤答・部分点は decide / openPartialScoreModal が止める
   useSceneCommand("scoring.partial", openPartialScoreModal, {
     scene: "scoring",
     condition: "hasSelectedAnswers",
     metadata: { title: "部分点で確定", category: "確定" },
   })
-  useSceneCommand("scoring.pending", openPartialScoreModal, {
+  useSceneCommand("scoring.pending", openPendingInput, {
     scene: "scoring",
     condition: "hasSelectedAnswers",
     metadata: { title: "保留で確定", category: "確定" },

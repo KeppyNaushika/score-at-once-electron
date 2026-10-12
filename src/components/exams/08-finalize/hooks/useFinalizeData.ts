@@ -22,6 +22,8 @@ import type {
  */
 export interface DecisionGridItem extends ScoringData {
   cell: ScoreDecisionCell
+  /** 枠に出している結果の類型（類型評価で評価済みのときだけ。マスの記号と色を決める） */
+  scaleLevelId: string | null
 }
 
 /**
@@ -118,7 +120,10 @@ export function useFinalizeData(
           : "",
         // 枠の色は「いま出力される結果」。未解決の食い違いは出力でも未採点になる
         status: cell.decision?.verdict ?? "unscored",
-        currentScore: cell.decision?.score ?? undefined,
+        // 類型評価の確定は点を持たず、類型の点数が得点になる
+        currentScore:
+          cell.decision?.score ?? cell.decision?.scaleLevel?.score ?? undefined,
+        scaleLevelId: cell.decision?.scaleLevelId ?? null,
         maxScore: currentQuestion.maxScore,
         questionRegion: currentCropRegion,
         customOrder: answerImage?.examStudent.customOrder ?? 999999,

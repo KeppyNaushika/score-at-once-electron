@@ -145,6 +145,7 @@ describe("採点対象と受験者の試験スコープ", () => {
         examStudentId: examStudentB.id,
         verdict: "correct",
         score: null,
+        scaleLevelId: null,
         comment: null,
         decidedByUserId: examA.user.id,
       })
