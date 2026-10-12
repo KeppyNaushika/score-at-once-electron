@@ -39,7 +39,7 @@ const workerProcess: WorkerProcess = {
 }
 
 Object.assign(globalThis, {
-  // 画像 URL の規則（`src/lib/appImageUrl.ts`）が web 版の形を選ぶ印。画面側も同じものを立てる
+  // web 版で動いている印（`src/lib/webRuntime.ts`）。画面側も同じものを立てる
   scoreAtOnceWeb: true,
   process: workerProcess,
   Buffer,

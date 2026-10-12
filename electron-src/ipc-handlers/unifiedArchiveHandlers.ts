@@ -19,6 +19,7 @@ import * as fsPromises from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 
+import { isWebRuntime } from "../../src/lib/webRuntime"
 import {
   ARCHIVE_IMPORT_FILE_KINDS,
   type SelectedArchiveImportFile,
@@ -140,9 +141,6 @@ const spawnArchiveExportWorker = (): ArchiveExportWorkerProcess => {
     },
   }
 }
-
-/** web 版（入口が大域の `scoreAtOnceWeb` を立てる。`src/lib/appImageUrl.ts`）で動いているか */
-const isWebRuntime = (): boolean => globalThis.scoreAtOnceWeb === true
 
 const archiveExportWorker = createArchiveExportWorkerClient({
   spawn: isWebRuntime()

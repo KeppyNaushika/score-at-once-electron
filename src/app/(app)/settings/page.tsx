@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import {
   CalendarRange,
   FolderSync,
+  HardDrive,
   Keyboard,
   Monitor,
   Palette,
@@ -14,6 +15,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { AuditLogRetentionTab } from "@/app/(app)/settings/components/AuditLogRetentionTab"
+import { BrowserStorageTab } from "@/app/(app)/settings/components/BrowserStorageTab"
 import { DisplaySettingsTab } from "@/app/(app)/settings/components/DisplaySettingsTab"
 import { FiscalYearTab } from "@/app/(app)/settings/components/FiscalYearTab"
 import { KeyboardShortcutSection } from "@/app/(app)/settings/components/KeyboardShortcutSection"
@@ -27,6 +29,7 @@ import { UserEditModal } from "@/components/auth/UserEditModal"
 import { BetaBadge } from "@/components/common/BetaBadge"
 import PageHeader from "@/components/layout/PageHeader"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
 import { type PublicUser, userListQuery } from "@/queries/user"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -45,6 +48,7 @@ export default function SettingsPage() {
     getKeyDisplayName,
   } = useKeyboardSettings()
 
+  const isWebRuntime = useIsWebRuntime()
   const { data: users = EMPTY_USERS } = useQuery(userListQuery())
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
@@ -97,6 +101,12 @@ export default function SettingsPage() {
                 <Users className="h-4 w-4" />
                 ユーザー管理
               </TabsTrigger>
+              {isWebRuntime && (
+                <TabsTrigger value="browser-storage" className="gap-2">
+                  <HardDrive className="h-4 w-4" />
+                  ブラウザの保存領域
+                </TabsTrigger>
+              )}
               <TabsTrigger value="sync" className="gap-2">
                 <FolderSync className="h-4 w-4" />
                 同期設定
@@ -142,6 +152,12 @@ export default function SettingsPage() {
                 onDeleteUser={setDeletingUser}
               />
             </TabsContent>
+
+            {isWebRuntime && (
+              <TabsContent value="browser-storage">
+                <BrowserStorageTab />
+              </TabsContent>
+            )}
 
             <TabsContent value="sync">
               <SyncSettingsTab />

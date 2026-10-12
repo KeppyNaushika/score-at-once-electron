@@ -13,25 +13,20 @@
  * web 版では `appimg` を読めないので、同一オリジンの `/__appimg/<相対パス>` にし、
  * Service Worker（`web/serviceWorker/serviceWorker.ts`）がデータフォルダ（OPFS）から返す。
  * 画面の静的書き出しはデスクトップ版と同じものを配るので、どちらで動いているかは
- * ビルド時ではなく実行時に、web 版の入口が立てる大域の `scoreAtOnceWeb` で見分ける。
- * 画面（`web/page/`）と、main の処理を動かす Worker（`web/worker/`）の両方が立てるので、
- * main の `resolve-file-protocol-path` もこの関数で組み立てれば、web 版では web の URL を返す。
+ * 実行時に見分ける（`src/lib/webRuntime.ts`）。画面と、main の処理を動かす Worker の両方で
+ * 見分けられるので、main の `resolve-file-protocol-path` もこの関数で組み立てれば、
+ * web 版では web の URL を返す。
  *
  * 相対パスを渡す。絶対パスを載せると `appimg:////Users/...` となり、
  * URL 正規化でパスが壊れる。
  */
 
-declare global {
-  /** web 版の入口（画面と Worker）が立てる。デスクトップ版では無い */
-  var scoreAtOnceWeb: true | undefined
-}
+import { isWebRuntime } from "@/lib/webRuntime"
 
 const APP_IMAGE_URL_PREFIX = "appimg:///"
 
 /** web 版の画像 URL の頭。Service Worker はこの頭の要求だけを受け持つ */
 export const WEB_APP_IMAGE_URL_PREFIX = "/__appimg/"
-
-const isWebRuntime = () => globalThis.scoreAtOnceWeb === true
 
 /** 共有フォルダからの相対パスを、画面に表示できる画像 URL にする（エンコードはしない） */
 export function toAppImageUrl(relativePath: string): string {

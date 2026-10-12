@@ -129,7 +129,15 @@ export async function replaceAppDatabase(bytes: Uint8Array): Promise<void> {
   if (pool === null) throw new Error("アプリの DB をまだ開いていない")
   current.handle.close()
   try {
-    await pool.importDb(current.databasePath, bytes)
+    // 中身を関数で渡す。バイト列を渡す形はファイルを切り詰めずに上から書くだけなので、
+    // 戻す前より長かった分（失敗した migration が伸ばしたページ）が末尾に残り、以後の
+    // 控えにも写り続ける。関数で渡す形は先に切り詰める（sqlite-wasm の `importDbChunked`）
+    let pendingBytes: Uint8Array | undefined = bytes
+    await pool.importDb(current.databasePath, () => {
+      const chunk = pendingBytes
+      pendingBytes = undefined
+      return chunk
+    })
   } finally {
     current.handle = openHandle(current.sqlite3, pool, current.databasePath)
   }
