@@ -4,7 +4,10 @@ import * as path from "path"
 import sharp from "sharp"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
-import { detectCornerMarkers } from "../../../electron-src/lib/omr/cornerMarkerDetector"
+import {
+  detectCornerMarkers,
+  resolveAnswerCorners,
+} from "../../../electron-src/lib/omr/cornerMarkerDetector"
 import type {
   DetectedCornerMarker,
   MarkerDetectionResult,
@@ -118,10 +121,7 @@ async function savePng(sheet: TestSheet): Promise<string> {
   return filePath
 }
 
-/**
- * 隅ごとの探索範囲（検出器の仕様: 隅から1%の余白、幅30%×高さ8%）。
- * マーカーがこの外へはみ出すと、検出器には範囲の中に入った部分しか見えない
- */
+/** 隅ごとの探索範囲（検出器の仕様: 隅から1%の余白、幅30%×高さ8%） */
 function searchRegion(width: number, height: number, corner: Corner): Rect {
   const marginX = Math.floor(width * 0.01)
   const marginY = Math.floor(height * 0.01)
@@ -150,12 +150,7 @@ function centerOf(rect: Rect): { x: number; y: number } {
   return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 }
 }
 
-/**
- * 4隅すべてが検出され、それぞれが期待の矩形の中心にあることを表明する。
- *
- * 期待の矩形は「マーカーのうち探索範囲に入った部分」に切る。範囲にはみ出した
- * マーカーは、見えている部分の中心で検出される（いまの検出器の挙動）
- */
+/** 4隅すべてが検出され、それぞれが期待の矩形の中心にあることを表明する */
 function expectMarkersAt(
   result: MarkerDetectionResult,
   rects: Record<Corner, Rect>,
@@ -166,11 +161,7 @@ function expectMarkersAt(
     ALL_CORNERS
   )
   for (const marker of result.markers) {
-    const visible = intersect(
-      rects[marker.corner],
-      searchRegion(result.imageWidth, result.imageHeight, marker.corner)
-    )
-    const expected = centerOf(visible)
+    const expected = centerOf(rects[marker.corner])
     expect(Math.abs(marker.centerX - expected.x)).toBeLessThanOrEqual(tolerance)
     expect(Math.abs(marker.centerY - expected.y)).toBeLessThanOrEqual(tolerance)
   }
@@ -278,8 +269,8 @@ describe("cornerMarkerDetector", () => {
 
   describe("複数用紙サイズ対応", () => {
     // A3・B4 は 1% の余白（上下 49px・42px）が端からの距離 35px より大きく、
-    // マーカーの上（下）側が探索範囲の外に出る。見えている部分の中心で検出され、
-    // 本来の中心から 7px・3.5px 内側へずれる（#1445 の「探索範囲の境界で切られている」）
+    // マーカーの上（下）側が最初の探索範囲の外に出る。切れていることに気づいて
+    // 余白を外して探し直すので、本来の中心で検出される（#1445）
     it.each([
       { name: "A4", width: 2480, height: 3508 },
       { name: "A3", width: 3508, height: 4961 },
@@ -389,14 +380,14 @@ describe("cornerMarkerDetector", () => {
 
       const result = await detectCornerMarkers(await savePng(sheet), 128)
 
-      // 下の2隅は 1% の余白（35px）へ 15px はみ出し、見えている部分の中心で
-      // 検出される（本来の中心より 7.5px 上。#1445 の「探索範囲の境界で切られている」）
+      // 下の2隅は 1% の余白（35px）へ 15px はみ出すが、余白を外して探し直すので
+      // 本来の中心で検出される（#1445）
       expectMarkersAt(result, rects, 0.5)
     })
   })
 
   describe("罫線が密な解答用紙", () => {
-    it("罫線のグリッドに接しない隅は正しい位置で検出し、グリッドに埋もれた TL はずれて信頼度が下がる（#1445）", async () => {
+    it("罫線のグリッドに埋もれた TL も、細い線を剥がしてマーカーの中心で検出する（#1445）", async () => {
       const rects = a4MarkerRects()
       const sheet = blankSheet(A4_WIDTH, A4_HEIGHT)
       paintMarkers(sheet, rects)
@@ -424,77 +415,85 @@ describe("cornerMarkerDetector", () => {
 
       const result = await detectCornerMarkers(await savePng(sheet), 128)
 
-      // 水平罫線は TL マーカーを横切るので、TL はグリッドと1つの連結成分になる。
-      // いまの検出器はその成分を TL として採り、4隅そろったので success を返す。
-      // #1445 で検出器を直したら、この表明（ずれる・success）は書き換える
-      expect(result.success).toBe(true)
-      const tlMarker = result.markers.find((marker) => marker.corner === "TL")
-      expect(tlMarker).toBeDefined()
-      const tlCenter = centerOf(rects.TL)
-      expect(tlMarker!.centerX - tlCenter.x).toBeGreaterThan(100)
-      expect(tlMarker!.centerY - tlCenter.y).toBeGreaterThan(100)
-      expect(tlMarker!.confidence).toBeLessThan(0.5)
-
-      // グリッドの無い残り3隅は、マーカーの中心で高い信頼度
-      const otherMarkers = result.markers.filter(
-        (marker) => marker.corner !== "TL"
-      )
-      expect(otherMarkers).toHaveLength(3)
-      for (const marker of otherMarkers) {
-        const expected = centerOf(rects[marker.corner])
-        expect(marker.centerX).toBeCloseTo(expected.x, 5)
-        expect(marker.centerY).toBeCloseTo(expected.y, 5)
+      // マーカーの外へ出た罫線は剥がれるが、マーカーの右辺に接した 1px の線は
+      // マーカーの縁として残るので、その分（0.5px）だけ右へ寄る
+      expectMarkersAt(result, rects, 0.5)
+      for (const marker of result.markers) {
         expect(marker.confidence).toBeGreaterThanOrEqual(0.9)
       }
     })
   })
 
-  describe("罫線がマーカーに接触する最悪ケース", () => {
-    it("マーカーの一辺に長い罫線が連結すると、検出されたTLマーカーの中心がずれ、信頼度が低下する", async () => {
+  describe("罫線がマーカーに接触する場合（#1445）", () => {
+    it("マーカーの一辺に細い罫線が連結しても、線を剥がしてマーカーの中心で検出する", async () => {
       const rects = a4MarkerRects()
       const sheet = blankSheet(A4_WIDTH, A4_HEIGHT)
       paintMarkers(sheet, rects)
 
-      // TLマーカーの右辺に長い水平罫線を連結（マーカー右端から探索領域の右端まで）
-      // これによりTLの連結成分は横長になり、正方形スコアが低下する
+      // TLマーカーの右辺に長い水平罫線を連結（マーカー右端から探索領域の右端の先まで）
       const region = searchRegion(A4_WIDTH, A4_HEIGHT, "TL")
-      const tlRight = rects.TL.x + rects.TL.w
       paintRect(sheet, {
-        x: tlRight,
+        x: rects.TL.x + rects.TL.w,
         y: rects.TL.y + Math.floor(rects.TL.h / 2),
-        w: region.w, // 探索領域幅分（範囲の右端で切られる）
-        h: 2, // 太さ2px
+        w: region.w,
+        h: 2,
       })
 
       const result = await detectCornerMarkers(await savePng(sheet), 128)
 
-      // 探索領域の中で黒い連結成分はマーカー+罫線の1つしか無いので、それが TL として
-      // 選ばれる（選び方: 正方形性 × 充填率 × √面積 が最大の成分）。バウンディング
-      // ボックスが横長になるので、信頼度（＝縦横比）で異常に気づけることを固定する
-      const tlMarker = result.markers.find((marker) => marker.corner === "TL")
-      const otherMarkers = result.markers.filter(
-        (marker) => marker.corner !== "TL"
-      )
+      expectMarkersAt(result, rects, 0.5)
+      for (const marker of result.markers) {
+        expect(marker.confidence).toBeGreaterThanOrEqual(0.9)
+      }
+    })
 
-      // 他の3マーカーは正常に、高信頼度で検出される
-      expect(otherMarkers.map((marker) => marker.corner).sort()).toEqual([
+    it("剥がせない太い枠線がマーカーに重なると、その隅は失敗にする（ずれた位置を返さない）", async () => {
+      const rects = a4MarkerRects()
+      const sheet = blankSheet(A4_WIDTH, A4_HEIGHT)
+      paintMarkers(sheet, rects)
+
+      // 太さ 1mm（12px）の枠線が TL マーカーの下半分に重なって右へ伸びる
+      const region = searchRegion(A4_WIDTH, A4_HEIGHT, "TL")
+      paintRect(sheet, {
+        x: rects.TL.x,
+        y: rects.TL.y + rects.TL.h - 12,
+        w: region.w,
+        h: 12,
+      })
+
+      const result = await detectCornerMarkers(await savePng(sheet), 128)
+
+      expect(result.success).toBe(false)
+      expect(result.markers.map((marker) => marker.corner).sort()).toEqual([
         "BL",
         "BR",
         "TR",
       ])
-      for (const marker of otherMarkers) {
-        expect(marker.confidence).toBeGreaterThanOrEqual(0.9)
-      }
-
-      // TL は検出されるが、中心は「マーカー＋罫線」の外接矩形の中心（探索範囲の右端まで）
-      // へずれ、信頼度は正方形のマーカーよりはっきり低い。#1445 で直したら書き換える
-      expect(tlMarker).toBeDefined()
-      expect(tlMarker!.centerX).toBeCloseTo(
-        (rects.TL.x + region.x + region.w) / 2,
-        5
+      const tlDiagnostics = result.diagnostics?.find(
+        (diagnostic) => diagnostic.corner === "TL"
       )
-      expect(tlMarker!.centerY).toBeCloseTo(centerOf(rects.TL).y, 5)
-      expect(tlMarker!.confidence).toBeLessThan(0.5)
+      expect(tlDiagnostics?.detected).toBe(false)
+      expect(result.error).toMatch(/TL: /)
+    })
+  })
+
+  describe("探索範囲や画像の端で切れたマーカー（#1445）", () => {
+    it("画像の端で切れたマーカーは、見えている部分の中心を返さず失敗にする", async () => {
+      // TL だけ用紙の外へ 20px はみ出している（スキャンでトリミングされた）
+      const rects = a4MarkerRects()
+      rects.TL = { ...rects.TL, x: -20 }
+      const sheet = blankSheet(A4_WIDTH, A4_HEIGHT)
+      paintMarkers(sheet, rects)
+
+      const result = await detectCornerMarkers(await savePng(sheet), 128)
+
+      expect(result.success).toBe(false)
+      expect(result.markers.map((marker) => marker.corner).sort()).toEqual([
+        "BL",
+        "BR",
+        "TR",
+      ])
+      expect(result.error).toMatch(/TL: マーカーが画像の端で切れています/)
     })
   })
 
@@ -547,5 +546,94 @@ describe("cornerMarkerDetector", () => {
 
       expectMarkersAt(result, rects, 0.5)
     })
+  })
+})
+
+describe("resolveAnswerCorners", () => {
+  /** 模範解答の4隅（ピクセル） */
+  const reference: Record<Corner, { x: number; y: number }> = {
+    TL: { x: 100, y: 100 },
+    TR: { x: 2380, y: 100 },
+    BL: { x: 100, y: 3408 },
+    BR: { x: 2380, y: 3408 },
+  }
+
+  /** 答案: 模範解答を 2° 回し、0.98 倍して (30, -12) ずらした4隅 */
+  function transformed(point: { x: number; y: number }) {
+    const angle = (2 * Math.PI) / 180
+    const scale = 0.98
+    return {
+      x: scale * (Math.cos(angle) * point.x - Math.sin(angle) * point.y) + 30,
+      y: scale * (Math.sin(angle) * point.x + Math.cos(angle) * point.y) - 12,
+    }
+  }
+
+  function detectionOf(corners: Corner[]): MarkerDetectionResult {
+    return {
+      success: corners.length === 4,
+      markers: corners.map((corner) => ({
+        centerX: transformed(reference[corner]).x,
+        centerY: transformed(reference[corner]).y,
+        size: 59,
+        corner,
+        confidence: 1,
+      })),
+      imageWidth: A4_WIDTH,
+      imageHeight: A4_HEIGHT,
+    }
+  }
+
+  it("4隅とも検出できていれば、そのまま [TL, TR, BL, BR] の順に返す", () => {
+    const resolved = resolveAnswerCorners(
+      detectionOf(["BR", "TL", "BL", "TR"]),
+      reference
+    )
+    expect(resolved?.estimatedCorner).toBeNull()
+    expect(resolved?.corners).toEqual([
+      transformed(reference.TL),
+      transformed(reference.TR),
+      transformed(reference.BL),
+      transformed(reference.BR),
+    ])
+  })
+
+  it.each(ALL_CORNERS)(
+    "%s が欠けていれば、残り3隅と模範解答の対応から推定する",
+    (missing) => {
+      const resolved = resolveAnswerCorners(
+        detectionOf(ALL_CORNERS.filter((corner) => corner !== missing)),
+        reference
+      )
+      expect(resolved?.estimatedCorner).toBe(missing)
+      const index = ["TL", "TR", "BL", "BR"].indexOf(missing)
+      const expected = transformed(reference[missing])
+      expect(resolved!.corners[index].x).toBeCloseTo(expected.x, 6)
+      expect(resolved!.corners[index].y).toBeCloseTo(expected.y, 6)
+    }
+  )
+
+  it("基準が正規化座標でも、縮尺の違いを吸収して推定する", () => {
+    const normalized = Object.fromEntries(
+      ALL_CORNERS.map((corner) => [
+        corner,
+        {
+          x: reference[corner].x / A4_WIDTH,
+          y: reference[corner].y / A4_HEIGHT,
+        },
+      ])
+    ) as Record<Corner, { x: number; y: number }>
+    const resolved = resolveAnswerCorners(
+      detectionOf(["TL", "TR", "BL"]),
+      normalized
+    )
+    const expected = transformed(reference.BR)
+    expect(resolved!.corners[3].x).toBeCloseTo(expected.x, 6)
+    expect(resolved!.corners[3].y).toBeCloseTo(expected.y, 6)
+  })
+
+  it("2隅以上欠けていれば null（位置を合わせられない）", () => {
+    expect(
+      resolveAnswerCorners(detectionOf(["TL", "BR"]), reference)
+    ).toBeNull()
   })
 })

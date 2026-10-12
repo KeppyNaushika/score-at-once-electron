@@ -23,8 +23,14 @@ import {
   resizeToPng,
   rotateToPng,
 } from "../imageOps"
-import { detectCornerMarkersFromRaw } from "./cornerMarkerDetector"
+import {
+  detectCornerMarkersFromRaw,
+  resolveAnswerCorners,
+} from "./cornerMarkerDetector"
 import { loadImageRawFromBuffer } from "./imageProcessor"
+
+/** 隅の並び（srcPoints / dstPoints の添字と対応する） */
+const CORNER_ORDER: DetectedCornerMarker["corner"][] = ["TL", "TR", "BL", "BR"]
 
 interface RigidTransformParams {
   cosTheta: number
@@ -195,49 +201,44 @@ export async function correctImage(
       colorThreshold
     )
 
-    if (!answerResult.success) {
-      return {
-        success: false,
-        error: `答案マーカー検出失敗: ${answerResult.error ?? `${answerResult.markers.length}/4検出`}`,
-      }
-    }
-
     // 2. マスターマーカー座標を答案画像サイズに正規化
     const W = rawImage.width
     const H = rawImage.height
     const scaleX = W / masterWidth
     const scaleY = H / masterHeight
 
-    const cornerOrder: Array<"TL" | "TR" | "BL" | "BR"> = [
-      "TL",
-      "TR",
-      "BL",
-      "BR",
-    ]
-    const srcPoints: Point[] = []
-    const dstPoints: Point[] = []
-
-    for (const corner of cornerOrder) {
-      const answerMarker = answerResult.markers.find(
-        (marker) => marker.corner === corner
-      )
-      const masterMarker = masterMarkers.find(
-        (marker) => marker.corner === corner
-      )
-
-      if (!answerMarker || !masterMarker) {
-        return {
-          success: false,
-          error: `${corner}マーカーのペアリングに失敗`,
-        }
+    const masterCorners = new Map(
+      masterMarkers.map((marker) => [
+        marker.corner,
+        { x: marker.centerX * scaleX, y: marker.centerY * scaleY },
+      ])
+    )
+    const [masterTL, masterTR, masterBL, masterBR] = CORNER_ORDER.map(
+      (corner) => masterCorners.get(corner)
+    )
+    if (!masterTL || !masterTR || !masterBL || !masterBR) {
+      return {
+        success: false,
+        error: "マスターマーカーが4隅揃っていません",
       }
-
-      srcPoints.push({ x: answerMarker.centerX, y: answerMarker.centerY })
-      dstPoints.push({
-        x: masterMarker.centerX * scaleX,
-        y: masterMarker.centerY * scaleY,
-      })
     }
+
+    // 1隅だけ欠けた答案は、マスターの4隅との対応から残り3隅で推定する
+    const resolved = resolveAnswerCorners(answerResult, {
+      TL: masterTL,
+      TR: masterTR,
+      BL: masterBL,
+      BR: masterBR,
+    })
+    if (!resolved) {
+      return {
+        success: false,
+        error: `答案マーカー検出失敗: ${answerResult.error ?? `${answerResult.markers.length}/4検出`}`,
+      }
+    }
+
+    const srcPoints: Point[] = resolved.corners
+    const dstPoints: Point[] = [masterTL, masterTR, masterBL, masterBR]
 
     // 3. 剛体変換パラメータ算出（回転 + 平行移動）
     const rigid = computeRigidTransform(srcPoints, dstPoints)

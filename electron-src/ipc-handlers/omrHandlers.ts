@@ -16,7 +16,10 @@ import type {
 } from "../../src/types/omr.types"
 import { getSharedFilesDirectory } from "../lib/dataManager"
 import { createTransform } from "../lib/omr/coordinateTransform"
-import { detectCornerMarkers } from "../lib/omr/cornerMarkerDetector"
+import {
+  detectCornerMarkers,
+  resolveAnswerCorners,
+} from "../lib/omr/cornerMarkerDetector"
 import { correctImage } from "../lib/omr/imageCorrector"
 import { loadImageRaw } from "../lib/omr/imageProcessor"
 import { recognizeCells } from "../lib/omr/markRecognizer"
@@ -118,7 +121,18 @@ export const omrHandlers = {
           args.params.colorThreshold ?? undefined
         )
 
-        if (!markerResult.success) {
+        // 1隅だけ欠けた答案は、模範解答の4隅との対応から残り3隅で推定する。
+        // 2隅以上欠けていれば位置を合わせられない
+        const [expectedTL, expectedTR, expectedBL, expectedBR] =
+          args.expectedCorners
+        const resolved = resolveAnswerCorners(markerResult, {
+          TL: expectedTL,
+          TR: expectedTR,
+          BL: expectedBL,
+          BR: expectedBR,
+        })
+
+        if (!resolved) {
           results.push({
             success: false,
             examStudentId: entry.examStudentId,
@@ -129,20 +143,8 @@ export const omrHandlers = {
           })
           failed++
         } else {
-          const sortedMarkers = {
-            TL: markerResult.markers.find((marker) => marker.corner === "TL")!,
-            TR: markerResult.markers.find((marker) => marker.corner === "TR")!,
-            BL: markerResult.markers.find((marker) => marker.corner === "BL")!,
-            BR: markerResult.markers.find((marker) => marker.corner === "BR")!,
-          }
-
           const transform = createTransform(
-            [
-              { x: sortedMarkers.TL.centerX, y: sortedMarkers.TL.centerY },
-              { x: sortedMarkers.TR.centerX, y: sortedMarkers.TR.centerY },
-              { x: sortedMarkers.BL.centerX, y: sortedMarkers.BL.centerY },
-              { x: sortedMarkers.BR.centerX, y: sortedMarkers.BR.centerY },
-            ],
+            resolved.corners,
             args.expectedCorners,
             markerResult.imageWidth,
             markerResult.imageHeight
@@ -162,6 +164,7 @@ export const omrHandlers = {
             examStudentId: entry.examStudentId,
             pageIndex: args.pageIndex ?? 0,
             markerDetection: markerResult,
+            estimatedCorner: resolved.estimatedCorner,
             cellResults,
           })
           succeeded++

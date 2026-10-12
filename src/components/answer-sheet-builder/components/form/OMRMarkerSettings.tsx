@@ -1,5 +1,6 @@
 "use client"
 
+import { TriangleAlert } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Slider } from "@/components/ui/slider"
@@ -11,6 +12,8 @@ import { useAsbGesture } from "../../AsbGestureContext"
 interface OMRMarkerSettingsProps {
   config: OMRMarkerConfig
   onUpdate: (config: Partial<OMRMarkerConfig>) => void
+  /** 版面との干渉の警告（checkOMRMarkerPlacement の結果） */
+  warnings: string[]
 }
 
 function EditableValue({
@@ -87,6 +90,7 @@ function EditableValue({
 export function OMRMarkerSettings({
   config,
   onUpdate,
+  warnings,
 }: OMRMarkerSettingsProps) {
   const gesture = useAsbGesture()
   return (
@@ -152,6 +156,20 @@ export function OMRMarkerSettings({
             />
           </div>
         </div>
+      )}
+
+      {warnings.length > 0 && (
+        <ul className="space-y-1.5">
+          {warnings.map((warning) => (
+            <li
+              key={warning}
+              className="flex items-start gap-1.5 rounded-md border border-orange-200 bg-orange-50 p-2 text-xs text-orange-700"
+            >
+              <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              {warning}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
