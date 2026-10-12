@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BookA,
   Bot,
   ChartColumn,
   ClipboardList,
@@ -75,6 +76,7 @@ const navGroups: NavItem[][] = [
       isExperimental: true,
     },
     { href: "/audit-logs", label: "操作履歴", icon: RotateCcwClock },
+    { href: "/glossary", label: "用語集", icon: BookA },
   ],
 ]
 
