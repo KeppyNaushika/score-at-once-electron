@@ -429,16 +429,17 @@ OMR の自動採点は本番では renderer の `reevaluateWithThreshold` が担
   にまとめ、本番の deployer と `applyMigrationSql` を通すようにした
 - export だけ余計だった69件の `export` を外した。`package.json` の `db:*` 3つと `.env.test` を消した
 
-**残したもの**（同じ時期に別の作業が同じファイルを変えていたため、後で直す）:
+**後から直したもの**（同じ時期に別の作業が同じファイルを変えていたため、その作業の後に直した）:
 
-- `aiQuestionImages.test.tsx:124`、`hooks/useAiGradingAvailability.test.tsx:71`
-- `src/lib/shared/auditActions.ts` の `AUDIT_TARGET_TYPES`、
-  `src/components/exams/07-score-at-once/types.ts` の `MasterStatus` の余計な `export`
+- `aiQuestionImages.test.tsx:124` は拒否の `toast.error` を見る。`useAiGradingAvailability.test.tsx:71` は
+  同じキャッシュの見張りで状態が届いたことを待ってから見る。どちらも本番を壊して落ちることを確かめた
+- `MasterStatus` の余計な `export` を外した。`AUDIT_TARGET_TYPES` は型を作るためだけの配列だったので、
+  `AuditTargetType` を直接の union にした
 
 **対処の途中で新しく見つかったこと**:
 
 - `cornerMarkerDetector` は、マーカーが探索範囲からはみ出すと見えている部分の中心を返し、
-  それでも `success` になる（A3 で 7px、答案が下へ 15px ずれると下の2隅が 7.5px）。#1445 と同じ根
+  それでも `success` になる（A3 で 7px、答案が下へ 15px ずれると下の2隅が 7.5px）。#1445 に追記した
 - 個人成績表の `buildSubtotalScoresFromGroups`（`individual-report/dataFetcher.ts`）と Excel の
   `buildSubtotalScores`（`excel/dataFetcher.ts`）が同じ中身の写しになっていた。個人成績表は先に
   Excel 側の `fetchExportData` を呼んでおり、同じ入力で計算済みの小計を DB から引き直して

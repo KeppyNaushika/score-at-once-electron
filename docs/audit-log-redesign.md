@@ -325,7 +325,7 @@ PR-2 を PR-3 より前に置くのは、**対象ラベルがないとフィル�
   「監査ログのアーカイブ収録」とは別の判断）。対象はログに従って入り、取り込みはログと同じく
   追記だけ
 - 対象を記録するのは、絞り込みの欄がある生徒（`Student`）と採点領域（`CropRegion`）だけ。
-  種類の一覧は `src/lib/shared/auditActions.ts` の `AUDIT_TARGET_TYPES`
+  種類の一覧は `src/lib/shared/auditActions.ts` の `AuditTargetType`
 - アクションのカタログは renderer も引く（種別の展開・アイコン）ので `src/lib/shared/auditActions.ts`
   へ移した。main は行をそのまま返し、操作者名・種別・集約回数は renderer が導く
 

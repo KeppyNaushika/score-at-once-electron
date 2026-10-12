@@ -36,8 +36,7 @@ export type AuditVerb = (typeof AUDIT_VERBS)[number]
  * 記録側がこの名前で書き、絞り込みの欄（生徒・採点領域）がこの名前で引く。
  * 値はテーブル名にそろえる（`AuditLog.entityType` と同じ流儀）。
  */
-export const AUDIT_TARGET_TYPES = ["Student", "CropRegion"] as const
-export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number]
+export type AuditTargetType = "Student" | "CropRegion"
 
 interface AuditActionDef {
   category: AuditCategory

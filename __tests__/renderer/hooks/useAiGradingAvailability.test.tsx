@@ -8,12 +8,14 @@
 
 import "../setup"
 
+import { useQuery } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import type { ProviderStatus } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import { useAiGradingAvailability } from "@/hooks/useAiGradingAvailability"
 import { AI_GRADING_CONSENT_VERSION } from "@/lib/shared/aiGrading/consentText"
+import { aiProviderStatusesQuery } from "@/queries/aiProvider"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
@@ -69,7 +71,7 @@ describe("useAiGradingAvailability", () => {
   })
 
   it("版の古い同意・別の利用者の同意では、キーがあっても解放しない", async () => {
-    const getStatuses = installStatuses([
+    installStatuses([
       {
         provider: "anthropic",
         hasApiKey: true,
@@ -83,13 +85,19 @@ describe("useAiGradingAvailability", () => {
         consent: { ...CURRENT_CONSENT, userId: "someone-else" },
       },
     ])
-    const { result } = renderHook(() => useAiGradingAvailability(), {
-      wrapper: createQueryWrapper(),
-    })
+    // 既定値（[]）と期待値が同じなので、状態が届いたことを同じキャッシュの見張りで待つ。
+    // 見張りは自分では取りに行かない（取得はフックだけが行う）
+    const { result } = renderHook(
+      () => ({
+        availability: useAiGradingAvailability(),
+        statusesProbe: useQuery({ ...aiProviderStatusesQuery(), enabled: false }),
+      }),
+      { wrapper: createQueryWrapper() }
+    )
 
-    await waitFor(() => expect(getStatuses).toHaveBeenCalled())
-    // 取得が終わってからも閉じたまま
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(result.current.unlockedProviders).toEqual([])
+    await waitFor(() =>
+      expect(result.current.statusesProbe.data).toHaveLength(2)
+    )
+    expect(result.current.availability.unlockedProviders).toEqual([])
   })
 })
