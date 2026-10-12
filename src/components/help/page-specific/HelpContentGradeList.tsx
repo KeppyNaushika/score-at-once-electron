@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react"
 
+import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
 import {
   Badge,
   HelpSection,
@@ -86,9 +87,9 @@ export function HelpContentGradeList() {
               前の学期と同じ作りで出すときは、行末の「…」から「複製」を選ぶと設定ごと写せます。
             </p>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った成績算出は「読み込み」で取り込めます（.sao
-              のほか、以前の .grade
-              も選べます）。書き出しは行末の「…」から行います。
+              別の端末で作った成績算出は「読み込み」で取り込めます
+              <ArchiveImportFormatsNote legacyFormats=".grade" />
+              。書き出しは行末の「…」から行います。
             </p>
           </div>
         </HelpSection>

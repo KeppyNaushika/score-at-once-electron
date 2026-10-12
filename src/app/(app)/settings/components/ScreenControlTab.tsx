@@ -12,6 +12,8 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
+import { useIsScreenWakeLockSupported } from "@/hooks/useScreenWakeLock"
 import { getModifierKeyLabels } from "@/lib/platformUtils"
 import { parsePreference } from "@/lib/userPreferences"
 import {
@@ -29,6 +31,12 @@ export function ScreenControlTab() {
   const { data: savedProjectorMode } = useQuery(projectorModeQuery())
   const setProjectorMode = useMutation(setProjectorModeMutation())
   const projectorMode = savedProjectorMode ?? false
+
+  // web 版のプロジェクターモードは画面側の Screen Wake Lock で動かす（`useScreenWakeLock`）。
+  // 状態はデスクトップ版と同じ get/set で持つ。API が無いブラウザでは押せなくする
+  const isWebRuntime = useIsWebRuntime()
+  const isWakeLockSupported = useIsScreenWakeLockSupported()
+  const isProjectorModeUnavailable = isWebRuntime && !isWakeLockSupported
 
   // 画面消灯。目隠しの本体（ScreenBlackout）と同じキャッシュを読み書きするので、
   // 変更を伝える自作イベントは要らない
@@ -63,6 +71,9 @@ export function ScreenControlTab() {
         // 切り替え後の実際の状態を返すので、要求値ではなくそちらを採る
         onSuccess: (applied) => {
           queryClient.setQueryData(projectorModeKey, applied)
+          // web 版でオンにしたときは、ロックが取れてから `useScreenWakeLock` が知らせる
+          // （断られたらオフへ戻す）。ここで出すと、断られても「有効にしました」が並ぶ
+          if (enabled && isWebRuntime) return
           toast.success(
             enabled
               ? "プロジェクターモードを有効にしました"
@@ -73,7 +84,7 @@ export function ScreenControlTab() {
           void queryClient.invalidateQueries({ queryKey: projectorModeKey }),
       })
     },
-    [projectorModeKey, queryClient, setProjectorMode]
+    [isWebRuntime, projectorModeKey, queryClient, setProjectorMode]
   )
 
   const handleBlackoutToggle = useCallback(
@@ -140,12 +151,21 @@ export function ScreenControlTab() {
                 プロジェクターモード
               </Label>
               <p className="text-xs text-muted-foreground">
-                スクリーンセーバーとスリープを無効化します
+                {isWebRuntime
+                  ? "このページを表示している間、画面の消灯とスリープを止めます（別のタブやアプリへ移ると止まり、戻ると再開します）"
+                  : "スクリーンセーバーとスリープを無効化します"}
               </p>
+              {isProjectorModeUnavailable && (
+                <p className="text-xs text-amber-700">
+                  このブラウザは画面の消灯を止める機能（Screen Wake
+                  Lock）に対応していないため使えません
+                </p>
+              )}
             </div>
             <Switch
               checked={projectorMode}
               onCheckedChange={handleProjectorModeToggle}
+              disabled={isProjectorModeUnavailable}
             />
           </div>
 
@@ -183,23 +203,28 @@ export function ScreenControlTab() {
             </div>
           </div>
 
-          <div className="border-t" />
+          {/* 自動フルスクリーン。web 版には無い（ブラウザの全画面はユーザーの操作が要り、
+              無操作タイマーの消灯からは入れない） */}
+          {!isWebRuntime && (
+            <>
+              <div className="border-t" />
 
-          {/* 自動フルスクリーン */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">
-                消灯時に自動フルスクリーン
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                消灯・ロック時にウィンドウをフルスクリーンにします
-              </p>
-            </div>
-            <Switch
-              checked={autoFullScreen}
-              onCheckedChange={handleAutoFullScreenToggle}
-            />
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">
+                    消灯時に自動フルスクリーン
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    消灯・ロック時にウィンドウをフルスクリーンにします
+                  </p>
+                </div>
+                <Switch
+                  checked={autoFullScreen}
+                  onCheckedChange={handleAutoFullScreenToggle}
+                />
+              </div>
+            </>
+          )}
         </div>
       </section>
 

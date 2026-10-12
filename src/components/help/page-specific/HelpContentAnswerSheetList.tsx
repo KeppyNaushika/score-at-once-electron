@@ -9,6 +9,7 @@ import {
   UserRoundCog,
 } from "lucide-react"
 
+import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
 import {
   Badge,
   HelpSection,
@@ -93,9 +94,9 @@ export function HelpContentAnswerSheetList() {
               <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った解答用紙は「読み込み」で取り込めます（.sao
-              のほか、以前の .asb
-              も選べます）。書き出しと複製は行末の「…」から行います。
+              別の端末で作った解答用紙は「読み込み」で取り込めます
+              <ArchiveImportFormatsNote legacyFormats=".asb" />
+              。書き出しと複製は行末の「…」から行います。
             </p>
           </div>
         </HelpSection>

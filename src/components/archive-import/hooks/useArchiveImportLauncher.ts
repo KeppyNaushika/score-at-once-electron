@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { openExamImportFile } from "@/hooks/import/useImportWizard"
 import { openStudentImportFile } from "@/hooks/student-import/useStudentImportWizard"
+import { isWebRuntime } from "@/lib/webRuntime"
 import { importAnswerSheetDefinitionMutation } from "@/queries/answerSheetBuilder"
 import { analyzeCourseworkArchive } from "@/queries/coursework"
 import { analyzeGradeArchive } from "@/queries/grade"
@@ -18,6 +19,14 @@ import type { OpenedArchiveImport } from "../types"
 
 const errorMessageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
+
+/**
+ * web 版で旧形式・外部の形式を選んだときの断り。それらの取り込みは adm-zip と同期の fs に
+ * 依存していて、web 版では動かない（ファイル選択も .sao だけを受け付けるが、すべてのファイルを
+ * 選べる状態にされると届く）
+ */
+const WEB_LEGACY_IMPORT_MESSAGE =
+  "web 版で読み込めるのは統合アーカイブ（.sao）だけです。旧形式（.score・.coursework・.grade・.asb・.students）と .hsz・.dat は、デスクトップ版で読み込んでから統合アーカイブに書き出してください。"
 
 /** 画面を持つ種類（.asb は画面を挟まずにそのまま取り込む） */
 type ScreenFileKind = Exclude<ArchiveImportFileKind, "asb">
@@ -117,6 +126,12 @@ export function useArchiveImportLauncher() {
     if (selected === null) return
 
     const { path: filePath, kind } = selected
+    if (isWebRuntime() && kind !== "sao") {
+      toast.error("このファイルは web 版では読み込めません", {
+        description: WEB_LEGACY_IMPORT_MESSAGE,
+      })
+      return
+    }
     if (kind === null) {
       toast.error("このファイルは読み込めません", {
         description:

@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react"
 
+import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
 import {
   Badge,
   HelpSection,
@@ -82,9 +83,9 @@ export function HelpContentCourseworkList() {
               資料名・実施日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
             </p>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った資料は「読み込み」で取り込めます（.sao
-              のほか、以前の .coursework
-              も選べます）。書き出しと削除は行末の「…」から行います。成績算出から参照されている資料は削除できません
+              別の端末で作った資料は「読み込み」で取り込めます
+              <ArchiveImportFormatsNote legacyFormats=".coursework" />
+              。書き出しと削除は行末の「…」から行います。成績算出から参照されている資料は削除できません
               （どの成績算出が使っているかを知らせます）。
             </p>
           </div>

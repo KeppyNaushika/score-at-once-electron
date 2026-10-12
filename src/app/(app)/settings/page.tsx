@@ -107,11 +107,14 @@ export default function SettingsPage() {
                   ブラウザの保存領域
                 </TabsTrigger>
               )}
-              <TabsTrigger value="sync" className="gap-2">
-                <FolderSync className="h-4 w-4" />
-                同期設定
-                <BetaBadge />
-              </TabsTrigger>
+              {/* 同期・共有モードはデスクトップ版だけ（web 版は1人用で、協調はデスクトップ版の役目） */}
+              {!isWebRuntime && (
+                <TabsTrigger value="sync" className="gap-2">
+                  <FolderSync className="h-4 w-4" />
+                  同期設定
+                  <BetaBadge />
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="keyboard">
@@ -159,9 +162,11 @@ export default function SettingsPage() {
               </TabsContent>
             )}
 
-            <TabsContent value="sync">
-              <SyncSettingsTab />
-            </TabsContent>
+            {!isWebRuntime && (
+              <TabsContent value="sync">
+                <SyncSettingsTab />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

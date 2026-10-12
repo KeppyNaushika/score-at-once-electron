@@ -5,7 +5,9 @@ import { Lock } from "lucide-react"
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { useScreenWakeLock } from "@/hooks/useScreenWakeLock"
 import { parsePreference } from "@/lib/userPreferences"
+import { isWebRuntime } from "@/lib/webRuntime"
 import {
   fullScreenQuery,
   setFullScreenMutation,
@@ -31,6 +33,10 @@ export function ScreenBlackout() {
   const passcodeRef = useRef("")
   /** 直近で「触った」と控えた時刻（間引き用） */
   const lastBumpRef = useRef(0)
+
+  // web 版のプロジェクターモード（画面の消灯を止める）。目隠しと同じく常に居る
+  // 部品が持つので、設定画面を離れても切るまで効き続ける
+  useScreenWakeLock()
 
   // 目隠しの設定は設定画面と同じキャッシュを読む。あちらで変えれば
   // ここも取り直されるので、変更を伝える自作イベントは要らない
@@ -90,8 +96,10 @@ export function ScreenBlackout() {
     startFadeTimer()
   }, [startFadeTimer])
 
+  // web 版では全画面にしない。ブラウザの全画面はユーザーの操作が要り、
+  // 無操作タイマーの暗転からは入れない（設定画面でもこの項目を出していない）
   const enterFullScreenIfNeeded = useCallback(async () => {
-    if (!autoFullScreen) return
+    if (!autoFullScreen || isWebRuntime()) return
     // 暗転を解いたときに元へ戻せるよう、今が全画面かをその場で確かめる
     wasFullScreenBeforeRef.current =
       await queryClient.fetchQuery(fullScreenQuery())
@@ -99,7 +107,7 @@ export function ScreenBlackout() {
   }, [autoFullScreen, queryClient, setFullScreen])
 
   const restoreFullScreenIfNeeded = useCallback(() => {
-    if (!autoFullScreen) return
+    if (!autoFullScreen || isWebRuntime()) return
     if (wasFullScreenBeforeRef.current) return
     setFullScreen(false)
   }, [autoFullScreen, setFullScreen])

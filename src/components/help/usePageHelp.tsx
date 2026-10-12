@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
 import { examWorkflowSteps } from "@/lib/shared/workflowSteps"
 
 // ページごとのヘルプコンポーネント
@@ -58,6 +59,12 @@ const pageHelpComponents: {
   settings: HelpContentSettings,
 }
 
+/**
+ * web 版では出さない手引き。設定の手引きは中身が同期（共有モード）だけで、web 版には
+ * 同期設定のタブが無い
+ */
+const desktopOnlyHelpPageIds = new Set(["settings"])
+
 interface UsePageHelpOptions {
   /**
    * 段のヘッダーに並べる小さい形にする。
@@ -71,6 +78,7 @@ interface UsePageHelpOptions {
 /** 現在のページに対応するヘルプコンテンツを全画面モーダルで表示するフック */
 export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
   const pathname = usePathname()
+  const isWebRuntime = useIsWebRuntime()
   const [isOpen, setIsOpen] = useState(false)
 
   /**
@@ -100,6 +108,9 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       return "students"
     }
 
+    if (isWebRuntime && desktopOnlyHelpPageIds.has(lastSegment)) {
+      return undefined
+    }
     return Object.keys(pageHelpComponents).includes(lastSegment)
       ? lastSegment
       : undefined
