@@ -7,6 +7,11 @@ import { useCallback } from "react"
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
+import { useRegionPointsRecalculation } from "@/components/exams/03-region-info/hooks/useRegionPointsRecalculation"
+import {
+  readPointsInput,
+  recalculatesRubricScores,
+} from "@/components/exams/03-region-info/utils/regionPoints"
 import { CropRegionDeleteConfirmModal } from "@/components/exams/shared/CropRegionDeleteConfirmModal"
 import {
   Table,
@@ -68,6 +73,7 @@ const RegionDetailsTable = ({
   const updateCropRegionOrders = useMutation(
     updateCropRegionOrdersMutation(examId)
   )
+  const { recalculateForPoints } = useRegionPointsRecalculation(examId)
 
   /** 並べ替え。順番は行の並びそのものなので、全行の orderIndex を振り直す */
   const handleReorder = useCallback(
@@ -99,20 +105,31 @@ const RegionDetailsTable = ({
     field: string,
     value: string | number | null
   ) => {
-    // 配点だけ数値。空欄は「未設定」なので null へ倒す
-    remember(cropRegionId, field, value === null ? "" : String(value))
+    const text = value === null ? "" : String(value)
+    remember(cropRegionId, field, text)
 
-    const nextValue =
-      field === "points"
-        ? value === "" || value === null
-          ? null
-          : parseFloat(String(value))
-        : value
-    // 数にできない途中（空・`8.`）は書かない。次の打鍵で確定する
-    if (field === "points" && nextValue !== null && Number.isNaN(nextValue))
+    if (field !== "points") {
+      updateCropRegion.mutate({ id: cropRegionId, data: { [field]: value } })
       return
+    }
 
-    updateCropRegion.mutate({ id: cropRegionId, data: { [field]: nextValue } })
+    const cropRegion = regions.find((region) => region.id === cropRegionId)
+    if (!cropRegion) return
+    // 配点だけ数値。空欄は（直接採点なら）「未設定」なので null へ倒す。
+    // 数にできない途中（`-` など）は書かない。次の打鍵で確定する
+    const pointsInput = readPointsInput(text, cropRegion.scoringMethod)
+    if (pointsInput.kind === "incomplete") return
+    const pointsWrite = updateCropRegion.mutateAsync({
+      id: cropRegionId,
+      data: { points: pointsInput.points },
+    })
+    if (!recalculatesRubricScores(cropRegion.scoringMethod)) {
+      // 失敗の通知は MutationCache の後始末が担う
+      pointsWrite.catch(() => {})
+      return
+    }
+    // 減点・加点方式は配点が点の計算に入るので、全採点者の点をこの配点で計算し直す（§4-6）
+    void recalculateForPoints(cropRegionId, pointsInput.points, pointsWrite)
   }
 
   const handleDeleteRegion = (cropRegionId: string) => {

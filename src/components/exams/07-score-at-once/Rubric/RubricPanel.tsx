@@ -23,6 +23,7 @@ import { useRubricItemEditing } from "./hooks/useRubricItemEditing"
 import { useRubricPanelChoiceScene } from "./hooks/useRubricPanelChoiceScene"
 import { useRubricQuestion } from "./hooks/useRubricQuestion"
 import { useRubricRecalculation } from "./hooks/useRubricRecalculation"
+import { useRubricSyncLagRepair } from "./hooks/useRubricSyncLagRepair"
 import { useScoringKeysPausedWhile } from "./hooks/useScoringKeysPausedWhile"
 import { RubricAdviceChoiceView } from "./RubricAdviceChoiceView"
 import { RubricAdviceSection } from "./RubricAdviceSection"
@@ -122,6 +123,11 @@ export function RubricPanel({
     syncAdviceRows: adviceSync.syncRows,
   })
   const { runWithRecalculation, pending, cancel } = useRubricRecalculation({
+    examId,
+    cropRegionId: cropRegion.id,
+    currentUserId,
+  })
+  useRubricSyncLagRepair({
     examId,
     cropRegionId: cropRegion.id,
     currentUserId,
