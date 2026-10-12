@@ -17,6 +17,7 @@ import "../setup"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { type ReactNode, useState } from "react"
+import { toast } from "sonner"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiPromptEditorDialog } from "@/components/exams/07-score-at-once/AiGrading/AiPromptEditorDialog"
@@ -133,6 +134,10 @@ describe("問題の画像の欄", () => {
     await user.upload(
       screen.getByTestId("ai-question-image-file-input"),
       new File(["text"], "メモ.txt", { type: "text/plain" })
+    )
+    // 拒否は取り込む前に同期で伝わる（受け付けた種類なら読み込みの後に切り出しの画面が開く）
+    expect(toast.error).toHaveBeenCalledWith(
+      "メモ.txt: PNG・JPEG・WebP の画像か、PDF を選んでください"
     )
     expect(screen.queryByRole("dialog")).toBeNull()
     expect(aiGrading.importQuestionImage).not.toHaveBeenCalled()

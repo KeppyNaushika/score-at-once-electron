@@ -121,7 +121,7 @@ export type MasterAnswerDisplayMode =
 export type MasterAnswerKeyBehavior =
   (typeof MASTER_ANSWER_KEY_BEHAVIORS)[number]
 
-export type MasterStatus = "master"
+type MasterStatus = "master"
 
 export interface MasterGridItem {
   id: string
