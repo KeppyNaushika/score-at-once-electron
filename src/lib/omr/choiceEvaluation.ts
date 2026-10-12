@@ -117,17 +117,22 @@ export function evaluateChoiceBubbles(
       ...bubbleMeasurements.map((measurement) => measurement.fillRatio)
     )
     confidence = 1 - maxRatio / divisor
-  } else if (marked.length === 1) {
-    // 単一回答: マーク済みの塗りつぶし率が高いほど、他との差が大きいほど高信頼
-    const markedRatio = marked[0].fillRatio
+  } else {
+    // 回答あり: マーク済みのうち最も薄いものが濃いほど、
+    // 閾値未満のうち最も濃いものが薄いほど高信頼。
+    // 塗った数では下げない。複数正解の設問を正しく塗った答案が保留に回らないように。
+    // 正解数を超えた塗りは ambiguous（→ double_mark）で、低信頼チェックの対象外
+    const weakestMarkedRatio = Math.min(
+      ...marked.map((measurement) => measurement.fillRatio)
+    )
     const otherMaxRatio = Math.max(
       ...belowThreshold.map((measurement) => measurement.fillRatio),
       0
     )
-    confidence = Math.min(markedRatio / divisor, 1 - otherMaxRatio / divisor)
-  } else {
-    // 複数マーク: 信頼度は低い
-    confidence = 0.3
+    confidence = Math.min(
+      weakestMarkedRatio / divisor,
+      1 - otherMaxRatio / divisor
+    )
   }
   if (residue.length > 0) {
     confidence = Math.min(confidence, MAX_CONFIDENCE_WITH_RESIDUE)

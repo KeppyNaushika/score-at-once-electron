@@ -72,7 +72,6 @@ describe("evaluateChoiceBubbles", () => {
     })
 
     expect(evaluation.autoScoreStatus).toBe("ambiguous")
-    expect(evaluation.confidence).toBeLessThanOrEqual(0.3)
   })
 
   it("複数正解を全て選べば correct", () => {
@@ -89,6 +88,24 @@ describe("evaluateChoiceBubbles", () => {
 
     expect(evaluation.autoScoreStatus).toBe("correct")
     expect(evaluation.recognizedValues).toEqual(["ア", "ウ"])
+    // 塗った数では信頼度を下げない（#1444）
+    expect(evaluation.confidence).toBeGreaterThanOrEqual(0.9)
+  })
+
+  it("複数マークの信頼度は、閾値未満で最も濃い塗りに引き下げられる", () => {
+    const evaluation = evaluateChoiceBubbles({
+      bubbleMeasurements: [
+        measurement(0, "ア", 0.9),
+        measurement(1, "イ", 0.3),
+        measurement(2, "ウ", 0.87),
+      ],
+      correctChoiceIndices: [0, 2],
+      areaThreshold: 0.4,
+      minInkDarkness: null,
+    })
+
+    expect(evaluation.autoScoreStatus).toBe("correct")
+    expect(evaluation.confidence).toBeCloseTo(1 - 0.3 / 0.4)
   })
 
   it("未マークは no_answer で、薄いほど高信頼", () => {
