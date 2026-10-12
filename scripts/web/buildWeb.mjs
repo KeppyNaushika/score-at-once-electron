@@ -7,6 +7,10 @@
  * - 入口（`web/page/entry.ts`）: preload（`electron-src/preload.ts`。無改変）を `electron` だけ
  *   `web/page/electronShim.ts` に差し替えて束ねたもの。すべての HTML（動的ルートの殻を含む）の
  *   `<head>` の先頭に、Next のスクリプトより先に同期で読まれるよう差し込む
+ * - CSP の meta: 入口のさらに前に差し込む。HTML ごとのインラインのスクリプトの sha256 を許す
+ * - 配信のヘッダー（`_headers`。Cloudflare Pages の形式）
+ *
+ * CSP などのヘッダーの定義は `scripts/web/webHeaders.mjs` だけが持つ（手元の配信も同じものを読む）。
  * - 画像を OPFS から返す Service Worker（`web/serviceWorker/serviceWorker.ts`）
  * - main の処理を動かす module Worker（`scripts/web/buildWorker.mjs`）
  *
@@ -22,6 +26,8 @@ import { builtinModules } from "node:module"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { tsImport } from "tsx/esm/api"
+
+import { addPageHeadElements, renderHeadersFile } from "./webHeaders.mjs"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -141,20 +147,19 @@ const listHtmlFiles = async (directory) => {
     .map((entry) => path.join(entry.parentPath, entry.name))
 }
 
-const HEAD_OPEN_TAG = /<head(\s[^>]*)?>/i
-
-/** 入口を `<head>` の先頭に差し込む。`async` を付けないので、後に続く Next のスクリプトより先に動く */
-const injectPageScript = async (htmlPath) => {
+/** CSP の meta と入口を `<head>` の先頭に差し込む（`webHeaders.mjs` の `addPageHeadElements`） */
+const injectPageHeadElements = async (htmlPath) => {
   const html = await readFile(htmlPath, "utf8")
-  const headOpenTag = html.match(HEAD_OPEN_TAG)
-  if (!headOpenTag) {
-    throw new Error(`<head> がありません: ${relativeToRepo(htmlPath)}`)
+  try {
+    await writeFile(
+      htmlPath,
+      addPageHeadElements(html, { pageScriptPath: PAGE_SCRIPT_PATH })
+    )
+  } catch (error) {
+    throw new Error(
+      `${relativeToRepo(htmlPath)}: ${error instanceof Error ? error.message : error}`
+    )
   }
-  const pageScriptTag = `<script src="${PAGE_SCRIPT_PATH}"></script>`
-  await writeFile(
-    htmlPath,
-    html.replace(HEAD_OPEN_TAG, (headTag) => headTag + pageScriptTag)
-  )
 }
 
 const buildWorkerBundle = async (minify) => {
@@ -201,10 +206,13 @@ export async function buildWeb({ minify }) {
   })
 
   const htmlFiles = await listHtmlFiles(WEB_DIST_DIR)
-  await Promise.all(htmlFiles.map(injectPageScript))
+  await Promise.all(htmlFiles.map(injectPageHeadElements))
   console.log(
-    `web-dist: 画面を写し、${htmlFiles.length} 枚の HTML に入口を差し込みました`
+    `web-dist: 画面を写し、${htmlFiles.length} 枚の HTML に CSP と入口を差し込みました`
   )
+
+  await writeFile(toDistPath("/_headers"), renderHeadersFile())
+  console.log("web-dist: 配信のヘッダー（_headers）を書き出しました")
 
   await buildWorkerBundle(minify)
   console.log("web-dist: Worker を書き出しました")

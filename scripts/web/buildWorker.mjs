@@ -15,7 +15,7 @@
  */
 import { build } from "esbuild"
 import { existsSync } from "node:fs"
-import { copyFile, mkdir } from "node:fs/promises"
+import { copyFile, mkdir, readFile } from "node:fs/promises"
 import { builtinModules } from "node:module"
 import * as path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -194,6 +194,12 @@ export async function buildWorker({ outDir, minify = false }) {
   }
   await mkdir(outDir, { recursive: true })
 
+  // Worker に要るのは版と名前だけ。package.json を丸ごと束ねず、この2つを埋め込む
+  // （`web/worker/electronShim.ts` の `__APP_VERSION__`・`__APP_NAME__`）
+  const packageJson = JSON.parse(
+    await readFile(path.join(repositoryRoot, "package.json"), "utf-8")
+  )
+
   const replacementLog = new Map()
   const result = await build({
     absWorkingDir: repositoryRoot,
@@ -209,6 +215,8 @@ export async function buildWorker({ outDir, minify = false }) {
     define: {
       "process.env.NODE_ENV": JSON.stringify("production"),
       global: "globalThis",
+      __APP_VERSION__: JSON.stringify(packageJson.version),
+      __APP_NAME__: JSON.stringify(packageJson.name),
     },
     plugins: [createReplacementPlugin(replacementLog)],
   })

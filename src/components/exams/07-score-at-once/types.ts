@@ -250,7 +250,7 @@ export interface CommandHandler {
   /** コマンド実行時のハンドラー関数 */
   handler: () => void
 
-  /** 実行条件を表すwhen句（JavaScript式として評価される） */
+  /** 実行条件を表すwhen句（`ScoringMain/contexts/whenClause.ts` の文法で読んで評価する） */
   when: string
 
   /** コマンドのメタデータ（設定画面での表示用） */

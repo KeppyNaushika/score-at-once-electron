@@ -18,6 +18,7 @@ import {
   type StudentArchiveManifest,
 } from "../../../../src/types/studentArchive.types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
+import { assertLegacyZipWithinLimits } from "../shared/legacyZipLimits"
 import { newerArchiveVersionError } from "../shared/transformChain"
 
 /**
@@ -49,6 +50,7 @@ export async function extractStudentArchive(archivePath: string): Promise<{
     }
 
     const zip = new AdmZip(archivePath)
+    assertLegacyZipWithinLimits(zip)
     zip.extractAllTo(tempDir, true)
 
     // manifest.json を読み込み

@@ -7,7 +7,6 @@
  * 暗号化の口（safeStorage）は web 版では未対応。HTML の印刷は、オフスクリーンのウィンドウを
  * 使う窓口（`electron-src/lib/printUtils.ts`）ごと差し替える（`htmlPrinting.ts`）。
  */
-import packageJson from "../../package.json"
 import type { WorkerToPageMessage } from "../ipcProtocol"
 import { createDownloadDirectory, createDownloadPath } from "./downloadArea"
 import { requestOpenFiles } from "./pageRequests"
@@ -17,6 +16,13 @@ import {
   WEB_TEMP_DIRECTORY,
   WEB_USER_DATA_DIRECTORY,
 } from "./webPaths"
+
+/**
+ * アプリの版と名前。書き出し（`scripts/web/buildWorker.mjs` の `define`）が package.json から
+ * 埋め込む。package.json を丸ごと import すると依存の一覧まで Worker に入るので、要る2つだけを渡す
+ */
+declare const __APP_VERSION__: string
+declare const __APP_NAME__: string
 
 type IpcListener = (event: IpcEvent, ...args: unknown[]) => unknown
 
@@ -143,8 +149,8 @@ export const app = {
     }
     return resolvedPath
   },
-  getVersion: (): string => packageJson.version,
-  getName: (): string => packageJson.name,
+  getVersion: (): string => __APP_VERSION__,
+  getName: (): string => __APP_NAME__,
   getAppPath: (): string => "/",
   relaunch(): void {
     console.warn(

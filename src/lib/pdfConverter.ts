@@ -50,6 +50,27 @@ export interface ConvertedImage {
  */
 export const PDF_RENDER_SCALE = 2.0
 
+/**
+ * 1ページを描く canvas の上限。ブラウザごとに上限が違い（辺の長さ・面積）、超えると描けずに
+ * 画像が取れない。主なブラウザで描ける大きさに抑え、倍率 2.0 で A0（約 4768×6740px）まで通す。
+ * 倍率は下げない（変換画像から PDF のページ寸法へ逆算する側が `PDF_RENDER_SCALE` 固定を前提にする）
+ */
+export const MAX_PDF_CANVAS_SIDE = 16384
+export const MAX_PDF_CANVAS_AREA = 8192 * 8192
+
+/** ページを描く canvas の大きさが上限を超えるなら、利用者に見せる理由を返す。収まるなら null */
+export function oversizedPdfPageReason(
+  pageNumber: number,
+  canvasWidth: number,
+  canvasHeight: number
+): string | null {
+  const isWithinSide =
+    canvasWidth <= MAX_PDF_CANVAS_SIDE && canvasHeight <= MAX_PDF_CANVAS_SIDE
+  const isWithinArea = canvasWidth * canvasHeight <= MAX_PDF_CANVAS_AREA
+  if (isWithinSide && isWithinArea) return null
+  return `${pageNumber}ページ目が大きすぎて画像にできません（${Math.round(canvasWidth)}×${Math.round(canvasHeight)}px。A0 より大きいページは変換できません）`
+}
+
 // PDF.js 6.x は JBIG2 / JPEG2000 画像のデコードに WASM モジュールを使う。
 // スキャナ生成PDF（JBIG2/CCITT等）はこれが無いとデコードに失敗し白紙になる
 // （"JBig2 failed to initialize" → "Dependent image isn't ready yet" → 白紙）。
@@ -84,6 +105,14 @@ export async function convertPdfToImages(
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum)
       const viewport = page.getViewport({ scale: PDF_RENDER_SCALE })
+      const oversizedReason = oversizedPdfPageReason(
+        pageNum,
+        viewport.width,
+        viewport.height
+      )
+      if (oversizedReason !== null) {
+        throw new Error(oversizedReason)
+      }
 
       const canvas = document.createElement("canvas")
       const context = canvas.getContext("2d")!
@@ -96,8 +125,19 @@ export async function convertPdfToImages(
       }).promise
 
       // Convert canvas to blob with PNG for lossless quality (better for editing workflow)
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob!), "image/png")
+      // 描けなかった canvas（メモリ不足等）は null が返る。中身の無い画像にせず理由を付けて止める
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((pngBlob) => {
+          if (pngBlob === null) {
+            reject(
+              new Error(
+                `${pageNum}ページ目を画像にできませんでした（ページが大きすぎるか、メモリが足りません）`
+              )
+            )
+            return
+          }
+          resolve(pngBlob)
+        }, "image/png")
       })
 
       const buffer = await blob.arrayBuffer()

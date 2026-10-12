@@ -256,4 +256,40 @@ describe("resolveAppImageRequestPath（appimg://）", () => {
       )
     })
   }
+
+  it.each([
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "webp",
+    "bmp",
+    "tif",
+    "tiff",
+    "svg",
+    "PNG",
+  ])("画像の形式 .%s は返す", (extension) => {
+    expect(
+      resolveAppImageRequestPath(
+        `appimg:///exams/exam-1/page.${extension}`,
+        ROOT_DIRECTORY
+      )
+    ).toBe(path.join(ROOT_DIRECTORY, "exams", "exam-1", `page.${extension}`))
+  })
+
+  const nonImageUrls = [
+    { label: "根の下の DB", url: "appimg:///database.db" },
+    { label: "PDF", url: "appimg:///exams/exam-1/answers.pdf" },
+    { label: "JSON", url: "appimg:///settings.json" },
+    { label: "HTML", url: "appimg:///exams/exam-1/page.html" },
+    { label: "拡張子なし", url: "appimg:///exams/exam-1/page" },
+    { label: "画像の拡張子が途中にあるだけ", url: "appimg:///page.png.db" },
+  ]
+  for (const nonImageUrl of nonImageUrls) {
+    it(`画像でない形式（${nonImageUrl.label}）は根の下でも断る`, () => {
+      expect(resolveAppImageRequestPath(nonImageUrl.url, ROOT_DIRECTORY)).toBe(
+        null
+      )
+    })
+  }
 })

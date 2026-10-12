@@ -24,6 +24,7 @@ import type {
 import { isLegacyCourseworkTree } from "../coursework-transformers/legacyShape"
 import type { AnyCourseworkArchiveData } from "../coursework-transformers/types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
+import { assertLegacyZipWithinLimits } from "../shared/legacyZipLimits"
 
 interface ExtractedCourseworkArchive {
   manifest: CourseworkArchiveManifest
@@ -68,6 +69,7 @@ export async function extractCourseworkArchive(
     }
 
     const zip = new AdmZip(archivePath)
+    assertLegacyZipWithinLimits(zip)
     zip.extractAllTo(tempDir, true)
 
     const manifest = readJsonFile<CourseworkArchiveManifest>(

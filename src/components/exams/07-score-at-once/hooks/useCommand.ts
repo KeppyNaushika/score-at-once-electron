@@ -46,7 +46,8 @@ function createMetadataSignature(metadata?: CommandMetadata): string {
  */
 interface UseCommandOptions {
   /**
-   * 実行条件を表すwhen句（JavaScript式として評価される）
+   * 実行条件を表すwhen句（`ScoringMain/contexts/whenClause.ts` の文法で読む。
+   * コードとしては評価しない）
    * デフォルト: "true" （常に有効）
    *
    * 利用可能な変数:
