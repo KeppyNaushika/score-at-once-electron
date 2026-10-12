@@ -49,6 +49,8 @@ const scoreStatusLabel = (status: string | null | undefined): string => {
       return "複数マーク"
     case "unscored":
       return "未採点"
+    case "evaluated":
+      return "類型評価"
     default:
       return status ?? "（なし）"
   }
@@ -139,6 +141,8 @@ export type SetQuestionScoreData = Omit<
   | "overridesRubric"
   | "status"
   | "partialScore"
+  // 類型は類型評価の書き込み（`scaleLevelScoreWrite.ts`）だけが書く。ここでは null に戻す
+  | "scaleLevelId"
 > &
   QuestionScoreResult
 
@@ -149,6 +153,16 @@ export type SetQuestionScoreData = Omit<
  */
 const rubricOverrideFor = (row: { rubricApplications: unknown[] }) =>
   row.rubricApplications.length > 0
+
+/**
+ * 点の採点の書き込みに `evaluated`（類型を付けた）が来たら拒む。類型は `setScaleLevels` で付ける
+ * （ここで受けると、類型の無い評価済みの行ができる）
+ */
+const assertPointResult = (result: QuestionScoreResult) => {
+  if (result.status === "evaluated") {
+    throw new Error("類型は類型評価の書き込みで付けてください")
+  }
+}
 
 /** 部分点を Decimal 列の値へ。`null` はそのまま NULL を書く */
 const toPartialScoreColumn = (
@@ -243,6 +257,7 @@ export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
  */
 export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
   try {
+    assertPointResult(questionScore)
     // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
     await assertCropRegionsInSameExam([
       {
@@ -268,6 +283,7 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
         data: {
           partialScore: toPartialScoreColumn(questionScore.partialScore),
           status: questionScore.status,
+          scaleLevelId: null,
           overridesRubric: rubricOverrideFor(existing),
         },
         include: {
@@ -353,6 +369,7 @@ export const updateQuestionScore = async (
   result: QuestionScoreResult
 ) => {
   try {
+    assertPointResult(result)
     // 差分記録用に変更前を取得。ここで無ければ答案ごと削除された後なので、
     // 生の Prisma エラーではなく「削除済み」として返す（協調採点で他教員が削除した場合）。
     const before = await prisma.questionScore.findUnique({
@@ -369,6 +386,7 @@ export const updateQuestionScore = async (
       data: {
         partialScore: toPartialScoreColumn(result.partialScore),
         status: result.status,
+        scaleLevelId: null,
         overridesRubric: rubricOverrideFor(before),
       },
       include: {
@@ -424,6 +442,7 @@ export async function batchUpdateQuestionScores(
 ): Promise<{ updatedCount: number }> {
   try {
     let updatedCount = 0
+    questionScores.forEach(assertPointResult)
 
     // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
     await assertCropRegionsInSameExam(questionScores)
@@ -446,6 +465,7 @@ export async function batchUpdateQuestionScores(
             data: {
               status: questionScore.status,
               partialScore: toPartialScoreColumn(questionScore.partialScore),
+              scaleLevelId: null,
             },
           })
         } else {

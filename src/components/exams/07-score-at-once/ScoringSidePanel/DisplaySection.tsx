@@ -28,6 +28,8 @@ interface DisplaySectionProps {
   answerSortOrder: AnswerSortOrder
   onAnswerSortOrderChange: (order: AnswerSortOrder) => void
   isWhitenessReady: boolean
+  /** 今の設問が類型評価か（評価済みの絞り込みも並べる） */
+  isScaleQuestion?: boolean
   isOpen: boolean
   onToggle: () => void
 }
@@ -49,6 +51,7 @@ export function DisplaySection({
   answerSortOrder,
   onAnswerSortOrderChange,
   isWhitenessReady,
+  isScaleQuestion = false,
   isOpen,
   onToggle,
 }: DisplaySectionProps) {
@@ -86,6 +89,7 @@ export function DisplaySection({
           <ScoringStatusFilterButtons
             filterSettings={filterSettings}
             onToggleFilter={onToggleFilter}
+            showEvaluated={isScaleQuestion}
           />
         )}
 

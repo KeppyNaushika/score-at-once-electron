@@ -9,4 +9,5 @@ export const statusLabels: Record<ScoringStatus, string> = {
   pending: "処理中",
   no_answer: "無答",
   double_mark: "Wマーク",
+  evaluated: "類型評価",
 }

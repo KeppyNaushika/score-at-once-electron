@@ -511,8 +511,10 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 
 - 類型評価：作る・名前を直す・消す・共通にする／試験に戻す・複製する。類型：足す・直す（記号・説明・点数）・並べ替える・消す。
   消すのは使われていないときだけ（main でも数え直して拒む。`deleteAfterRecount` と同じ形）
-- 設問：方式と類型評価を選ぶ。採点：類型を付ける（`status: "evaluated"`・`scaleLevelId`。採点行が無ければ `ensureQuestionScore` で用意する。
-  今の採点キーの書き込みと同じ経路に類型を足す）・外す（`unscored` に戻す）
+- 設問：方式と類型評価を選ぶ。採点：類型を付ける（`status: "evaluated"`・`scaleLevelId`・`partialScore` は null）・外す（`unscored` に戻す）。
+  点の採点の書き込み（判定と部分点の「1つの決定」）とは口を分け、`set-scale-levels`（`scaleLevelScoreWrite.ts`）で自分の行にまとめて書く。
+  行が無ければ作る。付けられるのは設問の類型評価の類型だけ。点の採点の書き込みは `evaluated` を拒み、書くときは `scaleLevelId` を null に戻す
+  （類型評価の設問で保留・無答を付けると類型が外れる）。監査ログは `exam.score.evaluate`
 - 監査ログの action を足す（`exam.score_scale.*`・`score_scale.*`。共通のものは試験の作業領域に入らない）
 
 **migration**

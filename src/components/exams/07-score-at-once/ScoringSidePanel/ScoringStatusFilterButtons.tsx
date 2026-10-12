@@ -5,6 +5,7 @@ import {
   CircleDashed,
   Clock,
   CopyX,
+  Layers,
   Minus,
   Triangle,
   X,
@@ -31,6 +32,13 @@ const FILTER_BUTTONS = [
   { status: "double_mark", label: "Wマーク", icon: CopyX },
 ] as const
 
+/** 類型評価の設問でだけ足す、評価済み（類型を付けた答案）の絞り込み */
+const EVALUATED_FILTER_BUTTON = {
+  status: "evaluated",
+  label: "類型評価",
+  icon: Layers,
+} as const
+
 interface ScoringStatusFilterButtonsProps {
   /** 状態ごとの表示の有無（無い状態は非表示として扱う） */
   filterSettings: Partial<Record<ScoringStatus, boolean>>
@@ -39,6 +47,8 @@ interface ScoringStatusFilterButtonsProps {
   commandIdOf?: (status: ScoringStatus) => string
   /** ボタンの組の名前（同じ画面に2組並べるときに読み上げで区別する） */
   "aria-label"?: string
+  /** 評価済み（類型評価）の絞り込みも並べるか（類型評価の設問だけ） */
+  showEvaluated?: boolean
 }
 
 /**
@@ -50,16 +60,23 @@ export function ScoringStatusFilterButtons({
   onToggleFilter,
   commandIdOf = filterCommandIdOf,
   "aria-label": groupLabel,
+  showEvaluated = false,
 }: ScoringStatusFilterButtonsProps) {
+  const filterButtons = showEvaluated
+    ? [...FILTER_BUTTONS, EVALUATED_FILTER_BUTTON]
+    : FILTER_BUTTONS
   const { keyBindings } = useKeyBindings()
   const scoringColors = useScoringStatusColors()
 
   return (
     <TooltipProvider delayDuration={300}>
       <div style={GRID_4_3_STYLE} role="group" aria-label={groupLabel}>
-        {FILTER_BUTTONS.map((button) => {
+        {filterButtons.map((button) => {
           const isActive = filterSettings[button.status] ?? false
-          const keyBinding = keyBindings[commandIdOf(button.status)] || "?"
+          // 評価済みの絞り込みには既定のキーが無い（無ければ「?」でなく「なし」と出す）
+          const keyBinding =
+            keyBindings[commandIdOf(button.status)] ||
+            (button.status === "evaluated" ? "なし" : "?")
           const colors = scoringColors[button.status]
           return (
             <ShortcutTooltip

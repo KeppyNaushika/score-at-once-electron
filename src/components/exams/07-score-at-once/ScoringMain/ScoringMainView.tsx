@@ -35,6 +35,7 @@ function ScoringMainViewContent() {
   const { unlockedProviders } = useAiGradingAvailability()
   const {
     allMasterImageUrls,
+    applyScaleLevel,
     assignmentScope,
     allScoringData,
     answerSortOrder,
@@ -99,6 +100,7 @@ function ScoringMainViewContent() {
     questionProgress,
     questionScoresByCropRegionId,
     rubricAnswerFlow,
+    scaleQuestion,
     scoringBehavior,
     selectMode,
     selectableCropRegions,
@@ -333,6 +335,7 @@ function ScoringMainViewContent() {
               mouseBrush={mouseBrush}
               onMouseScoring={handleMouseScoring}
               renderBeforeStatusMark={renderRubricCellMark}
+              scaleAppearanceOf={scaleQuestion.scaleAppearanceOf}
             />
           </div>
 
@@ -415,6 +418,8 @@ function ScoringMainViewContent() {
                 visibleUnscoredCount={visibleUnscoredCount}
                 hiddenUnscoredCount={hiddenUnscoredCount}
                 onBatchScoreVisibleUnscored={handleBatchScoreVisibleUnscored}
+                scaleQuestion={scaleQuestion}
+                onApplyScaleLevel={applyScaleLevel}
               />
             </div>
           </div>

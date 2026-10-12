@@ -7,6 +7,7 @@ import type {
 import type { SerializedQuestionScore } from "../../src/types/prismaExtensions"
 import { toScoringStatus } from "../../src/types/scoringStatus.types"
 import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
+import { getCurrentActorUserId } from "../lib/prisma/auditActor"
 import {
   assignCropRegion,
   canManageAssignments,
@@ -31,6 +32,10 @@ import {
   type SetQuestionScoreData,
   updateQuestionScore,
 } from "../lib/prisma/questionScoreWrite"
+import {
+  setScaleLevels,
+  type SetScaleLevelsInput,
+} from "../lib/prisma/scaleLevelScoreWrite"
 import {
   toSerializedScoreDecision,
   upsertScoreDecision,
@@ -150,6 +155,14 @@ export const scoringHandlers = {
   ) => setExamStudentAssignments(input),
 
   // QuestionScore 一括更新（OMR自動採点結果反映）
+  // 類型評価の設問で、自分の採点行に類型を付ける・外す（採点者は操作者。§4-8-6）
+  "set-scale-levels": async (input: SetScaleLevelsInput) => {
+    const actorUserId = getCurrentActorUserId()
+    if (!actorUserId) throw new Error("ログインしていません")
+    const written = await setScaleLevels(input, actorUserId)
+    return written.map(serializeScore)
+  },
+
   "batch-update-question-scores": async (
     questionScores: SetQuestionScoreData[]
   ) => {

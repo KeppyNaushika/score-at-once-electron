@@ -7,20 +7,10 @@
  * 切り替える前に、その件数を示して確かめる。
  */
 
-import type { ScoringMethod } from "@/types/rubric.types"
-
-/** 類型評価の設問では得点にならない状態（正誤の評価） */
-const POINT_VERDICT_STATUSES: ReadonlySet<string> = new Set([
-  "correct",
-  "incorrect",
-  "partial",
-])
-
-/**
- * 点の採点の設問では得点にならない状態（類型を付けた評価済み）。
- * `evaluated` は S2 で `SCORING_STATUSES` に入る。それまでは行に現れないが、数え方は先に揃えておく
- */
-const SCALE_VERDICT_STATUSES: ReadonlySet<string> = new Set(["evaluated"])
+import {
+  isStatusCompatibleWithScoringMethod,
+  type ScoringMethod,
+} from "@/types/rubric.types"
 
 /** 類型評価と点の採点をまたぐ切り替えか（またがなければ採点行は方式と合ったまま） */
 export const crossesScaleBoundary = (
@@ -33,9 +23,8 @@ export function countIncompatibleScores(
   questionScores: readonly { status: string }[],
   nextMethod: ScoringMethod
 ): number {
-  const incompatibleStatuses =
-    nextMethod === "scale" ? POINT_VERDICT_STATUSES : SCALE_VERDICT_STATUSES
-  return questionScores.filter((questionScore) =>
-    incompatibleStatuses.has(questionScore.status)
+  return questionScores.filter(
+    (questionScore) =>
+      !isStatusCompatibleWithScoringMethod(nextMethod, questionScore.status)
   ).length
 }

@@ -76,6 +76,19 @@ export function KeyboardHelpDialog({
                     </code>
                   </div>
                 )}
+                {/* 類型評価の設問では、同じ数字キーが部分点の代わりに類型を並び順に選ぶ */}
+                {section.showPartialScoreStart && (
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      類型を選ぶ（類型評価の設問。1
+                      が先頭の類型。正答・誤答・部分点のキーは効きません）
+                    </span>
+                    <code className="h-fit rounded bg-gray-100 px-2 py-1 whitespace-nowrap">
+                      {displayKey("scoring.openPartialWith1")}〜
+                      {displayKey("scoring.openPartialWith9")}
+                    </code>
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -11,7 +11,7 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 /**
  * 実際の得点を計算する。
  *
- * @param questionScore 採点データ（status と部分点）
+ * @param questionScore 採点データ（status と部分点。類型評価なら類型の点数）
  * @param maxScore 配点
  * @returns 得点。未採点・部分点未入力は null
  */
@@ -19,6 +19,11 @@ export const calculateActualScore = (
   questionScore: {
     status: ScoringStatus
     partialScore?: number | null
+    /**
+     * 類型評価で付けた類型の点数（docs/vlm-grading-design.md §4-8-8）。類型が消えた（SetNull）・
+     * 渡さないときは null で、評価済みでも欠測になる
+     */
+    scaleLevelScore?: number | null
   },
   maxScore: number
 ): number | null => {
@@ -37,6 +42,9 @@ export const calculateActualScore = (
         questionScore.partialScore !== undefined
         ? Number(questionScore.partialScore)
         : null
+    case "evaluated":
+      // 類型の点数そのもの。配点を超えてよい（0〜配点に収めない）
+      return questionScore.scaleLevelScore ?? null
   }
   // **網羅していない値はここでコンパイルエラーになる。** `string` で受けていた頃は
   // `default: return 0` で黙って通り、未知の判定が「未採点（欠測）」ではなく

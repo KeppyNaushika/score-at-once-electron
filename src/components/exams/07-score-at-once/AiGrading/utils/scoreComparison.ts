@@ -70,6 +70,9 @@ export function scoreOfJudgement(
     case "double_mark":
     case "unscored":
       return 0
+    // AI は類型を判定しない（類型評価の設問は AI 採点の対象外。§4-8-7 の S6 で足す）
+    case "evaluated":
+      return null
   }
 }
 

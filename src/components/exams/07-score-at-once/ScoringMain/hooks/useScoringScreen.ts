@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
+import { useScaleQuestion } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleQuestion"
 import { useAnswerSelection } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerSelection"
 import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import { useAssignedCropRegions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions"
@@ -26,6 +27,10 @@ import type { AssignmentScope } from "@/components/exams/07-score-at-once/Scorin
 import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useRouteParams } from "@/hooks/useRouteParams"
+import type { QuestionScoreRow } from "@/queries/scoring"
+
+/** 採点行がまだ届いていない設問の空の並び（毎回作り直さない） */
+const NO_QUESTION_SCORES: QuestionScoreRow[] = []
 
 interface UseScoringScreenOptions {
   /**
@@ -370,10 +375,22 @@ export function useScoringScreen({
     setAutoScroll,
   })
 
+  /** 今の設問が類型評価なら、その類型と一覧のマスの見せ方 */
+  const scaleQuestion = useScaleQuestion({
+    examId,
+    currentUserId: currentUser.id,
+    currentCropRegion,
+    questionScores: currentCropRegionId
+      ? (questionScoresByCropRegionId.get(currentCropRegionId) ??
+        NO_QUESTION_SCORES)
+      : NO_QUESTION_SCORES,
+  })
+
   const {
     guardScoring,
     calculateQuestionProgress,
     handleBatchScoreWithProgress,
+    applyScaleLevel,
     partialScoreInput,
     showPartialScoreModal,
     openPartialScoreModal,
@@ -414,6 +431,7 @@ export function useScoringScreen({
       setGradingMode,
     },
     currentCropRegion,
+    scaleQuestion,
   })
 
   /** 表示モード切り替え（グリッド⇔個別） */
@@ -499,6 +517,7 @@ export function useScoringScreen({
 
   return {
     allMasterImageUrls,
+    applyScaleLevel,
     assignmentScope,
     allScoringData,
     answerSortOrder,
@@ -563,6 +582,7 @@ export function useScoringScreen({
     questionProgress,
     questionScoresByCropRegionId,
     rubricAnswerFlow,
+    scaleQuestion,
     scoringBehavior,
     selectMode,
     selectableCropRegions,

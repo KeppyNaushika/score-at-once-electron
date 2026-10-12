@@ -4,6 +4,7 @@ import { ChartColumn, Eye, User } from "lucide-react"
 import { useCallback } from "react"
 
 import { ScoringMethodSection } from "@/components/exams/07-score-at-once/Rubric/ScoringMethodSection"
+import type { ScaleQuestionState } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleScoringGate"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
@@ -136,6 +137,10 @@ interface ScoringSidePanelProps {
   visibleUnscoredCount?: number
   hiddenUnscoredCount?: number
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
+  /** 今の設問の類型評価（類型評価の設問では、正答・誤答・部分点の代わりに類型のボタンを並べる） */
+  scaleQuestion?: ScaleQuestionState
+  /** 選んでいる答案に類型を付ける */
+  onApplyScaleLevel?: (scaleLevelId: string) => void
 }
 
 export function ScoringSidePanel({
@@ -206,6 +211,8 @@ export function ScoringSidePanel({
   visibleUnscoredCount,
   hiddenUnscoredCount,
   onBatchScoreVisibleUnscored,
+  scaleQuestion,
+  onApplyScaleLevel,
 }: ScoringSidePanelProps) {
   // 閉じているセクションIDを設定へ残す（既定は全展開）
   const { isSectionOpen, toggleSection } = useSidePanelSections()
@@ -301,6 +308,7 @@ export function ScoringSidePanel({
             answerSortOrder={answerSortOrder}
             onAnswerSortOrderChange={onAnswerSortOrderChange}
             isWhitenessReady={isWhitenessReady}
+            isScaleQuestion={scaleQuestion?.isScaleQuestion ?? false}
             isOpen={isSectionOpen("display")}
             onToggle={() => toggleSection("display")}
           />
@@ -331,6 +339,8 @@ export function ScoringSidePanel({
             visibleUnscoredCount={visibleUnscoredCount}
             hiddenUnscoredCount={hiddenUnscoredCount}
             onBatchScoreVisibleUnscored={onBatchScoreVisibleUnscored}
+            scaleQuestion={scaleQuestion}
+            onApplyScaleLevel={onApplyScaleLevel}
           />
 
           {/* 覚え書き（いま選んでいるマスに、その点にした理由を書く） */}

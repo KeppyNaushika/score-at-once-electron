@@ -1,6 +1,8 @@
 import type { ReactNode } from "react"
 
 import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
+import { ScaleCellMark } from "@/components/exams/07-score-at-once/ScaleLevel/ScaleCellMark"
+import type { ScaleCellAppearance } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleLevelAppearance"
 import { hatchedFill } from "@/components/exams/07-score-at-once/ScoringGrid/constants/proposalFill"
 import {
   getDynamicScoreStatusConfig,
@@ -21,6 +23,7 @@ const VALID_STATUS_KEYS: ScoreStatusKey[] = [
   "incorrect",
   "no_answer",
   "double_mark",
+  "evaluated",
   "master",
 ]
 
@@ -53,6 +56,11 @@ interface GridCellProps {
   draftStatus?: ScoreStatusKey | null
   /** 採点マーク（状態のアイコン）の左隣に置くもの（AI採点モードの AI の判定の札）。模範解答には出さない */
   beforeStatusMark?: ReactNode
+  /**
+   * 類型の見せ方（類型評価の設問で類型を付けたマス・方式と合わない採点のマス）。
+   * 類型を付けたマスは類型の並び順の色で塗り、採点マークの代わりに類型の記号を出す
+   */
+  scaleAppearance?: ScaleCellAppearance | null
 }
 
 export function GridCell({
@@ -71,12 +79,28 @@ export function GridCell({
   proposalStatus,
   draftStatus,
   beforeStatusMark,
+  scaleAppearance,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
   const statusKey: ScoreStatusKey = isValidStatusKey(answer.status)
     ? answer.status
     : "unscored"
-  const config = statusConfig[statusKey]
+  const statusOnlyConfig = statusConfig[statusKey]
+  const levelAppearance =
+    scaleAppearance?.kind === "level" ? scaleAppearance : null
+  const isIncompatibleScore = scaleAppearance?.kind === "incompatible"
+  // 類型を付けたマスは、採点状態の色の代わりに類型の色で塗る
+  const config = levelAppearance
+    ? {
+        ...statusOnlyConfig,
+        bgStyle: { backgroundColor: levelAppearance.colors.bg },
+        selectedBgStyle: {
+          backgroundColor: levelAppearance.colors.bg,
+          opacity: 0.8,
+        },
+        textStyle: { color: levelAppearance.colors.text },
+      }
+    : statusOnlyConfig
   const Icon = config.icon
   const isMaster =
     answer.examStudentId === "MASTER" || answer.studentName === "模範解答"
@@ -110,6 +134,13 @@ export function GridCell({
   }
 
   const getScoreDisplay = () => {
+    if (levelAppearance) {
+      return `${levelAppearance.score}/${answer.maxScore}`
+    }
+    if (answer.status === "evaluated") {
+      // 類型が消えた評価済み（同期でだけ起こる）。点は欠測
+      return `-/${answer.maxScore}`
+    }
     if (answer.status === "correct") {
       return `${answer.maxScore}/${answer.maxScore}`
     }
@@ -209,7 +240,13 @@ export function GridCell({
           </span>
 
           {!isMaster && answer.status !== "unscored" && (
-            <Badge variant="outline" className="h-4 px-1 text-xs">
+            <Badge
+              variant="outline"
+              className={`h-4 px-1 text-xs ${
+                // 方式と合わない採点は得点にしない（取り消し線で示す）
+                isIncompatibleScore ? "line-through opacity-60" : ""
+              }`}
+            >
               {getScoreDisplay()}
             </Badge>
           )}
@@ -227,7 +264,13 @@ export function GridCell({
         {!isMaster && (
           <div className="flex shrink-0 items-center gap-1">
             {beforeStatusMark}
-            <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
+            {scaleAppearance && <ScaleCellMark appearance={scaleAppearance} />}
+            {!levelAppearance && (
+              <Icon
+                className={`h-3 w-3 shrink-0 ${isIncompatibleScore ? "opacity-50" : ""}`}
+                style={config.iconStyle}
+              />
+            )}
           </div>
         )}
       </div>

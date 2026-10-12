@@ -169,6 +169,25 @@ export const updateQuestionScoreMutation = (
   })
 
 /**
+ * 類型評価の設問で、選んだ答案に類型を付ける（`scaleLevelId: null` なら外して未採点へ戻す）。
+ *
+ * 書くのは今の利用者の採点行だけ（`status: "evaluated"`・`scaleLevelId`。部分点は持たない）。
+ * 行が無ければ main が用意する。類型が設問の組のものでなければ main が拒む
+ * （docs/vlm-grading-design.md §4-8-2・§4-8-8）。
+ */
+export const setScaleLevelsMutation = (examId: string, cropRegionId: string) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<typeof window.electronAPI.setScaleLevels>[0]
+    ) => window.electronAPI.setScaleLevels(input),
+    scope: { id: `exam:${examId}:questionScores` },
+    meta: {
+      invalidates: [questionScoresQuery(examId, cropRegionId).queryKey],
+      errorMessage: "類型を保存できませんでした",
+    },
+  })
+
+/**
  * その採点者が、その点にした理由の覚え書きを書く。
  *
  * **採点そのものとは別の口。** 判定・部分点はキー1打で確定する操作、覚え書きは

@@ -56,6 +56,7 @@ export const SCORING_STATUS_LABELS: Record<ScoringStatus, string> = {
   incorrect: "誤答",
   no_answer: "無答",
   double_mark: "Wマーク",
+  evaluated: "類型評価",
 }
 
 /** 状態の表示順序 */
@@ -85,6 +86,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       incorrect: { bg: "#FEE2E2", text: "#991B1B", icon: "#DC2626" },
       no_answer: { bg: "#EDE9FE", text: "#5B21B6", icon: "#7C3AED" },
       double_mark: { bg: "#FFF7ED", text: "#9A3412", icon: "#EA580C" },
+      evaluated: { bg: "#F1F5F9", text: "#334155", icon: "#64748B" },
     },
   },
   {
@@ -99,6 +101,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       incorrect: { bg: "#FECACA", text: "#7F1D1D", icon: "#EF4444" },
       no_answer: { bg: "#DDD6FE", text: "#4C1D95", icon: "#8B5CF6" },
       double_mark: { bg: "#FFEDD5", text: "#7C2D12", icon: "#F97316" },
+      evaluated: { bg: "#F1F5F9", text: "#334155", icon: "#64748B" },
     },
   },
   {
@@ -113,6 +116,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       incorrect: { bg: "#FFE4E6", text: "#9F1239", icon: "#F43F5E" },
       no_answer: { bg: "#F3E8FF", text: "#6B21A8", icon: "#A855F7" },
       double_mark: { bg: "#FEF3C7", text: "#78350F", icon: "#D97706" },
+      evaluated: { bg: "#F1F5F9", text: "#334155", icon: "#64748B" },
     },
   },
   {
@@ -127,6 +131,7 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
       incorrect: { bg: "#FADDC8", text: "#8B3A00", icon: "#D55E00" },
       no_answer: { bg: "#F5E0EC", text: "#7A3F66", icon: "#CC79A7" },
       double_mark: { bg: "#FAE8D0", text: "#8B4513", icon: "#E69F00" },
+      evaluated: { bg: "#F1F5F9", text: "#334155", icon: "#64748B" },
     },
   },
 ]

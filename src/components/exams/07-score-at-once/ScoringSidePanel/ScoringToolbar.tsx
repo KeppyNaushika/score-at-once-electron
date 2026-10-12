@@ -3,6 +3,8 @@
 import { Calculator, Keyboard, Mouse, Target } from "lucide-react"
 import { useState } from "react"
 
+import type { ScaleQuestionState } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleScoringGate"
+import { ScaleLevelButtons } from "@/components/exams/07-score-at-once/ScaleLevel/ScaleLevelButtons"
 import type {
   MouseBrushAction,
   ScoringOperationMode,
@@ -59,6 +61,10 @@ interface ScoringToolbarProps {
   visibleUnscoredCount?: number
   hiddenUnscoredCount?: number
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
+  /** 今の設問の類型評価。類型評価の設問では部分点・正答・誤答の代わりに類型のボタンを並べる */
+  scaleQuestion?: ScaleQuestionState
+  /** 選んでいる答案に類型を付ける */
+  onApplyScaleLevel?: (scaleLevelId: string) => void
 }
 
 export default function ScoringToolbar({
@@ -86,8 +92,11 @@ export default function ScoringToolbar({
   visibleUnscoredCount = 0,
   hiddenUnscoredCount = 0,
   onBatchScoreVisibleUnscored,
+  scaleQuestion,
+  onApplyScaleLevel,
 }: ScoringToolbarProps) {
   const [{ primary: ctrlLabel }] = useState(getModifierKeyLabels)
+  const isScaleQuestion = scaleQuestion?.isScaleQuestion ?? false
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -146,8 +155,18 @@ export default function ScoringToolbar({
             </ToggleGroup>
           )}
 
+          {/* 類型評価の設問の類型（キーボード・マウス共通。部分点は持たない） */}
+          {scaleQuestion?.isScaleQuestion && onApplyScaleLevel && (
+            <ScaleLevelButtons
+              scaleLevels={scaleQuestion.scaleLevels}
+              isScaleLevelsLoading={scaleQuestion.isScaleLevelsLoading}
+              selectedAnswersCount={selectedAnswersCount}
+              onApplyScaleLevel={onApplyScaleLevel}
+            />
+          )}
+
           {/* 部分点入力モーダルを開くボタン（キーボード・マウス共通） */}
-          {onOpenPartialScoreModal && (
+          {onOpenPartialScoreModal && !isScaleQuestion && (
             <ShortcutTooltip
               description="選択中の答案に部分点を入力"
               keys={["0〜9"]}
@@ -211,6 +230,7 @@ export default function ScoringToolbar({
               <KeyboardScoringButtons
                 selectedAnswersCount={selectedAnswersCount}
                 onScore={onScore}
+                isScaleQuestion={isScaleQuestion}
               />
 
               {/* 選択操作 */}
