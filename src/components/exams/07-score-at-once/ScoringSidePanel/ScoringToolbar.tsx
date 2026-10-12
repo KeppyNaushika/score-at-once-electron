@@ -58,6 +58,10 @@ interface ScoringToolbarProps {
   onScoringOperationModeChange?: (mode: ScoringOperationMode) => void
   mouseBrush?: MouseBrushAction
   onMouseBrushChange?: (brush: MouseBrushAction) => void
+  /** 類型のブラシが付ける類型（類型のブラシのときだけ値を持つ） */
+  mouseScaleLevelId?: string | null
+  /** 類型のブラシを選ぶ */
+  onMouseScaleLevelSelect?: (scaleLevelId: string) => void
   visibleUnscoredCount?: number
   hiddenUnscoredCount?: number
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
@@ -89,6 +93,8 @@ export default function ScoringToolbar({
   onScoringOperationModeChange,
   mouseBrush = "correct",
   onMouseBrushChange,
+  mouseScaleLevelId = null,
+  onMouseScaleLevelSelect,
   visibleUnscoredCount = 0,
   hiddenUnscoredCount = 0,
   onBatchScoreVisibleUnscored,
@@ -194,6 +200,9 @@ export default function ScoringToolbar({
               <MouseBrushControls
                 mouseBrush={mouseBrush}
                 onMouseBrushChange={onMouseBrushChange}
+                mouseScaleLevelId={mouseScaleLevelId}
+                onMouseScaleLevelSelect={onMouseScaleLevelSelect}
+                scaleQuestion={scaleQuestion}
                 visibleUnscoredCount={visibleUnscoredCount}
                 hiddenUnscoredCount={hiddenUnscoredCount}
                 onBatchScoreVisibleUnscored={onBatchScoreVisibleUnscored}

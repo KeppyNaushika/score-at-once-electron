@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { ListChecks, Plus, Undo2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -10,9 +11,11 @@ import type {
 import { Button } from "@/components/ui/button"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { RubricItemRow } from "@/queries/rubric"
+import { examScoreScalesQuery } from "@/queries/scoreScale"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import { toScoringMethod } from "@/types/rubric.types"
 
+import { findScaleLevels } from "../ScaleLevel/utils/scaleLevelAppearance"
 import { useRubricAdviceChoice } from "./hooks/useRubricAdviceChoice"
 import { useRubricAdviceSync } from "./hooks/useRubricAdviceSync"
 import {
@@ -30,11 +33,14 @@ import { RubricAdviceSection } from "./RubricAdviceSection"
 import { RubricItemEditorDialog } from "./RubricItemEditorDialog"
 import { RubricItemEntry } from "./RubricItemEntry"
 import { RubricRecalculationDialog } from "./RubricRecalculationDialog"
-import { SCORING_METHOD_LABELS } from "./utils/rubricEffectLabel"
+import {
+  isRubricItemEffective,
+  SCORING_METHOD_LABELS,
+} from "./utils/rubricEffectLabel"
 
 interface RubricPanelProps {
   examId: string
-  /** 減点・加点方式の設問（直接採点の設問ではこのパネルを出さない） */
+  /** 減点・加点方式・類型方式の設問（正誤方式の設問ではこのパネルを出さない） */
   cropRegion: QuestionAnswerRegionRow
   currentUserId: string
   /** その設問の採点行（採点者を問わない） */
@@ -70,6 +76,9 @@ type EditorTarget =
  *
  * 助言のある項目が2つ以上当たった答案の組み合わせは「重なった助言」に出し、決まりが無ければ
  * 未決定として問いかける（開くと、選択肢と下見に切り替わる）
+ *
+ * 類型方式の設問では、項目は類型を決める根拠として並び、類型にする項目を当てるとその類型になる
+ * （§4-8-6）。方式を変える前に作った項目（類型方式の設問の加減の項目など）は、残したまま効かないと示す
  */
 export function RubricPanel({
   examId,
@@ -86,6 +95,19 @@ export function RubricPanel({
   isAnswerPageMissing = false,
 }: RubricPanelProps) {
   const scoringMethod = toScoringMethod(cropRegion.scoringMethod)
+  const isScaleQuestion = scoringMethod === "scale"
+  // 類型にする項目の記号と、項目の編集の類型の選択肢（類型方式の設問だけ読む）
+  const { data: scoreScales } = useQuery({
+    ...examScoreScalesQuery(examId),
+    enabled: isScaleQuestion,
+  })
+  const scaleLevels = useMemo(
+    () =>
+      isScaleQuestion && scoreScales
+        ? findScaleLevels(scoreScales, cropRegion.scoreScaleId)
+        : [],
+    [isScaleQuestion, scoreScales, cropRegion.scoreScaleId]
+  )
   const { rubricItems, ownCellOf, ownAppliedCells } = useRubricQuestion({
     examId,
     cropRegionId: cropRegion.id,
@@ -187,7 +209,9 @@ export function RubricPanel({
           <span className="text-xs font-medium text-gray-700">採点項目</span>
           <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
             {SCORING_METHOD_LABELS[scoringMethod]}
-            {cropRegion.points !== null ? `・配点 ${cropRegion.points}点` : ""}
+            {!isScaleQuestion && cropRegion.points !== null
+              ? `・配点 ${cropRegion.points}点`
+              : ""}
           </span>
         </div>
         <p
@@ -209,6 +233,7 @@ export function RubricPanel({
       {adviceChoice.activeCombination ? (
         <RubricAdviceChoiceView
           rubricItems={rubricItems}
+          scaleLevels={scaleLevels}
           activeCombination={adviceChoice.activeCombination}
           options={adviceChoice.options}
           focusedIndex={choiceScene.focusedIndex}
@@ -255,6 +280,8 @@ export function RubricPanel({
               <RubricItemEntry
                 key={rubricItem.id}
                 rubricItem={rubricItem}
+                scaleLevels={scaleLevels}
+                isEffective={isRubricItemEffective(scoringMethod, rubricItem)}
                 choiceNumber={panelChoice.numberOfItem(index)}
                 isFocused={panelChoice.isItemFocused(index)}
                 appliedCount={
@@ -280,6 +307,7 @@ export function RubricPanel({
 
           <RubricAdviceSection
             rubricItems={rubricItems}
+            scaleLevels={scaleLevels}
             undecided={adviceChoice.undecided}
             decided={adviceChoice.decided}
             numberOfUndecided={panelChoice.numberOfUndecided}
@@ -313,6 +341,7 @@ export function RubricPanel({
         }
         points={cropRegion.points}
         scoringMethod={scoringMethod}
+        scaleLevels={scaleLevels}
         onSubmit={(draft) =>
           editorTarget
             ? handleSubmit(editorTarget, draft)

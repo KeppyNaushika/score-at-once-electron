@@ -283,21 +283,26 @@ model ScoreScale {
 /// 類型評価の類型（A/B/C など）。その類型を付けた答案の点は `score`（配点を超えてよい。
 /// 外部資料の文字評価と同じ）。`score` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す
 model ScoreScaleLevel {
-  id                 String          @id @default(uuid())
-  scaleId            String
+  id                       String                          @id @default(uuid())
+  scaleId                  String
   /// 記号（例「A」）
-  label              String          @default("")
+  label                    String                          @default("")
   /// 説明（例「根拠を2つ以上挙げて説明している」）
-  description        String          @default("")
+  description              String                          @default("")
   /// その類型を付けた答案の点（0 以上）
-  score              Decimal         @default(0)
-  sortOrder          Int             @default(0)
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @default(now()) @updatedAt
-  scale              ScoreScale      @relation(fields: [scaleId], references: [id], onDelete: Cascade)
-  questionScores     QuestionScore[]
-  scoreDecisions     ScoreDecision[]
-  settingRubricItems RubricItem[]
+  score                    Decimal                         @default(0)
+  sortOrder                Int                             @default(0)
+  createdAt                DateTime                        @default(now())
+  updatedAt                DateTime                        @default(now()) @updatedAt
+  scale                    ScoreScale                      @relation(fields: [scaleId], references: [id], onDelete: Cascade)
+  questionScores           QuestionScore[]
+  scoreDecisions           ScoreDecision[]
+  settingRubricItems       RubricItem[]
+  /// AI の層（docs/vlm-grading-design.md §4-8-6）。類型が消えたら、どれも null になる
+  aiAttempts               AiGradingAttempt[]
+  aiProposalOptions        AiRubricProposalOption[]
+  aiProposalResponseScores AiRubricProposalResponseScore[]
+  aiAttemptResponses       AiAttemptResponse[]
 
   @@index([scaleId])
 }
@@ -470,7 +475,7 @@ model QuestionScore {
   /// docs/vlm-grading-design.md §4-5）。計算し直しはこの印の行を飛ばす。
   /// 印は、そのマスの適用を付け外ししたとき・項目から計算した点を書いたときに外れる
   overridesRubric    Boolean             @default(false)
-  /// 類型評価の設問で付けた類型（status は "evaluated"。§4-8-2）。類型が消えたら null
+  /// 類型方式の設問で付けた類型（status は "evaluated"。§4-8-2）。類型が消えたら null
   scaleLevelId       String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
@@ -718,6 +723,10 @@ model AiPrompt {
   /// 項目は生きた状態で書き換わるので、送った文面を再現できるようここに写す。
   /// 今の項目と違っていれば、送るときに新しい行を作る（§3-1）
   renderedRubricItems   String                  @default("")
+  /// 送った時点の類型表の類型の一覧をアプリが文にしたもの（類型方式の設問でなければ ""）。
+  /// 類型の記号・説明も生きた状態で書き換わるので、項目の一覧と同じくここに写す
+  /// （docs/vlm-grading-design.md §4-8-6）。今の類型と違っていれば、送るときに新しい行を作る
+  renderedScaleLevels   String                  @default("")
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @default(now()) @updatedAt
   cropRegion            CropRegion              @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
@@ -837,6 +846,8 @@ model AiGradingAttempt {
   status                 String                          @default("unscored")
   /// partial / pending のときの点。0〜run の points、0.01 単位（検証を通った値だけを書く）
   partialScore           Decimal?
+  /// 類型方式の設問で AI が選んだ類型（status が evaluated のときだけ）。類型が消えたら null
+  scaleLevelId           String?
   /// 答案から読み取った内容
   transcription          String                          @default("")
   /// 所見（模範解答・採点基準・項目と比べて、どこが同じでどこが違うか）。2段目は画像を見ないので、ここを読む
@@ -853,6 +864,7 @@ model AiGradingAttempt {
   updatedAt              DateTime                        @default(now()) @updatedAt
   run                    AiGradingRun                    @relation(fields: [runId], references: [id], onDelete: Cascade)
   examStudent            ExamStudent                     @relation(fields: [examStudentId], references: [id], onDelete: Cascade)
+  scaleLevel             ScoreScaleLevel?                @relation(fields: [scaleLevelId], references: [id], onDelete: SetNull)
   rubricMatches          AiAttemptRubricMatch[]
   proposalMemberships    AiRubricProposalMember[]
   responses              AiAttemptResponse[]
@@ -860,6 +872,7 @@ model AiGradingAttempt {
 
   @@index([runId])
   @@index([examStudentId])
+  @@index([scaleLevelId])
 }
 
 /// 1段目が「この答案に既存の項目が当てはまる」と返したもの（docs/vlm-grading-design.md §5-3）。
@@ -905,26 +918,30 @@ model AiRubricProposal {
   @@index([matchedRubricItemId])
 }
 
-/// 案の選択肢。効き方は RubricItem と同じ形（adjust は pointDelta、set は setStatus・setScore）
+/// 案の選択肢。効き方は RubricItem と同じ形（adjust は pointDelta、set は setStatus・setScore・setScaleLevelId）
 model AiRubricProposalOption {
-  id          String                     @id @default(uuid())
-  proposalId  String
+  id              String                     @id @default(uuid())
+  proposalId      String
   /// "adjust" | "set"
-  effectKind  String
-  pointDelta  Decimal?
-  setStatus   String?
-  setScore    Decimal?
+  effectKind      String
+  pointDelta      Decimal?
+  setStatus       String?
+  setScore        Decimal?
+  /// 類型方式の設問で、その類型にする選択肢（setStatus が evaluated のときだけ）。類型が消えたら null
+  setScaleLevelId String?
   /// 教員向けの一言の理由
-  rationale   String                     @default("")
+  rationale       String                     @default("")
   /// 推奨の選択肢か（案ごとにちょうど1つ）
-  recommended Boolean                    @default(false)
-  sortOrder   Int                        @default(0)
-  createdAt   DateTime                   @default(now())
-  updatedAt   DateTime                   @default(now()) @updatedAt
-  proposal    AiRubricProposal           @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  responses   AiRubricProposalResponse[]
+  recommended     Boolean                    @default(false)
+  sortOrder       Int                        @default(0)
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @default(now()) @updatedAt
+  proposal        AiRubricProposal           @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  setScaleLevel   ScoreScaleLevel?           @relation(fields: [setScaleLevelId], references: [id], onDelete: SetNull)
+  responses       AiRubricProposalResponse[]
 
   @@index([proposalId])
+  @@index([setScaleLevelId])
 }
 
 /// 案に入る答案（1段目の試行）。1つの答案が複数の案に入ってよい
@@ -981,13 +998,17 @@ model AiRubricProposalResponseScore {
   status       String
   /// partial / pending のときの点
   partialScore Decimal?
+  /// 類型方式の設問で付けた類型（status が evaluated のときだけ）。類型が消えたら null
+  scaleLevelId String?
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @default(now()) @updatedAt
   response     AiRubricProposalResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
   attempt      AiGradingAttempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  scaleLevel   ScoreScaleLevel?         @relation(fields: [scaleLevelId], references: [id], onDelete: SetNull)
 
   @@index([responseId])
   @@index([attemptId])
+  @@index([scaleLevelId])
 }
 
 /// 問いかけで教員が直している助言の文（案ごと・教員ごと）。答える前から1打鍵ごとに書き、
@@ -1044,13 +1065,17 @@ model AiAttemptResponse {
   status       String?
   /// partial / pending のときの点
   partialScore Decimal?
+  /// 類型方式の設問で付ける類型（status が evaluated のときだけ）。類型が消えたら null
+  scaleLevelId String?
   /// 確定した日時。下書きは null
   committedAt  DateTime?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @default(now()) @updatedAt
   attempt      AiGradingAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  scaleLevel   ScoreScaleLevel? @relation(fields: [scaleLevelId], references: [id], onDelete: SetNull)
 
   @@index([attemptId])
+  @@index([scaleLevelId])
 }
 
 /// 監査ログ（Discord風の操作履歴）。

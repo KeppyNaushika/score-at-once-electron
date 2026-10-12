@@ -15,6 +15,11 @@ import type { AiPrompt } from "@prisma/client"
 
 import type { PromptPart } from "@/electron-src/lib/aiGrading/providers/types"
 
+import {
+  formatScaleLevelsSection,
+  type ScaleLevelForPrompt,
+} from "./scaleLevelsText"
+
 /** 送る画像（問題の画像・模範解答の切り出し・答案） */
 export interface PromptImage {
   mediaType: "image/png" | "image/jpeg"
@@ -80,6 +85,11 @@ interface PromptContentInput {
   questionImages?: readonly PromptImage[]
   /** 模範解答のページから設問枠を切り出した画像。無ければ省く */
   modelAnswerImage?: PromptImage | null
+  /**
+   * 類型方式の設問の類型（並び順）。あれば配点の節の代わりに類型の節を置く（点は送らない。
+   * docs/vlm-grading-design.md §4-8-6）。類型方式でない設問は省くか空
+   */
+  scaleLevels?: readonly ScaleLevelForPrompt[]
 }
 
 /**
@@ -101,13 +111,14 @@ function questionImageSegments(
 }
 
 /**
- * 採点指示の中身（配点・問題文・模範解答・採点基準）の節を並べる（1段目の固定部の頭）
+ * 採点指示の中身（配点または類型・問題文・模範解答・採点基準）の節を並べる（1段目の固定部の頭）
  */
 export function buildPromptContentSegments(
   input: PromptContentInput
 ): (string | PromptImage | null)[] {
   const { prompt, points, modelAnswerImage } = input
   const questionImages = input.questionImages ?? []
+  const scaleLevelsSection = formatScaleLevelsSection(input.scaleLevels ?? [])
   const questionTextSection = textSection("問題文", prompt.questionText)
   const modelAnswerTextSection = textSection("模範解答", prompt.modelAnswerText)
   const rubricSection = textSection("採点基準", prompt.rubricText)
@@ -119,7 +130,7 @@ export function buildPromptContentSegments(
     rubricSection === null
 
   return [
-    formatPointsSection(points),
+    scaleLevelsSection ?? formatPointsSection(points),
     questionTextSection,
     ...questionImageSegments(questionImages),
     modelAnswerTextSection,
@@ -127,7 +138,9 @@ export function buildPromptContentSegments(
     modelAnswerImage ?? null,
     rubricSection,
     hasNoContent
-      ? "問題文・模範解答・採点基準はありません。答案と配点から判断してください。"
+      ? scaleLevelsSection === null
+        ? "問題文・模範解答・採点基準はありません。答案と配点から判断してください。"
+        : "問題文・模範解答・採点基準はありません。答案と類型の説明から判断してください。"
       : null,
   ]
 }

@@ -5,6 +5,9 @@
  * 1. 同じ答えに違う点: 1段目の書き起こしを正規化して（全角半角・空白の揺れを除く）同じなのに、
  *    教員の点が違う答案の組
  * 2. 先生と AI の食い違い: 1 に入らない答案のうち、教員の判定と AI の判定が違うもの（AI の確信度の高い順）
+ *
+ * 類型方式の設問（§4-8-5）では判定と類型で比べる。類型が違えば、点数が同じでも違う点として扱い、
+ * 「あなたは A、AI は B と判定しました」「B に直す」のように類型の記号で問う。
  */
 
 import { toAiGradingConfidence } from "@/types/aiGrading.types"
@@ -19,6 +22,7 @@ import {
   describeScore,
   isSameQuestioningScore,
   type QuestioningOption,
+  type QuestioningScaleLevel,
   type QuestioningScore,
   type QuestioningStep,
   type QuestioningStepState,
@@ -32,11 +36,14 @@ export function normalizeTranscription(transcription: string): string {
 }
 
 const scoreKeyOf = (score: QuestioningScore) =>
-  `${score.status}:${score.partialScore ?? ""}`
+  score.status === "evaluated"
+    ? `${score.status}:${score.scaleLevelId ?? ""}`
+    : `${score.status}:${score.partialScore ?? ""}`
 
 const aiScoreOf = (attempt: CheckAttempt): QuestioningScore => ({
   status: attempt.status,
   partialScore: attempt.partialScore,
+  scaleLevelId: attempt.scaleLevelId,
 })
 
 const CONFIDENCE_RANK = { high: 0, medium: 1, low: 2 } as const
@@ -47,6 +54,8 @@ interface BuildCheckQuestioningInput {
   /** 教員の今の採点（未採点なら null） */
   ownScoreOf: (examStudentId: string) => QuestioningScore | null
   points: number | null
+  /** 設問の類型表の類型（並び順のまま。類型方式でなければ空）。類型の記号で問うのに使う */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 /** 「このままにする」の選択肢 */
@@ -79,8 +88,14 @@ export function buildCheckQuestioning({
   checkRun,
   ownScoreOf,
   points,
+  scaleLevels,
 }: BuildCheckQuestioningInput): QuestioningStepState[] {
   if (!checkRun) return []
+  const describe = (score: QuestioningScore) =>
+    describeScore(score, points, scaleLevels)
+  /** 類型の記号は文の中で前後を空けて読ませる（「あなたは A、AI は B と…」） */
+  const inline = (score: QuestioningScore) =>
+    score.status === "evaluated" ? ` ${describe(score)} ` : describe(score)
   const seenExamStudentIds = new Set<string>()
   const attempts = checkRun.attempts.filter((attempt) => {
     if (attempt.state !== "succeeded") return false
@@ -140,7 +155,7 @@ export function buildCheckQuestioning({
     const options = teacherChoices.map(({ score, count }) =>
       rescoreOption(
         score,
-        `すべて${describeScore(score, points)}`,
+        `すべて${inline(score).trimEnd()}`,
         aiMajority && isSameQuestioningScore(aiMajority, score)
           ? `いま${count}件がこの点。AI の判定も同じ`
           : `いま${count}件がこの点`,
@@ -151,7 +166,7 @@ export function buildCheckQuestioning({
       options.push(
         rescoreOption(
           aiMajority,
-          `すべて${describeScore(aiMajority, points)}`,
+          `すべて${inline(aiMajority).trimEnd()}`,
           "AI の判定",
           true
         )
@@ -201,7 +216,7 @@ export function buildCheckQuestioning({
       steps.push({
         id: `diff:${attempt.id}`,
         kind: "disagreement",
-        title: `あなたは${describeScore(ownScore, points)}、AI は${describeScore(aiScore, points)}と判定しました`,
+        title: `あなたは${inline(ownScore).trimEnd()}、AI は${inline(aiScore)}と判定しました`,
         question: finding
           ? `AI は「${finding}」と見ています。`
           : "AI の所見はありません。",
@@ -213,11 +228,11 @@ export function buildCheckQuestioning({
         options: [
           rescoreOption(
             aiScore,
-            `${describeScore(aiScore, points)} に直す`,
+            `${describe(aiScore)} に直す`,
             "AI の判定",
             true
           ),
-          keepOption(`${describeScore(ownScore, points)}のまま`),
+          keepOption(`${inline(ownScore).trimStart()}のまま`),
         ],
         allowsManual: true,
         allowsInstruction: false,

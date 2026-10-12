@@ -14,7 +14,9 @@ import { isScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   assertQuestioningScores,
+  questioningRegionInclude,
   toPartialScoreColumn,
+  toQuestioningScoreRegion,
 } from "./aiQuestioningScore"
 import prisma from "./client"
 
@@ -26,6 +28,8 @@ export interface AiAttemptResponseInput {
   /** rescore・manual で付ける判定。keep と、manual で付けていない答案は null */
   status: string | null
   partialScore: number | null
+  /** 類型方式の設問で付ける類型（status が evaluated のときだけ）。それ以外は null */
+  scaleLevelId: string | null
 }
 
 /**
@@ -42,7 +46,13 @@ export async function recordAiAttemptResponses(
   const attempts = await prisma.aiGradingAttempt.findMany({
     where: { id: { in: attemptIds } },
     include: {
-      run: { include: { prompt: { include: { cropRegion: true } } } },
+      run: {
+        include: {
+          prompt: {
+            include: { cropRegion: { include: questioningRegionInclude } },
+          },
+        },
+      },
     },
   })
   if (attempts.length !== attemptIds.length) {
@@ -51,10 +61,10 @@ export async function recordAiAttemptResponses(
   if (attempts.some((attempt) => attempt.run.userId !== actorUserId)) {
     throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
-  const pointsByAttemptId = new Map(
+  const regionByAttemptId = new Map(
     attempts.map((attempt) => [
       attempt.id,
-      attempt.run.prompt.cropRegion.points,
+      toQuestioningScoreRegion(attempt.run.prompt.cropRegion),
     ])
   )
   for (const response of input.responses) {
@@ -68,17 +78,25 @@ export async function recordAiAttemptResponses(
       throw new Error("直す答えには判定が要ります")
     }
     if (response.status === null) {
-      if (response.partialScore !== null) {
-        throw new Error("判定の無い答えは点を持ちません")
+      if (response.partialScore !== null || response.scaleLevelId !== null) {
+        throw new Error("判定の無い答えは点も類型も持ちません")
       }
       continue
     }
     if (!isScoringStatus(response.status)) {
       throw new Error(`採点の判定「${response.status}」は使えません`)
     }
+    const region = regionByAttemptId.get(response.attemptId)
+    if (!region) throw new Error("答えた答案の AI の判定が見つかりません")
     assertQuestioningScores(
-      [{ status: response.status, partialScore: response.partialScore }],
-      pointsByAttemptId.get(response.attemptId) ?? null
+      [
+        {
+          status: response.status,
+          partialScore: response.partialScore,
+          scaleLevelId: response.scaleLevelId,
+        },
+      ],
+      region
     )
   }
 
@@ -90,6 +108,7 @@ export async function recordAiAttemptResponses(
           choice: response.choice,
           status: response.status,
           partialScore: toPartialScoreColumn(response.partialScore),
+          scaleLevelId: response.scaleLevelId,
         },
       })
     )

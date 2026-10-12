@@ -20,6 +20,7 @@ const ANSWERS: Stage2AnswerInput[] = [
   {
     status: "correct",
     partialScore: null,
+    scaleLevelId: null,
     confidence: "high",
     transcription: "50 cm",
     observation: "模範解答と同じ。",
@@ -28,6 +29,7 @@ const ANSWERS: Stage2AnswerInput[] = [
   {
     status: "incorrect",
     partialScore: null,
+    scaleLevelId: null,
     confidence: "medium",
     transcription: "50",
     observation: "数値は正しいが単位 cm が無い。",
@@ -36,6 +38,7 @@ const ANSWERS: Stage2AnswerInput[] = [
   {
     status: "incorrect",
     partialScore: null,
+    scaleLevelId: null,
     confidence: "low",
     transcription: "5",
     observation: "桁を誤った。",
@@ -44,6 +47,7 @@ const ANSWERS: Stage2AnswerInput[] = [
   {
     status: "no_answer",
     partialScore: null,
+    scaleLevelId: null,
     confidence: "high",
     transcription: "",
     observation: "何も書かれていない。",
@@ -130,6 +134,7 @@ const VALID_RESPONSE = {
 const CONTEXT = {
   maxPoints: 4,
   rubricItemIds: [RUBRIC_ITEM_ID],
+  scaleLevelIds: [],
   answers: ANSWERS,
 }
 

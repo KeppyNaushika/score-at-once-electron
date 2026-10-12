@@ -3,7 +3,7 @@
  * （`AiAttemptResponse`）の行き来（docs/vlm-grading-design.md §3-5・§3-10）。
  *
  * 1つの問いの答えは、その問いの答案すべてに同じ種類の行を書く。読むときは、答案ごとの最新の行が
- * そろっていれば（同じ種類で、直す点も同じ）その答えとし、そろっていなければ（問いの顔ぶれが
+ * そろっていれば（同じ種類で、直す点も同じ。類型方式の設問では類型も同じ）その答えとし、そろっていなければ（問いの顔ぶれが
  * 変わった・まだ答えていない答案がある）答えていないものとして扱う。
  */
 
@@ -33,7 +33,11 @@ export const latestAttemptResponse = (
 function scoreOfRow(row: AttemptResponseRow): QuestioningScore | null {
   return row.status === null
     ? null
-    : { status: toScoringStatus(row.status), partialScore: row.partialScore }
+    : {
+        status: toScoringStatus(row.status),
+        partialScore: row.partialScore,
+        scaleLevelId: row.scaleLevelId,
+      }
 }
 
 /** 答案ごとの答えの行から読んだ、問いの答え */
@@ -124,6 +128,7 @@ export function attemptResponsesForDecision(
   choice: "rescore" | "keep" | "manual"
   status: QuestioningScore["status"] | null
   partialScore: number | null
+  scaleLevelId: string | null
 }[] {
   switch (decision.kind) {
     case "option": {
@@ -136,6 +141,7 @@ export function attemptResponsesForDecision(
         choice: score ? "rescore" : "keep",
         status: score?.status ?? null,
         partialScore: score?.partialScore ?? null,
+        scaleLevelId: score?.scaleLevelId ?? null,
       }))
     }
     case "manual":
@@ -146,6 +152,7 @@ export function attemptResponsesForDecision(
           choice: "manual",
           status: score?.status ?? null,
           partialScore: score?.partialScore ?? null,
+          scaleLevelId: score?.scaleLevelId ?? null,
         }
       })
     case "instruction":

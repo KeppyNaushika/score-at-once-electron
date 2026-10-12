@@ -23,10 +23,26 @@ import type {
 } from "../types"
 import { computeRubricScore, isSameRubricScore } from "./rubricScore"
 
-/** 洗い出しの材料（`getRubricRecalculationSource` の戻りをそのまま渡せる形） */
+/** 洗い出しの材料（`toRubricRecalculationSource` で `getRubricRecalculationSource` の戻りから作る） */
 export interface RubricRecalculationSource extends RubricScoringRegion {
   rubricItems: readonly RubricScoringItem[]
   questionScores: readonly RubricScoredRow[]
+}
+
+/**
+ * `getRubricRecalculationSource` の戻り（設問の行・項目・採点行・類型表）を洗い出しの材料へ。
+ * 類型方式の設問では、類型にする項目が今の類型表の類型を指すかを類型の id で確かめる（§4-8-6）
+ */
+export function toRubricRecalculationSource<
+  Source extends Omit<RubricRecalculationSource, "scaleLevelIds"> & {
+    scoreScale: { levels: readonly { id: string }[] } | null
+  },
+>(source: Source): Source & { scaleLevelIds: readonly string[] } {
+  return {
+    ...source,
+    scaleLevelIds:
+      source.scoreScale?.levels.map((scaleLevel) => scaleLevel.id) ?? [],
+  }
 }
 
 export interface RubricRecalculationOptions {
@@ -72,6 +88,7 @@ export function planRubricRecalculation(
       const before: RubricScoreResult = {
         status: questionScore.status,
         partialScore: questionScore.partialScore,
+        scaleLevelId: questionScore.scaleLevelId,
       }
       if (isSameRubricScore(before, outcome.result)) return []
       return [
@@ -127,5 +144,6 @@ export const toRubricScoreWrites = (
     questionScoreId: change.questionScoreId,
     status: change.after.status,
     partialScore: change.after.partialScore,
+    scaleLevelId: change.after.scaleLevelId,
     clearsOverride: false,
   }))

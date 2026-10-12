@@ -1,5 +1,5 @@
 /**
- * 点を計算し直す対象の洗い出し（docs/vlm-grading-design.md §4-6）と、項目の値の検証（§6-4）。
+ * 点を計算し直す対象の洗い出し（docs/vlm-grading-design.md §4-6）と、項目の値の検証（§6-4・§4-8-6）。
  */
 
 import { describe, expect, it } from "vitest"
@@ -28,6 +28,7 @@ const unitMissing: RubricScoringItem = {
   pointDelta: -2,
   setStatus: null,
   setScore: null,
+  setScaleLevelId: null,
   sortOrder: 0,
   createdAt: CREATED_AT,
 }
@@ -47,6 +48,7 @@ const row = (
   id,
   userId,
   overridesRubric,
+  scaleLevelId: null,
   ...stored,
   rubricApplications: rubricItemIds.map((rubricItemId) => ({ rubricItemId })),
 })
@@ -54,6 +56,7 @@ const row = (
 const SOURCE = {
   scoringMethod: "deduction",
   points: 10,
+  scaleLevelIds: [],
   rubricItems: [unitMissing, processMissing],
   questionScores: [
     row("own", ME, ["unit-missing"], { status: "partial", partialScore: 8 }),
@@ -97,20 +100,20 @@ describe("planRubricRecalculation", () => {
       {
         questionScoreId: "own",
         userId: ME,
-        before: { status: "partial", partialScore: 8 },
-        after: { status: "partial", partialScore: 9 },
+        before: { status: "partial", partialScore: 8, scaleLevelId: null },
+        after: { status: "partial", partialScore: 9, scaleLevelId: null },
       },
       {
         questionScoreId: "colleague-1",
         userId: COLLEAGUE,
-        before: { status: "partial", partialScore: 8 },
-        after: { status: "partial", partialScore: 9 },
+        before: { status: "partial", partialScore: 8, scaleLevelId: null },
+        after: { status: "partial", partialScore: 9, scaleLevelId: null },
       },
       {
         questionScoreId: "colleague-2",
         userId: COLLEAGUE,
-        before: { status: "partial", partialScore: 5 },
-        after: { status: "partial", partialScore: 6 },
+        before: { status: "partial", partialScore: 5, scaleLevelId: null },
+        after: { status: "partial", partialScore: 6, scaleLevelId: null },
       },
     ])
     expect(summarizeRubricRecalculation(changes, ME)).toEqual({
@@ -122,6 +125,7 @@ describe("planRubricRecalculation", () => {
       questionScoreId: "own",
       status: "partial",
       partialScore: 9,
+      scaleLevelId: null,
       clearsOverride: false,
     })
   })
@@ -137,9 +141,9 @@ describe("planRubricRecalculation", () => {
     expect(
       changes.map((change) => [change.questionScoreId, change.after])
     ).toEqual([
-      ["own", { status: "unscored", partialScore: null }],
-      ["colleague-1", { status: "unscored", partialScore: null }],
-      ["colleague-2", { status: "partial", partialScore: 7 }],
+      ["own", { status: "unscored", partialScore: null, scaleLevelId: null }],
+      ["colleague-1", { status: "unscored", partialScore: null, scaleLevelId: null }],
+      ["colleague-2", { status: "partial", partialScore: 7, scaleLevelId: null }],
     ])
   })
 
@@ -177,6 +181,22 @@ describe("planRubricRecalculation", () => {
       )
     ).toEqual(["own"])
   })
+})
+
+/** 減点方式の設問（検証の上限は配点） */
+const pointsRegion = (points: number | null) => ({
+  points,
+  scoringMethod: "deduction",
+  scaleLevelIds: [],
+})
+
+/** 判定を決める項目（類型方式の設問向け。点なし） */
+const scaleEffect = (setStatus: string, setScaleLevelId: string | null) => ({
+  effectKind: "set",
+  pointDelta: null,
+  setStatus,
+  setScore: null,
+  setScaleLevelId,
 })
 
 describe("validateRubricItemEffect", () => {
@@ -302,7 +322,12 @@ describe("validateRubricItemEffect", () => {
       10,
     ],
   ])("拒む: %s", (_name, effect, maxPoints) => {
-    expect(validateRubricItemEffect(effect, maxPoints).ok).toBe(false)
+    expect(
+      validateRubricItemEffect(
+        { ...effect, setScaleLevelId: null },
+        pointsRegion(maxPoints)
+      ).ok
+    ).toBe(false)
   })
 
   it.each([
@@ -352,6 +377,82 @@ describe("validateRubricItemEffect", () => {
       null,
     ],
   ])("通す: %s", (_name, effect, maxPoints) => {
-    expect(validateRubricItemEffect(effect, maxPoints).ok).toBe(true)
+    expect(
+      validateRubricItemEffect(
+        { ...effect, setScaleLevelId: null },
+        pointsRegion(maxPoints)
+      ).ok
+    ).toBe(true)
+  })
+
+  it("類型方式でない設問では、類型にする項目・類型つきの項目を拒む", () => {
+    expect(
+      validateRubricItemEffect(
+        scaleEffect("evaluated", "level-a"),
+        pointsRegion(10)
+      ).ok
+    ).toBe(false)
+    expect(
+      validateRubricItemEffect(
+        {
+          effectKind: "set",
+          pointDelta: null,
+          setStatus: "incorrect",
+          setScore: null,
+          setScaleLevelId: "level-a",
+        },
+        pointsRegion(10)
+      ).ok
+    ).toBe(false)
+  })
+})
+
+describe("validateRubricItemEffect（類型方式の設問）", () => {
+  const SCALE_REGION = {
+    points: 10,
+    scoringMethod: "scale",
+    scaleLevelIds: ["level-a", "level-b"],
+  }
+
+  it("類型表の類型にする項目と、無答・保留の項目を通す", () => {
+    expect(
+      validateRubricItemEffect(scaleEffect("evaluated", "level-b"), SCALE_REGION)
+    ).toEqual({
+      ok: true,
+      value: {
+        effectKind: "set",
+        pointDelta: null,
+        setStatus: "evaluated",
+        setScore: null,
+        setScaleLevelId: "level-b",
+      },
+    })
+    expect(
+      validateRubricItemEffect(scaleEffect("no_answer", null), SCALE_REGION).ok
+    ).toBe(true)
+    expect(
+      validateRubricItemEffect(scaleEffect("pending", null), SCALE_REGION).ok
+    ).toBe(true)
+  })
+
+  it.each([
+    ["類型が無い", scaleEffect("evaluated", null)],
+    ["ほかの類型表の類型", scaleEffect("evaluated", "level-of-other-table")],
+    ["正答の項目", scaleEffect("correct", null)],
+    ["部分点の項目", { ...scaleEffect("partial", null), setScore: 3 }],
+    ["保留に類型がある", scaleEffect("pending", "level-a")],
+    ["保留に点がある", { ...scaleEffect("pending", null), setScore: 3 }],
+    [
+      "加減の項目",
+      {
+        effectKind: "adjust",
+        pointDelta: -1,
+        setStatus: null,
+        setScore: null,
+        setScaleLevelId: null,
+      },
+    ],
+  ])("拒む: %s", (_name, effect) => {
+    expect(validateRubricItemEffect(effect, SCALE_REGION).ok).toBe(false)
   })
 })

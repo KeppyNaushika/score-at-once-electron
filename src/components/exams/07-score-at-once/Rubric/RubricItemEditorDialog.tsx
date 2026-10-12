@@ -17,13 +17,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { RubricItemRow } from "@/queries/rubric"
 import {
-  RUBRIC_SET_STATUSES,
   type RubricEffectKind,
   type RubricSetStatus,
+  rubricSetStatusesFor,
   type ScoringMethod,
   toRubricEffectKind,
 } from "@/types/rubric.types"
 
+import {
+  type ScaleLevelChoice,
+  scaleLevelColorsAt,
+} from "../ScaleLevel/utils/scaleLevelAppearance"
 import type { RubricItemDraft } from "./hooks/useRubricItemEditing"
 
 interface RubricItemEditorDialogProps {
@@ -34,11 +38,16 @@ interface RubricItemEditorDialogProps {
   /** 設問の配点（点の欄の上限の案内） */
   points: number | null
   scoringMethod: ScoringMethod
+  /** 設問の類型表の類型（類型方式の設問で、類型にする項目の選択肢。ほかの方式では空） */
+  scaleLevels: readonly ScaleLevelChoice[]
   /** 保存する。保存できたら true（ダイアログを閉じる） */
   onSubmit: (draft: RubricItemDraft) => Promise<boolean>
 }
 
-/** ルーブリック項目の追加・変更（docs/vlm-grading-design.md §4-2） */
+/**
+ * ルーブリック項目の追加・変更（docs/vlm-grading-design.md §4-2）。
+ * 類型方式の設問では、項目は判定を決めるものだけで、判定は「類型にする」（類型を選ぶ）・無答・保留（§4-8-6）
+ */
 export function RubricItemEditorDialog(props: RubricItemEditorDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
@@ -61,15 +70,27 @@ const toNumberOrNull = (text: string): number | null =>
 
 const numberText = (score: number | null) => (score === null ? "" : `${score}`)
 
+/** 判定のボタンの言葉（類型にする項目は、類型そのものを下の欄で選ぶ） */
+const setStatusButtonLabel = (status: RubricSetStatus) =>
+  status === "evaluated" ? "類型にする" : SCORING_STATUS_LABELS[status]
+
 function RubricItemEditorForm({
   onOpenChange,
   rubricItem,
   points,
   scoringMethod,
+  scaleLevels,
   onSubmit,
 }: RubricItemEditorDialogProps) {
+  const isScaleQuestion = scoringMethod === "scale"
+  const setStatuses = rubricSetStatusesFor(scoringMethod)
   const [effectKind, setEffectKind] = useState<RubricEffectKind>(
-    rubricItem ? toRubricEffectKind(rubricItem.effectKind) : "adjust"
+    // 類型方式の設問の項目は判定を決めるものだけ
+    isScaleQuestion
+      ? "set"
+      : rubricItem
+        ? toRubricEffectKind(rubricItem.effectKind)
+        : "adjust"
   )
   const [pointDeltaText, setPointDeltaText] = useState(
     rubricItem
@@ -79,8 +100,15 @@ function RubricItemEditorForm({
         : "-1"
   )
   const [setStatus, setSetStatus] = useState<RubricSetStatus>(
-    RUBRIC_SET_STATUSES.find((status) => status === rubricItem?.setStatus) ??
-      "incorrect"
+    setStatuses.find((status) => status === rubricItem?.setStatus) ??
+      (isScaleQuestion ? "evaluated" : "incorrect")
+  )
+  const [setScaleLevelId, setSetScaleLevelId] = useState<string | null>(
+    scaleLevels.find(
+      (scaleLevel) => scaleLevel.id === rubricItem?.setScaleLevelId
+    )?.id ??
+      scaleLevels[0]?.id ??
+      null
   )
   const [setScoreText, setSetScoreText] = useState(
     numberText(rubricItem?.setScore ?? null)
@@ -89,7 +117,9 @@ function RubricItemEditorForm({
   const [adviceText, setAdviceText] = useState(rubricItem?.adviceText ?? "")
   const [isSaving, setIsSaving] = useState(false)
 
-  const keepsScore = setStatus === "partial" || setStatus === "pending"
+  // 類型方式の設問の項目は点を持たない（点は類型の点数から読む）
+  const keepsScore =
+    !isScaleQuestion && (setStatus === "partial" || setStatus === "pending")
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -103,6 +133,10 @@ function RubricItemEditorForm({
       setScore:
         effectKind === "set" && keepsScore
           ? toNumberOrNull(setScoreText)
+          : null,
+      setScaleLevelId:
+        effectKind === "set" && setStatus === "evaluated"
+          ? setScaleLevelId
           : null,
     })
     setIsSaving(false)
@@ -122,7 +156,7 @@ function RubricItemEditorForm({
       </DialogHeader>
 
       <div className="space-y-4">
-        <div className="space-y-1">
+        <div className={`space-y-1 ${isScaleQuestion ? "hidden" : ""}`}>
           <Label>種類</Label>
           <div className="flex gap-2">
             {(["adjust", "set"] as const).map((kind) => (
@@ -158,7 +192,7 @@ function RubricItemEditorForm({
             <div className="space-y-1">
               <Label>判定</Label>
               <div className="flex flex-wrap gap-2">
-                {RUBRIC_SET_STATUSES.map((status) => (
+                {setStatuses.map((status) => (
                   <Button
                     key={status}
                     type="button"
@@ -167,11 +201,50 @@ function RubricItemEditorForm({
                     aria-pressed={setStatus === status}
                     onClick={() => setSetStatus(status)}
                   >
-                    {SCORING_STATUS_LABELS[status]}
+                    {setStatusButtonLabel(status)}
                   </Button>
                 ))}
               </div>
             </div>
+            {setStatus === "evaluated" && (
+              <div className="space-y-1">
+                <Label>類型</Label>
+                {scaleLevels.length === 0 ? (
+                  <p className="text-xs text-amber-700">
+                    この設問には類型表が選ばれていません。03
+                    の領域情報で選んでください
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {scaleLevels.map((scaleLevel, order) => {
+                      const colors = scaleLevelColorsAt(order)
+                      const isSelected = setScaleLevelId === scaleLevel.id
+                      return (
+                        <Button
+                          key={scaleLevel.id}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          aria-pressed={isSelected}
+                          title={scaleLevel.description || undefined}
+                          className={isSelected ? "ring-2 ring-gray-800" : ""}
+                          style={{
+                            backgroundColor: colors.bg,
+                            color: colors.text,
+                          }}
+                          onClick={() => setSetScaleLevelId(scaleLevel.id)}
+                        >
+                          {scaleLevel.label}
+                          <span className="text-[10px] opacity-80">
+                            {scaleLevel.score}点
+                          </span>
+                        </Button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             {keepsScore && (
               <div className="space-y-1">
                 <Label htmlFor="rubric-item-set-score">
@@ -195,7 +268,9 @@ function RubricItemEditorForm({
           <Input
             id="rubric-item-label"
             value={label}
-            placeholder="例: 単位が無い"
+            placeholder={
+              isScaleQuestion ? "例: 根拠を2つ挙げている" : "例: 単位が無い"
+            }
             onChange={(event) => setLabel(event.target.value)}
           />
         </div>

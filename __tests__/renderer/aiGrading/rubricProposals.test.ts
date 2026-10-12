@@ -55,6 +55,7 @@ function makeOption(overrides: Partial<OptionRow> = {}): OptionRow {
     pointDelta: -1,
     setStatus: null,
     setScore: null,
+    setScaleLevelId: null,
     rationale: "",
     recommended: true,
     sortOrder: 0,

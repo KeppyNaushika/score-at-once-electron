@@ -9,14 +9,17 @@
  * `gradingJobRunner.ts`・`batchPoller.ts`）。失敗した2段目は画面から送り直せる。
  * 2段目の run は文字だけの1件の依頼なので、送り方は常にその場（realtime）で、使用量は
  * run の列に書く。
+ *
+ * 類型方式の設問（§4-8-6）では、答案の仮の評価を類型の記号で送り、案の選択肢を類型にさせる。
+ * 1段目を類型方式で送ったか（送った類型の一覧の文があるか）と、今の設問の方式が食い違えば作らない。
  */
 
 import { isAiGradingOutputStatus } from "@/lib/shared/aiGrading/responseRules"
 import {
   buildStage2OutputSchema,
   buildStage2RequestParts,
-  STAGE2_TEMPLATE_VERSION,
   type Stage2AnswerInput,
+  stage2TemplateVersionFor,
 } from "@/lib/shared/aiGrading/stage2Grouping"
 import { validateStage2Response } from "@/lib/shared/aiGrading/stage2ResponseValidator"
 import { toAiGradingConfidence } from "@/types/aiGrading.types"
@@ -27,7 +30,7 @@ import {
   narrowAiGradingRun,
   updateAiGradingRun,
 } from "../prisma/aiGradingRun"
-import { readRubricItemsForPrompt } from "../prisma/aiPrompt"
+import { readGradingCriteriaForPrompt } from "../prisma/aiPrompt"
 import { recordAiRubricProposals } from "../prisma/aiRubricProposal"
 import {
   GROUPING_MAX_OUTPUT_TOKENS,
@@ -53,6 +56,7 @@ function collectStage2Answers(
       status: attempt.status,
       partialScore:
         attempt.partialScore === null ? null : attempt.partialScore.toNumber(),
+      scaleLevelId: attempt.scaleLevelId,
       confidence: toAiGradingConfidence(attempt.confidence),
       transcription: attempt.transcription,
       observation: attempt.observation,
@@ -105,8 +109,18 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
       throw new Error(`effort の値が正しくありません: ${gradeRun.effort}`)
     }
     const { prompt } = gradeRun
-    const { rubricItems } = await readRubricItemsForPrompt(prompt.cropRegionId)
+    const { isScaleQuestion, rubricItems, scaleLevels } =
+      await readGradingCriteriaForPrompt(prompt.cropRegionId)
+    if ((prompt.renderedScaleLevels !== "") !== isScaleQuestion) {
+      throw new Error(
+        "AI採点のあとで設問の採点方式が変わったので、項目の案を作れません。AI採点をやり直してください"
+      )
+    }
+    if (isScaleQuestion && scaleLevels.length === 0) {
+      throw new Error("類型表に類型が無いので、項目の案を作れません")
+    }
     const rubricItemIds = rubricItems.map((rubricItem) => rubricItem.id)
+    const scaleLevelIds = scaleLevels.map((scaleLevel) => scaleLevel.id)
     const usable = collectStage2Answers(
       gradeRun.attempts,
       new Set(rubricItemIds)
@@ -121,6 +135,7 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
       prompt,
       points,
       rubricItems,
+      scaleLevels,
       answers,
     })
     const attemptIdByAnswerKey = new Map(
@@ -135,7 +150,7 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
         userId: actorUserId,
         promptId: prompt.id,
         purpose: "group",
-        templateVersion: STAGE2_TEMPLATE_VERSION,
+        templateVersion: stage2TemplateVersionFor(isScaleQuestion),
         provider: gradeRun.provider,
         model: gradeRun.model,
         effort: gradeRun.effort,
@@ -167,7 +182,9 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
           systemText,
           fixedParts,
           variableParts: [],
-          outputSchema: toJsonSchemaObject(buildStage2OutputSchema(answerKeys)),
+          outputSchema: toJsonSchemaObject(
+            buildStage2OutputSchema(answerKeys, isScaleQuestion)
+          ),
           outputSchemaName: STAGE2_OUTPUT_SCHEMA_NAME,
         },
         controller.signal
@@ -178,6 +195,7 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
           ? validateStage2Response(response.parsedJson, {
               maxPoints: points,
               rubricItemIds,
+              scaleLevelIds,
               answers,
             })
           : null

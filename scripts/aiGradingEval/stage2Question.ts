@@ -67,6 +67,8 @@ export async function runStage2Question(input: {
   const answers: Stage2AnswerInput[] = usable.map(({ verdict }) => ({
     status: verdict.status,
     partialScore: verdict.partialScore,
+    // この評価は類型方式でない設問だけを対象にする（類型を送らない）
+    scaleLevelId: null,
     confidence: verdict.confidence,
     transcription: verdict.transcription,
     observation: verdict.observation,
@@ -87,6 +89,7 @@ export async function runStage2Question(input: {
     ? validateStage2Response(result.structuredOutput, {
         maxPoints: points,
         rubricItemIds: [],
+        scaleLevelIds: [],
         answers,
       })
     : null

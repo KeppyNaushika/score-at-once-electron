@@ -54,6 +54,11 @@ interface GridCellProps {
    * その状態の色の斜線を重ねる（確定すれば塗りになる）。提案の斜線より優先する
    */
   draftStatus?: ScoreStatusKey | null
+  /**
+   * 斜線の色の指定（類型方式の設問で、類型を付ける予定・AI が選んだ類型の色）。
+   * 無ければ斜線の状態の色で引く（類型採点済みの色は類型ごとの色にならないため）
+   */
+  hatchColor?: string | null
   /** 採点マーク（状態のアイコン）の左隣に置くもの（AI採点モードの AI の判定の札）。模範解答には出さない */
   beforeStatusMark?: ReactNode
   /**
@@ -79,6 +84,7 @@ export function GridCell({
   detail,
   proposalStatus,
   draftStatus,
+  hatchColor,
   beforeStatusMark,
   scaleAppearance,
 }: GridCellProps) {
@@ -171,7 +177,9 @@ export function GridCell({
   if (!isMaster && hatchStatus) {
     cellBgStyle = {
       ...cellBgStyle,
-      backgroundImage: hatchedFill(statusConfig[hatchStatus].iconStyle.color),
+      backgroundImage: hatchedFill(
+        hatchColor ?? statusConfig[hatchStatus].iconStyle.color
+      ),
     }
   }
 

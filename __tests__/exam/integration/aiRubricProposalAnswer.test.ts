@@ -12,6 +12,8 @@
  * - 自分で採点の答えは答案ごとの点を持ち、点を書き終えてから確定済みにする
  * - 案の外の問いかけの答え（答案ごと）と、問いかけで決めた点の書き込み
  * - 答えられるのは実行した教員だけ。案に入っていない答案には当てない
+ * - 類型方式の設問（§4-8-6）: 案の選択肢の類型を書き、確定で類型にする項目を作る。教員が決めた類型は
+ *   設問の類型表の類型だけを受け、類型の書き込みで書く。正答・誤答・部分点は拒む
  *
  * 実行・試行・案は合成した行（外部へは送らない）。
  */
@@ -39,6 +41,7 @@ import {
   listAiRubricProposalRunsByCropRegion,
   listTeacherInstructions,
   recordAiRubricProposalDraft,
+  recordAiRubricProposals,
   setAiRubricProposalAdviceDraft,
 } from "@/electron-src/lib/prisma/aiRubricProposal"
 import {
@@ -259,7 +262,14 @@ describe("下書き", () => {
           proposalId: proposal.id,
           optionId: null,
           freeText: "",
-          manualScores: [{ attemptId, status: "partial", partialScore: 9 }],
+          manualScores: [
+            {
+              attemptId,
+              status: "partial",
+              partialScore: 9,
+              scaleLevelId: null,
+            },
+          ],
         },
         ownerId()
       )
@@ -360,6 +370,7 @@ describe("選択肢を選んで確定する", () => {
         pointDelta: -2,
         setStatus: null,
         setScore: null,
+        setScaleLevelId: null,
       },
       ownerId()
     )
@@ -570,6 +581,7 @@ describe("直した助言", () => {
         pointDelta: -1,
         setStatus: null,
         setScore: null,
+        setScaleLevelId: null,
         sortOrder: 0,
       },
       ownerId()
@@ -716,7 +728,14 @@ describe("自分で採点する", () => {
         proposalId: proposal.id,
         optionId: null,
         freeText: "",
-        manualScores: [{ attemptId, status: "partial", partialScore: 2.5 }],
+        manualScores: [
+          {
+            attemptId,
+            status: "partial",
+            partialScore: 2.5,
+            scaleLevelId: null,
+          },
+        ],
       },
       ownerId()
     )
@@ -743,6 +762,7 @@ describe("自分で採点する", () => {
             examStudentId: examStudentId(0),
             status: "partial",
             partialScore: 2.5,
+            scaleLevelId: null,
           },
         ],
       },
@@ -780,6 +800,7 @@ describe("案の外の問いかけ（答案ごとの答え）", () => {
             choice: "rescore",
             status: "incorrect",
             partialScore: null,
+            scaleLevelId: null,
           },
         ],
       },
@@ -797,6 +818,7 @@ describe("案の外の問いかけ（答案ごとの答え）", () => {
               choice: "keep",
               status: "correct",
               partialScore: null,
+              scaleLevelId: null,
             },
           ],
         },
@@ -807,7 +829,13 @@ describe("案の外の問いかけ（答案ごとの答え）", () => {
       recordAiAttemptResponses(
         {
           responses: [
-            { attemptId, choice: "keep", status: null, partialScore: null },
+            {
+              attemptId,
+              choice: "keep",
+              status: null,
+              partialScore: null,
+              scaleLevelId: null,
+            },
           ],
         },
         otherUserId
@@ -862,5 +890,324 @@ describe("答えられないもの", () => {
       )
     ).rejects.toThrow("実行した教員だけ")
     expect(await testPrisma.rubricItem.count()).toBe(0)
+  })
+})
+
+describe("類型方式の設問", () => {
+  /** 設問を類型方式にし、使う類型表（A・B）と、使わない類型表（X）を作る */
+  async function setUpScaleQuestion() {
+    const createScale = (name: string, labels: string[]) =>
+      testPrisma.scoreScale.create({
+        data: {
+          examId: fixture.exam.id,
+          name,
+          levels: {
+            create: labels.map((label, sortOrder) => ({
+              label,
+              description: `${label} の説明`,
+              score: 5 - sortOrder * 2,
+              sortOrder,
+            })),
+          },
+        },
+        include: { levels: { orderBy: { sortOrder: "asc" } } },
+      })
+    const scale = await createScale("記述の類型", ["A", "B"])
+    const otherScale = await createScale("別の類型表", ["X"])
+    await testPrisma.cropRegion.update({
+      where: { id: cropRegionId() },
+      data: { scoringMethod: "scale", scoreScaleId: scale.id },
+    })
+    return {
+      levelA: scale.levels[0],
+      levelB: scale.levels[1],
+      otherLevel: otherScale.levels[0],
+    }
+  }
+
+  it("2段目の案の選択肢の類型を書き、確定で類型にする項目を作る", async () => {
+    const { levelA, levelB } = await setUpScaleQuestion()
+    const seeded = await createProposal()
+    const attemptId = await attemptIdOf(seeded.id, 0)
+    await recordAiRubricProposals(
+      seeded.runId,
+      [
+        {
+          label: "根拠が1つだけ",
+          description: "根拠を1つ挙げているが、2つ目が無い。",
+          adviceDraft: "もう1つの理由も書き足そう。",
+          matchedRubricItemId: null,
+          memberAnswerKeys: ["A1"],
+          options: [
+            {
+              effectKind: "set",
+              pointDelta: null,
+              setStatus: "evaluated",
+              setScore: null,
+              setScaleLevelId: levelB.id,
+              rationale: "根拠が1つ",
+              recommended: true,
+            },
+            {
+              effectKind: "set",
+              pointDelta: null,
+              setStatus: "evaluated",
+              setScore: null,
+              setScaleLevelId: levelA.id,
+              rationale: "十分",
+              recommended: false,
+            },
+          ],
+        },
+      ],
+      new Map([["A1", attemptId]])
+    )
+    const proposal = await testPrisma.aiRubricProposal.findFirstOrThrow({
+      where: { runId: seeded.runId, label: "根拠が1つだけ" },
+      include: { options: { orderBy: { sortOrder: "asc" } } },
+    })
+    expect(
+      proposal.options.map((option) => [
+        option.setStatus,
+        option.setScaleLevelId,
+        option.setScore,
+      ])
+    ).toEqual([
+      ["evaluated", levelB.id, null],
+      ["evaluated", levelA.id, null],
+    ])
+
+    const draft = await recordAiRubricProposalDraft(
+      {
+        proposalId: proposal.id,
+        optionId: proposal.options[0].id,
+        freeText: "",
+        manualScores: [],
+      },
+      ownerId()
+    )
+    const { response } = await commitAiRubricProposalResponse(
+      { responseId: draft.id, examStudentIds: [examStudentId(0)] },
+      ownerId()
+    )
+    expect(response.committedAt).not.toBeNull()
+    const createdItem = await testPrisma.rubricItem.findUniqueOrThrow({
+      where: { id: response.resultRubricItemId ?? "" },
+    })
+    expect(createdItem).toMatchObject({
+      effectKind: "set",
+      setStatus: "evaluated",
+      setScore: null,
+      setScaleLevelId: levelB.id,
+    })
+  })
+
+  it("自分で採点した類型を答えに持ち、設問の類型表の類型だけを受ける", async () => {
+    const { levelA, otherLevel } = await setUpScaleQuestion()
+    const proposal = await createProposal()
+    const attemptId = await attemptIdOf(proposal.id, 0)
+    const draftWith = (score: {
+      status: "evaluated" | "partial" | "pending"
+      partialScore: number | null
+      scaleLevelId: string | null
+    }) =>
+      recordAiRubricProposalDraft(
+        {
+          proposalId: proposal.id,
+          optionId: null,
+          freeText: "",
+          manualScores: [{ attemptId, ...score }],
+        },
+        ownerId()
+      )
+
+    const draft = await draftWith({
+      status: "evaluated",
+      partialScore: null,
+      scaleLevelId: levelA.id,
+    })
+    expect(draft.scores[0]).toMatchObject({
+      status: "evaluated",
+      scaleLevelId: levelA.id,
+      partialScore: null,
+    })
+
+    await expect(
+      draftWith({
+        status: "evaluated",
+        partialScore: null,
+        scaleLevelId: otherLevel.id,
+      })
+    ).rejects.toThrow("この設問の類型表の類型ではありません")
+    await expect(
+      draftWith({ status: "evaluated", partialScore: null, scaleLevelId: null })
+    ).rejects.toThrow("この設問の類型表の類型ではありません")
+    await expect(
+      draftWith({ status: "partial", partialScore: 2, scaleLevelId: null })
+    ).rejects.toThrow("正答・誤答・部分点")
+    await expect(
+      draftWith({ status: "pending", partialScore: 2, scaleLevelId: null })
+    ).rejects.toThrow("点を付けません")
+    await expect(
+      draftWith({
+        status: "pending",
+        partialScore: null,
+        scaleLevelId: levelA.id,
+      })
+    ).rejects.toThrow("類型を持ちません")
+  })
+
+  it("問いかけで決めた類型は類型の書き込みで書き、ほかの類型表の類型は拒む", async () => {
+    const { levelA, levelB, otherLevel } = await setUpScaleQuestion()
+    await writeAiQuestioningScores(
+      {
+        cropRegionId: cropRegionId(),
+        scores: [
+          {
+            examStudentId: examStudentId(0),
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: levelA.id,
+          },
+          {
+            examStudentId: examStudentId(1),
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: levelB.id,
+          },
+          {
+            examStudentId: examStudentId(2),
+            status: "no_answer",
+            partialScore: null,
+            scaleLevelId: null,
+          },
+        ],
+      },
+      ownerId()
+    )
+    const rows = await testPrisma.questionScore.findMany({
+      where: { cropRegionId: cropRegionId(), userId: ownerId() },
+    })
+    const rowOf = (index: number) =>
+      rows.find((row) => row.examStudentId === examStudentId(index))
+    expect(rowOf(0)).toMatchObject({
+      status: "evaluated",
+      scaleLevelId: levelA.id,
+      partialScore: null,
+    })
+    expect(rowOf(1)).toMatchObject({
+      status: "evaluated",
+      scaleLevelId: levelB.id,
+    })
+    expect(rowOf(2)).toMatchObject({ status: "no_answer", scaleLevelId: null })
+
+    await expect(
+      writeAiQuestioningScores(
+        {
+          cropRegionId: cropRegionId(),
+          scores: [
+            {
+              examStudentId: examStudentId(0),
+              status: "evaluated",
+              partialScore: null,
+              scaleLevelId: otherLevel.id,
+            },
+          ],
+        },
+        ownerId()
+      )
+    ).rejects.toThrow("この設問の類型表の類型ではありません")
+    await expect(
+      writeAiQuestioningScores(
+        {
+          cropRegionId: cropRegionId(),
+          scores: [
+            {
+              examStudentId: examStudentId(0),
+              status: "correct",
+              partialScore: null,
+              scaleLevelId: null,
+            },
+          ],
+        },
+        ownerId()
+      )
+    ).rejects.toThrow("正答・誤答・部分点")
+    // 拒んだ書き込みは何も変えない
+    expect(
+      (
+        await testPrisma.questionScore.findFirstOrThrow({
+          where: {
+            cropRegionId: cropRegionId(),
+            userId: ownerId(),
+            examStudentId: examStudentId(0),
+          },
+        })
+      ).scaleLevelId
+    ).toBe(levelA.id)
+  })
+
+  it("類型方式でない設問には類型を付けられない", async () => {
+    const { levelA } = await setUpScaleQuestion()
+    await testPrisma.cropRegion.update({
+      where: { id: cropRegionId() },
+      data: { scoringMethod: "deduction" },
+    })
+    await expect(
+      writeAiQuestioningScores(
+        {
+          cropRegionId: cropRegionId(),
+          scores: [
+            {
+              examStudentId: examStudentId(0),
+              status: "evaluated",
+              partialScore: null,
+              scaleLevelId: levelA.id,
+            },
+          ],
+        },
+        ownerId()
+      )
+    ).rejects.toThrow("類型方式でない設問には、類型を付けられません")
+  })
+
+  it("案の外の問いかけの答えに類型を持ち、設問の類型表の類型だけを受ける", async () => {
+    const { levelB, otherLevel } = await setUpScaleQuestion()
+    const proposal = await createProposal()
+    const attemptId = await attemptIdOf(proposal.id, 0)
+    const [written] = await recordAiAttemptResponses(
+      {
+        responses: [
+          {
+            attemptId,
+            choice: "rescore",
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: levelB.id,
+          },
+        ],
+      },
+      ownerId()
+    )
+    expect(written).toMatchObject({
+      status: "evaluated",
+      scaleLevelId: levelB.id,
+    })
+    await expect(
+      recordAiAttemptResponses(
+        {
+          responses: [
+            {
+              attemptId,
+              choice: "rescore",
+              status: "evaluated",
+              partialScore: null,
+              scaleLevelId: otherLevel.id,
+            },
+          ],
+        },
+        ownerId()
+      )
+    ).rejects.toThrow("この設問の類型表の類型ではありません")
   })
 })

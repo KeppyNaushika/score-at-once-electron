@@ -30,8 +30,12 @@ interface UseScoringModeReturn {
   /** モーダルを開く */
   /** 現在のマウスブラシ */
   mouseBrush: MouseBrushAction
-  /** マウスブラシを設定 */
+  /** マウスブラシを設定（類型のブラシ以外。類型は `selectMouseScaleLevel` で選ぶ） */
   setMouseBrush: (brush: MouseBrushAction) => void
+  /** 類型のブラシが付ける類型（類型のブラシのときだけ値を持つ） */
+  mouseScaleLevelId: string | null
+  /** 類型のブラシを選ぶ（ブラシと類型を一緒に決める） */
+  selectMouseScaleLevel: (scaleLevelId: string) => void
 }
 
 /**
@@ -59,7 +63,20 @@ export function useScoringMode(userId: string): UseScoringModeReturn {
     null
   )
   const [modeSelectionClosed, setModeSelectionClosed] = useState(false)
-  const [mouseBrush, setMouseBrush] = useState<MouseBrushAction>("correct")
+  const [mouseBrush, setMouseBrushState] = useState<MouseBrushAction>("correct")
+  const [mouseScaleLevelId, setMouseScaleLevelId] = useState<string | null>(
+    null
+  )
+
+  // 類型のブラシから離れたら類型も外す（類型の id だけが残って後で効くことが無いように）
+  const setMouseBrush = useCallback((brush: MouseBrushAction) => {
+    setMouseBrushState(brush)
+    setMouseScaleLevelId(null)
+  }, [])
+  const selectMouseScaleLevel = useCallback((scaleLevelId: string) => {
+    setMouseBrushState("scale_level")
+    setMouseScaleLevelId(scaleLevelId)
+  }, [])
 
   const remembered = parsePreference(
     "scoringOperationModeRemembered",
@@ -118,5 +135,7 @@ export function useScoringMode(userId: string): UseScoringModeReturn {
     closeModeSelectionModal,
     mouseBrush,
     setMouseBrush,
+    mouseScaleLevelId,
+    selectMouseScaleLevel,
   }
 }

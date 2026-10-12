@@ -134,6 +134,10 @@ interface ScoringSidePanelProps {
   onScoringOperationModeChange?: (mode: ScoringOperationMode) => void
   mouseBrush?: MouseBrushAction
   onMouseBrushChange?: (brush: MouseBrushAction) => void
+  /** 類型のブラシが付ける類型（類型のブラシのときだけ値を持つ） */
+  mouseScaleLevelId?: string | null
+  /** 類型のブラシを選ぶ */
+  onMouseScaleLevelSelect?: (scaleLevelId: string) => void
   visibleUnscoredCount?: number
   hiddenUnscoredCount?: number
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
@@ -208,6 +212,8 @@ export function ScoringSidePanel({
   onScoringOperationModeChange,
   mouseBrush,
   onMouseBrushChange,
+  mouseScaleLevelId,
+  onMouseScaleLevelSelect,
   visibleUnscoredCount,
   hiddenUnscoredCount,
   onBatchScoreVisibleUnscored,
@@ -336,6 +342,8 @@ export function ScoringSidePanel({
             onScoringOperationModeChange={onScoringOperationModeChange}
             mouseBrush={mouseBrush}
             onMouseBrushChange={onMouseBrushChange}
+            mouseScaleLevelId={mouseScaleLevelId}
+            onMouseScaleLevelSelect={onMouseScaleLevelSelect}
             visibleUnscoredCount={visibleUnscoredCount}
             hiddenUnscoredCount={hiddenUnscoredCount}
             onBatchScoreVisibleUnscored={onBatchScoreVisibleUnscored}

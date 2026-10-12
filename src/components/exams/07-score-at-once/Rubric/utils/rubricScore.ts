@@ -11,13 +11,19 @@
  * 採点方式が `points`（直接採点）の設問では計算しない。配点の無い設問では点を付けない
  * （`set` の判定だけを採り、加減だけのマスは `unscored`）。
  *
+ * **類型方式の設問**（§4-8-6）では、方式と合う `set` の項目（類型にする・無答・保留）だけを見て、
+ * 並び順が先のものの判定と類型を採る（点は書かない。類型の点数から読む）。加減の項目や正答・部分点・
+ * 誤答の項目（方式を変える前の項目）は類型方式では効かない。類型が消えた・ほかの組の類型を指す項目は、
+ * 類型を決められないので保留に倒す（点の無い部分点を保留にするのと同じ）。
+ *
  * 同じ項目の適用が2つあっても（同期で重なった行）、1つとして数える。設問の項目に無い
  * 適用（消えた項目を指すもの）は数えない。
  */
 
 import {
-  computesScoreFromRubricItems,
   isRubricSetStatus,
+  isStatusCompatibleWithScoringMethod,
+  scoresFromRubricItems,
   toScoringMethod,
 } from "@/types/rubric.types"
 
@@ -42,7 +48,17 @@ type RubricScoreOutcome =
       shadowedSetItemIds: string[]
     }
 
-const UNSCORED: RubricScoreResult = { status: "unscored", partialScore: null }
+const UNSCORED: RubricScoreResult = {
+  status: "unscored",
+  partialScore: null,
+  scaleLevelId: null,
+}
+
+const PENDING: RubricScoreResult = {
+  status: "pending",
+  partialScore: null,
+  scaleLevelId: null,
+}
 
 const roundToCent = (score: number): number => Math.round(score * 100) / 100
 
@@ -58,9 +74,38 @@ const compareSetPriority = (
 /** 0〜配点に収めた点から、判定と点を決める */
 function resultFromTotal(total: number, points: number): RubricScoreResult {
   const clamped = roundToCent(Math.min(Math.max(total, 0), points))
-  if (clamped >= points) return { status: "correct", partialScore: null }
-  if (clamped <= 0) return { status: "incorrect", partialScore: null }
-  return { status: "partial", partialScore: clamped }
+  if (clamped >= points) {
+    return { status: "correct", partialScore: null, scaleLevelId: null }
+  }
+  if (clamped <= 0) {
+    return { status: "incorrect", partialScore: null, scaleLevelId: null }
+  }
+  return { status: "partial", partialScore: clamped, scaleLevelId: null }
+}
+
+/** 類型方式の設問で set の項目が決める判定と類型。点は持たない */
+function resultFromScaleSetItem(
+  item: RubricScoringItem,
+  scaleLevelIds: readonly string[]
+): RubricScoreResult {
+  if (item.setStatus !== "evaluated") {
+    return {
+      status: item.setStatus === "no_answer" ? "no_answer" : "pending",
+      partialScore: null,
+      scaleLevelId: null,
+    }
+  }
+  if (
+    item.setScaleLevelId === null ||
+    !scaleLevelIds.includes(item.setScaleLevelId)
+  ) {
+    return PENDING
+  }
+  return {
+    status: "evaluated",
+    partialScore: null,
+    scaleLevelId: item.setScaleLevelId,
+  }
 }
 
 /** set の項目が決める判定と点。部分点・保留だけが点を持つ */
@@ -69,6 +114,8 @@ function resultFromSetItem(
   points: number | null
 ): RubricScoreResult {
   if (!isRubricSetStatus(item.setStatus)) return UNSCORED
+  // 方式と合わない項目は選ばれない（呼び出し側で除く）。型のうえで evaluated を残さない
+  if (item.setStatus === "evaluated") return PENDING
   const keepsScore =
     item.setStatus === "partial" || item.setStatus === "pending"
   const score =
@@ -76,11 +123,18 @@ function resultFromSetItem(
       ? roundToCent(Math.min(Math.max(item.setScore, 0), points))
       : null
   // 点の無い部分点は作れない（配点が消えた・項目の点が消えた）。保留に倒す
-  if (item.setStatus === "partial" && score === null) {
-    return { status: "pending", partialScore: null }
-  }
-  return { status: item.setStatus, partialScore: score }
+  if (item.setStatus === "partial" && score === null) return PENDING
+  return { status: item.setStatus, partialScore: score, scaleLevelId: null }
 }
+
+/** その方式で効く set の項目か（類型方式の設問の正答の項目などは効かない） */
+const isEffectiveSetItem = (
+  scoringMethod: ReturnType<typeof toScoringMethod>,
+  rubricItem: RubricScoringItem
+): boolean =>
+  rubricItem.effectKind === "set" &&
+  isRubricSetStatus(rubricItem.setStatus) &&
+  isStatusCompatibleWithScoringMethod(scoringMethod, rubricItem.setStatus)
 
 /** 1マスの点を計算する */
 export function computeRubricScore(
@@ -89,7 +143,7 @@ export function computeRubricScore(
   row: Pick<RubricScoredRow, "overridesRubric" | "rubricApplications">
 ): RubricScoreOutcome {
   const scoringMethod = toScoringMethod(region.scoringMethod)
-  if (!computesScoreFromRubricItems(scoringMethod)) {
+  if (!scoresFromRubricItems(scoringMethod)) {
     return { kind: "directScoring" }
   }
   if (row.overridesRubric) return { kind: "overridden" }
@@ -97,8 +151,12 @@ export function computeRubricScore(
   const appliedItemIds = new Set(
     row.rubricApplications.map((application) => application.rubricItemId)
   )
-  const appliedItems = rubricItems.filter((rubricItem) =>
-    appliedItemIds.has(rubricItem.id)
+  const appliedItems = rubricItems.filter(
+    (rubricItem) =>
+      appliedItemIds.has(rubricItem.id) &&
+      // 類型方式では加減の項目は効かない（方式を変える前に作った項目）
+      (scoringMethod !== "scale" ||
+        isEffectiveSetItem(scoringMethod, rubricItem))
   )
   if (appliedItems.length === 0) {
     return {
@@ -110,13 +168,16 @@ export function computeRubricScore(
   }
 
   const setItems = appliedItems
-    .filter((rubricItem) => rubricItem.effectKind === "set")
+    .filter((rubricItem) => isEffectiveSetItem(scoringMethod, rubricItem))
     .sort(compareSetPriority)
   if (setItems.length > 0) {
     const [decidingItem, ...shadowedItems] = setItems
     return {
       kind: "computed",
-      result: resultFromSetItem(decidingItem, region.points),
+      result:
+        scoringMethod === "scale"
+          ? resultFromScaleSetItem(decidingItem, region.scaleLevelIds)
+          : resultFromSetItem(decidingItem, region.points),
       decidingSetItemId: decidingItem.id,
       shadowedSetItemIds: shadowedItems.map((rubricItem) => rubricItem.id),
     }
@@ -126,7 +187,7 @@ export function computeRubricScore(
     .filter((rubricItem) => rubricItem.effectKind === "adjust")
     .reduce((acc, rubricItem) => acc + (rubricItem.pointDelta ?? 0), 0)
   const result =
-    region.points === null
+    region.points === null || scoringMethod === "scale"
       ? UNSCORED
       : resultFromTotal(
           (scoringMethod === "deduction" ? region.points : 0) + adjustTotal,
@@ -140,12 +201,13 @@ export function computeRubricScore(
   }
 }
 
-/** 保存されている点と計算した点が同じか（部分点は 0.01 単位で比べる） */
+/** 保存されている点と計算した点が同じか（部分点は 0.01 単位で比べる。類型は id で比べる） */
 export function isSameRubricScore(
   left: RubricScoreResult,
   right: RubricScoreResult
 ): boolean {
   if (left.status !== right.status) return false
+  if (left.scaleLevelId !== right.scaleLevelId) return false
   if (left.partialScore === null || right.partialScore === null) {
     return left.partialScore === right.partialScore
   }

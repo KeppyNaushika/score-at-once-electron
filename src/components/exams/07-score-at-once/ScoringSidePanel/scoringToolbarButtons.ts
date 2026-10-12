@@ -83,7 +83,8 @@ export const BRUSH_BUTTONS = SCORING_BUTTONS.filter(
 
 /** マウスモード用の特殊ブラシ（採点せず選択／モーダル展開） */
 const SPECIAL_BRUSH_BUTTONS: Array<{
-  status: MouseBrushAction
+  /** 類型のブラシは類型ごとに並べるので、ここ（固定のボタン）には入らない */
+  status: Exclude<MouseBrushAction, "scale_level">
   label: string
   icon: typeof CircleCheckBig
   description: string

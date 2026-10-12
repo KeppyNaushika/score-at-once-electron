@@ -98,6 +98,8 @@ function main() {
             pointDelta: recommended.pointDelta,
             setStatus: recommended.setStatus,
             setScore: recommended.setScore,
+            // この評価は類型方式でない設問だけを対象にする（記録した案は類型を持たない）
+            setScaleLevelId: null,
           }),
         ]
       })

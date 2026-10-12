@@ -1,6 +1,7 @@
 /**
- * ルーブリック項目の適用からの点の計算（docs/vlm-grading-design.md §4-4）。
+ * ルーブリック項目の適用からの点の計算（docs/vlm-grading-design.md §4-4・§4-8-6）。
  * 方式・set の優先・範囲への収め・上書きの飛ばしを表で確かめる。
+ * 類型方式の設問では、類型にする項目が類型を決め、加減・正答などの項目は効かない。
  */
 
 import { describe, expect, it } from "vitest"
@@ -19,6 +20,7 @@ const adjust = (id: string, pointDelta: number): RubricScoringItem => ({
   pointDelta,
   setStatus: null,
   setScore: null,
+  setScaleLevelId: null,
   sortOrder: 0,
   createdAt: CREATED_AT,
 })
@@ -27,13 +29,15 @@ const setItem = (
   id: string,
   setStatus: string,
   setScore: number | null,
-  sortOrder: number
+  sortOrder: number,
+  setScaleLevelId: string | null = null
 ): RubricScoringItem => ({
   id,
   effectKind: "set",
   pointDelta: null,
   setStatus,
   setScore,
+  setScaleLevelId,
   sortOrder,
   createdAt: CREATED_AT,
 })
@@ -52,8 +56,13 @@ const applied = (...rubricItemIds: string[]) => ({
   rubricApplications: rubricItemIds.map((rubricItemId) => ({ rubricItemId })),
 })
 
-const deduction = { scoringMethod: "deduction", points: 10 }
-const addition = { scoringMethod: "addition", points: 10 }
+const deduction = { scoringMethod: "deduction", points: 10, scaleLevelIds: [] }
+const addition = { scoringMethod: "addition", points: 10, scaleLevelIds: [] }
+const scale = {
+  scoringMethod: "scale",
+  points: 10,
+  scaleLevelIds: ["level-a", "level-b"],
+}
 
 describe("computeRubricScore", () => {
   it.each([
@@ -105,7 +114,7 @@ describe("computeRubricScore", () => {
     )
     expect(outcome).toEqual({
       kind: "computed",
-      result: { status: "partial", partialScore: 2 },
+      result: { status: "partial", partialScore: 2, scaleLevelId: null },
       decidingSetItemId: "answer-only",
       shadowedSetItemIds: ["unreadable"],
     })
@@ -149,14 +158,14 @@ describe("computeRubricScore", () => {
   it("points 方式（と外れ値）は計算しない", () => {
     expect(
       computeRubricScore(
-        { scoringMethod: "points", points: 10 },
+        { scoringMethod: "points", points: 10, scaleLevelIds: [] },
         ITEMS,
         applied("unit-missing")
       )
     ).toEqual({ kind: "directScoring" })
     expect(
       computeRubricScore(
-        { scoringMethod: "scale", points: 10 },
+        { scoringMethod: "unknown", points: 10, scaleLevelIds: [] },
         ITEMS,
         applied("unit-missing")
       )
@@ -164,7 +173,11 @@ describe("computeRubricScore", () => {
   })
 
   it("配点の無い設問では加減の点を付けず、set の判定だけを採る", () => {
-    const noPoints = { scoringMethod: "deduction", points: null }
+    const noPoints = {
+      scoringMethod: "deduction",
+      points: null,
+      scaleLevelIds: [],
+    }
     expect(
       computeRubricScore(noPoints, ITEMS, applied("unit-missing"))
     ).toMatchObject({ result: { status: "unscored", partialScore: null } })
@@ -184,24 +197,129 @@ describe("computeRubricScore", () => {
   })
 })
 
+describe("computeRubricScore（類型方式の設問）", () => {
+  const SCALE_ITEMS: RubricScoringItem[] = [
+    setItem("to-a", "evaluated", null, 0, "level-a"),
+    setItem("to-b", "evaluated", null, 1, "level-b"),
+    setItem("blank", "no_answer", null, 2),
+    setItem("stale-level", "evaluated", null, 3, "level-of-other-table"),
+    setItem("deleted-level", "evaluated", null, 4),
+    adjust("old-deduction", -2),
+    setItem("old-correct", "correct", null, -1),
+  ]
+
+  it("類型にする項目を当てるとその類型になり、点は書かない", () => {
+    expect(computeRubricScore(scale, SCALE_ITEMS, applied("to-b"))).toEqual({
+      kind: "computed",
+      result: { status: "evaluated", partialScore: null, scaleLevelId: "level-b" },
+      decidingSetItemId: "to-b",
+      shadowedSetItemIds: [],
+    })
+  })
+
+  it("複数当たれば並び順が先の項目を採り、残りを返す", () => {
+    expect(
+      computeRubricScore(scale, SCALE_ITEMS, applied("to-b", "to-a"))
+    ).toMatchObject({
+      result: { status: "evaluated", scaleLevelId: "level-a" },
+      shadowedSetItemIds: ["to-b"],
+    })
+  })
+
+  it("無答の項目は無答にする", () => {
+    expect(
+      computeRubricScore(scale, SCALE_ITEMS, applied("blank"))
+    ).toMatchObject({
+      result: { status: "no_answer", partialScore: null, scaleLevelId: null },
+    })
+  })
+
+  it("ほかの類型表の類型・消えた類型を指す項目は、類型を決められないので保留", () => {
+    expect(
+      computeRubricScore(scale, SCALE_ITEMS, applied("stale-level"))
+    ).toMatchObject({ result: { status: "pending", scaleLevelId: null } })
+    expect(
+      computeRubricScore(scale, SCALE_ITEMS, applied("deleted-level"))
+    ).toMatchObject({ result: { status: "pending", scaleLevelId: null } })
+  })
+
+  it("方式を変える前の加減・正答の項目は効かない（当たっていても未採点）", () => {
+    expect(
+      computeRubricScore(
+        scale,
+        SCALE_ITEMS,
+        applied("old-deduction", "old-correct")
+      )
+    ).toMatchObject({
+      kind: "computed",
+      result: { status: "unscored", scaleLevelId: null },
+      decidingSetItemId: null,
+    })
+    // 効かない正答の項目は、効く類型の項目より並びが先でも採らない
+    expect(
+      computeRubricScore(scale, SCALE_ITEMS, applied("old-correct", "to-a"))
+    ).toMatchObject({
+      result: { status: "evaluated", scaleLevelId: "level-a" },
+      shadowedSetItemIds: [],
+    })
+  })
+
+  it("減点方式の設問では類型にする項目は効かない", () => {
+    expect(
+      computeRubricScore(
+        deduction,
+        SCALE_ITEMS,
+        applied("to-a", "old-deduction")
+      )
+    ).toMatchObject({
+      result: { status: "partial", partialScore: 8, scaleLevelId: null },
+      decidingSetItemId: null,
+    })
+  })
+
+  it("手での上書きの行は計算しない", () => {
+    expect(
+      computeRubricScore(scale, SCALE_ITEMS, {
+        ...applied("to-a"),
+        overridesRubric: true,
+      })
+    ).toEqual({ kind: "overridden" })
+  })
+})
+
 describe("isSameRubricScore", () => {
+  const result = (
+    status: "partial" | "pending" | "evaluated",
+    partialScore: number | null,
+    scaleLevelId: string | null = null
+  ) => ({ status, partialScore, scaleLevelId })
+
   it("判定と、0.01 単位に丸めた点で比べる", () => {
     expect(
       isSameRubricScore(
-        { status: "partial", partialScore: 0.1 + 0.2 },
-        { status: "partial", partialScore: 0.3 }
+        result("partial", 0.1 + 0.2),
+        result("partial", 0.3)
+      )
+    ).toBe(true)
+    expect(
+      isSameRubricScore(result("partial", 3), result("pending", 3))
+    ).toBe(false)
+    expect(
+      isSameRubricScore(result("pending", null), result("pending", 2))
+    ).toBe(false)
+  })
+
+  it("類型は id で比べる", () => {
+    expect(
+      isSameRubricScore(
+        result("evaluated", null, "level-a"),
+        result("evaluated", null, "level-a")
       )
     ).toBe(true)
     expect(
       isSameRubricScore(
-        { status: "partial", partialScore: 3 },
-        { status: "pending", partialScore: 3 }
-      )
-    ).toBe(false)
-    expect(
-      isSameRubricScore(
-        { status: "pending", partialScore: null },
-        { status: "pending", partialScore: 2 }
+        result("evaluated", null, "level-a"),
+        result("evaluated", null, "level-b")
       )
     ).toBe(false)
   })

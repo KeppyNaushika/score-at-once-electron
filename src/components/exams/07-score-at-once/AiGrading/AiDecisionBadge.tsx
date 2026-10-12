@@ -12,7 +12,7 @@ interface AiDecisionBadgeProps {
 
 /**
  * 問いの一覧の行の右に出す、決めたことの札。答案に点を付ける選択肢は採点の状態の色
- * （［正答］［部分点 4点］）、それ以外は色の無い札、未回答は破線の薄い札
+ * （［正答］［部分点 4点］）、類型は記号を類型の色で（［A］）、それ以外は色の無い札、未回答は破線の薄い札
  */
 export function AiDecisionBadge({ badge }: AiDecisionBadgeProps) {
   const statusConfig = getDynamicScoreStatusConfig(useScoringStatusColors())
@@ -24,6 +24,20 @@ export function AiDecisionBadge({ badge }: AiDecisionBadgeProps) {
         className={`${frameClass} border-dashed border-gray-300 text-muted-foreground`}
       >
         未回答
+      </span>
+    )
+  }
+  if (badge.scaleColors) {
+    return (
+      <span
+        className={`${frameClass} font-bold`}
+        style={{
+          borderColor: badge.scaleColors.text,
+          backgroundColor: badge.scaleColors.bg,
+          color: badge.scaleColors.text,
+        }}
+      >
+        {badge.label}
       </span>
     )
   }

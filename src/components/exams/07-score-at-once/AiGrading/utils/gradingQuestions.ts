@@ -1,6 +1,8 @@
 /**
  * AI採点の問いかけ（docs/vlm-grading-design.md §3-5）の問いを、届いた行から組み立てる。
  *
+ * 類型方式の設問（§4-8-6）では、判定を決める案の選択肢が類型（「A にする」）・無答・保留になる。
+ *
  * 並び: 採点方式（直接採点の設問に点を加減する案があるときだけ）→ 2段目の項目の案（既存の項目に
  * 当たる案 → 判定を決める案 → 点を加減する案）→ どの案にも入らない答案。
  * 答えは AI の層の答えの行（案への答え・答案ごとの答え・実行の採点方式の下書き）から導く。
@@ -10,8 +12,10 @@ import { effectiveProposalAdviceDraftText } from "@/lib/shared/aiGrading/proposa
 import type { ScoringMethod } from "@/types/rubric.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
-import { rubricEffectLabel } from "../../Rubric/utils/rubricEffectLabel"
-import { SCORING_METHOD_LABELS } from "../../Rubric/utils/rubricEffectLabel"
+import {
+  rubricEffectLabel,
+  SCORING_METHOD_LABELS,
+} from "../../Rubric/utils/rubricEffectLabel"
 import type { AiGradingRunRow } from "../types"
 import {
   decisionFromAttemptResponses,
@@ -24,6 +28,8 @@ import {
   type QuestioningAdvice,
   type QuestioningDecision,
   type QuestioningMember,
+  type QuestioningScaleLevel,
+  type QuestioningScore,
   type QuestioningStep,
   type QuestioningStepState,
 } from "./questioningSteps"
@@ -130,10 +136,26 @@ function latestInstructionDraftText(
   return latestDraft?.instructionText ?? null
 }
 
+/**
+ * 選択肢の言葉。判定を決める選択肢は付く点（「誤答 0点」）、類型にする選択肢は「A にする」、
+ * 点を加減する選択肢は加減（「−1点」）
+ */
+function optionLabelOf(
+  option: AiRubricProposalRow["options"][number],
+  score: QuestioningScore | null,
+  points: number | null,
+  scaleLevels: readonly QuestioningScaleLevel[]
+): string {
+  if (!score) return rubricEffectLabel(optionEffectOf(option), scaleLevels)
+  const scoreLabel = describeScore(score, points, scaleLevels)
+  return score.status === "evaluated" ? `${scoreLabel} にする` : scoreLabel
+}
+
 /** 案1つの問い */
 function proposalStepOf(
   proposal: AiRubricProposalRow,
-  points: number | null
+  points: number | null,
+  scaleLevels: readonly QuestioningScaleLevel[]
 ): QuestioningStep {
   const members = membersOf(proposal.members.map((member) => member.attempt))
   return {
@@ -150,13 +172,15 @@ function proposalStepOf(
           ? toScoringStatus(option.setStatus)
           : null
       const score = setStatus
-        ? { status: setStatus, partialScore: option.setScore }
+        ? {
+            status: setStatus,
+            partialScore: option.setScore,
+            scaleLevelId: option.setScaleLevelId,
+          }
         : null
       return {
         key: option.id,
-        label: score
-          ? describeScore(score, points)
-          : rubricEffectLabel(optionEffectOf(option)),
+        label: optionLabelOf(option, score, points, scaleLevels),
         description: option.rationale,
         recommended: option.recommended,
         score,
@@ -207,6 +231,7 @@ function proposalDecisionOf(
                       {
                         status: toScoringStatus(score.status),
                         partialScore: score.partialScore,
+                        scaleLevelId: score.scaleLevelId,
                       },
                     ] as const,
                   ]
@@ -235,6 +260,8 @@ interface BuildGradingQuestioningInput {
   sourceGradeRun: Pick<AiGradingRunRow, "attempts"> | null
   scoringMethod: ScoringMethod
   points: number | null
+  /** 設問の類型表の類型（並び順のまま。類型方式でなければ空）。類型の選択肢の言葉に使う */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 /** AI採点の問いを、問いかける順に、いまの答え付きで */
@@ -243,11 +270,13 @@ export function buildGradingQuestioning({
   sourceGradeRun,
   scoringMethod,
   points,
+  scaleLevels,
 }: BuildGradingQuestioningInput): QuestioningStepState[] {
   if (!proposalRun) return []
   const proposals = orderProposalsForQuestioning(proposalRun.rubricProposals)
   const states: QuestioningStepState[] = []
 
+  // 類型方式の設問には点を加減する案が無く、採点方式も問わない（直接採点の設問だけ）
   if (scoringMethod === "points" && proposals.some(hasAdjustOption)) {
     const recommended = recommendedScoringMethodOf(proposals)
     const draftMethod = proposalRun.questioningScoringMethod
@@ -285,7 +314,7 @@ export function buildGradingQuestioning({
   }
 
   proposals.forEach((proposal) => {
-    const step = proposalStepOf(proposal, points)
+    const step = proposalStepOf(proposal, points, scaleLevels)
     states.push({ step, ...proposalDecisionOf(proposal, step) })
   })
 

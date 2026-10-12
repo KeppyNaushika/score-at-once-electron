@@ -66,12 +66,18 @@ const typesOf = (node: GradingJsonSchema): readonly string[] =>
   typeof node.type === "string" ? [node.type] : node.type
 
 const RUBRIC_ITEM_ID = "8d3f2a4e-1b2c-4d5e-8f90-123456789abc"
+const SCALE_LEVEL_ID = "4b7e1c2d-3a5f-4e6b-9c8d-0a1b2c3d4e5f"
 
 describe.each([
   ["1段目の出力（項目なし）", buildStage1OutputSchema([])],
   ["1段目の出力（項目あり）", buildStage1OutputSchema([RUBRIC_ITEM_ID])],
   ["2段目の出力", buildStage2OutputSchema(["A1", "A2"])],
   ["2段目の出力（答案なし）", buildStage2OutputSchema([])],
+  [
+    "1段目の出力（類型方式）",
+    buildStage1OutputSchema([RUBRIC_ITEM_ID], [SCALE_LEVEL_ID]),
+  ],
+  ["2段目の出力（類型方式）", buildStage2OutputSchema(["A1", "A2"], true)],
 ])("%s のスキーマ", (_label, schema) => {
   const nodes = collectNodes(schema)
 

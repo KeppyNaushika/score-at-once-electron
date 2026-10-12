@@ -74,11 +74,13 @@ function statusFromItems(
     pointDelta: item.pointDelta,
     setStatus: item.setStatus,
     setScore: item.setScore,
+    setScaleLevelId: item.setScaleLevelId,
     sortOrder: itemIndex,
     createdAt: new Date(0),
   }))
   const outcome = computeRubricScore(
-    { scoringMethod: "deduction", points: question.points },
+    // この評価は類型方式でない設問だけを対象にする（類型は無い）
+    { scoringMethod: "deduction", points: question.points, scaleLevelIds: [] },
     scoringItems,
     {
       overridesRubric: false,

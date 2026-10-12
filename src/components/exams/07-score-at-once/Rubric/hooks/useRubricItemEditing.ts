@@ -31,6 +31,7 @@ import {
 } from "../utils/rubricRecalculation"
 import type { useRubricAdviceSync } from "./useRubricAdviceSync"
 import type { useRubricRecalculation } from "./useRubricRecalculation"
+import { useRubricScoringRegion } from "./useRubricScoringRegion"
 
 /** 編集画面で書く項目の中身 */
 export interface RubricItemDraft extends RubricItemEffect {
@@ -65,6 +66,7 @@ export function useRubricItemEditing({
   runWithRecalculation,
   adviceSync,
 }: UseRubricItemEditingOptions) {
+  const { scoringRegion } = useRubricScoringRegion(examId, cropRegion)
   const { mutateAsync: createItem } = useMutation(
     createRubricItemMutation(examId, cropRegion.id)
   )
@@ -78,12 +80,12 @@ export function useRubricItemEditing({
   /** 効き方を確かめる。通らなければトーストで知らせて null */
   const validate = useCallback(
     (draft: RubricItemDraft): ValidatedRubricItemEffect | null => {
-      const validation = validateRubricItemEffect(draft, cropRegion.points)
+      const validation = validateRubricItemEffect(draft, scoringRegion)
       if (validation.ok) return validation.value
       toast.error(validation.reasons.join("・"))
       return null
     },
-    [cropRegion.points]
+    [scoringRegion]
   )
 
   /** 項目を作る（並びの最後へ）。作れたら作った項目を返す */

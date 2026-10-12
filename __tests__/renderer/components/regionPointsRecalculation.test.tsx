@@ -82,6 +82,7 @@ const unitMissing: RubricScoringItem = {
   pointDelta: -1,
   setStatus: null,
   setScore: null,
+  setScaleLevelId: null,
   sortOrder: 0,
   createdAt: FIXED_DATE,
 }
@@ -136,6 +137,8 @@ const deductionSource = {
   ...makeCropRegion("deduction"),
   rubricItems: [unitMissing],
   questionScores: [ownRow, colleagueRow, overriddenRow],
+  scoreScale: null,
+  scaleLevelIds: [],
 }
 
 /** 配点 `points` のとき、単位の減点だけが当たった行に書く点 */
@@ -143,6 +146,7 @@ const scoreWrite = (questionScoreId: string, points: number) => ({
   questionScoreId,
   status: "partial",
   partialScore: points - 1,
+  scaleLevelId: null,
   clearsOverride: false,
 })
 
@@ -249,8 +253,16 @@ describe("planPointsRecalculation", () => {
         change.after,
       ])
     ).toEqual([
-      [ownRow.id, CURRENT_USER_ID, { status: "partial", partialScore: 5 }],
-      ["score-colleague", COLLEAGUE_ID, { status: "partial", partialScore: 5 }],
+      [
+        ownRow.id,
+        CURRENT_USER_ID,
+        { status: "partial", partialScore: 5, scaleLevelId: null },
+      ],
+      [
+        "score-colleague",
+        COLLEAGUE_ID,
+        { status: "partial", partialScore: 5, scaleLevelId: null },
+      ],
     ])
   })
 

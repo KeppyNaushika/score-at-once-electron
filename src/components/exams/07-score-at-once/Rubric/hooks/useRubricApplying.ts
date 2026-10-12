@@ -55,8 +55,12 @@ export function useRubricApplying({
   syncAdviceRows,
   isAnswerPageMissing,
 }: UseRubricApplyingOptions) {
-  const { readRubricItems, writeScores, writeComputedScores } =
-    useRubricScoreWriting(examId, cropRegion)
+  const {
+    readRubricItems,
+    readScoringRegion,
+    writeScores,
+    writeComputedScores,
+  } = useRubricScoreWriting(examId, cropRegion)
   // 採点の口と同じく、成績算出のロック中は当てない（main も書き込みを止める）
   const { guard } = useGradeLock()
   const { mutateAsync: setApplications } = useMutation(
@@ -97,9 +101,10 @@ export function useRubricApplying({
   /** 選んだ答案のうち上書きしているマスを、項目から計算した点へ戻す */
   const clearOverrides = useCallback(async () => {
     const rubricItems = await readRubricItems()
+    const scoringRegion = await readScoringRegion()
     const writes = selectedCells.flatMap((cell) => {
       if (!cell.questionScore || !cell.overridesRubric) return []
-      const outcome = computeRubricScore(cropRegion, rubricItems, {
+      const outcome = computeRubricScore(scoringRegion, rubricItems, {
         ...toRubricScoredRow(cell.questionScore, cell.appliedItemIds),
         overridesRubric: false,
       })
@@ -109,6 +114,7 @@ export function useRubricApplying({
           questionScoreId: cell.questionScore.id,
           status: outcome.result.status,
           partialScore: outcome.result.partialScore,
+          scaleLevelId: outcome.result.scaleLevelId,
           clearsOverride: true,
         },
       ]
@@ -120,7 +126,7 @@ export function useRubricApplying({
     } catch {
       // 同上
     }
-  }, [selectedCells, cropRegion, readRubricItems, writeScores, onScored])
+  }, [selectedCells, readRubricItems, readScoringRegion, writeScores, onScored])
 
   return useMemo(() => {
     // 見えていない解答に点を付けないよう、答案に設問のページが無い間も止める

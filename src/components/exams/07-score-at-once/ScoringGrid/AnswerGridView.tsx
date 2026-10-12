@@ -81,6 +81,8 @@ interface AnswerGridViewProps {
   proposalStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
   /** 確定すると付く予定の状態（AI採点モードの問いかけの下書き）。採点済みのマスにも斜線を重ねる */
   draftStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
+  /** 斜線の色の指定（類型方式の設問の類型の色）。無ければ斜線の状態の色 */
+  hatchColorOf?: (answer: GridAnswerItem) => string | null
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
   /** マスの類型の見せ方（類型評価の設問の類型） */
@@ -120,6 +122,7 @@ export default function AnswerGridView({
   renderCellDetail,
   proposalStatusOf,
   draftStatusOf,
+  hatchColorOf,
   renderBeforeStatusMark,
   scaleAppearanceOf,
   previewRubricAdviceOf,
@@ -413,6 +416,7 @@ export default function AnswerGridView({
               detail={renderCellDetail?.(answer)}
               proposalStatus={proposalStatusOf?.(answer) ?? null}
               draftStatus={draftStatusOf?.(answer) ?? null}
+              hatchColor={hatchColorOf?.(answer) ?? null}
               beforeStatusMark={renderBeforeStatusMark?.(answer)}
               scaleAppearance={scaleAppearanceOf?.(answer) ?? null}
             />

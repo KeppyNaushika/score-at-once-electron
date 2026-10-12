@@ -5,8 +5,9 @@
  * 教員が直すと、元の行を親とする新しい行を作る。過去のプロンプトはすべて残り、それ自体が
  * 履歴になる。そのため、ここには作成の口しか無い。
  *
- * 行には、その時点のルーブリック項目の一覧を文にしたもの（`renderedRubricItems`）を写す。
- * 送るときに今の項目と違っていれば、アプリが新しい行を作って送る（`ensurePromptRendersRubricItems`）。
+ * 行には、その時点の採点項目の一覧を文にしたもの（`renderedRubricItems`）と、類型方式の設問なら
+ * 類型表の類型の一覧を文にしたもの（`renderedScaleLevels`）を写す。送るときに今の項目・類型と
+ * 違っていれば、アプリが新しい行を作って送る（`ensurePromptRendersCriteria`）。
  *
  * 問題の画像（`AiPromptQuestionImage`）もプロンプトの一部で、プロンプトの行を作るときに一緒に作る。
  * 新しい行を作るたびに、画像の行も並び順のまま作り直す（ファイルは同じものを指す）。
@@ -18,7 +19,11 @@ import {
   formatRubricItemsSection,
   toRubricItemForPrompt,
 } from "@/lib/shared/aiGrading/rubricItemsText"
-import type { RubricItemForPrompt } from "@/types/rubric.types"
+import {
+  formatScaleLevelsSection,
+  type ScaleLevelForPrompt,
+} from "@/lib/shared/aiGrading/scaleLevelsText"
+import { type RubricItemForPrompt, toScoringMethod } from "@/types/rubric.types"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion } from "./auditScope"
@@ -54,11 +59,39 @@ export async function getAiPrompt(promptId: string) {
   })
 }
 
-/** 送る時点のルーブリック項目（並び順）と、それをプロンプトの行へ写す文 */
-export async function readRubricItemsForPrompt(cropRegionId: string): Promise<{
+/** 送る時点の採点の基準（採点項目と、類型方式の設問の類型）と、それをプロンプトの行へ写す文 */
+export interface GradingCriteriaForPrompt {
+  /** 設問が類型方式か（CropRegion.scoringMethod が scale） */
+  isScaleQuestion: boolean
+  /** 採点項目（並び順） */
   rubricItems: RubricItemForPrompt[]
   renderedRubricItems: string
-}> {
+  /** 類型方式の設問の類型表の類型（並び順）。類型方式でない・類型表の無い設問は空 */
+  scaleLevels: ScaleLevelForPrompt[]
+  /** 類型の一覧の文。類型方式でない設問は "" */
+  renderedScaleLevels: string
+}
+
+/**
+ * 送る時点の採点項目・類型（並び順）と、それをプロンプトの行へ写す文。
+ * 類型にする項目の効き目は類型の記号で書くので、項目の文も類型の一覧から組む
+ */
+export async function readGradingCriteriaForPrompt(
+  cropRegionId: string
+): Promise<GradingCriteriaForPrompt> {
+  const cropRegion = await prisma.cropRegion.findUnique({
+    where: { id: cropRegionId },
+    include: {
+      scoreScale: {
+        include: { levels: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] } },
+      },
+    },
+  })
+  if (!cropRegion) throw new Error("設問が見つかりません")
+  const isScaleQuestion = toScoringMethod(cropRegion.scoringMethod) === "scale"
+  const scaleLevels: ScaleLevelForPrompt[] = isScaleQuestion
+    ? (cropRegion.scoreScale?.levels ?? [])
+    : []
   const rows = await listRubricItemsByCropRegion(cropRegionId)
   const rubricItems = rows.map((row) =>
     toRubricItemForPrompt({
@@ -68,11 +101,16 @@ export async function readRubricItemsForPrompt(cropRegionId: string): Promise<{
       pointDelta: row.pointDelta === null ? null : row.pointDelta.toNumber(),
       setStatus: row.setStatus,
       setScore: row.setScore === null ? null : row.setScore.toNumber(),
+      setScaleLevelId: row.setScaleLevelId,
     })
   )
   return {
+    isScaleQuestion,
     rubricItems,
-    renderedRubricItems: formatRubricItemsSection(rubricItems) ?? "",
+    renderedRubricItems:
+      formatRubricItemsSection(rubricItems, scaleLevels) ?? "",
+    scaleLevels,
+    renderedScaleLevels: formatScaleLevelsSection(scaleLevels) ?? "",
   }
 }
 
@@ -162,9 +200,8 @@ export async function createAiPrompt(
     }
   }
 
-  const { renderedRubricItems } = await readRubricItemsForPrompt(
-    data.cropRegionId
-  )
+  const { renderedRubricItems, renderedScaleLevels } =
+    await readGradingCriteriaForPrompt(data.cropRegionId)
   const created = await prisma.aiPrompt.create({
     data: {
       cropRegionId: data.cropRegionId,
@@ -176,6 +213,7 @@ export async function createAiPrompt(
       rubricText: data.rubricText ?? "",
       annotationInstruction: data.annotationInstruction ?? "",
       renderedRubricItems,
+      renderedScaleLevels,
       questionImages: {
         create: toQuestionImageCreates(questionImagePaths),
       },
@@ -197,15 +235,24 @@ export async function createAiPrompt(
 }
 
 /**
- * 送る項目の一覧の文が、プロンプトの行に写したものと同じならその行を、違えばその行を親として
- * 文だけを今のものにした新しい行を作って返す（§3-1。送った文面を行から再現できるように）
+ * 送る項目・類型の一覧の文が、プロンプトの行に写したものと同じならその行を、違えばその行を親として
+ * 文だけを今のものにした新しい行を作って返す（§3-1・§4-8-6。送った文面を行から再現できるように）
  */
-export async function ensurePromptRendersRubricItems(
+export async function ensurePromptRendersCriteria(
   prompt: AiPromptWithImages,
-  renderedRubricItems: string,
+  rendered: Pick<
+    GradingCriteriaForPrompt,
+    "renderedRubricItems" | "renderedScaleLevels"
+  >,
   actorUserId: string
 ): Promise<AiPromptWithImages> {
-  if (prompt.renderedRubricItems === renderedRubricItems) return prompt
+  const { renderedRubricItems, renderedScaleLevels } = rendered
+  if (
+    prompt.renderedRubricItems === renderedRubricItems &&
+    prompt.renderedScaleLevels === renderedScaleLevels
+  ) {
+    return prompt
+  }
   const created = await prisma.aiPrompt.create({
     data: {
       cropRegionId: prompt.cropRegionId,
@@ -217,6 +264,7 @@ export async function ensurePromptRendersRubricItems(
       rubricText: prompt.rubricText,
       annotationInstruction: prompt.annotationInstruction,
       renderedRubricItems,
+      renderedScaleLevels,
       questionImages: {
         create: toQuestionImageCreates(
           prompt.questionImages.map((questionImage) => questionImage.imagePath)
@@ -233,7 +281,10 @@ export async function ensurePromptRendersRubricItems(
     entityId: created.id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    summary: "採点項目の一覧が変わったので、採点指示の新しい版を作りました",
+    summary:
+      prompt.renderedRubricItems === renderedRubricItems
+        ? "類型表の類型が変わったので、採点指示の新しい版を作りました"
+        : "採点項目の一覧が変わったので、採点指示の新しい版を作りました",
   })
   return created
 }

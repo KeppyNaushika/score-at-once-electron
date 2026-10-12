@@ -76,6 +76,7 @@ const createAdviceItem = (label: string, adviceText: string, sortOrder = 0) =>
       pointDelta: -1,
       setStatus: null,
       setScore: null,
+      setScaleLevelId: null,
     },
     ownerId()
   )

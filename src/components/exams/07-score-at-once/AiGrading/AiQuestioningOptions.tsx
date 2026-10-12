@@ -4,20 +4,28 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { useOtherInstructionKeys } from "./hooks/useOtherInstructionKeys"
 import type { QuestioningFlow } from "./hooks/useQuestioningFlow"
-import type { QuestioningStepState } from "./utils/questioningSteps"
+import {
+  type QuestioningScaleLevel,
+  type QuestioningStepState,
+  scaleColorsOf,
+} from "./utils/questioningSteps"
 
 interface AiQuestioningOptionsProps {
   state: QuestioningStepState
   flow: QuestioningFlow
+  /** 設問の類型表の類型（類型の選択肢に類型の色を添える。類型方式でなければ空） */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 /**
  * 問いの選択肢の並び（問いの選択肢 →「自分で採点する」→「その他：再採点を指示する」）。
- * ↑↓ かクリックで焦点を移し（選ぶだけで決めない）、Enter かカードの「次へ」で決める
+ * ↑↓ かクリックで焦点を移し（選ぶだけで決めない）、Enter かカードの「次へ」で決める。
+ * 類型の選択肢（「A にする」）は、記号の前に類型の色の印を置く
  */
 export function AiQuestioningOptions({
   state,
   flow,
+  scaleLevels,
 }: AiQuestioningOptionsProps) {
   const { step } = state
   const handleOtherKeyDown = useOtherInstructionKeys({
@@ -42,6 +50,9 @@ export function AiQuestioningOptions({
         )
         if (entry.kind === "option") {
           const option = step.options[entry.optionIndex]
+          const scaleColors = option.score
+            ? scaleColorsOf(option.score, scaleLevels)
+            : null
           return (
             <li
               key={option.key}
@@ -51,7 +62,19 @@ export function AiQuestioningOptions({
               onClick={() => pick(entryIndex)}
             >
               {cursor}
-              <span>{option.label}</span>
+              <span className="flex items-baseline gap-1">
+                {scaleColors && (
+                  <span
+                    aria-hidden
+                    className="inline-block h-2.5 w-2.5 shrink-0 self-center rounded-sm border"
+                    style={{
+                      backgroundColor: scaleColors.bg,
+                      borderColor: scaleColors.text,
+                    }}
+                  />
+                )}
+                {option.label}
+              </span>
               {option.recommended ? (
                 <span className="rounded border border-primary px-1 text-[10px] text-primary">
                   推奨

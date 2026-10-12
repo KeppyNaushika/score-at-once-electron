@@ -9,6 +9,7 @@
  *
  * 点を加減する案の選択肢は、その項目1つだけが当たったとして計算する（ほかの項目との
  * 足し合わせは確定のときに項目から計算し直す）。直接採点のままなら点を出さない。
+ * 類型方式の設問の類型にする選択肢は、その類型を付く予定の点とする（類型は点の `scaleLevelId`）。
  */
 
 import type { ScoringMethod } from "@/types/rubric.types"
@@ -52,8 +53,9 @@ function adjustedScoreOf(
   scoringMethod: ScoringMethod,
   points: number | null
 ): QuestioningScore | null {
+  // 加減の項目は類型を決めないので、類型の id は要らない
   const outcome = computeRubricScore(
-    { scoringMethod, points },
+    { scoringMethod, points, scaleLevelIds: [] },
     [
       {
         id: PREVIEW_ITEM_ID,
@@ -61,6 +63,7 @@ function adjustedScoreOf(
         pointDelta,
         setStatus: null,
         setScore: null,
+        setScaleLevelId: null,
         sortOrder: 0,
         createdAt: new Date(0),
       },

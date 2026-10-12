@@ -8,6 +8,7 @@ import { useCallback, useMemo } from "react"
 
 import { recordAiAttemptResponsesMutation } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import { countedStatusOf } from "@/types/rubric.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import type { AiGradingAnswer, AiGradingRunRow } from "../types"
@@ -15,6 +16,7 @@ import { attemptResponsesForDecision } from "../utils/attemptResponseDecision"
 import { buildCheckQuestioning } from "../utils/checkQuestions"
 import type {
   QuestioningDecision,
+  QuestioningScaleLevel,
   QuestioningScore,
   QuestioningStep,
 } from "../utils/questioningSteps"
@@ -29,20 +31,32 @@ const ACTIVE_RUN_STATUSES: ReadonlySet<string> = new Set([
 /** running: チェックを実行中、idle: まだ実行していない、ready: 問いを出せる */
 type CheckStatus = "running" | "idle" | "ready"
 
-/** 自分の今の採点（未採点・行が無ければ null） */
+/**
+ * 自分の今の採点（未採点・行が無ければ null）。設問の方式と合わない採点は未採点として読む
+ * （`countedStatusOf`。§4-8-8）。類型方式の設問では類型も持つ
+ */
 function ownScoreOfAnswers(
-  answers: readonly AiGradingAnswer[]
+  answers: readonly AiGradingAnswer[],
+  scoringMethod: string
 ): (examStudentId: string) => QuestioningScore | null {
   const scoreByExamStudentId = new Map(
     answers.flatMap((answer) => {
       const { questionScore } = answer
       if (!questionScore) return []
-      const status = toScoringStatus(questionScore.status)
+      const status = countedStatusOf(
+        scoringMethod,
+        toScoringStatus(questionScore.status)
+      )
       if (status === "unscored") return []
       return [
         [
           answer.studentAnswerImage.examStudentId,
-          { status, partialScore: questionScore.partialScore },
+          {
+            status,
+            partialScore: questionScore.partialScore,
+            scaleLevelId:
+              status === "evaluated" ? questionScore.scaleLevelId : null,
+          },
         ] as const,
       ]
     })
@@ -55,6 +69,8 @@ interface UseAiCheckQuestionsOptions {
   cropRegion: QuestionAnswerRegionRow
   runs: readonly AiGradingRunRow[]
   answers: readonly AiGradingAnswer[]
+  /** 設問の類型表の類型（並び順のまま。類型方式でなければ空） */
+  scaleLevels: readonly QuestioningScaleLevel[]
 }
 
 export function useAiCheckQuestions({
@@ -62,6 +78,7 @@ export function useAiCheckQuestions({
   cropRegion,
   runs,
   answers,
+  scaleLevels,
 }: UseAiCheckQuestionsOptions) {
   const checkRuns = runs.filter((run) => run.purpose === "check")
   const latestCheckRun = checkRuns.at(-1) ?? null
@@ -72,15 +89,19 @@ export function useAiCheckQuestions({
       : endedCheckRun
         ? "ready"
         : "idle"
-  const ownScoreOf = useMemo(() => ownScoreOfAnswers(answers), [answers])
+  const ownScoreOf = useMemo(
+    () => ownScoreOfAnswers(answers, cropRegion.scoringMethod),
+    [answers, cropRegion.scoringMethod]
+  )
   const states = useMemo(
     () =>
       buildCheckQuestioning({
         checkRun: endedCheckRun ?? null,
         ownScoreOf,
         points: cropRegion.points,
+        scaleLevels,
       }),
-    [endedCheckRun, ownScoreOf, cropRegion.points]
+    [endedCheckRun, ownScoreOf, cropRegion.points, scaleLevels]
   )
   const { mutateAsync: recordAttemptResponses } = useMutation(
     recordAiAttemptResponsesMutation(examId, cropRegion.id)

@@ -31,6 +31,15 @@ export const { is: isScoringMethod, to: toScoringMethod } = defineStringUnion(
 )
 
 /**
+ * 採点項目を当てて採点する方式か（減点・加点方式と類型方式）。正誤方式だけは項目から点を決めず、
+ * 採点キーと部分点で付ける。類型方式では、類型にする項目を当てるとその類型になる（§4-8-6）
+ */
+export const scoresFromRubricItems = (
+  scoringMethod: ScoringMethod
+): scoringMethod is "deduction" | "addition" | "scale" =>
+  scoringMethod !== "points"
+
+/**
  * 当たった項目の加減から点を計算する方式か（減点・加点方式）。
  * 直接採点と類型評価は、項目から部分点を計算しない（配点を変えても点を計算し直さない）
  */
@@ -96,8 +105,9 @@ export const { is: isRubricEffectKind, to: toRubricEffectKind } =
   defineStringUnion(RUBRIC_EFFECT_KINDS, "adjust")
 
 /**
- * set の項目が決める判定（ScoringStatus のうちの5つ。§6-4）。
- * `unscored`・`double_mark` は項目では決めない
+ * set の項目が決める判定（ScoringStatus のうちの6つ。§6-4・§4-8-6）。
+ * `unscored`・`double_mark` は項目では決めない。`evaluated`（類型にする）は類型方式の設問だけで、
+ * 正答・部分点・誤答は類型方式でない設問だけで使う（{@link rubricSetStatusesFor}）
  */
 export const RUBRIC_SET_STATUSES = [
   "correct",
@@ -105,12 +115,21 @@ export const RUBRIC_SET_STATUSES = [
   "incorrect",
   "no_answer",
   "pending",
+  "evaluated",
 ] as const
 export type RubricSetStatus = (typeof RUBRIC_SET_STATUSES)[number]
 export const { is: isRubricSetStatus } = defineStringUnion(
   RUBRIC_SET_STATUSES,
   "pending"
 )
+
+/** 設問の方式で set の項目が決められる判定（方式と合う判定だけ。並びは画面のボタンの順） */
+export const rubricSetStatusesFor = (
+  scoringMethod: ScoringMethod
+): readonly RubricSetStatus[] =>
+  RUBRIC_SET_STATUSES.filter((status) =>
+    isStatusCompatibleWithScoringMethod(scoringMethod, status)
+  )
 
 /**
  * 助言を持つ項目が2つ以上当たったときの朱書きの決まり（§4-7）。
@@ -137,7 +156,13 @@ export type RubricItemForPrompt = Readonly<
   Omit<
     Pick<
       Serialized<RubricItem>,
-      "id" | "label" | "effectKind" | "pointDelta" | "setStatus" | "setScore"
+      | "id"
+      | "label"
+      | "effectKind"
+      | "pointDelta"
+      | "setStatus"
+      | "setScore"
+      | "setScaleLevelId"
     >,
     "effectKind" | "setStatus"
   > & {

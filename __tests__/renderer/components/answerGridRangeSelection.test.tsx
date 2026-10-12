@@ -335,6 +335,8 @@ function AiGridHarness() {
       </output>
       <AiGradingGrid
         cropRegion={cropRegion}
+        scaleLevels={[]}
+        scaleAppearanceOf={() => null}
         currentUserId={CURRENT_USER_ID}
         pageSize="A4"
         display={display}

@@ -32,6 +32,7 @@ const RUBRIC_ITEMS: RubricItemForPrompt[] = [
     pointDelta: -1,
     setStatus: null,
     setScore: null,
+    setScaleLevelId: null,
   },
   {
     id: "0f8b8c1e-4a8d-4c47-9a4e-2c1f6b9d1a02",
@@ -40,6 +41,7 @@ const RUBRIC_ITEMS: RubricItemForPrompt[] = [
     pointDelta: null,
     setStatus: "partial",
     setScore: 1,
+    setScaleLevelId: null,
   },
 ]
 
@@ -133,6 +135,7 @@ describe("教員の指示と、送った項目の一覧", () => {
         pointDelta: null,
         setStatus: "double_mark",
         setScore: null,
+        setScaleLevelId: null,
       })
     ).toMatchObject({ effectKind: "set", setStatus: null })
   })
@@ -161,6 +164,7 @@ const VALID_RESPONSE = {
 const CONTEXT = {
   maxPoints: 3,
   rubricItemIds: RUBRIC_ITEMS.map((item) => item.id),
+  scaleLevelIds: [],
 }
 
 describe("1段目の応答の検証", () => {

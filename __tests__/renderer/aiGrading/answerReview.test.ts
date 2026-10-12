@@ -37,7 +37,11 @@ const POINTS = 4
 
 describe("食い違いの判断", () => {
   it("判定と点の両方で比べ、自分が採点していなければ食い違いではない", () => {
-    const aiPartial = { status: "partial" as const, partialScore: 2 }
+    const aiPartial = {
+      status: "partial" as const,
+      partialScore: 2,
+      scaleLevelId: null,
+    }
     expect(
       isDisagreeing(
         aiPartial,
@@ -48,7 +52,7 @@ describe("食い違いの判断", () => {
     expect(isDisagreeing(aiPartial, undefined, POINTS)).toBe(false)
     expect(
       isDisagreeing(
-        { status: "correct", partialScore: null },
+        { status: "correct", partialScore: null, scaleLevelId: null },
         makeQuestionScore({ examStudentId: "s" }),
         POINTS
       )
@@ -58,8 +62,8 @@ describe("食い違いの判断", () => {
   it("±1点以内の判断は点の差で行う", () => {
     expect(
       isWithinOnePoint(
-        { status: "partial", partialScore: 3 },
-        { status: "correct", partialScore: null },
+        { status: "partial", partialScore: 3, scaleLevelId: null },
+        { status: "correct", partialScore: null, scaleLevelId: null },
         POINTS
       )
     ).toBe(true)
@@ -69,6 +73,7 @@ describe("食い違いの判断", () => {
     const aiPendingWithoutScore = {
       status: "pending",
       partialScore: null,
+      scaleLevelId: null,
     } satisfies Parameters<typeof scoreOfJudgement>[0]
     expect(scoreOfJudgement(aiPendingWithoutScore, POINTS)).toBeNull()
     expect(describeJudgement("pending", null)).toBe("保留")
@@ -94,8 +99,40 @@ describe("食い違いの判断", () => {
     ).toBe(true)
   })
 
+  it("類型は id で比べ、点数が同じでも類型が違えば食い違い（§4-8-5）", () => {
+    const aiLevelB = {
+      status: "evaluated" as const,
+      partialScore: null,
+      scaleLevelId: "level-b",
+    }
+    const ownLevelOf = (scaleLevelId: string) =>
+      makeQuestionScore({
+        examStudentId: "s",
+        status: "evaluated",
+        scaleLevelId,
+      })
+    expect(isDisagreeing(aiLevelB, ownLevelOf("level-a"), POINTS)).toBe(true)
+    expect(isDisagreeing(aiLevelB, ownLevelOf("level-b"), POINTS)).toBe(false)
+    expect(
+      isWithinOnePoint(
+        aiLevelB,
+        { status: "evaluated", partialScore: null, scaleLevelId: "level-a" },
+        POINTS
+      )
+    ).toBe(false)
+    expect(describeJudgement("evaluated", null, "B")).toBe("B")
+    expect(describeJudgement("evaluated", null)).toBe("類型（なし）")
+  })
+
   it("設問の id が空なら投げる", () => {
-    expect(() => findOwnQuestionScore([], { id: "", scoringMethod: "points" }, "s", "user-1")).toThrow()
+    expect(() =>
+      findOwnQuestionScore(
+        [],
+        { id: "", scoringMethod: "points" },
+        "s",
+        "user-1"
+      )
+    ).toThrow()
   })
 })
 

@@ -9,12 +9,17 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { annotationsByCropRegionQuery } from "@/queries/drawing"
 import { rubricAnswerInkQuery } from "@/queries/rubric"
-import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   buildInkMeasurementSignature,
   indexInkGridsByExamStudent,
 } from "../Rubric/utils/answerInkMeasurement"
+import {
+  type ScaleCellAppearance,
+  type ScaleLevelChoice,
+  scaleLevelColorsAt,
+} from "../ScaleLevel/utils/scaleLevelAppearance"
+import type { GridAnswerItem } from "../ScoringGrid/types"
 import { AiProposalChips } from "./AiProposalChips"
 import type { AiGridDisplaySettings, AiGridItem } from "./types"
 import {
@@ -22,6 +27,7 @@ import {
   buildAdviceTextPreview,
 } from "./utils/adviceTextPreview"
 import { toMasterGridItem } from "./utils/aiGridItems"
+import type { QuestioningScore } from "./utils/questioningSteps"
 
 /** 助言の下見を置き直すまでの待ち（打鍵のたびに折り返しと置き場所を計算しない） */
 const ADVICE_PREVIEW_DELAY_MS = 300
@@ -40,10 +46,14 @@ interface AiGradingGridProps {
   /** 設問の答案の数（絞り込む前） */
   totalCount: number
   /**
-   * 確定すると付く予定の状態（問いかけの下書き。受験者 → 状態）。そのマスに斜線を重ねる。
-   * 問いかけのタブでなければ渡さない
+   * 確定すると付く予定の点（問いかけの下書き。受験者 → 点）。そのマスに斜線を重ね、類型なら
+   * 記号の札を添える。問いかけのタブでなければ渡さない
    */
-  draftStatusByExamStudentId?: ReadonlyMap<string, ScoringStatus>
+  draftScoreByExamStudentId?: ReadonlyMap<string, QuestioningScore>
+  /** 設問の類型表の類型（並び順のまま。類型方式でなければ空） */
+  scaleLevels: readonly ScaleLevelChoice[]
+  /** マスの類型の見せ方（自分が類型を付けたマスを類型の色と記号で出す。一覧表示と同じ） */
+  scaleAppearanceOf: (answer: GridAnswerItem) => ScaleCellAppearance | null
   /** 設問のページの答案（助言の下見の占有グリッドを引く） */
   pageAnswerImages: readonly StudentAnswerImageWithExamStudents[]
   /**
@@ -71,7 +81,9 @@ export function AiGradingGrid({
   onSelect,
   onReplaceSelection,
   totalCount,
-  draftStatusByExamStudentId,
+  draftScoreByExamStudentId,
+  scaleLevels,
+  scaleAppearanceOf,
   pageAnswerImages,
   advicePreview,
 }: AiGradingGridProps) {
@@ -173,14 +185,40 @@ export function AiGradingGrid({
             return attempt?.state === "succeeded" ? attempt.status : null
           }}
           draftStatusOf={(gridAnswer) =>
-            draftStatusByExamStudentId?.get(gridAnswer.examStudentId) ?? null
+            draftScoreByExamStudentId?.get(gridAnswer.examStudentId)?.status ??
+            null
           }
+          hatchColorOf={(gridAnswer) => {
+            // 斜線は、付ける予定の類型（下書き）→ AI が選んだ類型の順に、その類型の色で引く
+            const draftScore = draftScoreByExamStudentId?.get(
+              gridAnswer.examStudentId
+            )
+            const attempt = gridItemById.get(gridAnswer.id)?.reviewedAnswer
+              .review.displayedAttempt?.attempt
+            const scaleLevelId = draftScore
+              ? draftScore.status === "evaluated"
+                ? draftScore.scaleLevelId
+                : null
+              : attempt?.state === "succeeded" && attempt.status === "evaluated"
+                ? attempt.scaleLevelId
+                : null
+            const order = scaleLevels.findIndex(
+              (scaleLevel) => scaleLevel.id === scaleLevelId
+            )
+            return order === -1 ? null : scaleLevelColorsAt(order).text
+          }}
+          scaleAppearanceOf={scaleAppearanceOf}
           renderBeforeStatusMark={(gridAnswer) => {
             const gridItem = gridItemById.get(gridAnswer.id)
             return gridItem ? (
               <AiProposalChips
                 reviewedAnswer={gridItem.reviewedAnswer}
                 points={cropRegion.points}
+                scaleLevels={scaleLevels}
+                draftScore={
+                  draftScoreByExamStudentId?.get(gridAnswer.examStudentId) ??
+                  null
+                }
               />
             ) : null
           }}

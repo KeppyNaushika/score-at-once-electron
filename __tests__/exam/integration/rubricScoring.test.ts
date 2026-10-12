@@ -7,6 +7,8 @@
  * - 計算し直しの材料は、適用のある全採点者の採点行を返す
  * - 項目から計算した点の書き込みは、上書きの印の立った行を（解除の指示が無ければ）飛ばす
  * - 採点キーで付けた点は、そのマスに適用があれば上書きの印を立てる
+ * - 類型方式の設問（§4-8-6）: 項目は類型表の類型にする・無答・保留だけ。項目から計算した類型を書き、
+ *   方式と合わない判定・ほかの類型表の類型は書かない。類型のキーも適用のあるマスでは上書きになる
  */
 
 import * as path from "path"
@@ -39,6 +41,11 @@ import {
   updateRubricItem,
 } from "@/electron-src/lib/prisma/rubricItem"
 import { writeRubricScores } from "@/electron-src/lib/prisma/rubricScoreWrite"
+import { setScaleLevels } from "@/electron-src/lib/prisma/scaleLevelScoreWrite"
+import {
+  createScoreScale,
+  setCropRegionScoreScale,
+} from "@/electron-src/lib/prisma/scoreScale"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {
@@ -90,6 +97,7 @@ const createDeduction = (pointDelta: number) =>
       pointDelta,
       setStatus: null,
       setScore: null,
+      setScaleLevelId: null,
     },
     ownerId()
   )
@@ -110,6 +118,7 @@ describe("ルーブリック項目", () => {
           pointDelta: null,
           setStatus: "partial",
           setScore: 3,
+          setScaleLevelId: null,
         },
       },
       ownerId()
@@ -143,6 +152,7 @@ describe("ルーブリック項目", () => {
           pointDelta: null,
           setStatus: "partial",
           setScore: 10,
+          setScaleLevelId: null,
         },
         ownerId()
       )
@@ -341,18 +351,21 @@ describe("計算し直しの材料と点の書き込み", () => {
           questionScoreId: ownRow.id,
           status: "partial",
           partialScore: 8,
+          scaleLevelId: null,
           clearsOverride: false,
         },
         {
           questionScoreId: otherRow.id,
           status: "partial",
           partialScore: 8,
+          scaleLevelId: null,
           clearsOverride: false,
         },
         {
           questionScoreId: crypto.randomUUID(),
           status: "partial",
           partialScore: 8,
+          scaleLevelId: null,
           clearsOverride: false,
         },
       ],
@@ -381,6 +394,7 @@ describe("計算し直しの材料と点の書き込み", () => {
           questionScoreId: ownRow.id,
           status: "partial",
           partialScore: 8,
+          scaleLevelId: null,
           clearsOverride: true,
         },
       ],
@@ -432,5 +446,213 @@ describe("計算し直しの材料と点の書き込み", () => {
       ownerId()
     )
     expect(afterToggle.overridesRubric).toBe(false)
+  })
+})
+
+describe("類型方式の設問", () => {
+  /** 設問を類型方式にし、類型 A/B の類型表を選ぶ。ほかの類型表も1つ作る */
+  const setUpScaleQuestion = async () => {
+    const scoreScale = await createScoreScale(
+      {
+        examId: fixture.exam.id,
+        name: "記述",
+        levels: [
+          { label: "A", score: 10 },
+          { label: "B", score: 6 },
+        ],
+      },
+      ownerId()
+    )
+    const otherScale = await createScoreScale(
+      {
+        examId: fixture.exam.id,
+        name: "ほか",
+        levels: [{ label: "S", score: 12 }],
+      },
+      ownerId()
+    )
+    await setCropRegionScoringMethod(cropRegionId(), "scale", ownerId())
+    await setCropRegionScoreScale(cropRegionId(), scoreScale.id, ownerId())
+    const [levelA, levelB] = scoreScale.levels
+    return { levelA, levelB, otherLevel: otherScale.levels[0] }
+  }
+
+  const scaleItem = (setStatus: string, setScaleLevelId: string | null) =>
+    createRubricItem(
+      {
+        cropRegionId: cropRegionId(),
+        label: "根拠を2つ挙げている",
+        adviceText: "",
+        sortOrder: 0,
+        effectKind: "set",
+        pointDelta: null,
+        setStatus,
+        setScore: null,
+        setScaleLevelId,
+      },
+      ownerId()
+    )
+
+  it("類型表の類型にする項目を作れ、ほかの類型表の類型・加減の項目は作れない", async () => {
+    const { levelA, otherLevel } = await setUpScaleQuestion()
+    const item = await scaleItem("evaluated", levelA.id)
+    expect(item.setStatus).toBe("evaluated")
+    expect(item.setScaleLevelId).toBe(levelA.id)
+    expect(item.setScore).toBeNull()
+
+    await expect(scaleItem("evaluated", otherLevel.id)).rejects.toThrow(
+      "類型表の類型ではありません"
+    )
+    await expect(scaleItem("correct", null)).rejects.toThrow()
+    await expect(createDeduction(-1)).rejects.toThrow("加減する項目")
+  })
+
+  it("類型を変えると監査ログに類型の記号の前後が残る", async () => {
+    const { levelA, levelB } = await setUpScaleQuestion()
+    const item = await scaleItem("evaluated", levelA.id)
+    await updateRubricItem(
+      item.id,
+      {
+        effect: {
+          effectKind: "set",
+          pointDelta: null,
+          setStatus: "evaluated",
+          setScore: null,
+          setScaleLevelId: levelB.id,
+        },
+      },
+      ownerId()
+    )
+    const updateLog = await testPrisma.auditLog.findFirst({
+      where: { entityId: item.id, action: "exam.rubric_item.update" },
+    })
+    expect(JSON.parse(updateLog?.metadata ?? "{}").changes).toContainEqual({
+      field: "setScaleLevel",
+      label: "類型",
+      before: "A",
+      after: "B",
+    })
+  })
+
+  it("項目から計算した類型を書き、部分点は書かない。合わない判定・ほかの類型表の類型は書かない", async () => {
+    const { levelA, otherLevel } = await setUpScaleQuestion()
+    const item = await scaleItem("evaluated", levelA.id)
+    const [touched] = await setRubricApplications(
+      {
+        cropRegionId: cropRegionId(),
+        rubricItemId: item.id,
+        examStudentIds: [examStudentId(0)],
+        applied: true,
+      },
+      ownerId()
+    )
+    const write = {
+      questionScoreId: touched.id,
+      status: "evaluated" as const,
+      partialScore: 3,
+      scaleLevelId: levelA.id,
+      clearsOverride: false,
+    }
+    await writeRubricScores([write], ownerId())
+    const written = await testPrisma.questionScore.findUniqueOrThrow({
+      where: { id: touched.id },
+    })
+    expect(written.status).toBe("evaluated")
+    expect(written.scaleLevelId).toBe(levelA.id)
+    expect(written.partialScore).toBeNull()
+
+    await expect(
+      writeRubricScores(
+        [{ ...write, status: "partial", scaleLevelId: null }],
+        ownerId()
+      )
+    ).rejects.toThrow("正答・誤答・部分点を書けません")
+    await expect(
+      writeRubricScores([{ ...write, scaleLevelId: otherLevel.id }], ownerId())
+    ).rejects.toThrow("類型表の類型ではありません")
+
+    // 保留は類型を外して書く
+    await writeRubricScores(
+      [
+        {
+          ...write,
+          status: "pending",
+          partialScore: null,
+          scaleLevelId: levelA.id,
+        },
+      ],
+      ownerId()
+    )
+    const pending = await testPrisma.questionScore.findUniqueOrThrow({
+      where: { id: touched.id },
+    })
+    expect(pending.status).toBe("pending")
+    expect(pending.scaleLevelId).toBeNull()
+  })
+
+  it("類型方式でない設問には類型を書かない", async () => {
+    const item = await createDeduction(-1)
+    const [touched] = await setRubricApplications(
+      {
+        cropRegionId: cropRegionId(),
+        rubricItemId: item.id,
+        examStudentIds: [examStudentId(0)],
+        applied: true,
+      },
+      ownerId()
+    )
+    await expect(
+      writeRubricScores(
+        [
+          {
+            questionScoreId: touched.id,
+            status: "evaluated",
+            partialScore: null,
+            scaleLevelId: null,
+            clearsOverride: false,
+          },
+        ],
+        ownerId()
+      )
+    ).rejects.toThrow("類型を書けません")
+  })
+
+  it("適用のあるマスで類型のキーを押すと手での上書きになり、計算し直しの材料に類型表の類型が載る", async () => {
+    const { levelA, levelB } = await setUpScaleQuestion()
+    const item = await scaleItem("evaluated", levelA.id)
+    await setRubricApplications(
+      {
+        cropRegionId: cropRegionId(),
+        rubricItemId: item.id,
+        examStudentIds: [examStudentId(0)],
+        applied: true,
+      },
+      ownerId()
+    )
+    const [overridden, plain] = await Promise.all([
+      setScaleLevels(
+        {
+          cropRegionId: cropRegionId(),
+          examStudentIds: [examStudentId(0)],
+          scaleLevelId: levelB.id,
+        },
+        ownerId()
+      ),
+      setScaleLevels(
+        {
+          cropRegionId: cropRegionId(),
+          examStudentIds: [examStudentId(1)],
+          scaleLevelId: levelB.id,
+        },
+        ownerId()
+      ),
+    ])
+    expect(overridden[0].overridesRubric).toBe(true)
+    expect(plain[0].overridesRubric).toBe(false)
+
+    const source = await getRubricRecalculationSource(cropRegionId())
+    expect(source?.scoreScale?.levels.map((level) => level.id).sort()).toEqual(
+      [levelA.id, levelB.id].sort()
+    )
   })
 })

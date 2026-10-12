@@ -163,6 +163,8 @@ export async function getRubricRecalculationSource(cropRegionId: string) {
       rubricItems: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
       },
+      // 類型方式の設問では、類型にする項目が今の組の類型を指すかを確かめる（§4-8-6）
+      scoreScale: { include: { levels: true } },
       questionScores: {
         where: { rubricApplications: { some: {} } },
         include: {

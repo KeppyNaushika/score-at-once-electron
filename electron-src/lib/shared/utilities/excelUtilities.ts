@@ -64,17 +64,28 @@ export function getScoreCellSymbol(
 }
 
 /**
- * セルのスタイルを統一的に設定する関数
+ * 得点・正誤のマスを赤字にするか。得点が確かでない採点（部分点・保留）を目立たせる。
+ * 類型方式の設問の類型採点済みは赤字にしない（類型は正誤を持たず、点は類型の点数で確か）。
+ * 方式と合わない採点は解決（`resolveEffectiveScores`）で未採点として読んであるので、ここへは届かない
+ */
+export function isScoreCellHighlighted(score: Pick<ScoreDetail, "status">) {
+  return score.status === "partial" || score.status === "pending"
+}
+
+/**
+ * セルのスタイルを統一的に設定する関数。先に付けた文字の色（赤字など）は残す
  */
 export function applyCellStyle(
   cell: ExcelJS.Cell,
   style: "header" | "data" | "total" | "subtotal"
 ) {
   // フォント設定（メイリオUI統一）
+  const fontColor = cell.font?.color
   cell.font = {
     name: "メイリオUI",
     size: style === "header" ? 11 : 10,
     bold: style === "header" || style === "total",
+    ...(fontColor ? { color: fontColor } : {}),
   }
 
   // 罫線設定

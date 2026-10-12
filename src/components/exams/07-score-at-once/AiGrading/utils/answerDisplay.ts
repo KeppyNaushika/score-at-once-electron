@@ -27,11 +27,16 @@ export function studentDisplayName(
   return `${student.lastName} ${student.firstName}`
 }
 
-/** 判定を「部分点 3点」のような文にする */
+/**
+ * 判定を「部分点 3点」のような文にする。類型（evaluated）は類型の記号を渡せばその記号
+ * （類型が消えていれば「類型（なし）」）
+ */
 export function describeJudgement(
   status: ScoringStatus,
-  partialScore: number | null
+  partialScore: number | null,
+  scaleLevelLabel: string | null = null
 ): string {
+  if (status === "evaluated") return scaleLevelLabel ?? "類型（なし）"
   const label = SCORING_STATUS_LABELS[status]
   return (status === "partial" || status === "pending") && partialScore !== null
     ? `${label} ${partialScore}点`

@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
 import {
@@ -24,7 +24,10 @@ interface UseGuardedScoringOptions {
   >
   clickScoring: Omit<
     Parameters<typeof useClickAndMouseScoring>[0],
-    "openPartialScoreModal" | "scoreAnswers"
+    | "openPartialScoreModal"
+    | "scoreAnswers"
+    | "scoreAnswersWithScaleLevel"
+    | "ownScaleLevelIdOf"
   >
   currentCropRegion: Parameters<typeof usePartialScore>[0]["currentCropRegion"]
   /** 今の設問の類型評価（類型評価の設問では、正答・誤答・部分点を付けず数字キーで類型を選ぶ） */
@@ -88,10 +91,14 @@ export function useGuardedScoring({
     blocksStatusOnScale,
     applyScaleLevel,
     applyScaleLevelOfDigit,
+    writeScaleLevelTo,
+    ownScaleLevelIdOf,
   } = useScaleScoringGate({
     examId: scoringData.examId,
+    currentUserId: scoringData.currentUserId,
     currentCropRegionId: scoringData.currentCropRegionId,
     studentAnswerImages: scoringData.studentAnswerImages,
+    questionScoresByCropRegionId: scoringData.questionScoresByCropRegionId,
     scaleQuestion,
     applyWithProgress,
     guardScoring: guardScoringWrite,
@@ -165,6 +172,16 @@ export function useGuardedScoring({
    * 印が付き、採点していない答案が採点済みの並びへ寄せられる
    */
   const { setRecentlyScoredAnswers } = progress
+  const markRecentlyScored = useCallback(
+    (answerIds: string[]) => {
+      setRecentlyScoredAnswers((prev) => {
+        const newSet = new Set(prev)
+        answerIds.forEach((answerId) => newSet.add(answerId))
+        return newSet
+      })
+    },
+    [setRecentlyScoredAnswers]
+  )
   const scoreAnswers = useMemo(
     () =>
       guardScoringWrite(
@@ -174,19 +191,24 @@ export function useGuardedScoring({
         ) => {
           if (blocksStatusOnScale(scoringStatusOfCall(status))) return
           handleBatchScoreUnguarded(status, null, null, new Set(answerIds))
-          setRecentlyScoredAnswers((prev) => {
-            const newSet = new Set(prev)
-            answerIds.forEach((answerId) => newSet.add(answerId))
-            return newSet
-          })
+          markRecentlyScored(answerIds)
         }
       ),
     [
       guardScoringWrite,
       handleBatchScoreUnguarded,
-      setRecentlyScoredAnswers,
+      markRecentlyScored,
       blocksStatusOnScale,
     ]
+  )
+  /** 名指しした答案に類型を付け、「いま採点した」印も付ける（類型のブラシ・表示中の一括。包み方は上と同じ） */
+  const scoreAnswersWithScaleLevel = useMemo(
+    () =>
+      guardScoringWrite((scaleLevelId: string, answerIds: string[]) => {
+        writeScaleLevelTo(scaleLevelId, answerIds)
+        markRecentlyScored(answerIds)
+      }),
+    [guardScoringWrite, writeScaleLevelTo, markRecentlyScored]
   )
 
   const {
@@ -199,6 +221,8 @@ export function useGuardedScoring({
     ...clickScoring,
     openPartialScoreModal,
     scoreAnswers,
+    scoreAnswersWithScaleLevel,
+    ownScaleLevelIdOf,
   })
 
   return {

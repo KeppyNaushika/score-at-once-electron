@@ -5,6 +5,10 @@ import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 
+import {
+  type ScaleLevelChoice,
+  scaleLevelColorsAt,
+} from "../ScaleLevel/utils/scaleLevelAppearance"
 import { confidenceLabel, describeJudgement } from "./utils/answerDisplay"
 import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
 import {
@@ -13,6 +17,7 @@ import {
   PROPOSAL_CHIP_LABELS,
   type ProposalChipKind,
 } from "./utils/proposalChip"
+import type { QuestioningScore } from "./utils/questioningSteps"
 import {
   REVIEW_REASON_LABELS,
   type ReviewReason,
@@ -23,6 +28,24 @@ import { scoreOfJudgement } from "./utils/scoreComparison"
 interface AiProposalChipsProps {
   reviewedAnswer: ReviewedAiGradingAnswer
   points: number | null
+  /** 設問の類型表の類型（並び順のまま。類型方式でなければ空） */
+  scaleLevels: readonly ScaleLevelChoice[]
+  /**
+   * 問いかけで確定すると付く予定の点（このマスの下書き）。類型なら記号の札を添える
+   * （斜線は採点の状態の色なので、どの類型かは札で示す）。無ければ null
+   */
+  draftScore: QuestioningScore | null
+}
+
+/** 類型の並び順と記号（類型表に無い類型は null） */
+function scaleLevelAt(
+  scaleLevels: readonly ScaleLevelChoice[],
+  scaleLevelId: string | null
+): { order: number; scaleLevel: ScaleLevelChoice } | null {
+  const order = scaleLevels.findIndex(
+    (scaleLevel) => scaleLevel.id === scaleLevelId
+  )
+  return order < 0 ? null : { order, scaleLevel: scaleLevels[order] }
 }
 
 /** 札そのものが示すので、印としては出さない理由 */
@@ -52,7 +75,9 @@ const CONFIDENCE_MARK: Record<string, string> = { medium: "中", low: "低" }
 /**
  * 一覧の答案の下に出す、AI の提案の札（簡素に1行）。
  *
- * - 判定があれば「AI＋状態のアイコン＋点」だけ。未確定か確定かはマスの斜線・塗りが示す
+ * - 判定があれば「AI＋状態のアイコン＋点」だけ。未確定か確定かはマスの斜線・塗りが示す。
+ *   類型方式の設問で AI が類型を付けたなら「AI＋類型の記号」を類型の色で出す
+ * - 問いかけで類型を付ける予定のマスには「→ A」を類型の色で添える
  * - 確信度が中・低なら「中」「低」を添える
  * - 要確認の理由（AI 由来）と、アプリが画像から測った印は、小さな「!」1つにまとめ、
  *   中身はツールチップで AI 由来と画像由来に分けて示す（同じ並びに混ぜない）
@@ -60,6 +85,8 @@ const CONFIDENCE_MARK: Record<string, string> = { medium: "中", low: "低" }
 export function AiProposalChips({
   reviewedAnswer,
   points,
+  scaleLevels,
+  draftScore,
 }: AiProposalChipsProps) {
   const statusConfig = getDynamicScoreStatusConfig(useScoringStatusColors())
   const { review } = reviewedAnswer
@@ -67,8 +94,26 @@ export function AiProposalChips({
   const attempt = review.displayedAttempt?.attempt ?? null
   const judgement =
     attempt && hasJudgement(kind)
-      ? { status: attempt.status, partialScore: attempt.partialScore }
+      ? {
+          status: attempt.status,
+          partialScore: attempt.partialScore,
+          scaleLevelId: attempt.scaleLevelId,
+        }
       : null
+  const aiScaleLevel =
+    judgement?.status === "evaluated"
+      ? scaleLevelAt(scaleLevels, judgement.scaleLevelId)
+      : null
+  const aiScaleColors = aiScaleLevel
+    ? scaleLevelColorsAt(aiScaleLevel.order)
+    : null
+  const draftScaleLevel =
+    draftScore?.status === "evaluated"
+      ? scaleLevelAt(scaleLevels, draftScore.scaleLevelId)
+      : null
+  const draftScaleColors = draftScaleLevel
+    ? scaleLevelColorsAt(draftScaleLevel.order)
+    : null
   const config = judgement ? statusConfig[judgement.status] : null
   const Icon = config?.icon
   const score = judgement ? scoreOfJudgement(judgement, points) : null
@@ -88,7 +133,7 @@ export function AiProposalChips({
   ]
 
   const chipTitle = judgement
-    ? `AI: ${describeJudgement(judgement.status, judgement.partialScore)}（確信度 ${confidenceLabel(attempt?.confidence ?? "")}）・${PROPOSAL_CHIP_LABELS[kind]}\n${PROPOSAL_FILL_LEGEND}`
+    ? `AI: ${describeJudgement(judgement.status, judgement.partialScore, aiScaleLevel?.scaleLevel.label ?? null)}（確信度 ${confidenceLabel(attempt?.confidence ?? "")}）・${PROPOSAL_CHIP_LABELS[kind]}\n${PROPOSAL_FILL_LEGEND}`
     : PROPOSAL_CHIP_LABELS[kind]
 
   return (
@@ -101,9 +146,33 @@ export function AiProposalChips({
         data-kind={kind}
         title={chipTitle}
         className={`inline-flex items-center gap-0.5 rounded border px-1 ${CHIP_FRAME_CLASS[kind]}`}
-        style={config ? { borderColor: config.iconStyle.color } : undefined}
+        style={
+          aiScaleColors
+            ? { borderColor: aiScaleColors.text }
+            : config
+              ? { borderColor: config.iconStyle.color }
+              : undefined
+        }
       >
-        {Icon && config && judgement ? (
+        {aiScaleLevel && aiScaleColors ? (
+          <>
+            <span className="text-gray-500">AI</span>
+            <span
+              className="rounded-sm px-0.5 font-bold"
+              style={{
+                backgroundColor: aiScaleColors.bg,
+                color: aiScaleColors.text,
+              }}
+            >
+              {aiScaleLevel.scaleLevel.label}
+            </span>
+            {confidenceMark && (
+              <span className="font-medium text-amber-700">
+                {confidenceMark}
+              </span>
+            )}
+          </>
+        ) : Icon && config && judgement ? (
           <>
             <span className="text-gray-500">AI</span>
             <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
@@ -122,6 +191,20 @@ export function AiProposalChips({
           PROPOSAL_CHIP_LABELS[kind]
         )}
       </span>
+      {draftScaleLevel && draftScaleColors && (
+        <span
+          data-testid="ai-draft-scale-level"
+          title={`反映すると類型 ${draftScaleLevel.scaleLevel.label}`}
+          className="rounded-sm border px-1 font-bold"
+          style={{
+            backgroundColor: draftScaleColors.bg,
+            color: draftScaleColors.text,
+            borderColor: draftScaleColors.text,
+          }}
+        >
+          → {draftScaleLevel.scaleLevel.label}
+        </span>
+      )}
       {noteLines.length > 0 && (
         <span
           data-testid="ai-proposal-notes"

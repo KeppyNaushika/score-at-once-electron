@@ -5,6 +5,8 @@
  * - 1段目は答案ごとに、判定・読み取り・所見・当てはまる項目・確信度を返させる。
  *   その設問のルーブリック項目を文にしてプロンプトに入れ、送った文をプロンプトの行に写す
  *   （今の項目と違えば新しい行を作る。§3-1）。教員が問いかけの「その他」に書いた指示も添える
+ * - 類型方式の設問（§4-8-6）では、配点の代わりに類型表の類型を送り、判定の代わりに類型を選ばせる。
+ *   送った類型の一覧の文もプロンプトの行に写す（項目の一覧と同じ）。類型の無い設問では始めない
  * - その場の採点（realtime）: 同時実行数を絞って1件ずつ送り、結果が届くたびに試行へ書いて
  *   進み具合を押し出す。run ごとに AbortController を持ち、中止できる。最後まで送れたら
  *   **そのまま2段目（項目の案）を続ける**（`groupingRunner.ts`）
@@ -19,7 +21,7 @@ import { buildGradingVariableParts } from "@/lib/shared/aiGrading/promptBuilder"
 import {
   buildStage1OutputSchema,
   buildStage1RequestParts,
-  STAGE1_TEMPLATE_VERSION,
+  stage1TemplateVersionFor,
 } from "@/lib/shared/aiGrading/stage1Grading"
 import type {
   AiGradingRunMode,
@@ -36,9 +38,9 @@ import {
 } from "../prisma/aiGradingRun"
 import { getCropRegionWithAnswerImages } from "../prisma/aiGradingSource"
 import {
-  ensurePromptRendersRubricItems,
+  ensurePromptRendersCriteria,
   getAiPrompt,
-  readRubricItemsForPrompt,
+  readGradingCriteriaForPrompt,
 } from "../prisma/aiPrompt"
 import { listTeacherInstructions } from "../prisma/aiRubricProposal"
 import { cropRegionForSending } from "./answerImage"
@@ -206,6 +208,14 @@ export function createGradingJobRunner(
       throw new Error(`答案画像の無い答案が${missingCount}件含まれています`)
     }
 
+    const criteria = await readGradingCriteriaForPrompt(cropRegion.id)
+    const { rubricItems, scaleLevels } = criteria
+    if (criteria.isScaleQuestion && scaleLevels.length === 0) {
+      throw new Error(
+        "この設問は類型方式ですが、類型表に類型がありません。類型表を選び、類型を作ってから AI採点を始めてください"
+      )
+    }
+
     // 送る前に事業者を決める（同意・キーが無ければここで止まり、何も作らない）
     const provider = dependencies.resolveProvider(input.provider)
     if (input.mode === "batch" && !provider.capabilities.batch) {
@@ -220,10 +230,8 @@ export function createGradingJobRunner(
       imageScale: input.imageScale,
       resolveDataPath: dependencies.resolveDataPath,
     })
-    const { rubricItems, renderedRubricItems } = await readRubricItemsForPrompt(
-      cropRegion.id
-    )
     const rubricItemIds = rubricItems.map((rubricItem) => rubricItem.id)
+    const scaleLevelIds = scaleLevels.map((scaleLevel) => scaleLevel.id)
     const teacherInstructions = await listTeacherInstructions(
       cropRegion.id,
       actorUserId
@@ -234,15 +242,16 @@ export function createGradingJobRunner(
       questionImages,
       modelAnswerImage,
       rubricItems,
+      scaleLevels,
       teacherInstructions,
     })
     const outputSchema = toJsonSchemaObject(
-      buildStage1OutputSchema(rubricItemIds)
+      buildStage1OutputSchema(rubricItemIds, scaleLevelIds)
     )
-    // 送る項目の一覧の文をプロンプトの行に写す（違えば新しい行。送った文面を再現できるように）
-    const sendingPrompt = await ensurePromptRendersRubricItems(
+    // 送る項目・類型の一覧の文をプロンプトの行に写す（違えば新しい行。送った文面を再現できるように）
+    const sendingPrompt = await ensurePromptRendersCriteria(
       prompt,
-      renderedRubricItems,
+      criteria,
       actorUserId
     )
 
@@ -251,7 +260,7 @@ export function createGradingJobRunner(
         userId: actorUserId,
         promptId: sendingPrompt.id,
         purpose: input.purpose,
-        templateVersion: STAGE1_TEMPLATE_VERSION,
+        templateVersion: stage1TemplateVersionFor(criteria.isScaleQuestion),
         provider: input.provider,
         model: input.model,
         effort: input.effort,
@@ -319,7 +328,7 @@ export function createGradingJobRunner(
       tracker,
       controller,
       concurrency: dependencies.getConcurrency(),
-      validationContext: { maxPoints: points, rubricItemIds },
+      validationContext: { maxPoints: points, rubricItemIds, scaleLevelIds },
     })
       .then(async (status) => {
         activeControllers.delete(run.id)

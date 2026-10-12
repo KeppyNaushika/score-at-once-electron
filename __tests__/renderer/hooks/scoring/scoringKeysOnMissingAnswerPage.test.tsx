@@ -154,6 +154,7 @@ function ScoringKeys({
       filteredScoringDataIds: [],
       replaceSelection: noop,
       setGradingMode: noop,
+      mouseScaleLevelId: null,
     },
     currentCropRegion: page2Region,
     scaleQuestion: scale,
