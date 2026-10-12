@@ -37,6 +37,7 @@ import { DefinitionSummary } from "./components/list/DefinitionSummary"
 import { DeleteDefinitionDialog } from "./components/list/DeleteDefinitionDialog"
 import { TransferOwnerDialog } from "./components/list/TransferOwnerDialog"
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
+import { useCreateDefinition } from "./hooks/useCreateDefinition"
 
 /** 解答用紙一覧のフィルタ対象値（名前・説明・タグ名／タグ／使用日） */
 const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
@@ -58,8 +59,14 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 export function AnswerSheetDefinitionList() {
   const currentUser = useCurrentUser()
   const router = useRouter()
-  const { definitions, isLoading, deleteDefinition, duplicateDefinition } =
-    useAnswerSheetDefinitions(currentUser.id)
+  const {
+    definitions,
+    isLoading,
+    deleteDefinition,
+    isDeleting,
+    duplicateDefinition,
+  } = useAnswerSheetDefinitions(currentUser.id)
+  const { createAndOpen, isCreating } = useCreateDefinition(currentUser.id)
 
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const definitionDeletion = useDialogTarget<ASBDefinitionListItem>()
@@ -166,7 +173,8 @@ export function AnswerSheetDefinitionList() {
         priority: ENTITY_LIST_CREATE_PRIORITY,
         node: (
           <CreateDefinitionButton
-            userId={currentUser.id}
+            onCreate={() => void createAndOpen()}
+            isCreating={isCreating}
             variant="outline"
             size="sm"
             className="rounded-lg"
@@ -176,7 +184,8 @@ export function AnswerSheetDefinitionList() {
         ),
         collapsedNode: (
           <CreateDefinitionButton
-            userId={currentUser.id}
+            onCreate={() => void createAndOpen()}
+            isCreating={isCreating}
             variant="ghost"
             size="sm"
             className="w-full justify-start"
@@ -197,7 +206,13 @@ export function AnswerSheetDefinitionList() {
       ],
       bulkTag: bulkTagAction,
     })
-  }, [bulkTagAction, currentUser.id, importToolbarAction, showAllOwners])
+  }, [
+    bulkTagAction,
+    createAndOpen,
+    importToolbarAction,
+    isCreating,
+    showAllOwners,
+  ])
 
   return (
     <>
@@ -248,7 +263,11 @@ export function AnswerSheetDefinitionList() {
             ? "解答用紙がありません"
             : "担当している解答用紙がありません",
           action: (
-            <CreateDefinitionButton userId={currentUser.id} variant="outline">
+            <CreateDefinitionButton
+              onCreate={() => void createAndOpen()}
+              isCreating={isCreating}
+              variant="outline"
+            >
               最初の解答用紙を作成
             </CreateDefinitionButton>
           ),
@@ -265,9 +284,10 @@ export function AnswerSheetDefinitionList() {
 
       <DeleteDefinitionDialog
         open={definitionDeletion.isOpen}
-        onOpenChange={definitionDeletion.handleOpenChange}
+        onClose={definitionDeletion.close}
         definitionName={definitionDeletion.target?.name}
         onConfirm={confirmDelete}
+        loading={isDeleting}
       />
 
       <EntityListArchiveDialogs archive={archive} />

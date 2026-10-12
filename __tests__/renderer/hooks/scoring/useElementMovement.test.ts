@@ -43,7 +43,6 @@ function renderMovement(
         setRectangleEditMode: vi.fn(),
         setDrawingElements,
         updateDrawingElements,
-        hitTestElement: () => false,
       }),
     { initialProps: { selectedElementIds } }
   )

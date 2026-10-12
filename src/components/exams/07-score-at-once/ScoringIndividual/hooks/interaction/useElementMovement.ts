@@ -28,17 +28,6 @@ interface UseElementMovementProps {
   updateDrawingElements: (
     updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
   ) => void
-  // リサイズ操作用の追加
-  setIsResizingElement?: (resizing: boolean) => void
-  setResizeHandle?: (handle: string | null) => void
-
-  // Utils
-  hitTestElement: (element: DrawingAnnotation, x: number, y: number) => boolean
-  hitTestHandle?: (
-    element: DrawingAnnotation,
-    x: number,
-    y: number
-  ) => string | null
 }
 
 /** 移動開始時の状態（移動中の座標は、開始時の行からの絶対座標で求める） */
@@ -88,7 +77,7 @@ function translateSelectedElements(
 }
 
 /**
- * 描画要素の移動・リサイズ操作を管理するフック。
+ * 描画要素の移動操作を管理するフック。
  *
  * **掴んでいる間は書かない。** 動かしている途中の姿はローカル状態に持ち、離した
  * ときに1回だけ DB へ書く（`handleMovementEnd`）。採点領域の編集（02-template の
@@ -109,8 +98,6 @@ export function useElementMovement({
   setRectangleEditMode,
   setDrawingElements,
   updateDrawingElements,
-  setIsResizingElement = () => {},
-  setResizeHandle = () => {},
 }: UseElementMovementProps) {
   // 掴んでいる間に動かした結果。要素ごとに最後の姿だけを持ち、離したときに書く
   const pendingUpdatesRef = useRef<Map<string, Partial<DrawingAnnotation>>>(
@@ -149,114 +136,12 @@ export function useElementMovement({
     [setDrawingElements]
   )
 
-  // リサイズ状態
-  const resizeStartRef = useRef<{
-    element: DrawingAnnotation
-    handle: string
-    startX: number
-    startY: number
-    originalX: number
-    originalY: number
-    originalWidth: number
-    originalHeight: number
-  } | null>(null)
-
   // 移動開始時の状態を保存（絶対座標計算用）
   const moveStartRef = useRef<MoveStart | null>(null)
-
-  // リサイズ処理
-  const handleElementResize = useCallback(
-    (imageCoords: { x: number; y: number }) => {
-      if (!resizeStartRef.current) return false
-
-      const {
-        element,
-        handle,
-        originalX,
-        originalY,
-        originalWidth,
-        originalHeight,
-        startX,
-        startY,
-      } = resizeStartRef.current
-      const deltaX = imageCoords.x - startX
-      const deltaY = imageCoords.y - startY
-
-      let newX = originalX
-      let newY = originalY
-      let newWidth = originalWidth
-      let newHeight = originalHeight
-
-      // ハンドルに応じてサイズと位置を計算
-      switch (handle) {
-        case "top-left":
-          newX = originalX + deltaX
-          newY = originalY + deltaY
-          newWidth = originalWidth - deltaX
-          newHeight = originalHeight - deltaY
-          break
-        case "top-right":
-          newY = originalY + deltaY
-          newWidth = originalWidth + deltaX
-          newHeight = originalHeight - deltaY
-          break
-        case "bottom-left":
-          newX = originalX + deltaX
-          newWidth = originalWidth - deltaX
-          newHeight = originalHeight + deltaY
-          break
-        case "bottom-right":
-          newWidth = originalWidth + deltaX
-          newHeight = originalHeight + deltaY
-          break
-      }
-
-      // 最小サイズ制限を削除（任意のサイズを許容）
-
-      // Shiftキーで縦横比を維持
-      if (
-        isShiftPressed &&
-        (element.type === "rectangle" || element.type === "ellipse")
-      ) {
-        if (element.type === "ellipse") {
-          // 円・楕円の場合は正円を維持
-          const size = Math.max(Math.abs(newWidth), Math.abs(newHeight))
-          newWidth = newWidth < 0 ? -size : size
-          newHeight = newHeight < 0 ? -size : size
-        } else if (originalWidth !== 0 && originalHeight !== 0) {
-          // 矩形の場合は縦横比を維持
-          const aspectRatio = originalWidth / originalHeight
-          if (Math.abs(newWidth / newHeight) > Math.abs(aspectRatio)) {
-            newHeight = newWidth / aspectRatio
-          } else {
-            newWidth = newHeight * aspectRatio
-          }
-        }
-      }
-
-      const updates: Partial<DrawingAnnotation> = { x: newX, y: newY }
-      if (element.type === "rectangle" || element.type === "ellipse") {
-        updates.width = newWidth
-        updates.height = newHeight
-      } else if (element.type === "text") {
-        updates.textBoxWidth = newWidth
-        updates.textBoxHeight = newHeight
-      }
-
-      applyMove(element.id, updates)
-      return true
-    },
-    [isShiftPressed, applyMove]
-  )
 
   // 要素移動処理
   const handleElementMovement = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      // リサイズ中の場合
-      if (resizeStartRef.current) {
-        return handleElementResize(imageCoords)
-      }
-
       if (
         currentTool !== "select" ||
         !isDraggingElement ||
@@ -348,7 +233,6 @@ export function useElementMovement({
       lineEditMode,
       isShiftPressed,
       applyMove,
-      handleElementResize,
     ]
   )
 
@@ -374,14 +258,6 @@ export function useElementMovement({
       handled = true
     }
 
-    // リサイズ終了
-    if (resizeStartRef.current) {
-      setIsResizingElement(false)
-      setResizeHandle(null)
-      resizeStartRef.current = null
-      handled = true
-    }
-
     return handled
   }, [
     currentTool,
@@ -390,8 +266,6 @@ export function useElementMovement({
     setDragElementOffset,
     setLineEditMode,
     setRectangleEditMode,
-    setIsResizingElement,
-    setResizeHandle,
     flushPendingMoves,
   ])
 

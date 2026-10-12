@@ -11,13 +11,18 @@ export const ENTITY_LIST_CREATE_PRIORITY = 80
 /**
  * ヘッダー右の「新規作成」。押すと既定値の1件を作って概要へ進む画面（試験・資料・成績）の形。
  * 解答用紙は作成のボタンが自分で書き込みを持つので、これを使わずに組む
+ *
+ * `disabled` には作成の mutation の `isPending` を渡す。書き込み中に押し直すと、
+ * 押すたびに新しい id で同じ既定値の1件が作られてしまう
  */
 export function entityListCreateAction({
   label,
   onClick,
+  disabled = false,
 }: {
   label: string
   onClick: () => void
+  disabled?: boolean
 }): ToolbarAction {
   return toolbarButtonAction({
     id: "create",
@@ -25,6 +30,7 @@ export function entityListCreateAction({
     icon: Plus,
     label,
     onClick,
+    disabled,
   })
 }
 

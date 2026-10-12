@@ -100,7 +100,8 @@ export default function ConfirmationModal({
     <AlertDialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen) onClose()
+        // 処理中は Esc でも閉じない。閉じると進み具合も失敗も見えなくなる
+        if (!isOpen && !loading) onClose()
       }}
     >
       <AlertDialogContent

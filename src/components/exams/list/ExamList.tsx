@@ -17,6 +17,7 @@ import { toolbarButtonAction } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import {
   type ExamSummary,
@@ -65,6 +66,10 @@ const ExamList = () => {
   const createExam = useMutation(createExamMutation(currentUser.id))
   const router = useRouter()
 
+  // 押せなくするのは isPending だが、それが描画に届く前の連打はここで止める
+  const { tryAcquire: tryStartCreate, release: finishCreate } =
+    useInFlightGuard()
+
   /**
    * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
    *
@@ -76,14 +81,17 @@ const ExamList = () => {
    * id は renderer が振る（規約）。失敗したときは遷移しない。
    */
   const handleCreate = useCallback(async () => {
+    if (!tryStartCreate()) return
     const examId = crypto.randomUUID()
     try {
       await createExam.mutateAsync({ id: examId, examName: "新しい試験" })
       router.push(`/exams/${examId}`)
     } catch {
       // 失敗の通知は MutationCache が出す
+    } finally {
+      finishCreate()
     }
-  }, [createExam, router])
+  }, [createExam, router, tryStartCreate, finishCreate])
 
   /** 選んだ試験へ、既存のタグを保ったまま同じタグを足す */
   const assignTagToExams = useCallback(
@@ -111,6 +119,7 @@ const ExamList = () => {
         create: entityListCreateAction({
           label: "新規試験作成",
           onClick: () => void handleCreate(),
+          disabled: createExam.isPending,
         }),
         archiveImport: importToolbarAction,
         bulkTag: bulkTagAction,
@@ -128,6 +137,7 @@ const ExamList = () => {
       }),
     [
       bulkTagAction,
+      createExam.isPending,
       handleCreate,
       importToolbarAction,
       openUnifiedExport,
@@ -165,7 +175,11 @@ const ExamList = () => {
           icon: PencilSparkles,
           message: "まだ試験がありません",
           action: (
-            <Button variant="outline" onClick={() => void handleCreate()}>
+            <Button
+              variant="outline"
+              onClick={() => void handleCreate()}
+              disabled={createExam.isPending}
+            >
               <Plus className="mr-2 h-4 w-4" />
               最初の試験を作成
             </Button>
