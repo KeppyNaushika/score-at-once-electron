@@ -16,6 +16,7 @@ import {
 } from "../../dataManager"
 import { detectCornerMarkers } from "../../omr/cornerMarkerDetector"
 import { correctImage } from "../../omr/imageCorrector"
+import { isRelativePathInside, resolveUnderRoot } from "../../pathContainment"
 import { recordAuditLog } from "../auditLog"
 import { resolveExamScope } from "../auditScope"
 import prisma from "../client"
@@ -51,10 +52,17 @@ async function getMasterMarkersForExamPage(
     return null
   }
 
-  const dataDir = getSharedFilesDirectory()
-  const imagePath = path.join(dataDir, examPage.imagePath)
+  // 共有するファイルの根の外を指すパスは読まない（基準にできないページと同じ扱い）
+  const masterImage = resolveUnderRoot(
+    getSharedFilesDirectory(),
+    examPage.imagePath
+  )
+  if (masterImage.kind !== "ok") {
+    cache.set(examPageId, null)
+    return null
+  }
   const result: MarkerDetectionResult = await detectCornerMarkers(
-    imagePath,
+    masterImage.absolutePath,
     colorThreshold
   )
 
@@ -226,10 +234,13 @@ export async function uploadStudentAnswers(
         await fsPromises.writeFile(filePath, buffer)
 
         try {
-          const oldFilePath = getAbsolutePathFromSharedFiles(
-            existingRecord.imagePath
-          )
-          await fsPromises.unlink(oldFilePath)
+          // 消すのは試験の画像の置き場（`exams/` の下）のファイルだけ
+          if (isRelativePathInside(existingRecord.imagePath, ["exams"])) {
+            const oldFilePath = getAbsolutePathFromSharedFiles(
+              existingRecord.imagePath
+            )
+            await fsPromises.unlink(oldFilePath)
+          }
         } catch {
           // ファイルが存在しない場合は無視
         }

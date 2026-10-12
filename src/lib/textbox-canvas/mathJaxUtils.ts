@@ -312,7 +312,8 @@ async function createOptimizedSVG(
 
 /**
  * HTML内容からMathJax対応の高品質SVGを生成する
- * @param htmlContent 変換対象のHTML文字列
+ * @param htmlContent 変換対象のHTML文字列（そのまま HTML として読み込むので、利用者の文字は
+ *   `parseTextWithMath` でエスケープ済みのもの、またはそれを組版した DOM を書き出したものに限る）
  * @param initialWidth 初期幅
  * @param initialHeight 初期高さ
  * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）

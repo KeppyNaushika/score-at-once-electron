@@ -551,3 +551,106 @@ describe("DB の守り", () => {
     ])
   })
 })
+
+describe("行の値の守り（id とファイルのパス）", () => {
+  /** 表の1行を写し、id だけを替えた行を足す（列の並びは写した元と同じ） */
+  const duplicateFirstRow = (
+    db: SqliteDatabase,
+    table: string,
+    newId: string
+  ) => {
+    db.exec(`CREATE TEMP TABLE "copiedRow" AS SELECT * FROM "${table}" LIMIT 1`)
+    db.prepare(`UPDATE "copiedRow" SET "id" = ?`).run(newId)
+    db.exec(`INSERT INTO "${table}" SELECT * FROM "copiedRow"`)
+    db.exec(`DROP TABLE "copiedRow"`)
+  }
+
+  /** 最初のページの画像のパスを書き換えた archive.db（パスは試験の id から組む） */
+  const withFirstPageImagePath = (
+    imagePathOf: (examId: string, otherExamId: string) => string
+  ) =>
+    databaseCopy(CURRENT_DB_PATH, (db) => {
+      const page = db
+        .prepare<[], { id: string; examId: string }>(
+          `SELECT "id", "examId" FROM "ExamPage" ORDER BY "id" LIMIT 1`
+        )
+        .get()
+      if (!page) throw new Error("固定データにページが無い")
+      const otherExam = db
+        .prepare<[string], { id: string }>(
+          `SELECT "id" FROM "Exam" WHERE "id" <> ? LIMIT 1`
+        )
+        .get(page.examId)
+      if (!otherExam) throw new Error("固定データに試験が2つ無い")
+      db.prepare(`UPDATE "ExamPage" SET "imagePath" = ? WHERE "id" = ?`).run(
+        imagePathOf(page.examId, otherExam.id),
+        page.id
+      )
+    })
+
+  /** 前の場合の展開先を消す（開く側は空の展開先を求める） */
+  const clearWorkDirectory = () =>
+    fs.rmSync(workDirectoryOf(), { recursive: true, force: true })
+
+  it("パスにならない試験の id を含むアーカイブは unsafeValues で断る", async () => {
+    for (const examId of ["..", "a/b", "a\\b"]) {
+      const databasePath = databaseCopy(CURRENT_DB_PATH, (db) =>
+        duplicateFirstRow(db, "Exam", examId)
+      )
+      const error = await expectOpenError(
+        buildArchive({ manifest: validManifest(), databasePath }),
+        "unsafeValues"
+      )
+      expect(error.details).toEqual(["Exam.id: id として扱えない値 1件"])
+      clearWorkDirectory()
+    }
+  })
+
+  it("制御文字を含む id を含むアーカイブは unsafeValues で断る", async () => {
+    const databasePath = databaseCopy(CURRENT_DB_PATH, (db) =>
+      duplicateFirstRow(db, "ExamPage", "page\u0000id")
+    )
+    const error = await expectOpenError(
+      buildArchive({ manifest: validManifest(), databasePath }),
+      "unsafeValues"
+    )
+    expect(error.details).toEqual(["ExamPage.id: id として扱えない値 1件"])
+  })
+
+  it("ファイルのパスの列に外へ出る値・直下の名前・別の試験・許さない拡張子があれば unsafeValues で断る", async () => {
+    const rejectedPathsOf: ((examId: string, otherExamId: string) => string)[] =
+      [
+        (examId) => `exams/${examId}/master-answers/../../../database.db`,
+        () => "/tmp/page.png",
+        () => "database.db",
+        () => "sync-config.json",
+        (examId) => `exams/${examId}\\master-answers\\page.png`,
+        (examId) => `exams/${examId}/master-answers/page.svg`,
+        (_examId, otherExamId) =>
+          `exams/${otherExamId}/master-answers/page.png`,
+      ]
+    for (const imagePathOf of rejectedPathsOf) {
+      const error = await expectOpenError(
+        buildArchive({
+          manifest: validManifest(),
+          databasePath: withFirstPageImagePath(imagePathOf),
+        }),
+        "unsafeValues"
+      )
+      expect(error.details).toEqual([
+        "ExamPage.imagePath: ファイルの場所として扱えない値 1件",
+      ])
+      clearWorkDirectory()
+    }
+  })
+
+  it("アプリの書く形のパスなら今までどおり開ける", async () => {
+    const databasePath = withFirstPageImagePath(
+      (examId) => `exams/${examId}/master-answers/1700000000000-0-模範解答.PNG`
+    )
+    const opened = await open(
+      buildArchive({ manifest: validManifest(), databasePath })
+    )
+    expect(opened.appliedMigrations).toEqual([])
+  })
+})

@@ -25,6 +25,7 @@ import type {
   ExamArchiveData,
 } from "../../../../src/types/examArchive.types"
 import { transformExamArchiveToLatest } from "../transformers"
+import { describeUnsafeExamArchiveValues } from "./archiveValueValidator"
 
 /**
  * 展開されたアーカイブデータ（バージョン変換チェーン適用済み・最新形式）
@@ -143,6 +144,20 @@ export async function extractArchive(archivePath: string): Promise<{
       deletedRecordsData,
     })
     const transformed = chainResult.data
+    const defaultedSections = withDefaultedSections(transformed)
+
+    // 試験の id と画像のパスは、データフォルダの中の場所を決める。アプリの書く形でない
+    // 値が1つでもあれば取り込まない（欠けた配列は既定を入れてから確かめる）
+    const unsafeValues = describeUnsafeExamArchiveValues(
+      defaultedSections.examData
+    )
+    if (unsafeValues.length > 0) {
+      cleanupTempDir(tempDir)
+      return {
+        success: false,
+        error: `アーカイブに、このアプリが書き出さない形の値があるため読み込めません（${unsafeValues.join(" / ")}）`,
+      }
+    }
 
     // 画像パスを収集
     const masterImagesDir = path.join(tempDir, "master-images")
@@ -155,7 +170,7 @@ export async function extractArchive(archivePath: string): Promise<{
       success: true,
       data: {
         ...transformed,
-        ...withDefaultedSections(transformed),
+        ...defaultedSections,
         transformWarnings: chainResult.warnings,
         tempDir,
         masterImagePaths,

@@ -2,6 +2,11 @@ import { app } from "electron"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
+import {
+  requireRemovableUnderRoot,
+  requireSafePathSegment,
+  requireUnderRoot,
+} from "./pathContainment"
 import { getStorageRoots } from "./storageRoots"
 
 // アプリケーションのルートディレクトリ（実行ファイルがある場所）
@@ -61,9 +66,16 @@ export const getLocalDataDirectory = (): string => {
 export const getSharedFilesDirectory = (): string =>
   getStorageRoots().sharedFilesDirectory
 
-/** 指定した試験IDのディレクトリパスを取得する */
+/**
+ * 指定した試験IDのディレクトリパスを取得する。
+ * id がパスの1区切りとして安全な形でなければ例外（`pathContainment.ts` の `requireSafePathSegment`）
+ */
 export const getExamDirectory = (examId: string): string => {
-  return path.join(getSharedFilesDirectory(), "exams", examId)
+  return path.join(
+    getSharedFilesDirectory(),
+    "exams",
+    requireSafePathSegment(examId)
+  )
 }
 
 /** 指定した試験の答案画像保存ディレクトリのパスを取得する */
@@ -76,14 +88,21 @@ export const getMasterAnswersDirectory = (examId: string): string => {
   return path.join(getExamDirectory(examId), "master-answers")
 }
 
-/** 答案用紙ビルダー（ASB）の画像保存ディレクトリのパスを取得する */
-export const getAsbImagesDirectory = (definitionId: string): string => {
+/**
+ * 答案用紙ビルダー（ASB）の定義1つ分のディレクトリのパスを取得する。
+ * id がパスの1区切りとして安全な形でなければ例外
+ */
+export const getAsbDefinitionDirectory = (definitionId: string): string => {
   return path.join(
     getSharedFilesDirectory(),
     "answer-sheet-builder",
-    definitionId,
-    "images"
+    requireSafePathSegment(definitionId)
   )
+}
+
+/** 答案用紙ビルダー（ASB）の画像保存ディレクトリのパスを取得する */
+export const getAsbImagesDirectory = (definitionId: string): string => {
+  return path.join(getAsbDefinitionDirectory(definitionId), "images")
 }
 
 /** Excel・PDF等の出力ファイル保存ディレクトリのパスを取得する（PCに残す） */
@@ -190,6 +209,24 @@ const copyDirectory = async (src: string, dest: string): Promise<void> => {
 export const getRelativePathFromSharedFiles = (absolutePath: string): string =>
   path.relative(getSharedFilesDirectory(), absolutePath).replace(/\\/g, "/")
 
-/** 共有するファイルの根からの相対パス（DB の `imagePath`）を絶対パスに変換する */
+/**
+ * 共有するファイルの根からの相対パス（DB の `imagePath`）を絶対パスに変換する。
+ *
+ * 根の外を指すもの（絶対パス・`..` で出るもの・根そのもの・NUL を含むもの）は
+ * `PathOutsideRootError` を投げる（規則は `pathContainment.ts` の `resolveUnderRoot`）。
+ */
 export const getAbsolutePathFromSharedFiles = (relativePath: string): string =>
-  path.join(getSharedFilesDirectory(), relativePath)
+  requireUnderRoot(getSharedFilesDirectory(), relativePath)
+
+/**
+ * 共有するファイルの根の下のディレクトリを再帰的に消す。既に無ければ何もしない。
+ * 消す先が根の下でない（根そのものを含む）なら、何も消さずに例外を投げる。
+ */
+export const removeDirectoryUnderSharedFiles = async (
+  absolutePath: string
+): Promise<void> => {
+  await fsPromises.rm(
+    requireRemovableUnderRoot(getSharedFilesDirectory(), absolutePath),
+    { recursive: true, force: true }
+  )
+}

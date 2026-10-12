@@ -4,7 +4,11 @@ import * as fsPromises from "fs/promises"
 import { toAppImageUrl } from "@/lib/appImageUrl"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
-import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
+import {
+  getAbsolutePathFromSharedFiles,
+  getSharedFilesDirectory,
+} from "../lib/dataManager"
+import { resolveUnderRoot } from "../lib/pathContainment"
 import {
   createClassroom,
   deleteClassroom,
@@ -228,13 +232,15 @@ export const miscHandlers = {
 
   // ファイル存在確認ハンドラー
   // 存在しないことは失敗ではないので、例外にせず値で返す
+  // 共有するファイルの根の外を指すパスも「無い」と答える（根の外は見に行かない）
   "check-file-exists": async (relativePath: string) => {
-    const absolutePath = getAbsolutePathFromSharedFiles(relativePath)
+    const resolved = resolveUnderRoot(getSharedFilesDirectory(), relativePath)
+    if (resolved.kind !== "ok") return { exists: false, path: "" }
     try {
-      await fsPromises.access(absolutePath)
-      return { exists: true, path: absolutePath }
+      await fsPromises.access(resolved.absolutePath)
+      return { exists: true, path: resolved.absolutePath }
     } catch {
-      return { exists: false, path: absolutePath }
+      return { exists: false, path: resolved.absolutePath }
     }
   },
 } satisfies HandlerMap

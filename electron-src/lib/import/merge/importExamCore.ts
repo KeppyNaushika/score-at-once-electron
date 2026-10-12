@@ -14,10 +14,10 @@
  */
 
 import * as crypto from "crypto"
-import * as path from "path"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { lastPathSegmentOf } from "../exam-archive/archiveValueValidator"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
@@ -32,7 +32,8 @@ function toImportedMasterImagePath(
   archiveImagePath: string | null
 ): string | null {
   if (!archiveImagePath) return null
-  return `exams/${newExamId}/master-images/${path.basename(archiveImagePath)}`
+  // ファイル名の形は展開時に確かめてある（archiveValueValidator.ts）
+  return `exams/${newExamId}/master-images/${lastPathSegmentOf(archiveImagePath)}`
 }
 
 /**

@@ -1,17 +1,24 @@
 import { WEB_APP_IMAGE_URL_PREFIX } from "@/lib/appImageUrl"
 
-import { OPFS_VIRTUAL_ROOT, WEB_DATA_DIRECTORY } from "../worker/webPaths"
+import {
+  appImageContentTypeOf,
+  appImageHeaders,
+  appImageNotFound,
+  isImageRequest,
+  toDataDirectorySegments,
+} from "./appImageResponse"
 
 /**
  * web 版の画像を返す Service Worker。
  *
  * 画面は画像を `/__appimg/<データフォルダからの相対パス>` で読む（`src/lib/appImageUrl.ts`）。
  * デスクトップ版の `appimg` プロトコルハンドラ（`electron-src/index.ts`）と同じく、相対パスを
- * データフォルダの中のファイルとして読み、Content-Type を付けて返す。それ以外の要求には
- * 手を出さない（ネットワークへそのまま流れる）。
+ * データフォルダの中のファイルとして読み、Content-Type を付けて返す。`/__appimg/` 以外の要求には
+ * 手を出さない（ネットワークへそのまま流れる）。何を返し何を断るかは `appImageResponse.ts`:
+ * データフォルダの外は返さない・ページとして開く要求には答えない・形式は画像に限る。
  *
- * ファイルの置き方は Worker の fs 差し替えと揃える（`web/worker/webPaths.ts`）: 仮想パス
- * `/opfs/<rest>` は OPFS のルート直下の `<rest>` で、データフォルダは `/opfs/data`（OPFS の `data/`）。
+ * ファイルの置き方は Worker の fs 差し替えと揃える（`web/worker/webPaths.ts`）: データフォルダは
+ * 仮想パスの `/opfs/data`（OPFS の `data/`）。
  */
 
 /** 画面（`web/page/entry.ts`）から届く頼みごと */
@@ -51,34 +58,6 @@ interface ServiceWorkerScope {
 
 declare const self: ServiceWorkerScope
 
-/** 仮想パスの絶対パスの頭。ここから先が OPFS のルートからのパス */
-const OPFS_VIRTUAL_ROOT_PREFIX = `${OPFS_VIRTUAL_ROOT}/`
-
-/** データフォルダの、OPFS のルートからの位置 */
-const DATA_DIRECTORY_SEGMENTS = WEB_DATA_DIRECTORY.slice(
-  OPFS_VIRTUAL_ROOT_PREFIX.length
-).split("/")
-
-const IMAGE_CONTENT_TYPES: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  bmp: "image/bmp",
-  svg: "image/svg+xml",
-  tif: "image/tiff",
-  tiff: "image/tiff",
-  pdf: "application/pdf",
-}
-
-const DEFAULT_CONTENT_TYPE = "application/octet-stream"
-
-const contentTypeOf = (fileName: string) => {
-  const extension = fileName.split(".").pop()?.toLowerCase() ?? ""
-  return IMAGE_CONTENT_TYPES[extension] ?? DEFAULT_CONTENT_TYPE
-}
-
 const isServiceWorkerRequest = (
   message: unknown
 ): message is ServiceWorkerRequest =>
@@ -86,42 +65,6 @@ const isServiceWorkerRequest = (
   message !== null &&
   "kind" in message &&
   message.kind === "claim"
-
-/**
- * 画像 URL のパス（`/__appimg/` より後ろ）を、OPFS のルートからのパスの区切りにする。
- * データフォルダの外（`..`）は指させない
- */
-const toOpfsSegments = (encodedPath: string): string[] | null => {
-  let filePath: string
-  try {
-    filePath = decodeURIComponent(encodedPath)
-  } catch {
-    return null
-  }
-  // projects/ → exams/（v0.6.x のリネーム。デスクトップ版のハンドラと同じ）
-  if (filePath.startsWith("projects/")) {
-    filePath = "exams/" + filePath.slice("projects/".length)
-  }
-  // 仮想パスの絶対パスが来たら、OPFS のルートから辿る
-  const isAbsolute = filePath.startsWith(OPFS_VIRTUAL_ROOT_PREFIX)
-  const relativeSegments = (
-    isAbsolute ? filePath.slice(OPFS_VIRTUAL_ROOT_PREFIX.length) : filePath
-  )
-    .split("/")
-    .filter((segment) => segment !== "" && segment !== ".")
-  if (relativeSegments.length === 0 || relativeSegments.includes("..")) {
-    return null
-  }
-  return isAbsolute
-    ? relativeSegments
-    : [...DATA_DIRECTORY_SEGMENTS, ...relativeSegments]
-}
-
-const notFound = () =>
-  new Response("File not found", {
-    status: 404,
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  })
 
 const readOpfsFile = async (segments: string[]): Promise<File> => {
   const directorySegments = segments.slice(0, -1)
@@ -134,29 +77,29 @@ const readOpfsFile = async (segments: string[]): Promise<File> => {
   return fileHandle.getFile()
 }
 
-const respondWithImage = async (encodedPath: string): Promise<Response> => {
-  const segments = toOpfsSegments(encodedPath)
-  if (!segments) return notFound()
+const respondWithImage = async (
+  encodedPath: string,
+  destination: RequestDestination
+): Promise<Response> => {
+  const segments = toDataDirectorySegments(encodedPath)
+  if (!segments) return appImageNotFound()
+  const contentType = appImageContentTypeOf(
+    segments[segments.length - 1],
+    destination
+  )
+  if (contentType === null) return appImageNotFound()
   try {
     const file = await readOpfsFile(segments)
     return new Response(file, {
       status: 200,
-      headers: {
-        "Content-Type": contentTypeOf(file.name),
-        "Content-Length": String(file.size),
-        // 同じパスのまま中身を書き換えることがあるので、毎回読み直させる
-        "Cache-Control": "no-store",
-        // フレーム検出は crossOrigin="anonymous" で読む（デスクトップ版のハンドラと同じ）
-        "Access-Control-Allow-Origin": "*",
-        "Cross-Origin-Resource-Policy": "same-origin",
-      },
+      headers: appImageHeaders(contentType, file.size),
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === "NotFoundError") {
-      return notFound()
+      return appImageNotFound()
     }
     console.error("[serviceWorker] 画像を読めませんでした", segments, error)
-    return notFound()
+    return appImageNotFound()
   }
 }
 
@@ -179,7 +122,15 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url)
   if (requestUrl.origin !== self.location.origin) return
   if (!requestUrl.pathname.startsWith(WEB_APP_IMAGE_URL_PREFIX)) return
+  // ページとして開く要求には、静的配信へ流さず（画面の書き出しが返りうる）ここで断る
+  if (!isImageRequest(event.request)) {
+    event.respondWith(Promise.resolve(appImageNotFound()))
+    return
+  }
   event.respondWith(
-    respondWithImage(requestUrl.pathname.slice(WEB_APP_IMAGE_URL_PREFIX.length))
+    respondWithImage(
+      requestUrl.pathname.slice(WEB_APP_IMAGE_URL_PREFIX.length),
+      event.request.destination
+    )
   )
 })

@@ -25,6 +25,7 @@ import {
   orientAndFitInside,
   readImageHeader,
 } from "../imageOps"
+import { requireSafePathSegment } from "../pathContainment"
 import { AI_QUESTION_IMAGES_DIRECTORY_NAME } from "../prisma/aiPrompt"
 import prisma from "../prisma/client"
 
@@ -135,7 +136,8 @@ export async function importAiQuestionImage(
   const encoded = await encodeQuestionImage(source)
   const imagePath = [
     "exams",
-    cropRegion.examPage.examId,
+    // id が区切りや `..` を含めば例外（取り込み先を試験のフォルダの外へずらさない）
+    requireSafePathSegment(cropRegion.examPage.examId),
     AI_QUESTION_IMAGES_DIRECTORY_NAME,
     `${crypto.randomUUID()}${encoded.extension}`,
   ].join("/")

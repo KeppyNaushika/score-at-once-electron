@@ -1,18 +1,19 @@
 import { app, dialog, net, protocol } from "electron"
 import * as fs from "fs"
-import * as path from "path"
 import { pathToFileURL } from "url"
 
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { stopUnifiedArchiveExportWorker } from "./ipc-handlers/unifiedArchiveHandlers"
 import { startAiGradingBatchPolling } from "./lib/aiGrading/aiGradingMainServices"
-import { getAbsolutePathFromSharedFiles } from "./lib/dataManager"
+import { resolveAppImageRequestPath } from "./lib/appImageProtocol"
+import { getSharedFilesDirectory } from "./lib/dataManager"
 import { takeAllUnifiedArchiveImportWorkDirectories } from "./lib/import/unified-archive/archiveImportSessions"
 import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
 import { getPrismaClient } from "./lib/prisma/client"
 import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
 import { stopSync } from "./lib/sync/syncService"
+import { rendererOrigin } from "./rendererPort"
 import { startRendererStaticServer } from "./rendererStaticServer"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
@@ -77,35 +78,30 @@ protocol.registerSchemesAsPrivileged([
 app.on("ready", async () => {
   try {
     // appimg:// プロトコルハンドラを登録
-    // appimg:///path/to/file → file:///path/to/file としてローカルファイルを読み込む
+    // appimg:///<共有するファイルの根からの相対パス> → 根の下のファイルを読み込む
     // renderer はこの規則で URL を組み立てる（src/lib/appImageUrl.ts）。変えるときは揃えること
     protocol.handle("appimg", async (request) => {
       try {
-        // new URL() を使わず文字列操作でパスを抽出
-        // appimg://exams/... や appimg:///exams/... の両方に対応
-        let filePath = decodeURIComponent(
-          request.url.replace(/^appimg:\/\/\/?/, "")
+        // 根の下に解決できないもの（`..`・絶対パス・根そのもの）は読まずに断る
+        const filePath = resolveAppImageRequestPath(
+          request.url,
+          getSharedFilesDirectory()
         )
-
-        // projects/ → exams/ パス正規化（v0.6.x リネーム対応）
-        if (filePath.startsWith("projects/")) {
-          filePath = "exams/" + filePath.slice("projects/".length)
-        }
-
-        // 相対パスの場合はデータディレクトリからの絶対パスに変換
-        if (!path.isAbsolute(filePath)) {
-          filePath = getAbsolutePathFromSharedFiles(filePath)
+        if (filePath === null) {
+          return new Response("Forbidden", { status: 403 })
         }
 
         const fileUrl = pathToFileURL(filePath).href
         const response = await net.fetch(fileUrl)
 
         // CORSヘッダーを付与する。
-        // フレーム検出（02-template）は img.crossOrigin="anonymous" で画像を読み込み
+        // フレーム検出（02-template）などは img.crossOrigin="anonymous" で画像を読み込み
         // getImageData でピクセルを解析するため、Access-Control-Allow-Origin が無いと
         // ブラウザのCORSチェックで読み込みが拒否される（img.onerror → "Failed to load image"）。
+        // 許すのは画面（renderer）の入口だけ（どこからでも読めるようにはしない）
         const headers = new Headers(response.headers)
-        headers.set("Access-Control-Allow-Origin", "*")
+        headers.set("Access-Control-Allow-Origin", rendererOrigin)
+        headers.set("Vary", "Origin")
         return new Response(response.body, {
           status: response.status,
           statusText: response.statusText,

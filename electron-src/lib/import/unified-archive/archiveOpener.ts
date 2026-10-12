@@ -37,6 +37,7 @@ import {
 } from "../../prisma/schema/migrationApplier"
 import { hasTable, type SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 import { parseUnifiedArchiveManifest } from "./archiveManifestParser"
+import { describeUnacceptableArchiveValues } from "./archiveValueGuards"
 import {
   type ArchiveZip,
   type ArchiveZipEntry,
@@ -59,6 +60,8 @@ export type UnifiedArchiveOpenErrorKind =
   | "unsafeSchema"
   /** 現行化できない、現行化後の表・列が参照 DB と違う、外部キーが閉じていない */
   | "schemaMismatch"
+  /** id かファイルのパスの値が、アプリの書く形でない（`archiveValueGuards.ts`） */
+  | "unsafeValues"
 
 const OPEN_ERROR_MESSAGES: Record<UnifiedArchiveOpenErrorKind, string> = {
   notArchive: "統合アーカイブのファイルではありません",
@@ -71,6 +74,8 @@ const OPEN_ERROR_MESSAGES: Record<UnifiedArchiveOpenErrorKind, string> = {
     "アーカイブのデータベースに、想定外のトリガーかビューがあります",
   schemaMismatch:
     "アーカイブのデータベースを、このアプリのスキーマに揃えられませんでした",
+  unsafeValues:
+    "アーカイブのデータベースに、このアプリが書き出さない形の id かファイルの場所があります",
 }
 
 export class UnifiedArchiveOpenError extends Error {
@@ -517,6 +522,13 @@ export async function openUnifiedArchive(
     ]
     if (mismatches.length > 0) {
       throw new UnifiedArchiveOpenError("schemaMismatch", mismatches)
+    }
+
+    // 行の値の守り。id とファイルのパスは、取り込み・差し替え・削除でデータフォルダの中の
+    // 場所を決めるので、アプリの書く形のものだけを通す（現行化の後の値で確かめる）
+    const unacceptableValues = describeUnacceptableArchiveValues(db)
+    if (unacceptableValues.length > 0) {
+      throw new UnifiedArchiveOpenError("unsafeValues", unacceptableValues)
     }
 
     await writeDatabaseFile(db, databasePath, { exclusive: true })

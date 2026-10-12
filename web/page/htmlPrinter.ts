@@ -92,6 +92,11 @@ export async function printHtml(request: PrintHtmlRequest): Promise<void> {
   const frame = document.createElement("iframe")
   frame.setAttribute("aria-hidden", "true")
   frame.tabIndex = -1
+  // 印刷する HTML には他人の書いた文字（取り込んだ生徒名・注釈など）が入るので、中の
+  // スクリプトは走らせない（今の印刷用 HTML の生成器はどれもスクリプトを含まない）。
+  // allow-same-origin は画面からの document の読み取りと Service Worker の受け持ちのため、
+  // allow-modals は印刷ダイアログ（print()）のため
+  frame.setAttribute("sandbox", "allow-same-origin allow-modals")
   // 見えない所で描く。大きさはデスクトップ版のウィンドウ（A4 を 96 DPI）に合わせる
   frame.style.cssText =
     "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;" +

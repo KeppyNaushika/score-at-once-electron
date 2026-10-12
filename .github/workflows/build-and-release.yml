@@ -15,8 +15,9 @@ on:
           - "prerelease"
           - "release"
 
+# ジョブごとに必要なものだけ与える（build は読むだけ、release だけが書く）
 permissions:
-  contents: write
+  contents: read
 
 env:
   # Node.js version to use
@@ -28,6 +29,8 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.runner || matrix.os }}
+    permissions:
+      contents: read
 
     strategy:
       matrix:
@@ -61,25 +64,20 @@ jobs:
           git config --global core.eol lf
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
         run: |
-          # Clear npm cache to avoid stale binaries
-          npm cache clean --force
-          # Install dependencies with fresh download
-          npm install --prefer-online
-          # Force reinstall all Tailwind CSS v4 native modules
-          # 版は package-lock.json と揃えること。ずれると lint:fix が落ちる
-          # （canonicalizeTailwindClasses.mjs が Tailwind の内部 API を呼んでおり、
-          #  4.1.7 には canonicalizeCandidates が無い）
-          npm uninstall lightningcss @tailwindcss/oxide @tailwindcss/postcss tailwindcss
-          npm install lightningcss@1.32.0 @tailwindcss/postcss@4.3.3 tailwindcss@4.3.3 --prefer-online
+          # package-lock.json のとおりに入れる。lightningcss / @tailwindcss/oxide の
+          # 各 OS 向けのネイティブモジュールも lockfile に載っているので、入れ直しは要らない
+          npm ci
           # Verify native modules
           node -e "
             console.log('Node.js:', process.version, 'Platform:', process.platform, process.arch);
@@ -204,6 +202,9 @@ jobs:
       # Create archives for distribution
       - name: Create archive from Forge output (Windows)
         if: runner.os == 'Windows'
+        env:
+          BUILD_VERSION: ${{ steps.vars_win.outputs.version }}
+          ARTIFACT_NAME: ${{ matrix.artifact_name }}
         run: |
           Write-Host "=== Creating Windows archive ==="
 
@@ -219,8 +220,8 @@ jobs:
 
             if ($zipFiles.Count -gt 0) {
               $sourceZip = $zipFiles[0].FullName
-              $version = "${{ steps.vars_win.outputs.version }}"
-              $targetZip = Join-Path $rootDir "${{ matrix.artifact_name }}-$version.zip"
+              $version = $env:BUILD_VERSION
+              $targetZip = Join-Path $rootDir "$($env:ARTIFACT_NAME)-$version.zip"
               Write-Host "Copying $sourceZip to $targetZip"
               Copy-Item $sourceZip $targetZip
               Write-Host "Copy completed"
@@ -230,8 +231,8 @@ jobs:
           }
 
           # Verify final result
-          $version = "${{ steps.vars_win.outputs.version }}"
-          $finalZip = "${{ matrix.artifact_name }}-$version.zip"
+          $version = $env:BUILD_VERSION
+          $finalZip = "$($env:ARTIFACT_NAME)-$version.zip"
           if (Test-Path $finalZip) {
             Write-Host "SUCCESS: $finalZip created successfully"
             $fileInfo = Get-Item $finalZip
@@ -243,20 +244,25 @@ jobs:
 
       - name: Create archive from Forge output (Unix)
         if: runner.os != 'Windows'
+        env:
+          BUILD_VERSION: ${{ steps.vars_unix.outputs.version }}
+          ARTIFACT_NAME: ${{ matrix.artifact_name }}
+          MATRIX_OS: ${{ matrix.os }}
+          MATRIX_ARCH: ${{ matrix.arch }}
         run: |
           cd out
-          VERSION="${{ steps.vars_unix.outputs.version }}"
-          FINAL_NAME="${{ matrix.artifact_name }}-$VERSION.zip"
+          VERSION="$BUILD_VERSION"
+          FINAL_NAME="$ARTIFACT_NAME-$VERSION.zip"
 
           if [ -d "make" ]; then
             find make -name "*.zip" -exec cp {} "../$FINAL_NAME" \;
           fi
           if [ ! -f "../$FINAL_NAME" ]; then
             # Fallback: create archive from packaged app
-            if [ "${{ matrix.os }}" = "macos-latest" ]; then
-              zip -r "../$FINAL_NAME" "一括採点-darwin-${{ matrix.arch }}"
+            if [ "$MATRIX_OS" = "macos-latest" ]; then
+              zip -r "../$FINAL_NAME" "一括採点-darwin-$MATRIX_ARCH"
             else
-              zip -r "../$FINAL_NAME" "一括採点-linux-${{ matrix.arch }}"
+              zip -r "../$FINAL_NAME" "一括採点-linux-$MATRIX_ARCH"
             fi
           fi
 
@@ -265,7 +271,7 @@ jobs:
 
       # Upload artifacts
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ matrix.artifact_name }}-${{ steps.vars_win.outputs.version || steps.vars_unix.outputs.version }}
           path: ${{ matrix.artifact_name }}-${{ steps.vars_win.outputs.version || steps.vars_unix.outputs.version }}.zip
@@ -276,18 +282,25 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      # リリースの作成とリリースノートの生成（generate-notes）に要る
+      contents: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: ./artifacts
 
       - name: Setup release variables
         id: vars
+        env:
+          INPUT_RELEASE_TYPE: ${{ github.event.inputs.release_type || 'prerelease' }}
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
@@ -305,7 +318,7 @@ jobs:
             PACKAGE_VERSION=$(node -p "require('./package.json').version")
             VERSION="$PACKAGE_VERSION-dev"
             TAG_NAME="v$VERSION"
-            RELEASE_TYPE="${{ github.event.inputs.release_type || 'prerelease' }}"
+            RELEASE_TYPE="$INPUT_RELEASE_TYPE"
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -327,10 +340,10 @@ jobs:
         id: release_notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TYPE: ${{ steps.vars.outputs.release_type }}
+          VERSION: ${{ steps.vars.outputs.version }}
+          TAG_NAME: ${{ steps.vars.outputs.tag_name }}
         run: |
-          RELEASE_TYPE="${{ steps.vars.outputs.release_type }}"
-          VERSION="${{ steps.vars.outputs.version }}"
-          TAG_NAME="${{ steps.vars.outputs.tag_name }}"
 
           # 直近の前回タグ（現在のタグ自身は除外）を求める
           CURRENT_TAG=$(git tag --sort=-version:refname | head -n 1)
@@ -345,9 +358,9 @@ jobs:
           # 自前のPR解析・API個別呼び出し・フォールバックは廃止。
           GEN_ARGS=(
             -X POST
-            "repos/${{ github.repository }}/releases/generate-notes"
+            "repos/$GITHUB_REPOSITORY/releases/generate-notes"
             -f "tag_name=$TAG_NAME"
-            -f "target_commitish=${{ github.sha }}"
+            -f "target_commitish=$GITHUB_SHA"
           )
           if [ -n "$LAST_TAG" ]; then
             GEN_ARGS+=(-f "previous_tag_name=$LAST_TAG")
@@ -369,13 +382,17 @@ jobs:
             NOTES=$(VERSION="$VERSION" CHANGES="$CHANGES" node scripts/build-release-notes.js release)
           fi
 
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "changes<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # 複数行の出力の区切りは毎回でたらめな値にする（本文に同じ行があると、そこで出力が切れて
+          # 残りが別の出力として読まれるため。PR のタイトルは外から入る）
+          DELIMITER="ghadelimiter_$(openssl rand -hex 32)"
+          {
+            echo "notes<<$DELIMITER"
+            echo "$NOTES"
+            echo "$DELIMITER"
+            echo "changes<<$DELIMITER"
+            echo "$CHANGES"
+            echo "$DELIMITER"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Collect release files
         run: |
@@ -384,7 +401,7 @@ jobs:
           ls -la release-files/
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15 (v1)
         with:
           tag_name: ${{ steps.vars.outputs.tag_name }}
           name: 一括採点 ${{ steps.vars.outputs.tag_name }}
@@ -396,8 +413,15 @@ jobs:
 
       - name: Discord Notification
         if: always()
+        env:
+          # 値は run に直接展開しない（PR のタイトルなど外から入る文字列がシェルとして解釈されるため）
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_CHANGES: ${{ steps.release_notes.outputs.changes }}
+          RELEASE_TAG_NAME: ${{ steps.vars.outputs.tag_name }}
+          IS_PRERELEASE: ${{ steps.vars.outputs.is_prerelease }}
+          VERSION: ${{ steps.vars.outputs.version }}
         run: |
-          if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
             cat > discord_notify.js << 'EOF'
           const https = require('https');
 
@@ -471,17 +495,14 @@ jobs:
 
             # Format changes for Discord (clean up markdown and limit length, keep line breaks)
             DISCORD_CHANGES=$(
-              printf '%s\n' '${{ steps.release_notes.outputs.changes }}' \
+              printf '%s\n' "$RELEASE_CHANGES" \
                 | sed 's/###/•/g' \
                 | sed 's/🔀//g' \
                 | awk 'NF' \
                 | head -8
             )
             
-            DISCORD_WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}" \
-            RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}" \
-            IS_PRERELEASE="${{ steps.vars.outputs.is_prerelease }}" \
-            VERSION="${{ steps.vars.outputs.version }}" \
+            RELEASE_URL="https://github.com/$GITHUB_REPOSITORY/releases/tag/$RELEASE_TAG_NAME" \
             CHANGES="$DISCORD_CHANGES" \
             node discord_notify.js
           else

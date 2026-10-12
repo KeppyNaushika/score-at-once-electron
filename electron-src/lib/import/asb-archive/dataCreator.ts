@@ -19,6 +19,7 @@ import {
 import { listAsbDefinitions } from "../../prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../prisma/asbDefinitionReplace"
 import prisma from "../../prisma/client"
+import { isAsbImagePath } from "../unified-archive/archiveValueGuards"
 
 /**
  * 名前の重複を解決するサフィックスを付与
@@ -37,14 +38,57 @@ export async function resolveNameConflict(name: string): Promise<string> {
 }
 
 /**
- * 画像ファイルをインポート先にコピーし、定義内のimagePathを更新
+ * 画像ファイルをインポート先にコピーし、定義内のimagePathを更新する。
+ *
+ * 写せなかった画像（アーカイブに同梱されていない）はアーカイブのパスのまま残るので、
+ * 最後に全ての画像のパスが解答用紙の画像の置き場の形（`archiveValueGuards.ts`）であることを
+ * 確かめ、外れたものがあれば取り込まない（そのパスで差し替え・削除・複製が動くため）
  */
 export function copyImagesAndUpdatePaths(
   definition: AnswerSheetDefinition,
   tempImagePaths: string[]
 ): void {
-  if (tempImagePaths.length === 0) return
+  if (tempImagePaths.length > 0) copyImages(definition, tempImagePaths)
+  try {
+    assertAsbImagePaths(definition)
+  } catch (error) {
+    // 写した画像は、振り直した新しい定義の id のフォルダにだけある。DB へ書く前なので消す
+    fs.rmSync(path.dirname(getAsbImagesDirectory(definition.id)), {
+      recursive: true,
+      force: true,
+    })
+    throw error
+  }
+}
 
+/** 定義の全ての画像要素 */
+const imageElementsOf = (definition: AnswerSheetDefinition) =>
+  definition.majorQuestions.flatMap((majorQuestion) =>
+    majorQuestion.subQuestions.flatMap((subQuestion) => [
+      ...(subQuestion.imageElements ?? []),
+      ...subQuestion.branchQuestions.flatMap(
+        (branchQuestion) => branchQuestion.imageElements ?? []
+      ),
+    ])
+  )
+
+/** 画像のパスが空か、解答用紙の画像の置き場の形でなければ投げる */
+function assertAsbImagePaths(definition: AnswerSheetDefinition): void {
+  const unsafeCount = imageElementsOf(definition).filter(
+    (imageElement) =>
+      imageElement.imagePath !== "" && !isAsbImagePath(imageElement.imagePath)
+  ).length
+  if (unsafeCount > 0) {
+    throw new Error(
+      `アーカイブに、画像の場所として扱えない値が ${unsafeCount}件あるため読み込めません`
+    )
+  }
+}
+
+function copyImages(
+  definition: AnswerSheetDefinition,
+  tempImagePaths: string[]
+): void {
   const imagesDir = getAsbImagesDirectory(definition.id)
   if (!fs.existsSync(imagesDir)) {
     fs.mkdirSync(imagesDir, { recursive: true })
