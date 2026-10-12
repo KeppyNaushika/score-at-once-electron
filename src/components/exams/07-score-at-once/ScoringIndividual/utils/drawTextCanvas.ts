@@ -18,10 +18,9 @@ import type {
 
 import type { CropRegionWithStatus } from "../hooks/core/types"
 import {
+  loadedPageIndexOfCropRegion,
   pageIndexByCropRegionId,
-  pageIndexOfCropRegion,
-  pageOffsetX,
-  pageOffsetY,
+  pagePlacementAt,
   stackedCanvasSize,
 } from "./canvasPageLayout"
 import { renderTextElement } from "./canvasTextRenderer"
@@ -29,6 +28,8 @@ import { renderTextElement } from "./canvasTextRenderer"
 interface TextCanvasParams {
   pageSpacing: number
   pageSize: string
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: readonly string[]
   currentCropRegion: QuestionAnswerRegionRow | null | undefined
   currentCropRegionId: string | null | undefined
   allCropRegionsWithStatus: CropRegionWithStatus[]
@@ -48,6 +49,7 @@ export async function drawTextCanvas(
   {
     pageSpacing,
     pageSize,
+    loadedExamPageIds,
     currentCropRegion,
     currentCropRegionId,
     allCropRegionsWithStatus,
@@ -72,26 +74,21 @@ export async function drawTextCanvas(
 
   textBoundsCache.clear()
 
-  // cropRegionId → pageIndex ルックアップマップ
+  // cropRegionId → pageIndex ルックアップマップ（答案に無いページの設問は入らない）
   const textCropRegionPageMap = pageIndexByCropRegionId(
     allCropRegionsWithStatus,
-    loadedImages.length
+    loadedExamPageIds
   )
 
-  // 現在設問のページ情報
-  const currentPageIndex = pageIndexOfCropRegion(
+  // 現在設問のページ（答案に無ければ null。新規作成直後のテキストも描かない）
+  const currentPageIndex = loadedPageIndexOfCropRegion(
     currentCropRegion,
-    loadedImages.length
+    loadedExamPageIds
   )
-  const currentPageImg = loadedImages[currentPageIndex] || loadedImages[0]
-  const currentPageWidth = currentPageImg.naturalWidth
-  const currentPageHeight = currentPageImg.naturalHeight
-  const currentPageOffsetX = pageOffsetX(canvasWidth, currentPageImg)
-  const currentPageOffsetY = pageOffsetY(
-    loadedImages,
-    currentPageIndex,
-    pageSpacing
-  )
+  const currentPage =
+    currentPageIndex === null
+      ? null
+      : pagePlacementAt(loadedImages, currentPageIndex, pageSpacing)
 
   const drawingElementsMap = new Map(
     drawingElements.map((element) => [element.id, element])
@@ -119,18 +116,17 @@ export async function drawTextCanvas(
       const isSelected =
         isCurrentQuestion && selectedElementIds.includes(element.id)
 
-      // アノテーションが属するページを特定
-      const annotCropRegionId = annotation.questionScore?.cropRegionId || ""
-      const annotPageIndex = textCropRegionPageMap.get(annotCropRegionId) ?? 0
-      const annotPageImg = loadedImages[annotPageIndex] || loadedImages[0]
+      // アノテーションが属するページを特定（設問のページが答案に無ければ描かない）
+      const annotCropRegionId = annotation.questionScore?.cropRegionId ?? ""
+      const annotPageIndex = textCropRegionPageMap.get(annotCropRegionId)
+      if (annotPageIndex === undefined) return null
+      const {
+        pageImage: annotPageImg,
+        offsetX: annotPageOffsetX,
+        offsetY: annotPageOffsetY,
+      } = pagePlacementAt(loadedImages, annotPageIndex, pageSpacing)
       const annotPageWidth = annotPageImg.naturalWidth
       const annotPageHeight = annotPageImg.naturalHeight
-      const annotPageOffsetX = pageOffsetX(canvasWidth, annotPageImg)
-      const annotPageOffsetY = pageOffsetY(
-        loadedImages,
-        annotPageIndex,
-        pageSpacing
-      )
 
       try {
         // ページの左上までコンテキストを平行移動して描画
@@ -185,7 +181,14 @@ export async function drawTextCanvas(
       element.type === "text" && element.text && !drawnIds.has(element.id)
   )
 
-  if (newTextElements.length > 0) {
+  if (currentPage && newTextElements.length > 0) {
+    const {
+      pageImage: currentPageImg,
+      offsetX: currentPageOffsetX,
+      offsetY: currentPageOffsetY,
+    } = currentPage
+    const currentPageWidth = currentPageImg.naturalWidth
+    const currentPageHeight = currentPageImg.naturalHeight
     const newResults = await Promise.all(
       newTextElements.map(async (element) => {
         const isSelected = selectedElementIds.includes(element.id)

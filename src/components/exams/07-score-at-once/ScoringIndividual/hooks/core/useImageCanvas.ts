@@ -52,12 +52,13 @@ export function useImageCanvas({
   } = useCanvasRefs()
 
   // 画像読み込み
-  const { imageLoaded, loadedImages, loadedExamPageIds } = useImageLoader({
-    currentScoringData,
-    studentAnswerImages,
-    showMultiplePages,
-    imageRef,
-  })
+  const { imageLoaded, loadedImages, loadedExamPageIds, loadedExamStudentId } =
+    useImageLoader({
+      currentScoringData,
+      studentAnswerImages,
+      showMultiplePages,
+      imageRef,
+    })
 
   // 採点記号画像のプリロード
   useScoringMarks({
@@ -101,6 +102,8 @@ export function useImageCanvas({
     containerRef,
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
+    loadedExamStudentId,
     textBoundsCacheRef,
   }
 }

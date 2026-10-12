@@ -6,6 +6,10 @@ import {
   useScaleScoringGate,
 } from "@/components/exams/07-score-at-once/ScaleLevel/hooks/useScaleScoringGate"
 import { scoringStatusOfCall } from "@/components/exams/07-score-at-once/ScaleLevel/utils/scaleLevelAppearance"
+import {
+  guardOnMissingAnswerPage,
+  notifyMissingAnswerPage,
+} from "@/components/exams/07-score-at-once/ScoringMain/utils/missingAnswerPageGate"
 
 import { useBatchScoringWithProgress } from "./useBatchScoringWithProgress"
 import { useClickAndMouseScoring } from "./useClickAndMouseScoring"
@@ -25,6 +29,11 @@ interface UseGuardedScoringOptions {
   currentCropRegion: Parameters<typeof usePartialScore>[0]["currentCropRegion"]
   /** 今の設問の類型評価（類型評価の設問では、正答・誤答・部分点を付けず数字キーで類型を選ぶ） */
   scaleQuestion: ScaleQuestionState
+  /**
+   * 現在の設問のページが、個別表示中の答案に無いか（`AnswerIndividualView` が判定して伝える）。
+   * 無い間は採点を書き込まない。採点の後の自動進行もしない
+   */
+  isCurrentQuestionPageMissing: boolean
 }
 
 /**
@@ -33,6 +42,9 @@ interface UseGuardedScoringOptions {
  * 成績算出が使う試験は、試験ごとロックされる（layout の `GradeLockProvider`）。
  * 書き込みそのものは main が止めるが、採点の口はここでも包み、採点の後の自動進行や
  * モーダルまで止めて通知だけ出す。
+ *
+ * 個別表示で現在の設問のページが答案に無いときも、同じ口で止める（見えていない解答に
+ * 点を付けない）。移動・ズーム・パンはここを通らないので止まらない。
  */
 export function useGuardedScoring({
   scoringData,
@@ -40,16 +52,29 @@ export function useGuardedScoring({
   clickScoring,
   currentCropRegion,
   scaleQuestion,
+  isCurrentQuestionPageMissing,
 }: UseGuardedScoringOptions) {
   const { guard: guardScoring } = useGradeLock()
+  /**
+   * 採点の書き込みの包み: 成績算出のロックと、答案に設問のページが無いこと。
+   * 返す `guardScoring`（OMR の取り込みなど、表示中の答案に依らない口）はロックだけで包む
+   */
+  const guardScoringWrite = useMemo(() => {
+    const guardPage = guardOnMissingAnswerPage(
+      isCurrentQuestionPageMissing,
+      notifyMissingAnswerPage
+    )
+    return <Args extends unknown[]>(write: (...args: Args) => void) =>
+      guardScoring(guardPage(write))
+  }, [guardScoring, isCurrentQuestionPageMissing])
 
   const {
     handleBatchScore: handleBatchScoreUnguarded,
     calculateQuestionProgress,
   } = useScoringData(scoringData)
   const handleBatchScore = useMemo(
-    () => guardScoring(handleBatchScoreUnguarded),
-    [guardScoring, handleBatchScoreUnguarded]
+    () => guardScoringWrite(handleBatchScoreUnguarded),
+    [guardScoringWrite, handleBatchScoreUnguarded]
   )
 
   const {
@@ -69,14 +94,14 @@ export function useGuardedScoring({
     studentAnswerImages: scoringData.studentAnswerImages,
     scaleQuestion,
     applyWithProgress,
-    guardScoring,
+    guardScoring: guardScoringWrite,
   })
 
   // ロック中は採点しないだけでなく、採点の後の自動進行もさせない。
   // 類型評価の設問の正答・誤答・部分点は、書かず進みもしない
   const handleBatchScoreWithProgress = useMemo(
     () =>
-      guardScoring(
+      guardScoringWrite(
         (...args: Parameters<typeof handleBatchScoreWithProgressUnguarded>) => {
           if (blocksStatusOnScale(scoringStatusOfCall(args[0], args[1]))) {
             return
@@ -84,7 +109,11 @@ export function useGuardedScoring({
           handleBatchScoreWithProgressUnguarded(...args)
         }
       ),
-    [guardScoring, handleBatchScoreWithProgressUnguarded, blocksStatusOnScale]
+    [
+      guardScoringWrite,
+      handleBatchScoreWithProgressUnguarded,
+      blocksStatusOnScale,
+    ]
   )
 
   const {
@@ -105,16 +134,16 @@ export function useGuardedScoring({
   // 類型評価の設問は部分点を持たないので開かない
   const openPartialScoreModal = useMemo(
     () =>
-      guardScoring((targetAnswers?: Set<string>) => {
+      guardScoringWrite((targetAnswers?: Set<string>) => {
         if (blocksStatusOnScale("partial")) return
         openPartialScoreModalUnguarded(targetAnswers)
       }),
-    [guardScoring, openPartialScoreModalUnguarded, blocksStatusOnScale]
+    [guardScoringWrite, openPartialScoreModalUnguarded, blocksStatusOnScale]
   )
   // 数字キーは、類型評価の設問では類型を選び（1 が先頭）、ほかの設問では部分点の入力を始める
   const handlePartialScoreInput = useMemo(
     () =>
-      guardScoring((key: string) => {
+      guardScoringWrite((key: string) => {
         if (isScaleQuestion) {
           applyScaleLevelOfDigit(key)
           return
@@ -122,7 +151,7 @@ export function useGuardedScoring({
         handlePartialScoreInputUnguarded(key)
       }),
     [
-      guardScoring,
+      guardScoringWrite,
       isScaleQuestion,
       applyScaleLevelOfDigit,
       handlePartialScoreInputUnguarded,
@@ -138,7 +167,7 @@ export function useGuardedScoring({
   const { setRecentlyScoredAnswers } = progress
   const scoreAnswers = useMemo(
     () =>
-      guardScoring(
+      guardScoringWrite(
         (
           status: Parameters<typeof handleBatchScoreUnguarded>[0],
           answerIds: string[]
@@ -153,7 +182,7 @@ export function useGuardedScoring({
         }
       ),
     [
-      guardScoring,
+      guardScoringWrite,
       handleBatchScoreUnguarded,
       setRecentlyScoredAnswers,
       blocksStatusOnScale,

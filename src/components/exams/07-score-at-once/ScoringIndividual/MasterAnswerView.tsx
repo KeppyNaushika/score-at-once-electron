@@ -1,20 +1,15 @@
 "use client"
 
 import Image from "next/image"
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { forwardRef, useCallback, useEffect, useRef } from "react"
+
+import { useMasterOverlayImages } from "./hooks/view/useMasterOverlayImages"
+import type { AnswerPageSize, MasterPageImage } from "./types"
+import { placeMasterPagesOnAnswer } from "./utils/canvasPageLayout"
 
 interface MasterAnswerViewProps {
-  /** 模範解答の画像URL（単一ページ用、後方互換） */
-  masterImageUrl?: string | null
-  /** 全ページの模範解答画像URL（ページ番号順） */
-  masterImageUrls?: string[]
+  /** 全ページの模範解答画像（ページ番号順。答案のページとは examPageId で対応させる） */
+  masterPages: MasterPageImage[]
   /** ズーム倍率（答案ビューと同期） */
   zoom: number
   /** overlay時の不透明度（0-100） */
@@ -26,13 +21,10 @@ interface MasterAnswerViewProps {
   /** ページ間隔（答案ビューと一致させる） */
   pageSpacing?: number
   /**
-   * 答案側の画像サイズ（参照サイズ）
-   * 模範解答と答案の画素数が異なる場合、答案側のサイズに合わせて描画する
+   * 答案側の読み込んだページの大きさ（参照サイズ）
+   * 模範解答の各ページを、答案の同じページ（examPageId）の位置と大きさで描く
    */
-  referenceImageSize?: {
-    width: number
-    heights: number[]
-  }
+  answerPageSizes?: AnswerPageSize[]
   /** 答案側のスクロールコンテナRef（wheelイベント転送用） */
   answerScrollRef?: React.RefObject<HTMLDivElement | null>
 }
@@ -46,25 +38,19 @@ export const MasterAnswerView = forwardRef<
   MasterAnswerViewProps
 >(function MasterAnswerView(
   {
-    masterImageUrl,
-    masterImageUrls,
+    masterPages,
     zoom,
     opacity = 50,
     isOverlay = false,
     visible = true,
     pageSpacing = 20,
-    referenceImageSize,
+    answerPageSizes,
     answerScrollRef,
   },
   ref
 ) {
-  // 単一URLも配列に揃える。毎レンダー新しい配列を作ると読み込みeffectが回り続けるため
-  // memo 化し、呼び出し側（ScoringMainView）が渡す安定した参照をそのまま活かす
-  const urls = useMemo(
-    () => masterImageUrls ?? (masterImageUrl ? [masterImageUrl] : []),
-    [masterImageUrls, masterImageUrl]
-  )
-  const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
+  // 読み込めなかったページは飛ばす（ページは examPageId で答案と対応させるので、後ろはずれない）
+  const loadedMasterPages = useMasterOverlayImages(masterPages)
   const internalRef = useRef<HTMLDivElement>(null)
 
   // refを内部refと統合
@@ -79,41 +65,6 @@ export const MasterAnswerView = forwardRef<
     },
     [ref]
   )
-
-  // 全ページの画像を読み込み
-  useEffect(() => {
-    if (urls.length === 0) {
-      setLoadedImages([])
-      return
-    }
-    let cancelled = false
-    const loadAll = async () => {
-      const results = await Promise.allSettled(
-        urls.map(
-          (url) =>
-            new Promise<HTMLImageElement>((resolve, reject) => {
-              const image = document.createElement("img")
-              image.onload = () => resolve(image)
-              image.onerror = reject
-              image.src = url
-            })
-        )
-      )
-      if (cancelled) return
-      setLoadedImages(
-        results
-          .filter(
-            (result): result is PromiseFulfilledResult<HTMLImageElement> =>
-              result.status === "fulfilled"
-          )
-          .map((result) => result.value)
-      )
-    }
-    loadAll()
-    return () => {
-      cancelled = true
-    }
-  }, [urls])
 
   // ホイールズーム: Ctrl/Meta + ホイールを答案側コンテナに転送
   // 答案側の既存のwheelハンドラがzoom計算を行い、onZoomChanged経由で同期される
@@ -158,7 +109,7 @@ export const MasterAnswerView = forwardRef<
     return () => container.removeEventListener("wheel", handleWheel)
   }, [answerScrollRef])
 
-  if (urls.length === 0) {
+  if (masterPages.length === 0) {
     if (isOverlay) return null
     return (
       <div className="flex h-full items-center justify-center bg-gray-50 text-gray-400">
@@ -167,26 +118,34 @@ export const MasterAnswerView = forwardRef<
     )
   }
 
-  const refWidth = referenceImageSize?.width
-  const refHeights = referenceImageSize?.heights
+  // 答案に合わせて並べる。答案がまだ無い間は模範解答を自分の大きさで積む。
+  // 答案に無いページの模範解答は並べない（答案側は「ある分だけ」を詰めて積むので、
+  // 空けると答案とのスクロール同期で位置がずれる）
+  const layoutPageSizes: AnswerPageSize[] =
+    answerPageSizes && answerPageSizes.length > 0
+      ? answerPageSizes
+      : loadedMasterPages.map((loadedMasterPage) => ({
+          examPageId: loadedMasterPage.examPageId,
+          width: loadedMasterPage.image.naturalWidth,
+          height: loadedMasterPage.image.naturalHeight,
+        }))
+  const masterPagePlacements = placeMasterPagesOnAnswer(
+    loadedMasterPages,
+    layoutPageSizes,
+    pageSpacing
+  )
 
-  const contentWidth = refWidth ?? (loadedImages[0]?.naturalWidth || 800)
+  const contentWidth = layoutPageSizes[0]?.width || 800
   const contentHeight =
-    refHeights && refHeights.length > 0
-      ? refHeights.reduce(
-          (total, h, index) =>
-            total + h + (index < refHeights.length - 1 ? pageSpacing : 0),
+    layoutPageSizes.length > 0
+      ? layoutPageSizes.reduce(
+          (total, layoutPageSize, pageIndex) =>
+            total +
+            layoutPageSize.height +
+            (pageIndex < layoutPageSizes.length - 1 ? pageSpacing : 0),
           0
         )
-      : loadedImages.length > 0
-        ? loadedImages.reduce(
-            (total, image, index) =>
-              total +
-              image.naturalHeight +
-              (index < loadedImages.length - 1 ? pageSpacing : 0),
-            0
-          )
-        : 600
+      : 600
 
   return (
     <div
@@ -215,44 +174,30 @@ export const MasterAnswerView = forwardRef<
           minHeight: "100%",
         }}
       >
-        {loadedImages.map((image, pageIndex) => {
-          const displayWidth = refWidth ?? image.naturalWidth
-          const displayHeight =
-            refHeights && refHeights[pageIndex] !== undefined
-              ? refHeights[pageIndex]
-              : image.naturalHeight
-
-          let offsetY = 0
-          for (let i = 0; i < pageIndex; i++) {
-            const h =
-              refHeights && refHeights[i] !== undefined
-                ? refHeights[i]
-                : loadedImages[i]?.naturalHeight || 0
-            offsetY += h + pageSpacing
-          }
-
-          return (
+        {masterPagePlacements.map(
+          ({ masterPage, left, top, width, height }) => (
             <Image
-              key={`master-page-${pageIndex}`}
-              src={image.src}
-              alt={`模範解答 ページ${pageIndex + 1}`}
-              width={displayWidth}
-              height={displayHeight}
+              key={masterPage.examPageId}
+              src={masterPage.image.src}
+              alt="模範解答"
+              width={width}
+              height={height}
               unoptimized
               // appimg:// は next/image の既定で lazy になる。ページを並べて
               // 表示する領域にあり、素の <img> は eager だった
               loading="eager"
-              className="pointer-events-none absolute left-0 block"
+              className="pointer-events-none absolute block"
               style={{
-                top: `${offsetY * zoom}px`,
-                width: `${displayWidth * zoom}px`,
-                height: `${displayHeight * zoom}px`,
+                left: `${left * zoom}px`,
+                top: `${top * zoom}px`,
+                width: `${width * zoom}px`,
+                height: `${height * zoom}px`,
                 imageRendering: "pixelated",
               }}
               draggable={false}
             />
           )
-        })}
+        )}
       </div>
 
       {isOverlay && visible && (

@@ -22,6 +22,19 @@ export type LineEditMode = "move" | "start" | "end" | null
 // 矩形の編集モード
 export type RectangleEditMode = "move" | "resize" | null
 
+/** 模範解答の1ページ（どのページか と 画像のURL） */
+export interface MasterPageImage {
+  examPageId: string
+  imageUrl: string
+}
+
+/** 読み込んだ答案の1ページの大きさ（積んだキャンバスの並び順。ページは examPageId で同定） */
+export interface AnswerPageSize {
+  examPageId: string
+  width: number
+  height: number
+}
+
 // AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
   // Individual表示専用データ引数（単一データの詳細表示）
@@ -49,8 +62,8 @@ export interface AnswerIndividualViewProps {
   annotationRefreshKey?: number
 
   // 模範解答表示（ズーム・スクロール同期のため内部で描画）
-  /** 全ページの模範解答画像URL（ページ番号順） */
-  masterOverlayImageUrls?: string[]
+  /** 全ページの模範解答画像（ページ番号順。答案のページとは examPageId で対応させる） */
+  masterOverlayPages?: MasterPageImage[]
   masterOverlayOpacity?: number
   masterOverlayVisible?: boolean
   /** 模範解答表示モード（overlay のみ内部描画） */
@@ -59,8 +72,13 @@ export interface AnswerIndividualViewProps {
   onZoomChanged?: (zoom: number) => void
   /** スクロールコンテナのRef公開（split表示のscroll同期用） */
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>
-  /** 読み込み済み画像サイズ通知（split表示のMasterパネルで参照サイズとして使用） */
-  onImageSizeChanged?: (size: { width: number; heights: number[] }) => void
+  /** 読み込み済みの答案ページの大きさ通知（split表示のMasterパネルで参照サイズとして使用） */
+  onImageSizeChanged?: (answerPageSizes: AnswerPageSize[]) => void
+  /**
+   * 現在の設問のページがこの生徒の答案に無いかの通知（無い間は採点を止める）。
+   * 画像の読み込み中など判定できない間は false
+   */
+  onCurrentQuestionPageMissingChange?: (isPageMissing: boolean) => void
   /** 模範解答の用紙サイズ（mm→px変換基準、デフォルト: "A4"） */
   pageSize?: string
 }

@@ -21,10 +21,11 @@ import {
 import type { CropRegionWithStatus } from "../hooks/core/types"
 import type { useDrawingRenderer } from "../hooks/core/useDrawingRenderer"
 import {
+  loadedPageIndexOfCropRegion,
   pageIndexByCropRegionId,
-  pageIndexOfCropRegion,
   pageOffsetX,
   pageOffsetY,
+  pagePlacementAt,
   stackedCanvasSize,
 } from "./canvasPageLayout"
 import { drawCropRegionMarks } from "./drawCropRegionMarks"
@@ -33,6 +34,8 @@ interface MainCanvasParams {
   pageSpacing: number
   zoom: number
   pageSize: string
+  /** images と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: readonly string[]
   /** ページごとの、塗りつぶす氏名欄（images と同じ並び。匿名採点中でなければ空） */
   nameRegionsByPageIndex: readonly (readonly Rect[])[]
   currentCropRegion: QuestionAnswerRegionRow | null | undefined
@@ -60,6 +63,7 @@ export function drawMainCanvas(
     pageSpacing,
     zoom,
     pageSize,
+    loadedExamPageIds,
     nameRegionsByPageIndex,
     currentCropRegion,
     currentCropRegionId,
@@ -123,7 +127,7 @@ export function drawMainCanvas(
     {
       ctx,
       images,
-      canvasWidth,
+      loadedExamPageIds,
       pageSpacing,
       zoom,
       pageSize,
@@ -133,20 +137,21 @@ export function drawMainCanvas(
     { allCropRegionsWithStatus, currentCropRegion, currentScoringData }
   )
 
-  // cropRegionId → pageIndex のルックアップマップ
+  // cropRegionId → pageIndex のルックアップマップ（答案に無いページの設問は入らない）
   const cropRegionPageIndexMap = pageIndexByCropRegionId(
     allCropRegionsWithStatus,
-    images.length
+    loadedExamPageIds
   )
 
-  // 現在設問のページオフセットを計算
-  const currentPageIndex = pageIndexOfCropRegion(
+  // 現在設問のページ（答案に無ければ null。現在設問の描画要素・選択範囲は描かない）
+  const currentPageIndex = loadedPageIndexOfCropRegion(
     currentCropRegion,
-    images.length
+    loadedExamPageIds
   )
-  const currentPageImg = images[currentPageIndex] || images[0]
-  const currentOffsetX = pageOffsetX(canvasWidth, currentPageImg)
-  const currentOffsetY = pageOffsetY(images, currentPageIndex, pageSpacing)
+  const currentPage =
+    currentPageIndex === null
+      ? null
+      : pagePlacementAt(images, currentPageIndex, pageSpacing)
 
   const isAnyElementDragging =
     isElementDragging && selectedElementIds.length > 0
@@ -162,25 +167,27 @@ export function drawMainCanvas(
         continue
       }
 
-      // アノテーションが属するページのオフセットを計算
-      const annotPageIndex =
-        cropRegionPageIndexMap.get(
-          annotation.questionScore?.cropRegionId || ""
-        ) ?? 0
-      const annotPageImg = images[annotPageIndex] || images[0]
+      // アノテーションが属するページ（設問のページが答案に無ければ描かない）
+      const annotPageIndex = cropRegionPageIndexMap.get(
+        annotation.questionScore?.cropRegionId ?? ""
+      )
+      if (annotPageIndex === undefined) continue
+      const annotPage = pagePlacementAt(images, annotPageIndex, pageSpacing)
 
       ctx.globalAlpha = 0.5
       drawSingleElement(
         ctx,
         annotation,
-        annotPageImg,
-        pageOffsetX(canvasWidth, annotPageImg),
-        pageOffsetY(images, annotPageIndex, pageSpacing),
+        annotPage.pageImage,
+        annotPage.offsetX,
+        annotPage.offsetY,
         pageSize
       )
       ctx.globalAlpha = 1.0
     }
   }
+
+  if (!currentPage) return
 
   // 現在設問の描画要素（テキスト以外）
   for (const element of drawingElements) {
@@ -193,9 +200,9 @@ export function drawMainCanvas(
     drawSingleElement(
       ctx,
       element,
-      currentPageImg,
-      currentOffsetX,
-      currentOffsetY,
+      currentPage.pageImage,
+      currentPage.offsetX,
+      currentPage.offsetY,
       pageSize
     )
     ctx.globalAlpha = 1.0
@@ -209,12 +216,11 @@ export function drawMainCanvas(
     ctx.lineWidth = 1
     ctx.globalAlpha = 0.6
 
-    const rectX =
-      selectionRectangle.x * currentPageImg.naturalWidth + currentOffsetX
-    const rectY =
-      selectionRectangle.y * currentPageImg.naturalHeight + currentOffsetY
-    const rectWidth = selectionRectangle.width * currentPageImg.naturalWidth
-    const rectHeight = selectionRectangle.height * currentPageImg.naturalHeight
+    const { pageImage, offsetX, offsetY } = currentPage
+    const rectX = selectionRectangle.x * pageImage.naturalWidth + offsetX
+    const rectY = selectionRectangle.y * pageImage.naturalHeight + offsetY
+    const rectWidth = selectionRectangle.width * pageImage.naturalWidth
+    const rectHeight = selectionRectangle.height * pageImage.naturalHeight
 
     ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
 

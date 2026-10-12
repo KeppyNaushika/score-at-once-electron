@@ -195,6 +195,7 @@ function ScoringKeys({
     },
     currentCropRegion: cropRegion,
     scaleQuestion: scale,
+    isCurrentQuestionPageMissing: false,
   })
   useScoringShortcuts({
     handleToggleStudentNames: noop,

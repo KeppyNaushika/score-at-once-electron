@@ -14,6 +14,10 @@ import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
+import {
+  guardOnMissingAnswerPage,
+  notifyMissingAnswerPage,
+} from "@/components/exams/07-score-at-once/ScoringMain/utils/missingAnswerPageGate"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { setRubricApplicationsMutation } from "@/queries/rubric"
 
@@ -39,6 +43,8 @@ interface UseRubricApplyingOptions {
   onScored?: (examStudentIds: string[]) => void
   /** 当てる・外したマスの助言の朱書きを合わせる */
   syncAdviceRows: ReturnType<typeof useRubricAdviceSync>["syncRows"]
+  /** 個別表示で、現在の設問のページが答案に無いか（無い間は当てない・上書きを解除しない） */
+  isAnswerPageMissing: boolean
 }
 
 export function useRubricApplying({
@@ -47,6 +53,7 @@ export function useRubricApplying({
   selectedCells,
   onScored,
   syncAdviceRows,
+  isAnswerPageMissing,
 }: UseRubricApplyingOptions) {
   const { readRubricItems, writeScores, writeComputedScores } =
     useRubricScoreWriting(examId, cropRegion)
@@ -115,13 +122,17 @@ export function useRubricApplying({
     }
   }, [selectedCells, cropRegion, readRubricItems, writeScores, onScored])
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    // 見えていない解答に点を付けないよう、答案に設問のページが無い間も止める
+    const guardPage = guardOnMissingAnswerPage(
+      isAnswerPageMissing,
+      notifyMissingAnswerPage
+    )
+    return {
       toggleItem: guard(
-        (rubricItemId: string) => void toggleItem(rubricItemId)
+        guardPage((rubricItemId: string) => void toggleItem(rubricItemId))
       ),
-      clearOverrides: guard(() => void clearOverrides()),
-    }),
-    [guard, toggleItem, clearOverrides]
-  )
+      clearOverrides: guard(guardPage(() => void clearOverrides())),
+    }
+  }, [guard, isAnswerPageMissing, toggleItem, clearOverrides])
 }

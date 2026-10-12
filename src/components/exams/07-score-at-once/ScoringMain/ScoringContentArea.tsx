@@ -12,6 +12,10 @@ import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/Answ
 import AnswerIndividualView from "@/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView"
 import { MasterAnswerView } from "@/components/exams/07-score-at-once/ScoringIndividual/MasterAnswerView"
 import type {
+  AnswerPageSize,
+  MasterPageImage,
+} from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type {
   GradingMode,
   LayoutDirection,
   MasterAnswerDisplayMode,
@@ -23,6 +27,9 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
+
+/** 模範解答が無いときの空の並び（毎回作り直すと模範解答の読み込みが回り直す） */
+const NO_MASTER_PAGES: MasterPageImage[] = []
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
@@ -51,7 +58,10 @@ interface ScoringContentAreaProps {
   masterAnswerDisplayMode?: MasterAnswerDisplayMode
   masterAnswerOpacity?: number
   masterAnswerVisible?: boolean
-  allMasterImageUrls?: string[]
+  /** 全ページの模範解答画像（ページ番号順。答案とは examPageId で対応させる） */
+  masterPageImages?: MasterPageImage[]
+  /** 個別表示で、現在の設問のページが答案に無いかの通知（採点の口を止める） */
+  onCurrentQuestionPageMissingChange?: (isPageMissing: boolean) => void
   pageSize?: string
   onClickScoring?: (answerId: string, clickCount: number) => void
   clickScoringDebounceMs?: number
@@ -96,7 +106,8 @@ export function ScoringContentArea({
   masterAnswerDisplayMode = "off",
   masterAnswerOpacity = 50,
   masterAnswerVisible = false,
-  allMasterImageUrls,
+  masterPageImages,
+  onCurrentQuestionPageMissingChange,
   pageSize = "A4",
   onClickScoring,
   clickScoringDebounceMs,
@@ -117,10 +128,9 @@ export function ScoringContentArea({
 
   // ===== split用: zoom同期 + 画像サイズ同期 =====
   const [syncedZoom, setSyncedZoom] = useState(1)
-  const [answerImageSize, setAnswerImageSize] = useState<{
-    width: number
-    heights: number[]
-  } | null>(null)
+  const [answerPageSizes, setAnswerPageSizes] = useState<
+    AnswerPageSize[] | null
+  >(null)
   const answerScrollRef = useRef<HTMLDivElement | null>(null)
   const masterScrollRef = useRef<HTMLDivElement>(null)
 
@@ -129,8 +139,8 @@ export function ScoringContentArea({
   }, [])
 
   const handleImageSizeChanged = useCallback(
-    (size: { width: number; heights: number[] }) => {
-      setAnswerImageSize(size)
+    (loadedAnswerPageSizes: AnswerPageSize[]) => {
+      setAnswerPageSizes(loadedAnswerPageSizes)
     },
     []
   )
@@ -278,13 +288,14 @@ export function ScoringContentArea({
       onAnnotationChanged={onAnnotationChanged}
       annotationRefreshKey={annotationRefreshKey}
       // overlay
-      masterOverlayImageUrls={isOverlay ? allMasterImageUrls : undefined}
+      masterOverlayPages={isOverlay ? masterPageImages : undefined}
       masterOverlayOpacity={masterAnswerOpacity}
       masterOverlayVisible={isOverlay && showMaster}
       masterDisplayMode={isOverlay ? "overlay" : undefined}
       // zoom・画像サイズ通知は常に有効
       onZoomChanged={handleZoomChanged}
       onImageSizeChanged={handleImageSizeChanged}
+      onCurrentQuestionPageMissingChange={onCurrentQuestionPageMissingChange}
       scrollContainerRef={answerScrollRef}
       pageSize={pageSize}
     />
@@ -322,9 +333,9 @@ export function ScoringContentArea({
               </div>
               <MasterAnswerView
                 ref={masterScrollRef}
-                masterImageUrls={allMasterImageUrls}
+                masterPages={masterPageImages ?? NO_MASTER_PAGES}
                 zoom={syncedZoom}
-                referenceImageSize={answerImageSize ?? undefined}
+                answerPageSizes={answerPageSizes ?? undefined}
                 answerScrollRef={answerScrollRef}
               />
             </>

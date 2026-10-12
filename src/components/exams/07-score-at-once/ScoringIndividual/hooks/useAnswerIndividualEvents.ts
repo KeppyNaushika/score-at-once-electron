@@ -6,6 +6,7 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   AnnotationTarget,
   DrawingAnnotation,
@@ -24,7 +25,6 @@ interface UseAnswerDisplayEventsProps {
   // Canvas and container refs
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   containerRef: React.RefObject<HTMLDivElement | null>
-  imageRef: React.RefObject<HTMLImageElement | null>
 
   // Display state
   zoom: number
@@ -34,6 +34,10 @@ interface UseAnswerDisplayEventsProps {
   imageLoaded: boolean
   // 複数ページ対応
   loadedImages?: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds?: string[]
+  /** 現在の設問領域（描画要素の座標はこの設問のページを基準にする） */
+  currentCropRegion?: QuestionAnswerRegionRow | null
   pageSpacing?: number
 
   // Drawing state
@@ -124,8 +128,7 @@ interface UseAnswerDisplayEventsProps {
 
 /** 個別採点キャンバスのポインタイベントを各ツール（選択・描画・ハンド）に振り分けるフック */
 export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
-  const { canvasRef, containerRef, imageRef, zoom, onZoomChange, imageLoaded } =
-    props
+  const { canvasRef, containerRef, zoom, onZoomChange, imageLoaded } = props
 
   // Initialize hit test utilities（ズームを渡して画面上の当たり判定サイズを一定に）
   const { hitTestElement, hitTestHandle } = useHitTestUtils({
@@ -140,9 +143,10 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   const { getImageCoordinatesFromEvent, getScreenCoordinatesFromEvent } =
     useCoordinates({
       canvasRef,
-      imageRef,
       zoom,
       loadedImages: props.loadedImages,
+      loadedExamPageIds: props.loadedExamPageIds,
+      currentCropRegion: props.currentCropRegion,
       pageSpacing: props.pageSpacing,
     })
 
@@ -234,14 +238,17 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     (e: React.PointerEvent) => {
       if (!imageLoaded) return
 
+      // ハンドツールは画面座標だけで動く（設問のページが答案に無くてもパンできる）
+      if (props.currentTool === "hand") {
+        handleHandToolMouseDown(getScreenCoordinatesFromEvent(e))
+        return
+      }
+
       const imageCoords = getImageCoordinatesFromEvent(e)
       if (!imageCoords) return
 
       // Delegate to appropriate handler based on current tool
-      if (props.currentTool === "hand") {
-        const screenCoords = getScreenCoordinatesFromEvent(e)
-        handleHandToolMouseDown(screenCoords)
-      } else if (props.currentTool === "select") {
+      if (props.currentTool === "select") {
         if (handleSelectionMouseDown(imageCoords, e.nativeEvent)) return
       } else {
         handleNewDrawingMouseDown(imageCoords)
@@ -262,6 +269,12 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     (e: React.PointerEvent) => {
       if (!imageLoaded) return
 
+      // handツールでのドラッグ（パン操作）。画面座標だけで動く
+      if (props.currentTool === "hand") {
+        if (props.isDraggingElement) handleHandToolMouseMove(e)
+        return
+      }
+
       const imageCoords = getImageCoordinatesFromEvent(e)
       if (!imageCoords) return
 
@@ -269,9 +282,6 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       if (props.currentTool === "select") {
         // 選択ツールでの操作（要素移動・選択範囲ドラッグ）
         if (handleSelectionMouseMove(imageCoords)) return
-      } else if (props.currentTool === "hand" && props.isDraggingElement) {
-        // handツールでのドラッグ（パン操作）
-        handleHandToolMouseMove(e)
       } else {
         // 描画ツールでの操作
         handleNewDrawingMouseMove(imageCoords)

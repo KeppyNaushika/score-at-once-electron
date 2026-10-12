@@ -75,6 +75,10 @@ export interface UseImageCanvasReturn {
   containerRef: React.RefObject<HTMLDivElement | null>
   imageLoaded: boolean
   loadedImages: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: string[]
+  /** 読み込んだ画像の受験者（生徒を切り替えた直後の読み込み中は前の生徒のまま） */
+  loadedExamStudentId: string | null
   textBoundsCacheRef: React.MutableRefObject<
     Map<string, { x: number; y: number; width: number; height: number }>
   >
@@ -103,4 +107,6 @@ export interface ImageLoaderReturn {
   loadedImages: HTMLImageElement[]
   /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
   loadedExamPageIds: string[]
+  /** 読み込んだ画像の受験者（生徒を切り替えた直後の読み込み中は前の生徒のまま） */
+  loadedExamStudentId: string | null
 }

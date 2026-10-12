@@ -16,7 +16,10 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import type { CropRegionWithStatus } from "../hooks/core/types"
 import { getScoringMarkKey } from "../hooks/core/useScoringMarks"
-import { pageOffsetX, pageOffsetY } from "./canvasPageLayout"
+import {
+  loadedPageIndexOfCropRegion,
+  pagePlacementAt,
+} from "./canvasPageLayout"
 
 // 透明度定数
 const CURRENT_OPACITY = 0.8
@@ -25,7 +28,8 @@ const OTHER_OPACITY = 0.4
 interface CropRegionMarksParams {
   ctx: CanvasRenderingContext2D
   images: HTMLImageElement[]
-  canvasWidth: number
+  /** images と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: readonly string[]
   pageSpacing: number
   zoom: number
   /** 試験の用紙サイズ。重ねる要素の mm を画素へ換算する基準（注釈と同じもの） */
@@ -35,7 +39,8 @@ interface CropRegionMarksParams {
 }
 
 /**
- * 他の設問を先に半透明で描き、現在の設問を最後に前面へ描く
+ * 他の設問を先に半透明で描き、現在の設問を最後に前面へ描く。
+ * その生徒の答案に設問のページが無ければ、その設問は描かない
  */
 export function drawCropRegionMarks(
   params: CropRegionMarksParams,
@@ -94,7 +99,7 @@ function drawCropRegionMark(
   {
     ctx,
     images,
-    canvasWidth,
+    loadedExamPageIds,
     pageSpacing,
     zoom,
     pageSize,
@@ -107,16 +112,15 @@ function drawCropRegionMark(
   actualScore: number | null,
   scaleLevelLabel: string | null
 ): void {
-  const regionPageNumber = region.examPage?.pageNumber || 1
-  const regionPageIndex = regionPageNumber - 1
+  // 設問のページは examPageId で決める（答案に無いページの設問は描かない）
+  const regionPageIndex = loadedPageIndexOfCropRegion(region, loadedExamPageIds)
+  if (regionPageIndex === null) return
 
-  if (regionPageIndex < 0 || regionPageIndex >= images.length) return
-
-  const image = images[regionPageIndex]
-  if (!image) return
-
-  const offsetX = pageOffsetX(canvasWidth, image)
-  const offsetY = pageOffsetY(images, regionPageIndex, pageSpacing)
+  const {
+    pageImage: image,
+    offsetX,
+    offsetY,
+  } = pagePlacementAt(images, regionPageIndex, pageSpacing)
 
   const regionRect = {
     x: region.x * image.naturalWidth + offsetX,

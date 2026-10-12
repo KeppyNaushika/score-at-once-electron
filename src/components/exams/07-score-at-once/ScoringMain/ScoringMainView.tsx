@@ -34,7 +34,6 @@ function ScoringMainViewContent() {
   /** AI採点（実験的機能）を解放した事業者。1つも無ければ「AI採点」モードは出ない */
   const { unlockedProviders } = useAiGradingAvailability()
   const {
-    allMasterImageUrls,
     applyScaleLevel,
     assignmentScope,
     allScoringData,
@@ -61,6 +60,7 @@ function ScoringMainViewContent() {
     handleBatchScoreVisibleUnscored,
     handleBatchScoreWithProgress,
     handleClickScoring,
+    handleCurrentQuestionPageMissingChange,
     handleGridNavigation,
     handleItemsPerLineChange,
     handleMasterAnswerHide,
@@ -81,6 +81,7 @@ function ScoringMainViewContent() {
     handleToggleFilter,
     handleToggleMasterAnswer,
     hiddenUnscoredCount,
+    isCurrentQuestionPageMissing,
     isQuestionSetFiltered,
     isWhitenessPending,
     isWhitenessReady,
@@ -92,6 +93,7 @@ function ScoringMainViewContent() {
     masterAnswerKeyBehavior,
     masterAnswerOpacity,
     masterAnswerVisible,
+    masterPageImages,
     mouseBrush,
     openPartialScoreModal,
     pageSize,
@@ -297,6 +299,7 @@ function ScoringMainViewContent() {
               scoringDatas={allScoringData}
               pageSize={pageSize}
               onAnnotationsChanged={handleAnnotationsChangedElsewhere}
+              isAnswerPageMissing={isCurrentQuestionPageMissing}
             />
           )}
           <div className="min-w-0 flex-1">
@@ -328,7 +331,10 @@ function ScoringMainViewContent() {
               masterAnswerDisplayMode={masterAnswerDisplayMode}
               masterAnswerOpacity={masterAnswerOpacity}
               masterAnswerVisible={masterAnswerVisible}
-              allMasterImageUrls={allMasterImageUrls}
+              masterPageImages={masterPageImages}
+              onCurrentQuestionPageMissingChange={
+                handleCurrentQuestionPageMissingChange
+              }
               pageSize={pageSize}
               onClickScoring={handleClickScoring}
               clickScoringDebounceMs={clickScoringDebounceMs}

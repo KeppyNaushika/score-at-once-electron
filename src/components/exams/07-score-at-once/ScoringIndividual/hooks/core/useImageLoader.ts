@@ -28,6 +28,14 @@ interface LoadedAnswerPage {
   examPageId: string
 }
 
+/** 読み込んだ答案（どの受験者のものかと、そのページ） */
+interface LoadedAnswer {
+  examStudentId: string | null
+  pages: LoadedAnswerPage[]
+}
+
+const NO_LOADED_ANSWER: LoadedAnswer = { examStudentId: null, pages: [] }
+
 /**
  * 画像読み込みを管理するフック
  */
@@ -38,7 +46,8 @@ export function useImageLoader({
   imageRef,
 }: UseImageLoaderProps): ImageLoaderReturn {
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [loadedPages, setLoadedPages] = useState<LoadedAnswerPage[]>([])
+  const [loadedAnswer, setLoadedAnswer] =
+    useState<LoadedAnswer>(NO_LOADED_ANSWER)
 
   // 画像読み込み処理（Grid Viewと同じロジックを使用）
   useEffect(() => {
@@ -119,12 +128,13 @@ export function useImageLoader({
 
       try {
         const loadedImageArray = await Promise.all(loadPromises)
-        setLoadedPages(
-          loadedImageArray.map((image, index) => ({
+        setLoadedAnswer({
+          examStudentId: currentScoringData.examStudentId,
+          pages: loadedImageArray.map((image, index) => ({
             image,
             examPageId: imagesToLoad[index].examPageId,
-          }))
-        )
+          })),
+        })
         setImageLoaded(true)
 
         // 隠しimg要素に最初の画像のsrcを設定（座標計算用）
@@ -149,7 +159,10 @@ export function useImageLoader({
         const successfulImages = successfulPages.map((page) => page.image)
 
         if (successfulImages.length > 0) {
-          setLoadedPages(successfulPages)
+          setLoadedAnswer({
+            examStudentId: currentScoringData.examStudentId,
+            pages: successfulPages,
+          })
           setImageLoaded(true)
 
           // 隠しimg要素に最初の画像のsrcを設定（部分読み込みの場合）
@@ -169,17 +182,18 @@ export function useImageLoader({
   }, [currentScoringData, studentAnswerImages, showMultiplePages, imageRef])
 
   const loadedImages = useMemo(
-    () => loadedPages.map((page) => page.image),
-    [loadedPages]
+    () => loadedAnswer.pages.map((page) => page.image),
+    [loadedAnswer]
   )
   const loadedExamPageIds = useMemo(
-    () => loadedPages.map((page) => page.examPageId),
-    [loadedPages]
+    () => loadedAnswer.pages.map((page) => page.examPageId),
+    [loadedAnswer]
   )
 
   return {
     imageLoaded,
     loadedImages,
     loadedExamPageIds,
+    loadedExamStudentId: loadedAnswer.examStudentId,
   }
 }
