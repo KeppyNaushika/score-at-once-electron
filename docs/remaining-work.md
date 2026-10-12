@@ -126,23 +126,23 @@ TypeError: designSystem.canonicalizeCandidates is not a function
 ## 重複の整理 — 残り
 
 jscpd（`--min-tokens 80 --min-lines 12`、テスト・生成物・`bundledMigrations.ts` を除く）で
-重複を探して片付けている。済んだぶんは #1458・#1461・#1467 にある（重複の割合は 0.94% から
-0.47% へ下がり、その後の #1467 でさらに減った）。**まとめる前に必ず画面ごとの挙動の差を洗い出し、
-黙ってどちらかへ寄せない**——これまでの整理で見つかった不具合の多くは、その差だった。
+重複を探して片付けている。済んだぶんは #1458・#1461・#1467・#1480 にある（重複の割合は 0.94% から
+0.22% へ下がった）。**まとめる前に必ず画面ごとの挙動の差を洗い出し、黙ってどちらかへ寄せない**
+——これまでの整理で見つかった不具合の多くは、その差だった。
 
 ### 残っている重複
 
-| 対象                                                                                                                         | 見立て                                                                         |
-| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `help/page-specific/07-scoring/` の `IndividualScoringDemo` と `ScoringGridDemo`（約130行）                                  | 使い方ガイドの説明アニメ。実処理に関わらないので後回し                         |
-| `hszConverter.ts` と `datConverter.ts`（約90行）                                                                             | 外部形式の変換。`.score` の zip を組み立てる部分と小計の生成。変える頻度が低い |
-| `archive-import/` の `CourseworkImportDialog` と `GradeImportDialog`（約60行）                                               | 凍結した旧形式の読み込み。手を入れる価値が低い                                 |
-| `answer-sheet-builder/components/form/` の `LineStylePicker` と `OMRMarkerSettings`（約50行）                                | 小さい                                                                         |
-| ファイル内の自己重複（`ExcelPreview.tsx`・`useZoomAndScroll.ts`・`useHitTest.ts`・`useElementMovement.ts` ほか、各20〜50行） | 関数を1つ抜き出せば済む                                                        |
-| 一覧4画面の行ごとの props とヘッダー右のボタン並び（約40行）                                                                 | 解答用紙だけ並びが違うので部品にしていない                                     |
+| 対象                                                                                                                                                             | 見立て                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 学級と生徒の詳細画面（`ClassroomScoreTrendChart`/`ScoreTrendChart` の約180行、要約カード、ページ本体、`MembershipTable`/`MembershipsCard`）                      | いちばん大きい。得点推移のグラフは4か所が同じ形。学級と生徒で見せるものの差を先に洗い出す |
+| ヘルプの部品（`DocComponents` と `HelpContent07Scoring`・`HeadingFocus`、一覧のヘルプ同士）                                                                      | 共通部品の手前で写した形が残っている                                                      |
+| 取り込みの照合（`idIntegrationImporter`/`student-archive`、`MatchedItemRow`/`NoMatchItemRow`、`importSyncRecords.ts` の自己重複）                                | 旧形式の読み込み。#1452 の照合の食い違いを直すときに一緒に見る                            |
+| 08 の `useFinalizeScreen` と 07 の `useAiGridSelection` の範囲選択（約25行）                                                                                     | 採点の表の選択の作り。08 は 07 と同じ手触りにする方針なので、まとめる価値がある           |
+| 詳細画面の頭（`CourseworkDetail`・`AnswerSheetDefinitionDetail` と成績算出の詳細）                                                                               | 小さい                                                                                    |
+| ファイル内・小さな重複（`StudentInsightsCard`・`AnswerGridView`・`AiMonthlyUsageCharts`・`gridBuilder`、`useListPagination`/`useAuditLogs`、06 の型と DnD ほか） | 関数を1つ抜き出せば済む                                                                   |
 
-**分割だけで済む大きいファイル:** `datConverter.ts` の `convertDatToScore`（約330行）、
-`annotationPlacement.ts`（文字の折り返しと配置の探索の2つの役割）。
+凍結した旧形式の変換器（`transformers/`・`grade-transformers/`）と現行コードの重複は、変換器を
+書き換えないので対象にしない。
 
 ### 整理の途中で見つかり、まだ直していないもの
 

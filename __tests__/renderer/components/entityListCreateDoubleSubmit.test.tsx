@@ -136,7 +136,7 @@ const LIST_SCREENS = [
   {
     screenName: "試験",
     renderList: () => <ExamList />,
-    createLabel: "新規試験作成",
+    createLabel: "新規作成",
     emptyLabel: "最初の試験を作成",
     hrefPrefix: "/exams/",
   },

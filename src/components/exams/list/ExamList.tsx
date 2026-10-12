@@ -1,22 +1,24 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileArchive, PencilSparkles, Plus } from "lucide-react"
+import { PencilSparkles, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
 import {
+  entityListBulkUnifiedExportAction,
   entityListCreateAction,
   entityListToolbarActions,
 } from "@/components/common/entity-list/entityListToolbarActions"
 import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
 import { useEntityListControls } from "@/components/common/entity-list/useEntityListControls"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import { toolbarButtonAction } from "@/components/common/OverflowToolbar"
+import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import type { ListFilterAccessors } from "@/hooks/useListFilter"
 import {
@@ -24,7 +26,11 @@ import {
   getExamProgress,
   getExamWorkflowStatus,
 } from "@/lib/examStatus"
-import { createExamMutation, examListQuery } from "@/queries/exam"
+import {
+  createExamMutation,
+  examForDetailQuery,
+  examListQuery,
+} from "@/queries/exam"
 import {
   addTagToExamsMutation,
   findOrCreateTagMutation,
@@ -50,6 +56,38 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
   updatedAt: (exam) => exam.updatedAt,
 }
 
+/**
+ * 一覧から開く試験の削除確認。中身は概要ページと同じ `DeleteExamModal`（2段階の確認）。
+ *
+ * 確認は巻き添えになる件数（模範解答・採点領域・答案）を見せるので、一覧の行（概要）では
+ * 足りず、概要ページと同じ試験1件の取得を、開いたときだけ取りに行く。取れるまでは窓を出さない。
+ * 消した後は一覧に留まる（一覧は削除の書き込みが取り直し、選択からは
+ * `useEntityListControls` が消えた行を落とす）。
+ */
+function ExamListDeleteModal({
+  examId,
+  open,
+  onOpenChange,
+}: {
+  examId: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const { data: exam } = useQuery({
+    ...examForDetailQuery(examId),
+    enabled: open,
+  })
+  if (!exam) return null
+  return (
+    <DeleteExamModal
+      exam={exam}
+      open={open}
+      onOpenChange={onOpenChange}
+      onExamDeleted={() => {}}
+    />
+  )
+}
+
 const ExamList = () => {
   const currentUser = useCurrentUser()
   const { data: exams = EMPTY_EXAMS, isPending: isLoading } = useQuery(
@@ -64,6 +102,8 @@ const ExamList = () => {
   const { importToolbarAction, openUnifiedExport } = archive
 
   const createExam = useMutation(createExamMutation(currentUser.id))
+  // 削除確認を開いている試験。押しただけでは消さず、確認で決めてもらう
+  const examDeletion = useDialogTarget<ExamSummary>()
   const router = useRouter()
 
   // 押せなくするのは isPending だが、それが描画に届く前の連打はここで止める
@@ -117,7 +157,7 @@ const ExamList = () => {
     () =>
       entityListToolbarActions({
         create: entityListCreateAction({
-          label: "新規試験作成",
+          label: "新規作成",
           onClick: () => void handleCreate(),
           disabled: createExam.isPending,
         }),
@@ -125,13 +165,10 @@ const ExamList = () => {
         bulkTag: bulkTagAction,
         // 選択中だけ現れる。幅が急に増えるが、畳みは実測なので自然に吸収される
         bulk: [
-          toolbarButtonAction({
-            id: "bulk-unified-export",
-            priority: 50,
-            icon: FileArchive,
-            label: `.sao 書き出し（${selectedIds.size}件）`,
-            onClick: () =>
-              openUnifiedExport({ roots: { Exam: [...selectedIds] } }),
+          entityListBulkUnifiedExportAction({
+            rootTable: "Exam",
+            selectedIds,
+            openUnifiedExport,
           }),
         ],
       }),
@@ -149,7 +186,7 @@ const ExamList = () => {
     <>
       <EntityListPage<ExamSummary>
         {...listProps}
-        title="試験一覧"
+        title="試験"
         totalCount={exams.length}
         isLoading={isLoading}
         name={(exam) => exam.examName}
@@ -168,6 +205,7 @@ const ExamList = () => {
             onUnifiedExport={() =>
               openUnifiedExport({ roots: { Exam: [exam.id] } })
             }
+            onRequestDelete={() => examDeletion.openWith(exam)}
           />
         )}
         actions={actions}
@@ -188,6 +226,14 @@ const ExamList = () => {
         noMatchMessage="条件に一致する試験がありません"
         sortStorageKey="examList-sort"
       />
+
+      {examDeletion.target && (
+        <ExamListDeleteModal
+          examId={examDeletion.target.id}
+          open={examDeletion.isOpen}
+          onOpenChange={examDeletion.handleOpenChange}
+        />
+      )}
 
       <EntityListArchiveDialogs archive={archive} />
     </>

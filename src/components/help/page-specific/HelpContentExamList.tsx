@@ -29,7 +29,7 @@ export function HelpContentExamList() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <PencilSparkles className="h-6 w-6 text-blue-600" />
-          試験一覧
+          試験
         </h2>
         <p className="text-muted-foreground">
           採点する試験の一覧です。ここから試験を作り、8つの段を順に進めます。

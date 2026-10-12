@@ -132,7 +132,7 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       "subtotal-groups": "小計点グループ管理",
       classrooms: "学級管理",
       students: "生徒管理",
-      exams: "試験一覧",
+      exams: "試験",
       "answer-sheet-builder": "解答用紙作成",
       coursework: "試験外成績資料",
       grades: "成績算出",
