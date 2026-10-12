@@ -15,13 +15,13 @@ const ROOT = path.resolve(__dirname, "../../../..")
 /**
  * 試験を1件作り、その id を返す。
  *
- * **作成ダイアログは無い**（段階66）。「新規試験作成」を押すと既定値の1件が
+ * **作成ダイアログは無い**（段階66）。「新規作成」を押すと既定値の1件が
  * その場で作られ、概要ページへ直行する。名前はそこで付ける（1打鍵ごとに書くので
  * 「保存」は押さない）。
  */
 export async function createExam(page: Page, name: string): Promise<string> {
   await page.goto(`${E2E_BASE_URL}/exams`, { waitUntil: "domcontentloaded" })
-  await page.getByRole("button", { name: "新規試験作成" }).click()
+  await page.getByRole("button", { name: "新規作成" }).click()
 
   await expect(page).toHaveURL(/\/exams\/[0-9a-f-]{36}$/, { timeout: 15_000 })
   const examId = /\/exams\/([0-9a-f-]{36})/.exec(page.url())?.[1]

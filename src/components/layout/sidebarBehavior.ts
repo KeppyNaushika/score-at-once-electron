@@ -28,7 +28,7 @@ export interface SidebarSectionConfig {
 export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   {
     key: "exams",
-    label: "試験一覧",
+    label: "試験",
     preferenceKey: "sidebarBehaviorExams",
     pathMatch: (path) => path.startsWith("/exams"),
   },

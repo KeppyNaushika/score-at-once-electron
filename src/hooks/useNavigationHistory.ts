@@ -61,7 +61,7 @@ function routeToLabel(pathname: string): RouteLabel {
             step: findWorkflowStepLabel(examWorkflowTabs, third),
             entity: { kind: "exam", id: second },
           }
-        : { base: "試験一覧" }
+        : { base: "試験" }
     case "answer-sheet-builder":
       return second
         ? { base: "解答用紙作成", entity: { kind: "asb", id: second } }

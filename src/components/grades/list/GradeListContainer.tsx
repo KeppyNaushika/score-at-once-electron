@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
 import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
 import {
+  entityListBulkUnifiedExportAction,
   entityListCreateAction,
   entityListToolbarActions,
 } from "@/components/common/entity-list/entityListToolbarActions"
@@ -146,7 +147,7 @@ export function GradeListContainer() {
     [findOrCreateTag, addTagToGrades]
   )
 
-  const { bulkTagAction, listProps } = useEntityListControls(
+  const { selectedIds, bulkTagAction, listProps } = useEntityListControls(
     grades,
     GRADE_FILTER_ACCESSORS,
     {
@@ -168,8 +169,22 @@ export function GradeListContainer() {
         }),
         archiveImport: importToolbarAction,
         bulkTag: bulkTagAction,
+        bulk: [
+          entityListBulkUnifiedExportAction({
+            rootTable: "Grade",
+            selectedIds,
+            openUnifiedExport,
+          }),
+        ],
       }),
-    [bulkTagAction, createGrade.isPending, handleCreate, importToolbarAction]
+    [
+      bulkTagAction,
+      createGrade.isPending,
+      handleCreate,
+      importToolbarAction,
+      openUnifiedExport,
+      selectedIds,
+    ]
   )
 
   return (
@@ -202,7 +217,7 @@ export function GradeListContainer() {
         actions={actions}
         empty={{
           icon: ChartColumn,
-          message: "成績算出がありません",
+          message: "まだ成績算出がありません",
           action: (
             <Button
               variant="outline"

@@ -363,7 +363,9 @@ test("関門は画面遷移のたびに効き直す（レイアウトに置い�
   await loginAsAdmin(page)
 
   await page.goto(`${E2E_BASE_URL}/exams`, { waitUntil: "domcontentloaded" })
-  await expect(page.getByRole("heading", { name: "試験一覧" })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: "試験", exact: true })
+  ).toBeVisible({
     timeout: 30_000,
   })
 
@@ -376,9 +378,11 @@ test("関門は画面遷移のたびに効き直す（レイアウトに置い�
     timeout: 15_000,
   })
 
-  await page.getByRole("link", { name: "試験一覧" }).click()
+  await page.getByRole("link", { name: "試験", exact: true }).click()
   await expect(page).toHaveURL(`${E2E_BASE_URL}/exams`, { timeout: 15_000 })
-  await expect(page.getByRole("heading", { name: "試験一覧" })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: "試験", exact: true })
+  ).toBeVisible({
     timeout: 15_000,
   })
 })

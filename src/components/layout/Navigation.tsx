@@ -60,7 +60,7 @@ function navItemAccessibleName(navItem: NavItem): string {
 const navGroups: NavItem[][] = [
   [
     { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FilePen },
-    { href: "/exams", label: "試験一覧", icon: PencilSparkles },
+    { href: "/exams", label: "試験", icon: PencilSparkles },
     { href: "/coursework", label: "試験外成績資料", icon: ClipboardList },
     { href: "/grades", label: "成績算出", icon: ChartColumn },
   ],

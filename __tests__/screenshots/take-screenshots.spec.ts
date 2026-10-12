@@ -750,7 +750,7 @@ test.describe.serial("第2章: 試験準備", () => {
     await captureOptional(
       "ch2-exam-prep/10-new-exam-overview.png",
       async () => {
-        await clickWhenReady(page.getByRole("button", { name: "新規試験作成" }))
+        await clickWhenReady(page.getByRole("button", { name: "新規作成" }))
         await page.waitForURL(/\/exams\/[0-9a-f-]{36}$/, { timeout: 15_000 })
         // この試験は以降、模範解答・採点領域・答案を画面から入れる「通常の手順」の
         // 図に使う（2-9, 3-1b）。採点付きの試験（第２回定期テスト）とは別の名前にする

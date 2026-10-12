@@ -9,6 +9,7 @@ import { EntityListArchiveDialogs } from "@/components/common/entity-list/Entity
 import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
 import {
   ENTITY_LIST_CREATE_PRIORITY,
+  entityListBulkUnifiedExportAction,
   entityListToolbarActions,
 } from "@/components/common/entity-list/entityListToolbarActions"
 import { useEntityListArchive } from "@/components/common/entity-list/useEntityListArchive"
@@ -117,7 +118,7 @@ export function AnswerSheetDefinitionList() {
     [findOrCreateTag, addTagToDefinitions]
   )
 
-  const { bulkTagAction, listProps } = useEntityListControls(
+  const { selectedIds, bulkTagAction, listProps } = useEntityListControls(
     visibleDefinitions,
     ASB_FILTER_ACCESSORS,
     {
@@ -205,12 +206,23 @@ export function AnswerSheetDefinitionList() {
         },
       ],
       bulkTag: bulkTagAction,
+      // 選べるのは担当の行だけなので、書き出しも担当の行だけになる（他人の解答用紙は
+      // 行の「…」から1件ずつ書き出せる）
+      bulk: [
+        entityListBulkUnifiedExportAction({
+          rootTable: "AsbDefinition",
+          selectedIds,
+          openUnifiedExport,
+        }),
+      ],
     })
   }, [
     bulkTagAction,
     createAndOpen,
     importToolbarAction,
     isCreating,
+    openUnifiedExport,
+    selectedIds,
     showAllOwners,
   ])
 
@@ -260,7 +272,7 @@ export function AnswerSheetDefinitionList() {
         empty={{
           icon: FilePen,
           message: showAllOwners
-            ? "解答用紙がありません"
+            ? "まだ解答用紙がありません"
             : "担当している解答用紙がありません",
           action: (
             <CreateDefinitionButton

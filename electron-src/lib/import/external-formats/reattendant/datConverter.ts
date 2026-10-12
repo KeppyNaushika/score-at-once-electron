@@ -60,9 +60,9 @@ export async function convertDatToScore(
     const entries = datZip.getEntries()
 
     // 2〜7. 試験の定義・座標・模範解答画像を読む
-    const { contents, workbook, abcData, abcXml, masterImageEntries } =
+    const { contents, workbook, abcData, abcXml, masterImageEntryByPageNo } =
       readDatExamSource(entries)
-    const pageImageSizes = readPageImageSizes(masterImageEntries)
+    const pageImageSizes = readPageImageSizes(masterImageEntryByPageNo)
 
     // 8. UUID生成と試験構築
     const examId = generateUuid()
@@ -76,7 +76,7 @@ export async function convertDatToScore(
 
     const examPages = buildExamPages(
       pageUuidMap,
-      masterImageEntries.length,
+      masterImageEntryByPageNo,
       examId,
       now
     )
@@ -120,10 +120,13 @@ export async function convertDatToScore(
       examPages,
       cropRegions,
       subtotalData,
-      masterImages: masterImageEntries.map((masterImageEntry, index) => ({
-        fileName: masterImageFileName(index + 1),
-        image: masterImageEntry.getData(),
-      })),
+      masterImages: Array.from(
+        masterImageEntryByPageNo,
+        ([pageNo, masterImageEntry]) => ({
+          fileName: masterImageFileName(pageNo),
+          image: masterImageEntry.getData(),
+        })
+      ),
       tempDirPrefix: "dat-convert-",
       now,
     })
@@ -138,13 +141,21 @@ export async function convertDatToScore(
   }
 }
 
-/** 名前が suffix で終わる最初のエントリ */
-function findEntryBySuffix(
+/**
+ * ファイル名（最後の `/` より後ろ）が fileName と一致する最初のエントリ
+ *
+ * 末尾一致で探すと "angles.json" が "question_angles.json" にも当たり、
+ * zip 内の並び次第で別の表を読んでしまうので、ファイル名の完全一致で探す。
+ */
+function findEntryByFileName(
   entries: AdmZip.IZipEntry[],
-  suffix: string
+  fileName: string
 ): AdmZip.IZipEntry | undefined {
-  return entries.find((entry) => entry.entryName.endsWith(suffix))
+  return entries.find((entry) => entry.entryName.split("/").pop() === fileName)
 }
+
+/** 模範解答画像のパス（…/Correct/abc_mNN.png）。NN がページ番号 */
+const MASTER_IMAGE_PATH_PATTERN = /\/Correct\/abc_m(\d+)\.png$/
 
 /**
  * 試験の定義・座標・模範解答画像のエントリを読む
@@ -157,10 +168,11 @@ function readDatExamSource(entries: AdmZip.IZipEntry[]): {
   workbook: DatWorkbook
   abcData: DatAbcData
   abcXml: string | null
-  masterImageEntries: AdmZip.IZipEntry[]
+  /** ページ番号 → 模範解答画像のエントリ */
+  masterImageEntryByPageNo: Map<number, AdmZip.IZipEntry>
 } {
   // 2. RealtendantAppVersion.txt で検証
-  const versionEntry = findEntryBySuffix(entries, "RealtendantAppVersion.txt")
+  const versionEntry = findEntryByFileName(entries, "RealtendantAppVersion.txt")
   if (!versionEntry) {
     throw new Error(
       "リアテンダントのデータファイルではありません（RealtendantAppVersion.txt が見つかりません）"
@@ -168,7 +180,7 @@ function readDatExamSource(entries: AdmZip.IZipEntry[]): {
   }
 
   // 3. contents.json → image_scale取得
-  const contentsEntry = findEntryBySuffix(entries, "contents.json")
+  const contentsEntry = findEntryByFileName(entries, "contents.json")
   if (!contentsEntry) {
     throw new Error("contents.json が見つかりません")
   }
@@ -181,7 +193,7 @@ function readDatExamSource(entries: AdmZip.IZipEntry[]): {
   }
 
   // 4. workbooks.json → 試験名・教科取得
-  const workbooksEntry = findEntryBySuffix(entries, "workbooks.json")
+  const workbooksEntry = findEntryByFileName(entries, "workbooks.json")
   if (!workbooksEntry) {
     throw new Error("workbooks.json が見つかりません")
   }
@@ -211,7 +223,7 @@ function readDatExamSource(entries: AdmZip.IZipEntry[]): {
   }
 
   // 6. workbook_infoes.json → abc_xml（スコア印字エリア情報）
-  const workbookInfoEntry = findEntryBySuffix(entries, "workbook_infoes.json")
+  const workbookInfoEntry = findEntryByFileName(entries, "workbook_infoes.json")
   let abcXml: string | null = null
   if (workbookInfoEntry) {
     try {
@@ -224,36 +236,43 @@ function readDatExamSource(entries: AdmZip.IZipEntry[]): {
     }
   }
 
-  // 7. 模範解答画像を発見（ファイル名順 = ページ順）
-  const masterImageEntries = entries
-    .filter(
-      (entry) =>
-        entry.entryName.includes("/Correct/abc_m") &&
-        entry.entryName.endsWith(".png")
-    )
-    .sort((entryA, entryB) => entryA.entryName.localeCompare(entryB.entryName))
+  // 7. 模範解答画像を発見（ファイル名の番号 NN = ページ番号）
+  // 名前順の連番にすると、番号が飛んだときに後ろのページの画像がずれる
+  const masterImageEntryByPageNo = new Map<number, AdmZip.IZipEntry>()
+  const sortedEntries = [...entries].sort((entryA, entryB) =>
+    entryA.entryName.localeCompare(entryB.entryName)
+  )
+  for (const entry of sortedEntries) {
+    const pageNoMatch = MASTER_IMAGE_PATH_PATTERN.exec(entry.entryName)
+    if (!pageNoMatch) continue
+    const pageNo = parseInt(pageNoMatch[1], 10)
+    // 同じ番号が複数あれば名前順で先のものを使う
+    if (!masterImageEntryByPageNo.has(pageNo)) {
+      masterImageEntryByPageNo.set(pageNo, entry)
+    }
+  }
 
-  if (masterImageEntries.length === 0) {
+  if (masterImageEntryByPageNo.size === 0) {
     throw new Error("模範解答画像が見つかりません")
   }
 
-  return { contents, workbook, abcData, abcXml, masterImageEntries }
+  return { contents, workbook, abcData, abcXml, masterImageEntryByPageNo }
 }
 
 /**
  * 模範解答画像の PNG ヘッダー（IHDR）から、ページ番号 → 画像サイズ（フルスケール）を読む
  *
- * ページ番号は模範解答画像のファイル名順の連番（1始まり）。
+ * ページ番号は模範解答画像のファイル名の番号（abc_mNN.png の NN）。
  */
 function readPageImageSizes(
-  masterImageEntries: AdmZip.IZipEntry[]
+  masterImageEntryByPageNo: Map<number, AdmZip.IZipEntry>
 ): Map<number, { w: number; h: number }> {
   const pageImageSizes = new Map<number, { w: number; h: number }>()
-  masterImageEntries.forEach((masterImageEntry, index) => {
+  masterImageEntryByPageNo.forEach((masterImageEntry, pageNo) => {
     const imgBuffer = masterImageEntry.getData()
     const width = imgBuffer.readUInt32BE(16)
     const height = imgBuffer.readUInt32BE(20)
-    pageImageSizes.set(index + 1, { w: width, h: height })
+    pageImageSizes.set(pageNo, { w: width, h: height })
   })
   return pageImageSizes
 }
@@ -265,11 +284,11 @@ function masterImageFileName(pageNo: number): string {
 
 /**
  * ExamPages 生成（模範解答画像はページが持つ）。
- * 画像は abc_m01.png … の連番で、ページ番号と1対1に対応する
+ * 画像はページ番号と同じ番号の abc_mNN.png。画像の無いページは imagePath を空にする
  */
 function buildExamPages(
   pageUuidMap: Map<number, string>,
-  masterImageCount: number,
+  masterImageEntryByPageNo: Map<number, AdmZip.IZipEntry>,
   examId: string,
   now: string
 ): ConvertedExamPage[] {
@@ -277,7 +296,9 @@ function buildExamPages(
     id,
     examId,
     pageNumber: pageNo,
-    imagePath: pageNo <= masterImageCount ? masterImageFileName(pageNo) : "",
+    imagePath: masterImageEntryByPageNo.has(pageNo)
+      ? masterImageFileName(pageNo)
+      : "",
     pageSize: "A4",
     createdAt: now,
     updatedAt: now,
@@ -294,17 +315,20 @@ function readDatSubtotalSource(entries: AdmZip.IZipEntry[]): {
   angles: DatAngle[]
   questionAngles: DatQuestionAngle[]
 } {
-  const questionsEntry = findEntryBySuffix(entries, "questions.json")
+  const questionsEntry = findEntryByFileName(entries, "questions.json")
   const questions: DatQuestion[] = questionsEntry
     ? JSON.parse(questionsEntry.getData().toString("utf8"))
     : []
 
-  const anglesEntry = findEntryBySuffix(entries, "angles.json")
+  const anglesEntry = findEntryByFileName(entries, "angles.json")
   const angles: DatAngle[] = anglesEntry
     ? JSON.parse(anglesEntry.getData().toString("utf8"))
     : []
 
-  const questionAnglesEntry = findEntryBySuffix(entries, "question_angles.json")
+  const questionAnglesEntry = findEntryByFileName(
+    entries,
+    "question_angles.json"
+  )
   const questionAngles: DatQuestionAngle[] = questionAnglesEntry
     ? JSON.parse(questionAnglesEntry.getData().toString("utf8"))
     : []
@@ -661,7 +685,7 @@ function convertPageBlocksToCropRegions(
  *    - QUESTION_ASSIGNMENT: 各設問CropRegion → 対応する大問Subtotal
  *    - SUBTOTAL_DEFINITION: 小計N CropRegion → 大問N Subtotal
  * 2. 「観点」: angles.json の観点名（知識・技能, 思考・判断・表現）
- *    - QUESTION_ASSIGNMENT: 各設問CropRegion → question_angles経由で対応する観点Subtotal
+ *    - QUESTION_ASSIGNMENT: 各設問CropRegion → question_angles経由で対応する観点Subtotal（1対多）
  */
 function generateSubtotalData(
   questions: DatQuestion[],
@@ -680,10 +704,14 @@ function generateSubtotalData(
     questionNameToId.set(question.question_name, question.id)
   }
 
-  // question_id → angle_id マッピング
-  const questionIdToAngleId = new Map<number, number>()
+  // question_id → angle_id[] マッピング
+  // 1つの設問が複数の観点に属しうる（question_angles に同じ question_id の行が複数）ので、
+  // すべての観点を残す。小計は1つの設問を複数の Subtotal に割り当てられる
+  const questionIdToAngleIds = new Map<number, number[]>()
   for (const questionAngle of questionAngles) {
-    questionIdToAngleId.set(questionAngle.question_id, questionAngle.angle_id)
+    const angleIds = questionIdToAngleIds.get(questionAngle.question_id) || []
+    angleIds.push(questionAngle.angle_id)
+    questionIdToAngleIds.set(questionAngle.question_id, angleIds)
   }
 
   // ========================================
@@ -736,17 +764,15 @@ function generateSubtotalData(
     .sort((angleA, angleB) => angleA.angle_sort_no - angleB.angle_sort_no)
 
   if (activeAngles.length > 0 && questionAngles.length > 0) {
-    // QUESTION_ASSIGNMENT: 各設問CropRegion → 観点Subtotal
-    // QuizName → question_id → angle_id → Subtotal
+    // QUESTION_ASSIGNMENT: 各設問CropRegion → 観点Subtotal（設問1つに観点が複数ならそのすべて）
+    // QuizName → question_id → angle_id[] → Subtotal
     const angleAssignments = Array.from(quizNameToCropIds).flatMap(
       ([quizName, cropRegionIds]) => {
         const questionId = questionNameToId.get(quizName)
         if (questionId === undefined) return []
 
-        const angleId = questionIdToAngleId.get(questionId)
-        if (angleId === undefined) return []
-
-        return [{ key: angleId, cropRegionIds }]
+        const angleIds = questionIdToAngleIds.get(questionId) || []
+        return angleIds.map((angleId) => ({ key: angleId, cropRegionIds }))
       }
     )
 
@@ -759,7 +785,9 @@ function generateSubtotalData(
           name: angle.angle_name,
         })),
         questionAssignments: angleAssignments,
-        // 観点の印字欄（AngleScoreArea）はどの観点か分からないので紐付けない
+        // 観点の印字欄（AngleScoreArea）はどの観点か分からないので紐付けない。
+        // LargeQuestionScoreArea の LargeQuestionNumber にあたる、観点を指す属性が
+        // 確かめられておらず、並び順（angle_sort_no と欄の出現順）の対応も裏付けが無い
         definitionAssignments: [],
       },
       examId,

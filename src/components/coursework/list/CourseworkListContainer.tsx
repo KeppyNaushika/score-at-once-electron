@@ -8,6 +8,7 @@ import { useCallback, useMemo } from "react"
 import { EntityListArchiveDialogs } from "@/components/common/entity-list/EntityListArchiveDialogs"
 import { deleteFromEntityList } from "@/components/common/entity-list/entityListDeletion"
 import {
+  entityListBulkUnifiedExportAction,
   entityListCreateAction,
   entityListToolbarActions,
 } from "@/components/common/entity-list/entityListToolbarActions"
@@ -141,7 +142,7 @@ export function CourseworkListContainer() {
     [findOrCreateTag, addTagToCourseworks]
   )
 
-  const { bulkTagAction, listProps } = useEntityListControls(
+  const { selectedIds, bulkTagAction, listProps } = useEntityListControls(
     courseworks,
     COURSEWORK_FILTER_ACCESSORS,
     {
@@ -163,12 +164,21 @@ export function CourseworkListContainer() {
         }),
         archiveImport: importToolbarAction,
         bulkTag: bulkTagAction,
+        bulk: [
+          entityListBulkUnifiedExportAction({
+            rootTable: "Coursework",
+            selectedIds,
+            openUnifiedExport,
+          }),
+        ],
       }),
     [
       bulkTagAction,
       createCoursework.isPending,
       handleCreate,
       importToolbarAction,
+      openUnifiedExport,
+      selectedIds,
     ]
   )
 
@@ -205,7 +215,7 @@ export function CourseworkListContainer() {
         actions={actions}
         empty={{
           icon: ClipboardList,
-          message: "試験外成績資料がありません",
+          message: "まだ試験外成績資料がありません",
           action: (
             <Button
               variant="outline"
