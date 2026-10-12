@@ -392,11 +392,13 @@ OMR の自動採点は本番では renderer の `reevaluateWithThreshold` が担
   → **裁定: やめる。** 新規作成する生徒・学級はアーカイブの値のまま作り、id で区別する。
   同一人物か同姓同名かを見分けにくいなら、それは取り込みと名簿の UI で直す（§9.12）
   同じ理由で、旧形式の取り込みが試験名（「別の試験として取り込む」）と小計グループ名に付けていた
-  ` (2)` もやめた。見分ける材料は UI で出す（#1452）
+  ` (2)` もやめた。同じグループの中の小計の名前も同じ。見分ける材料は UI で出す（#1452）
 - `.ncurc.json` → 削除した（Prisma 6 の頃に 7 へ上がらないよう止めた設定で、役目を終えていた）
 - `.ncurc.json`（§9.1）
 - 撤去済みの部品・列が戻っていないことを見る見張り（`regionInfoTable:189`、
   `entityListPage:230`、`entityOverviewPageAdoption:80, 100, 132`）を残すか
+  → `entityListPage:230` だけ削除した（`entityListPageAdoption` の「「詳細」の語を残さない」が
+  ソースで同じことを見ている）。残りは設計の判断を守る見張りとして残す
 - `gradeCalculator.test.ts` の `buildGrade` が、撤去済みの `GradeDataSource.maxScore` を載せている（低）
   → 判断の要らない取り残しだったので直した（coursework 型の参照先の満点にだけ使う）
 
