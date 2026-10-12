@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // actualScore
 const mockCalculateActualScore = vi.fn()
-vi.mock("@/electron-src/lib/shared/calculations/actualScore", () => ({
+vi.mock("@/lib/shared/actualScore", () => ({
   calculateActualScore: (...args: unknown[]) =>
     mockCalculateActualScore(...args),
 }))

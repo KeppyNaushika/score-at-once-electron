@@ -16,6 +16,9 @@ import type { ScoringData } from "../../shared/types"
 
 /**
  * 設問別正答率を計算
+ *
+ * 類型評価（scale）の設問には正誤が無いので正答率を出さない（キーごと載せない。
+ * docs/vlm-grading-design.md §4-8-5）。表は「—」、学習アドバイスは復習の候補から外す。
  */
 export function calculateQuestionCorrectRates(
   allScoringData: ScoringData[]
@@ -24,8 +27,10 @@ export function calculateQuestionCorrectRates(
 
   if (allScoringData.length === 0) return rates
 
-  // 最初の生徒から設問リストを取得
-  const questionIds = allScoringData[0].scores.map((score) => score.questionId)
+  // 最初の生徒から設問リストを取得（設問の方式は受験者で共通）
+  const questionIds = allScoringData[0].scores
+    .filter((score) => score.scoringMethod !== "scale")
+    .map((score) => score.questionId)
 
   for (const questionId of questionIds) {
     let correctCount = 0

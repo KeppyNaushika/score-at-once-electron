@@ -10,6 +10,7 @@ import type {
 } from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
+import type { ScaleValueDisplay } from "./rubric.types"
 import { defineStringUnion } from "./stringUnion"
 
 // ================== 表示モード関連 ==================
@@ -154,6 +155,8 @@ export interface IndividualReportOptions {
   questionTableFontSize: FontSizeOption
   showCorrectRate: boolean // 正答率を表示
   showScoreRate: boolean // 得点率を表示
+  /** 類型評価の設問の値の見せ方（「8」／「A (8)」／「A」。docs/vlm-grading-design.md §4-8-8） */
+  scaleValueDisplay: ScaleValueDisplay
 
   // 学習アドバイス
   showLearningAdvice: boolean
@@ -367,6 +370,7 @@ export const DEFAULT_INDIVIDUAL_REPORT_OPTIONS: IndividualReportOptions = {
   questionTableFontSize: 10,
   showCorrectRate: true,
   showScoreRate: false,
+  scaleValueDisplay: "label_points",
   showLearningAdvice: true,
   adviceOptions: DEFAULT_ADVICE_OPTIONS,
   showComment: false,

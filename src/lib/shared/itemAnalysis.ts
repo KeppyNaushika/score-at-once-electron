@@ -10,6 +10,8 @@
  *   - `unscored` と未確定の `hold`/`pending`（partialScore 未設定で score===null）は欠測として除外。
  * - 識別係数・D値・α は **complete-case**（全設問が採点済み = 全 score 非null の生徒）で算出する。
  *   採点途中の合計点（未採点を0と合算した値）で順位付けして母集団が歪むのを防ぐ。
+ * - 類型評価（scale）の設問は正答がないので正答率を出さず（null）、類型ごとの人数（分布）を出す
+ *   （docs/vlm-grading-design.md §4-8-5）。点は類型の点数なので、得点率・識別係数・D値・α には入れる。
  * - 個人成績表向けの `statisticsCalculator.ts`（`calculateDiscriminationIndices` 等）とは
  *   消費者・集計セマンティクスが異なるため別実装。こちらは「シートとプレビューの一致」を担保する。
  */
@@ -25,6 +27,22 @@ interface ItemAnalysisInputItem {
   score: number | null
   /** 正答（status === "correct"）なら true */
   isCorrect: boolean
+  /** 類型評価の設問なら、組の類型（並び順）と付けた類型。点の設問は null */
+  scale: ItemAnalysisScaleInput | null
+}
+
+/** 類型評価の設問の入力。使われていない類型も分布に 0 人で並べるため、組の類型を全部渡す */
+interface ItemAnalysisScaleInput {
+  levels: { id: string; label: string }[]
+  /** 付けた類型。未採点・方式と合わない採点は null */
+  scaleLevelId: string | null
+}
+
+/** 類型1つ分の人数 */
+interface ItemAnalysisLevelCount {
+  levelId: string
+  label: string
+  count: number
 }
 
 /** 生徒1人分の入力 */
@@ -37,8 +55,10 @@ interface ItemAnalysisItem {
   questionId: string
   label: string
   maxScore: number
-  /** 正答率(%) */
-  correctRate: number
+  /** 正答率(%)。類型評価の設問は正答がないので null */
+  correctRate: number | null
+  /** 類型評価の設問の、類型ごとの人数（組の並び順・0 人の類型も含む）。点の設問は null */
+  levelCounts: ItemAnalysisLevelCount[] | null
   /** 得点率(%) */
   scoreRate: number
   /** 識別係数（補正済み項目合計相関、complete-case）。判定不可は null */
@@ -92,6 +112,7 @@ export function computeItemAnalysis(
     questionId: item.questionId,
     label: item.label,
     maxScore: item.maxScore,
+    scaleLevels: item.scale?.levels ?? null,
   }))
   const k = questions.length
   if (k === 0) return null
@@ -156,7 +177,24 @@ export function computeItemAnalysis(
       if (item.isCorrect) correctCount++
       if (question.maxScore > 0) scoreRateSum += item.score / question.maxScore
     }
-    const correctRate = scoredCount > 0 ? (correctCount / scoredCount) * 100 : 0
+    const correctRate =
+      question.scaleLevels !== null
+        ? null
+        : scoredCount > 0
+          ? (correctCount / scoredCount) * 100
+          : 0
+    const levelCounts =
+      question.scaleLevels === null
+        ? null
+        : question.scaleLevels.map((level) => ({
+            levelId: level.id,
+            label: level.label,
+            count: studentMaps.filter(
+              (studentMap) =>
+                studentMap.get(question.questionId)?.scale?.scaleLevelId ===
+                level.id
+            ).length,
+          }))
     const scoreRate = scoredCount > 0 ? (scoreRateSum / scoredCount) * 100 : 0
 
     // 識別係数（complete-case の補正済み項目合計相関）
@@ -204,6 +242,7 @@ export function computeItemAnalysis(
       label: question.label,
       maxScore: question.maxScore,
       correctRate,
+      levelCounts,
       scoreRate,
       discriminationIndex,
       discriminationLevel: getDiscriminationLevel(discriminationIndex),
@@ -245,4 +284,13 @@ function computeCronbachAlpha(
   if (totalVariance === 0) return null
 
   return (k / (k - 1)) * (1 - sumItemVariance / totalVariance)
+}
+
+/** 類型ごとの人数を「A 12・B 8・C 3」の文字にする（問題分析シートとプレビューで同じ見せ方） */
+export function formatLevelCounts(
+  levelCounts: ItemAnalysisLevelCount[]
+): string {
+  return levelCounts
+    .map((levelCount) => `${levelCount.label} ${levelCount.count}`)
+    .join("・")
 }

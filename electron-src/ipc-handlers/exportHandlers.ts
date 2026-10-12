@@ -148,6 +148,8 @@ export const exportHandlers = {
           questionRegion.orderIndex != null
             ? Number(questionRegion.orderIndex)
             : null,
+        scoringMethod: questionRegion.scoringMethod,
+        scoreScaleId: questionRegion.scoreScaleId,
       })
     )
 
@@ -168,6 +170,8 @@ export const exportHandlers = {
         score: score.score != null ? Number(score.score) : null,
         maxScore: Number(score.maxScore),
         status: score.status,
+        scoringMethod: score.scoringMethod,
+        scaleLevel: score.scaleLevel,
       })),
       totalScore:
         studentScoring.totalScore != null
@@ -185,6 +189,8 @@ export const exportHandlers = {
     return {
       questionRegions,
       subtotalColumns: exportData.subtotalColumns,
+      // 問題分析の類型ごとの人数に 0 人の類型も並べるための組（serialize 済み）
+      scoreScales: exportData.scoreScales,
       scoringData,
     }
   },

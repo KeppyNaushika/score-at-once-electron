@@ -196,8 +196,25 @@ describe("返却版の差分", () => {
     expect(diff.scoreChanges).toHaveLength(1)
     expect(diff.scoreChanges[0]).toMatchObject({
       cropRegionId: fixture.cropRegions[0].id,
-      before: { status: "evaluated", value: 12 },
-      after: { status: "evaluated", value: 8 },
+      before: { status: "evaluated", scaleLabel: "A", value: 12 },
+      after: { status: "evaluated", scaleLabel: "A", value: 8 },
+    })
+  })
+
+  it("類型の記号を直しても差分に出る（答案に記号を印刷するため）", async () => {
+    await writeScore(0, { status: "evaluated", scaleLevelId: levelA.id })
+    await captureReturnSnapshot({
+      examId: fixture.exam.id,
+      examStudentIds: [examStudentId()],
+    })
+    await testPrisma.scoreScaleLevel.update({
+      where: { id: levelA.id },
+      data: { label: "S" },
+    })
+    const [diff] = (await getReturnDiff(fixture.exam.id)).diffs
+    expect(diff.scoreChanges[0]).toMatchObject({
+      before: { scaleLabel: "A", value: 12 },
+      after: { scaleLabel: "S", value: 12 },
     })
   })
 })

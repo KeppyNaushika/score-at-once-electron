@@ -48,6 +48,8 @@ const verdictLabel = (verdict: string | null | undefined): string => {
       return "無答"
     case "double_mark":
       return "複数マーク"
+    case "evaluated":
+      return "類型評価"
     default:
       return verdict ?? "（なし）"
   }

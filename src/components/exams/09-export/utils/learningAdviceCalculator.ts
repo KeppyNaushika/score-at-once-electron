@@ -12,8 +12,14 @@ import type {
 
 /**
  * 生徒が間違えた問題かどうかを判定
+ *
+ * 類型評価（scale）の設問と、類型を付けた採点（`evaluated`）は正誤が無く正答率も無い
+ * （main が載せない）ので、正答率で選ぶ復習の候補に入れない（docs/vlm-grading-design.md §4-8-5）
  */
 function isIncorrectAnswer(score: ScoreDetail): boolean {
+  if (score.scoringMethod === "scale" || score.status === "evaluated") {
+    return false
+  }
   return (
     score.status === "incorrect" ||
     score.status === "no_answer" ||

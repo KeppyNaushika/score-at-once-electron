@@ -27,6 +27,7 @@ import {
   toStatisticScope,
   toTableColumns,
 } from "@/types/individualReport.types"
+import { toScaleValueDisplay } from "@/types/rubric.types"
 
 import { examWithExportSettingsInclude } from "../../../src/types/prismaExtensions"
 import type {
@@ -90,6 +91,7 @@ export async function getExamExportSettings(
             showGroupSubtotals: reportRow.showGroupSubtotals,
             showCorrectRate: reportRow.showCorrectRate,
             showScoreRate: reportRow.showScoreRate,
+            scaleValueDisplay: toScaleValueDisplay(reportRow.scaleValueDisplay),
             showLearningAdvice: reportRow.showLearningAdvice,
             adviceOptions: {
               reviewRateMin: reportRow.adviceReviewRateMin,
@@ -286,6 +288,7 @@ export async function setExamReportSettings(
     showGroupSubtotals: individualReport.showGroupSubtotals,
     showCorrectRate: individualReport.showCorrectRate,
     showScoreRate: individualReport.showScoreRate,
+    scaleValueDisplay: individualReport.scaleValueDisplay,
     showLearningAdvice: individualReport.showLearningAdvice,
     adviceReviewRateMin: individualReport.adviceOptions.reviewRateMin,
     adviceReviewRateMax: individualReport.adviceOptions.reviewRateMax,

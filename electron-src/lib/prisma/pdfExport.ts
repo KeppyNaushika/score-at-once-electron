@@ -3,12 +3,17 @@ import * as fsPromises from "fs/promises"
 import * as path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 
+import { calculateActualScore } from "@/lib/shared/actualScore"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
+import {
+  isStatusCompatibleWithScoringMethod,
+  type ScoringMethod,
+  toScoringMethod,
+} from "@/types/rubric.types"
 
 import type { DrawingAnnotation } from "../../../src/types/drawingAnnotation.types"
 import { getAbsolutePathFromSharedFiles } from "../dataManager"
 import { pathExists } from "../pathExists"
-import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
 import { getCropRegionsByExamId } from "./cropRegion"
@@ -46,6 +51,12 @@ export interface PdfExportPageData {
   scoringData: Array<{
     status: string
     partialScore: number | null
+    /**
+     * 類型評価で付けた類型。設問の方式と合う評価済み（類型評価の設問の evaluated）で、類型が
+     * 残っているときだけ値がある。答案には採点マークの代わりに記号（label）を、点数として
+     * 類型の点数（score）を印刷する（docs/vlm-grading-design.md §4-8-5）
+     */
+    scaleLevel: { label: string; score: number } | null
     cropRegion: {
       id: string
       x: number
@@ -55,6 +66,8 @@ export interface PdfExportPageData {
       label: string
       maxScore: number | null
       pageNumber: number
+      /** 採点方式。方式と合わない採点（§4-8-8）は点数を印刷しない */
+      scoringMethod: ScoringMethod
     }
   }>
   // 小計点データ
@@ -177,20 +190,37 @@ export async function getPdfExportData(options: {
 
       // 採点データを構築（提案行が無くても確定で採点済みのセルはマークを描画する）
       const scoringData = scoredRegions.map(
-        ({ region, examPage, effectiveScore }) => ({
-          status: effectiveScore.status,
-          partialScore: effectiveScore.partialScore,
-          cropRegion: {
-            id: region.id,
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            label: region.label,
-            maxScore: region.points !== null ? Number(region.points) : null,
-            pageNumber: examPage.pageNumber,
-          },
-        })
+        ({ region, examPage, effectiveScore }) => {
+          const scoringMethod = toScoringMethod(region.scoringMethod)
+          const isPrintableScaleLevel =
+            effectiveScore.status === "evaluated" &&
+            isStatusCompatibleWithScoringMethod(
+              scoringMethod,
+              effectiveScore.status
+            )
+          return {
+            status: effectiveScore.status,
+            partialScore: effectiveScore.partialScore,
+            scaleLevel:
+              isPrintableScaleLevel && effectiveScore.scaleLevel
+                ? {
+                    label: effectiveScore.scaleLevel.label,
+                    score: effectiveScore.scaleLevel.score,
+                  }
+                : null,
+            cropRegion: {
+              id: region.id,
+              x: region.x,
+              y: region.y,
+              width: region.width,
+              height: region.height,
+              label: region.label,
+              maxScore: region.points !== null ? Number(region.points) : null,
+              pageNumber: examPage.pageNumber,
+              scoringMethod,
+            },
+          }
+        }
       )
 
       // アノテーションを取得（行をそのまま持つ）。どの採点行の注釈を印刷するかは

@@ -112,6 +112,44 @@ export function drawScoringMark(
 }
 
 /**
+ * 類型評価の記号（A/B/C など）を、採点マークの位置へ採点マークのスタイルで文字として描画する
+ * （docs/vlm-grading-design.md §4-8-5）。
+ *
+ * 位置は採点マーク画像と同じアンカー点（"px" の行の端寄せ余白も含む）で、anchor は
+ * 画像の原点の代わりに textAlign / textBaseline へ写す
+ */
+export function drawScaleLevelLabel(
+  ctx: CanvasRenderingContext2D,
+  label: string,
+  region: ScoringDataForPdf["cropRegion"],
+  config: AnswerOverlaySettings,
+  imageWidth: number,
+  imageHeight: number,
+  pixelsPerMm: number
+): void {
+  const style = config.styles.mark
+  const pixelRegion = toPixelRegion(region, imageWidth, imageHeight)
+  const lengths = resolveOverlayPixelLengths(style, pixelsPerMm)
+  const { x, y } = resolveAnchorPoint(
+    pixelRegion,
+    style.position,
+    lengths.offsetX,
+    lengths.offsetY,
+    lengths.imageEdgePadding
+  )
+  const { textAlign, textBaseline } = resolveTextAnchor(style.anchor)
+
+  ctx.save()
+  ctx.globalAlpha = style.opacity / 100
+  ctx.font = `bold ${lengths.size}px sans-serif`
+  ctx.fillStyle = style.color
+  ctx.textAlign = textAlign
+  ctx.textBaseline = textBaseline
+  ctx.fillText(label, x, y)
+  ctx.restore()
+}
+
+/**
  * 設問ごとの点数テキストを描画
  */
 export function drawScoreText(

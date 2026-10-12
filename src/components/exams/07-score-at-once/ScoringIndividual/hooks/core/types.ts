@@ -21,6 +21,11 @@ export interface CropRegionWithStatus {
   cropRegion: QuestionAnswerRegionRow
   status: ScoringStatus
   actualScore: number | null
+  /**
+   * 採点マークの代わりに出す類型の記号（類型評価の設問の評価済みで、類型が見つかったときだけ）。
+   * docs/vlm-grading-design.md §4-8-5
+   */
+  scaleLevelLabel: string | null
 }
 
 /**

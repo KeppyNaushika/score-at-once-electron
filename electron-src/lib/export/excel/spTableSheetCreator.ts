@@ -18,6 +18,7 @@ function toSpInput(scoringData: ScoringData[]): SpInputStudent[] {
       label: score.questionLabel,
       isCorrect: score.status === "correct",
       isScored: score.status !== "unscored",
+      isScale: score.scoringMethod === "scale",
     })),
   }))
 }

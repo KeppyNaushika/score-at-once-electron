@@ -7,7 +7,8 @@
  * 受験者として登録されていない生徒はスコアを引けず、データなし（null）になる。
  */
 
-import { calculateActualScore } from "./actualScore"
+import { calculateActualScore } from "@/lib/shared/actualScore"
+
 import type { ExamDataCache, ExamStudentScores } from "./gradeCalculatorTypes"
 
 /**

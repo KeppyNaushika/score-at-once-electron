@@ -13,7 +13,7 @@
  * リゾルバそのものを使わないのは、割れたマスの候補（各採点者の判定）が要るため。
  */
 
-import { calculateActualScore } from "../../electron-src/lib/shared/calculations/actualScore"
+import { calculateActualScore } from "../../src/lib/shared/actualScore"
 import {
   isScoringStatus,
   type ScoringStatus,

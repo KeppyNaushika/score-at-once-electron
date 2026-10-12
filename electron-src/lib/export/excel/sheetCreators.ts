@@ -2,6 +2,7 @@ import type { CropRegion } from "@prisma/client"
 import type * as ExcelJS from "exceljs"
 
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
+import type { ScaleValueDisplay } from "@/types/rubric.types"
 
 import type { ScoringData } from "../../shared/types"
 import { autoFitColumns } from "../../shared/utilities/excelUtilities"
@@ -35,7 +36,9 @@ export async function createScoreSheet(
   await createSheetHeaders(worksheet, questionRegions, subtotalColumns)
 
   // データ行の作成
-  await createDataRows(worksheet, scoringData, subtotalColumns, true)
+  await createDataRows(worksheet, scoringData, subtotalColumns, {
+    kind: "score",
+  })
 
   // 全体平均・学級平均行（Phase 4・主成果）
   appendClassroomAverageRows(
@@ -59,13 +62,15 @@ export async function createScoreSheet(
  * @param questionRegions - 設問領域配列
  * @param subtotalColumns - 小計列情報配列（SubtotalGroupから構築）
  * @param scoringData - 採点データ配列
+ * @param scaleValueDisplay - 類型評価の設問の値の見せ方（試験の個人成績表設定）
  * @returns 作成されたワークシート
  */
 export async function createResultSheet(
   workbook: ExcelJS.Workbook,
   questionRegions: CropRegion[],
   subtotalColumns: SubtotalColumn[],
-  scoringData: ScoringData[]
+  scoringData: ScoringData[],
+  scaleValueDisplay: ScaleValueDisplay
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("正誤一覧")
 
@@ -73,7 +78,10 @@ export async function createResultSheet(
   await createSheetHeaders(worksheet, questionRegions, subtotalColumns)
 
   // データ行の作成
-  await createDataRows(worksheet, scoringData, subtotalColumns, false)
+  await createDataRows(worksheet, scoringData, subtotalColumns, {
+    kind: "result",
+    scaleValueDisplay,
+  })
 
   // スタイル適用
   autoFitColumns(worksheet)

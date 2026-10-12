@@ -4,6 +4,7 @@ import {
   OptionField,
   Section,
 } from "@/components/common/ReportOptionControls"
+import { ScaleValueDisplayField } from "@/components/common/ScaleValueDisplayField"
 import { Input } from "@/components/ui/input"
 import { useEditingInput } from "@/hooks/useEditingInput"
 
@@ -68,6 +69,12 @@ export function QuestionSettingsSection({
                   variant="sub"
                 />
               </div>
+              <ScaleValueDisplayField
+                display={options.scaleValueDisplay}
+                onDisplayChange={(scaleValueDisplay) =>
+                  updateOption("scaleValueDisplay", scaleValueDisplay)
+                }
+              />
               <TableLayoutFields
                 tableColumns={options.questionTableColumns}
                 fontSize={options.questionTableFontSize}

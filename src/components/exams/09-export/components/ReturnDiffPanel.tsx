@@ -45,6 +45,8 @@ const statusLabel = (status: string): string => {
       return "二重マーク"
     case "unscored":
       return "未採点"
+    case "evaluated":
+      return "類型評価"
     default:
       return status
   }
@@ -53,7 +55,8 @@ const statusLabel = (status: string): string => {
 /** セル状態を「判定（得点）」形式の文字列にする */
 const cellText = (cell: ReturnScoreCellState | null): string => {
   if (!cell) return "（なし）"
-  const label = statusLabel(cell.status)
+  // 類型評価は判定の名前でなく、付けた類型の記号を出す
+  const label = cell.scaleLabel ?? statusLabel(cell.status)
   if (cell.value !== null) return `${label}（${cell.value}点）`
   return label
 }

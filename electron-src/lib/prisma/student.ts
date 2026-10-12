@@ -1,7 +1,8 @@
 import type { Prisma } from "@prisma/client"
 
+import { calculateActualScore } from "@/lib/shared/actualScore"
+
 import { buildStudentDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
-import { calculateActualScore } from "../shared/calculations/actualScore"
 import { diffFields, recordAuditLog } from "./auditLog"
 import { studentAuditTarget } from "./auditTargets"
 import prisma from "./client"

@@ -502,11 +502,21 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
   - Excel と成績算出は有効スコアを射影せずそのまま小計・合計へ渡す。設問も行のまま渡す（`ExamDataCache.cropRegions`）
   - 返却版は評価済みのセルにだけ類型の id（`l`）と記録した時点の点数（`lp`）を足した。共通の類型評価の点数を直すと差分に出る
   - 生徒の試験成績は独自の点の計算をやめて単一実装を通した（採点者の解決はしないまま。先頭の行を読む今の形は別の課題）
-- 残っている小さなこと: 個別表示の答案に重ねる採点マーク（`drawCropRegionMarks`・`useCropRegionsWithStatus` の独自の点の計算）と
-  PDF の点の文字（`renderAnswerSheet.ts`）は類型を扱わない（S4）。08 の案の束ね（`proposedResults.ts` が判定と部分点で束ねる）は
-  類型の違いを見ない（S5）。進み具合の数え方は方式と合わない採点も採点済みに数える。
-  マウスモードのブラシの並びに正答・部分点が残る（押しても書かずに知らせる）。`useScoringScreen.ts` が 616行。
-  見せ方の3択（`scaleValueDisplay`）は列だけで、画面はまだ（S4）
+- **S4 済み**。得点の単一実装は renderer からも呼べるよう `src/lib/shared/actualScore.ts` へ移した。
+  - 答案の採点マーク: 07 の個別表示と 09 の PDF・プレビューで、方式と合う評価済みのマスは ○×△ の代わりに類型の記号を
+    マークの書式（大きさ・色・位置）で文字として描き、点数として類型の点数を出す（`cropRegionScoreDisplay.ts`・`scoringDataPrint.ts`）。
+    採点マーク設定の「類型評価」の行は見本に「A」を出す
+  - 見せ方の3択: 試験の個人票の設定（設問の表）と成績の個人票の設定（内訳）に「類型評価の見せ方」（`ScaleValueDisplayField`）。
+    文字にするのは `formatScaleValue`（`src/lib/shared/scaleValueDisplay.ts`）1か所で、試験の個人票・Excel の正誤一覧・
+    09 のプレビュー・成績の個人票の外部資料の文字評価が使う（換算できない文字は記号だけ）
+  - `ScoreDetail` に `scoringMethod` と `scaleLevel`（id・記号・点数）。Excel の書き出しは使う組を `getScoreScalesForExam` で読む
+  - 項目分析: 類型評価の設問は正答率を出さず（平均からも外す）、類型ごとの人数（使われていない類型も 0 で）を出す。
+    得点率・識別係数は点なので含める。S-P 表と exametrika の書き出しからは外す。個人票の正答率は「—」、学習アドバイスの
+    復習の候補からも外す
+  - 返却版は記録した時点の類型の記号（`ll`）も控え、記号を直しても差分に出す。差分の画面は判定の名前でなく記号を出す
+- 残っている小さなこと: 08 の案の束ね（`proposedResults.ts` が判定と部分点で束ねる）は類型の違いを見ない（S5）。
+  進み具合の数え方は方式と合わない採点も採点済みに数える。Excel のセルの赤字は判定（部分点・保留）で決めたまま。
+  マウスモードのブラシの並びに正答・部分点が残る（押しても書かずに知らせる）。`useScoringScreen.ts` が 616行
 
 #### 4-8-8. 実装の細目（着手前に読む）
 
@@ -520,7 +530,7 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 
 **点の単一実装**
 
-- 得点化は今 `electron-src/lib/shared/calculations/actualScore.ts` の `calculateActualScore` 1か所に集まっている（小計・合計・
+- 得点化は今 `src/lib/shared/actualScore.ts`（S4 で renderer からも呼べるよう `electron-src` から移した）の `calculateActualScore` 1か所に集まっている（小計・合計・
   PDF 出力・確定の集計・成績算出が呼ぶ）。ここに `evaluated` を足し、引数に類型の点数（`scaleLevelScore: number | null`）を受け取って
   そのまま返す（0〜配点に収めない）。類型が無い（SetNull された）`evaluated` は null（欠測）
 - 呼び出し側は、採点行の `scaleLevelId` から類型の行を引いて点数を渡す。類型の行は main の include で採点行に同梱する

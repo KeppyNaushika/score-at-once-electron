@@ -1,6 +1,7 @@
 import * as ExcelJS from "exceljs"
 
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
+import { getExamExportSettings } from "../../prisma/examSettings"
 import type {
   ExportGradingDataOptions,
   FileExportResult,
@@ -53,6 +54,10 @@ export async function exportGradingDataExcel(
     await getClassroomMembersForExam(examId)
   ).filter((examClassroom) => examClassroom.teacherStatistics)
 
+  // 類型評価の設問の値の見せ方は、個人成績表と同じ試験の設定に従う（docs/vlm-grading-design.md §4-8-8）
+  const { scaleValueDisplay } = (await getExamExportSettings(examId))
+    .individualReport
+
   // Excelワークブック作成
   const workbook = new ExcelJS.Workbook()
 
@@ -71,13 +76,15 @@ export async function exportGradingDataExcel(
     workbook,
     exportData.questionRegions,
     exportData.subtotalColumns,
-    scoringData
+    scoringData,
+    scaleValueDisplay
   )
 
   // 問題分析シート作成
   await createItemAnalysisSheet(
     workbook,
     exportData.questionRegions,
+    exportData.scoreScales,
     scoringData
   )
 

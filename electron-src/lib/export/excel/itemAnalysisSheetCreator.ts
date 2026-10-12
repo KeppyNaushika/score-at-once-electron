@@ -3,14 +3,17 @@ import type * as ExcelJS from "exceljs"
 
 import {
   computeItemAnalysis,
+  formatLevelCounts,
   type ItemAnalysisInputStudent,
 } from "@/lib/shared/itemAnalysis"
+import { toScoringMethod } from "@/types/rubric.types"
 
 import type { DiscriminationLevel, ScoringData } from "../../shared/types"
 import {
   applyCellStyle,
   autoFitColumns,
 } from "../../shared/utilities/excelUtilities"
+import type { ExportScoreScale } from "./dataFetcher"
 
 const DISCRIMINATION_LABEL: Record<DiscriminationLevel, string> = {
   good: "良好",
@@ -42,11 +45,18 @@ function colorByLevel(cell: ExcelJS.Cell, level: DiscriminationLevel): void {
   }
 }
 
-/** ScoringData を項目分析入力へ正規化（設問の並び・ラベル・配点は CropRegion 基準） */
+/**
+ * ScoringData を項目分析入力へ正規化（設問の並び・ラベル・配点は CropRegion 基準）。
+ * 類型評価の設問は、組の類型を全部（並び順）と付けた類型を渡す
+ */
 function toItemAnalysisInput(
   questionRegions: CropRegion[],
+  scoreScales: ExportScoreScale[],
   scoringData: ScoringData[]
 ): ItemAnalysisInputStudent[] {
+  const levelsByScaleId = new Map(
+    scoreScales.map((scoreScale) => [scoreScale.id, scoreScale.levels])
+  )
   return scoringData.map((student) => {
     const byId = new Map(
       student.scores.map((score) => [score.questionId, score])
@@ -60,6 +70,16 @@ function toItemAnalysisInput(
           maxScore: region.points ?? 0,
           score: score?.score ?? null,
           isCorrect: score?.status === "correct",
+          scale:
+            toScoringMethod(region.scoringMethod) === "scale"
+              ? {
+                  levels:
+                    (region.scoreScaleId !== null
+                      ? levelsByScaleId.get(region.scoreScaleId)
+                      : undefined) ?? [],
+                  scaleLevelId: score?.scaleLevel?.id ?? null,
+                }
+              : null,
         }
       }),
     }
@@ -70,16 +90,19 @@ function toItemAnalysisInput(
  * 問題分析シートを作成する
  * 設問別の正答率・得点率・識別係数（点双列相関）・D値（得点率差）と、テスト全体のα係数を出力。
  * 識別係数・D値は各セルを判定帯で着色する（単一の「判定」列は持たない）。
+ * 類型評価の設問は正答率を出さず（「—」・平均にも入れない）、類型ごとの人数を出す
+ * （docs/vlm-grading-design.md §4-8-5）。
  */
 export async function createItemAnalysisSheet(
   workbook: ExcelJS.Workbook,
   questionRegions: CropRegion[],
+  scoreScales: ExportScoreScale[],
   scoringData: ScoringData[]
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("問題分析")
 
   const analysis = computeItemAnalysis(
-    toItemAnalysisInput(questionRegions, scoringData)
+    toItemAnalysisInput(questionRegions, scoreScales, scoringData)
   )
 
   if (!analysis) {
@@ -99,11 +122,24 @@ export async function createItemAnalysisSheet(
   worksheet.addRow([]) // 区切りの空行
 
   // ヘッダー行
-  const headers = ["設問", "配点", "正答率(%)", "得点率(%)", "識別係数", "D値"]
+  // 類型評価の設問があるときだけ、類型ごとの人数の列を足す
+  const hasScaleQuestion = analysis.items.some(
+    (item) => item.levelCounts !== null
+  )
+  const headers = [
+    "設問",
+    "配点",
+    "正答率(%)",
+    "得点率(%)",
+    "識別係数",
+    "D値",
+    ...(hasScaleQuestion ? ["類型の分布（人）"] : []),
+  ]
   const headerRow = worksheet.addRow(headers)
   headerRow.eachCell((cell) => applyCellStyle(cell, "header"))
 
   let correctRateSum = 0
+  let correctRateCount = 0
   let scoreRateSum = 0
   let discrimSum = 0
   let discrimCount = 0
@@ -111,7 +147,10 @@ export async function createItemAnalysisSheet(
   let dValueCount = 0
 
   for (const item of analysis.items) {
-    correctRateSum += item.correctRate
+    if (item.correctRate !== null) {
+      correctRateSum += item.correctRate
+      correctRateCount++
+    }
     scoreRateSum += item.scoreRate
     if (item.discriminationIndex !== null) {
       discrimSum += item.discriminationIndex
@@ -125,12 +164,15 @@ export async function createItemAnalysisSheet(
     const row = worksheet.addRow([
       item.label,
       item.maxScore,
-      Math.round(item.correctRate * 10) / 10,
+      item.correctRate !== null ? Math.round(item.correctRate * 10) / 10 : "—",
       Math.round(item.scoreRate * 10) / 10,
       item.discriminationIndex !== null
         ? Math.round(item.discriminationIndex * 1000) / 1000
         : "---",
       item.dValue !== null ? Math.round(item.dValue * 1000) / 1000 : "---",
+      ...(hasScaleQuestion
+        ? [item.levelCounts !== null ? formatLevelCounts(item.levelCounts) : ""]
+        : []),
     ])
 
     row.eachCell((cell, colNumber) => {
@@ -156,10 +198,13 @@ export async function createItemAnalysisSheet(
     const summaryRow = worksheet.addRow([
       "平均",
       "",
-      Math.round((correctRateSum / questionCount) * 10) / 10,
+      correctRateCount > 0
+        ? Math.round((correctRateSum / correctRateCount) * 10) / 10
+        : "—",
       Math.round((scoreRateSum / questionCount) * 10) / 10,
       avgDiscrim,
       avgDValue,
+      ...(hasScaleQuestion ? [""] : []),
     ])
     summaryRow.eachCell((cell) => applyCellStyle(cell, "total"))
   }
