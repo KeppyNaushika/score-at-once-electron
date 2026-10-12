@@ -1,12 +1,13 @@
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toTableColumns } from "@/types/individualReport.types"
-
 import {
   OptionCard,
   OptionCardWithChildren,
+  OptionField,
   Section,
-} from "./ReportOptionControls"
+} from "@/components/common/ReportOptionControls"
+import { Input } from "@/components/ui/input"
+import { useEditingInput } from "@/hooks/useEditingInput"
+
+import { TableLayoutFields } from "./TableLayoutFields"
 import type { ReportSettingsSectionProps } from "./types"
 
 /** 設問の表と学習アドバイス */
@@ -14,6 +15,29 @@ export function QuestionSettingsSection({
   options,
   updateOption,
 }: ReportSettingsSectionProps) {
+  const editing = useEditingInput()
+
+  /** 学習アドバイスの数値欄。空は「指定なし」（null）、数にできない途中は書かない */
+  const editingAdviceNumber = (
+    field: "reviewRateMin" | "reviewRateMax" | "reviewQuestionCount"
+  ) =>
+    editing(field, String(options.adviceOptions[field] ?? ""), (text) => {
+      if (text.trim() === "") {
+        updateOption("adviceOptions", {
+          ...options.adviceOptions,
+          [field]: null,
+        })
+        return
+      }
+      const parsedValue = Number(text)
+      if (Number.isFinite(parsedValue)) {
+        updateOption("adviceOptions", {
+          ...options.adviceOptions,
+          [field]: parsedValue,
+        })
+      }
+    })
+
   return (
     <Section title="設問関連">
       <div className="flex flex-col gap-2">
@@ -44,39 +68,16 @@ export function QuestionSettingsSection({
                   variant="sub"
                 />
               </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-                <Label className="text-xs whitespace-nowrap">列数</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  className="h-6 flex-1 text-xs"
-                  value={options.questionTableColumns}
-                  onChange={(e) => {
-                    const value = Math.min(
-                      10,
-                      Math.max(1, Number(e.target.value))
-                    )
-                    updateOption("questionTableColumns", toTableColumns(value))
-                  }}
-                />
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-                <Label className="text-xs whitespace-nowrap">文字</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  className="h-6 flex-1 text-xs"
-                  value={options.questionTableFontSize}
-                  onChange={(e) => {
-                    const value = Math.max(1, Number(e.target.value))
-                    if (!isNaN(value)) {
-                      updateOption("questionTableFontSize", value)
-                    }
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">px</span>
-              </div>
+              <TableLayoutFields
+                tableColumns={options.questionTableColumns}
+                fontSize={options.questionTableFontSize}
+                onTableColumnsChange={(tableColumns) =>
+                  updateOption("questionTableColumns", tableColumns)
+                }
+                onFontSizeChange={(fontSize) =>
+                  updateOption("questionTableFontSize", fontSize)
+                }
+              />
             </div>
           )}
         </OptionCardWithChildren>
@@ -88,84 +89,31 @@ export function QuestionSettingsSection({
         >
           {options.showLearningAdvice && (
             <div className="mt-2 flex flex-col gap-2">
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-                <Label className="text-xs whitespace-nowrap">正答率</Label>
+              <OptionField label="正答率">
                 <Input
                   type="text"
                   className="h-6 flex-1 text-xs"
                   placeholder="なし"
-                  value={options.adviceOptions.reviewRateMin ?? ""}
-                  onChange={(e) => {
-                    const inputValue = e.target.value
-                    if (inputValue === "") {
-                      updateOption("adviceOptions", {
-                        ...options.adviceOptions,
-                        reviewRateMin: null,
-                      })
-                    } else {
-                      const parsedValue = Number(inputValue)
-                      if (!isNaN(parsedValue)) {
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          reviewRateMin: parsedValue,
-                        })
-                      }
-                    }
-                  }}
+                  {...editingAdviceNumber("reviewRateMin")}
                 />
                 <span className="text-xs text-muted-foreground">%以上</span>
                 <Input
                   type="text"
                   className="h-6 flex-1 text-xs"
                   placeholder="なし"
-                  value={options.adviceOptions.reviewRateMax ?? ""}
-                  onChange={(e) => {
-                    const inputValue = e.target.value
-                    if (inputValue === "") {
-                      updateOption("adviceOptions", {
-                        ...options.adviceOptions,
-                        reviewRateMax: null,
-                      })
-                    } else {
-                      const parsedValue = Number(inputValue)
-                      if (!isNaN(parsedValue)) {
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          reviewRateMax: parsedValue,
-                        })
-                      }
-                    }
-                  }}
+                  {...editingAdviceNumber("reviewRateMax")}
                 />
                 <span className="text-xs text-muted-foreground">%以下</span>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-                <Label className="text-xs whitespace-nowrap">問題数</Label>
+              </OptionField>
+              <OptionField label="問題数">
                 <Input
                   type="text"
                   className="h-6 flex-1 text-xs"
                   placeholder="全て"
-                  value={options.adviceOptions.reviewQuestionCount ?? ""}
-                  onChange={(e) => {
-                    const inputValue = e.target.value
-                    if (inputValue === "") {
-                      updateOption("adviceOptions", {
-                        ...options.adviceOptions,
-                        reviewQuestionCount: null,
-                      })
-                    } else {
-                      const parsedValue = Number(inputValue)
-                      if (!isNaN(parsedValue)) {
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          reviewQuestionCount: parsedValue,
-                        })
-                      }
-                    }
-                  }}
+                  {...editingAdviceNumber("reviewQuestionCount")}
                 />
                 <span className="text-xs text-muted-foreground">問</span>
-              </div>
+              </OptionField>
             </div>
           )}
         </OptionCardWithChildren>

@@ -3,14 +3,12 @@
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  toPasscodeType,
+  usePasscodeSettings,
+} from "@/components/auth/hooks/usePasscodeSettings"
+import { PasscodeSettingsCard } from "@/components/auth/PasscodeSettingsCard"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -19,20 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { type PublicUser, updateUserPasscodeMutation } from "@/queries/user"
 
 interface PasscodeEditModalProps {
@@ -40,15 +25,6 @@ interface PasscodeEditModalProps {
   onClose: () => void
   onPasscodeUpdated: () => void
   user: PublicUser | null
-}
-
-type PasscodeType = "none" | "4digit" | "6digit" | "alphanumeric"
-
-/** DBに入っている文字列を PasscodeType へ絞り込む（未知の値は none 扱い） */
-function toPasscodeType(value: string | null | undefined): PasscodeType {
-  return value === "4digit" || value === "6digit" || value === "alphanumeric"
-    ? value
-    : "none"
 }
 
 export function PasscodeEditModal({
@@ -59,10 +35,9 @@ export function PasscodeEditModal({
 }: PasscodeEditModalProps) {
   // 呼び出し側（settings/page.tsx）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに対象ユーザーの値から始まる。
-  const [passcodeType, setPasscodeType] = useState<PasscodeType>(
+  const passcodeSettings = usePasscodeSettings(
     toPasscodeType(user?.passcodeType)
   )
-  const [passcode, setPasscode] = useState("")
   const [error, setError] = useState("")
   const updateUserPasscode = useMutation(updateUserPasscodeMutation())
 
@@ -72,107 +47,25 @@ export function PasscodeEditModal({
 
     setError("")
 
-    if (passcodeType !== "none" && !passcode) {
-      setError("パスコードを入力してください")
-      return
-    }
-
-    if (passcodeType === "4digit" && passcode.length !== 4) {
-      setError("4桁のパスコードを入力してください")
-      return
-    }
-
-    if (passcodeType === "6digit" && passcode.length !== 6) {
-      setError("6桁のパスコードを入力してください")
-      return
-    }
-
-    if (passcodeType === "alphanumeric" && passcode.length < 4) {
-      setError("英数字のパスコードは4文字以上で入力してください")
+    if (passcodeSettings.passcodeError) {
+      setError(passcodeSettings.passcodeError)
       return
     }
 
     updateUserPasscode.mutate(
       {
         userId: user.id,
-        passcode: passcodeType === "none" ? undefined : passcode,
-        passcodeType,
+        passcode: passcodeSettings.submittedPasscode,
+        passcodeType: passcodeSettings.passcodeType,
       },
       {
         onSuccess: () => {
-          setPasscode("")
+          passcodeSettings.clearPasscode()
           onPasscodeUpdated()
           onClose()
         },
       }
     )
-  }
-
-  const renderPasscodeInput = () => {
-    if (passcodeType === "none") return null
-
-    if (passcodeType === "4digit") {
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="passcode">4桁パスコード</Label>
-          <InputOTP
-            maxLength={4}
-            value={passcode}
-            onChange={setPasscode}
-            pattern="[0-9]*"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-      )
-    }
-
-    if (passcodeType === "6digit") {
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="passcode">6桁パスコード</Label>
-          <InputOTP
-            maxLength={6}
-            value={passcode}
-            onChange={setPasscode}
-            pattern="[0-9]*"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-      )
-    }
-
-    if (passcodeType === "alphanumeric") {
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="passcode">英数字パスコード</Label>
-          <Input
-            id="passcode"
-            type="password"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder="英数字で入力"
-            minLength={4}
-            maxLength={20}
-          />
-        </div>
-      )
-    }
-
-    return null
   }
 
   if (!user) return null
@@ -201,38 +94,12 @@ export function PasscodeEditModal({
             </div>
           </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">パスコード設定</CardTitle>
-              <CardDescription className="text-xs">
-                間違って他のユーザーを選択しないための簡単なパスコードです
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="passcodeType">パスコードタイプ</Label>
-                <Select
-                  value={passcodeType}
-                  onValueChange={(value: PasscodeType) => {
-                    setPasscodeType(value)
-                    setPasscode("")
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="パスコードタイプを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">パスコードなし</SelectItem>
-                    <SelectItem value="4digit">4桁数字</SelectItem>
-                    <SelectItem value="6digit">6桁数字</SelectItem>
-                    <SelectItem value="alphanumeric">英数字</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {renderPasscodeInput()}
-            </CardContent>
-          </Card>
+          <PasscodeSettingsCard
+            passcodeType={passcodeSettings.passcodeType}
+            passcode={passcodeSettings.passcode}
+            onPasscodeTypeChange={passcodeSettings.changePasscodeType}
+            onPasscodeChange={passcodeSettings.setPasscode}
+          />
 
           {error && <div className="text-sm text-red-500">{error}</div>}
 

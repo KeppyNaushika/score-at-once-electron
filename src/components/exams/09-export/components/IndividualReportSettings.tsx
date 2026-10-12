@@ -1,12 +1,9 @@
 "use client"
 
+import { OptionCard, Section } from "@/components/common/ReportOptionControls"
 import type { IndividualReportOptions } from "@/types/individualReport.types"
 
 import { QuestionSettingsSection } from "./individual-report-settings/QuestionSettingsSection"
-import {
-  OptionCard,
-  Section,
-} from "./individual-report-settings/ReportOptionControls"
 import { StatisticsSettingsSection } from "./individual-report-settings/StatisticsSettingsSection"
 import { SubtotalSettingsSection } from "./individual-report-settings/SubtotalSettingsSection"
 import type { UpdateReportOption } from "./individual-report-settings/types"

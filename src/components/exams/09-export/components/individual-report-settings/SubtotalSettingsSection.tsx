@@ -1,14 +1,12 @@
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toTableColumns } from "@/types/individualReport.types"
-
-import { SubtotalGroupSelector } from "../individual-report/SubtotalGroupSelector"
-import { BoxPlotSettings } from "./BoxPlotSettings"
 import {
   OptionCard,
   OptionCardWithChildren,
   Section,
-} from "./ReportOptionControls"
+} from "@/components/common/ReportOptionControls"
+
+import { SubtotalGroupSelector } from "../individual-report/SubtotalGroupSelector"
+import { BoxPlotSettings } from "./BoxPlotSettings"
+import { TableLayoutFields } from "./TableLayoutFields"
 import type { ReportSettingsSectionProps } from "./types"
 
 interface SubtotalSettingsSectionProps extends ReportSettingsSectionProps {
@@ -52,39 +50,16 @@ export function SubtotalSettingsSection({
                 onChange={(value) => updateOption("showGroupSubtotals", value)}
                 variant="sub"
               />
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-                <Label className="text-xs whitespace-nowrap">列数</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  className="h-6 flex-1 text-xs"
-                  value={options.subtotalTableColumns}
-                  onChange={(e) => {
-                    const value = Math.min(
-                      10,
-                      Math.max(1, Number(e.target.value))
-                    )
-                    updateOption("subtotalTableColumns", toTableColumns(value))
-                  }}
-                />
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-                <Label className="text-xs whitespace-nowrap">文字</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  className="h-6 flex-1 text-xs"
-                  value={options.subtotalTableFontSize}
-                  onChange={(e) => {
-                    const value = Math.max(1, Number(e.target.value))
-                    if (!isNaN(value)) {
-                      updateOption("subtotalTableFontSize", value)
-                    }
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">px</span>
-              </div>
+              <TableLayoutFields
+                tableColumns={options.subtotalTableColumns}
+                fontSize={options.subtotalTableFontSize}
+                onTableColumnsChange={(tableColumns) =>
+                  updateOption("subtotalTableColumns", tableColumns)
+                }
+                onFontSizeChange={(fontSize) =>
+                  updateOption("subtotalTableFontSize", fontSize)
+                }
+              />
             </div>
           )}
         </OptionCardWithChildren>

@@ -3,14 +3,10 @@
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
+import { usePasscodeSettings } from "@/components/auth/hooks/usePasscodeSettings"
+import { PasscodeSettingsCard } from "@/components/auth/PasscodeSettingsCard"
+import { UserProfileFields } from "@/components/auth/UserProfileFields"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -19,20 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { createUserMutation } from "@/queries/user"
 
 interface UserCreateModalProps {
@@ -40,8 +22,6 @@ interface UserCreateModalProps {
   onClose: () => void
   onUserCreated: () => void
 }
-
-type PasscodeType = "none" | "4digit" | "6digit" | "alphanumeric"
 
 export function UserCreateModal({
   isOpen,
@@ -52,32 +32,27 @@ export function UserCreateModal({
     username: "",
     name: "",
   })
-  const [passcodeType, setPasscodeType] = useState<PasscodeType>("none")
-  const [passcode, setPasscode] = useState("")
+  const passcodeSettings = usePasscodeSettings("none")
   const [error, setError] = useState("")
   const createUser = useMutation(createUserMutation())
+
+  /**
+   * 閉じるときは入力をすべて消す。このモーダルは login/page.tsx に常にマウントされて
+   * いるので、消さないとパスコードや前回のエラーが次に開いたときに残る
+   */
+  const handleClose = () => {
+    setFormData({ username: "", name: "" })
+    passcodeSettings.resetPasscodeSettings()
+    setError("")
+    onClose()
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (passcodeType !== "none" && !passcode) {
-      setError("パスコードを入力してください")
-      return
-    }
-
-    if (passcodeType === "4digit" && passcode.length !== 4) {
-      setError("4桁のパスコードを入力してください")
-      return
-    }
-
-    if (passcodeType === "6digit" && passcode.length !== 6) {
-      setError("6桁のパスコードを入力してください")
-      return
-    }
-
-    if (passcodeType === "alphanumeric" && passcode.length < 4) {
-      setError("英数字のパスコードは4文字以上で入力してください")
+    if (passcodeSettings.passcodeError) {
+      setError(passcodeSettings.passcodeError)
       return
     }
 
@@ -85,90 +60,25 @@ export function UserCreateModal({
       {
         username: formData.username,
         name: formData.name,
-        passcode: passcodeType === "none" ? undefined : passcode,
-        passcodeType,
+        passcode: passcodeSettings.submittedPasscode,
+        passcodeType: passcodeSettings.passcodeType,
       },
       {
         onSuccess: () => {
-          setFormData({ username: "", name: "" })
-          setPasscodeType("none")
-          setPasscode("")
           onUserCreated()
-          onClose()
+          handleClose()
         },
       }
     )
   }
 
-  const renderPasscodeInput = () => {
-    if (passcodeType === "none") return null
-
-    if (passcodeType === "4digit") {
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="passcode">4桁パスコード</Label>
-          <InputOTP
-            maxLength={4}
-            value={passcode}
-            onChange={setPasscode}
-            pattern="[0-9]*"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-      )
-    }
-
-    if (passcodeType === "6digit") {
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="passcode">6桁パスコード</Label>
-          <InputOTP
-            maxLength={6}
-            value={passcode}
-            onChange={setPasscode}
-            pattern="[0-9]*"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-      )
-    }
-
-    if (passcodeType === "alphanumeric") {
-      return (
-        <div className="space-y-2">
-          <Label htmlFor="passcode">英数字パスコード</Label>
-          <Input
-            id="passcode"
-            type="password"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder="英数字で入力"
-            minLength={4}
-            maxLength={20}
-          />
-        </div>
-      )
-    }
-
-    return null
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose()
+      }}
+    >
       <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>新しいユーザーを作成</DialogTitle>
@@ -177,69 +87,26 @@ export function UserCreateModal({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">ユーザー名</Label>
-            <Input
-              id="username"
-              value={formData.username}
-              onChange={(e) =>
-                setFormData({ ...formData, username: e.target.value })
-              }
-              placeholder="ユーザー名を入力"
-              required
-            />
-          </div>
+          <UserProfileFields
+            username={formData.username}
+            name={formData.name}
+            onUsernameChange={(username) =>
+              setFormData({ ...formData, username })
+            }
+            onNameChange={(name) => setFormData({ ...formData, name })}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="name">表示名</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="表示名を入力"
-              required
-            />
-          </div>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">パスコード設定</CardTitle>
-              <CardDescription className="text-xs">
-                間違って他のユーザーを選択しないための簡単なパスコードです
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="passcodeType">パスコードタイプ</Label>
-                <Select
-                  value={passcodeType}
-                  onValueChange={(value: PasscodeType) => {
-                    setPasscodeType(value)
-                    setPasscode("")
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="パスコードタイプを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">パスコードなし</SelectItem>
-                    <SelectItem value="4digit">4桁数字</SelectItem>
-                    <SelectItem value="6digit">6桁数字</SelectItem>
-                    <SelectItem value="alphanumeric">英数字</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {renderPasscodeInput()}
-            </CardContent>
-          </Card>
+          <PasscodeSettingsCard
+            passcodeType={passcodeSettings.passcodeType}
+            passcode={passcodeSettings.passcode}
+            onPasscodeTypeChange={passcodeSettings.changePasscodeType}
+            onPasscodeChange={passcodeSettings.setPasscode}
+          />
 
           {error && <div className="text-sm text-red-500">{error}</div>}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
             <Button type="submit" disabled={createUser.isPending}>

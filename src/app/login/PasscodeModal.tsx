@@ -73,16 +73,17 @@ export function PasscodeModal({
       return (
         <InputOTP
           ref={passcodeInputRef}
+          id="passcode"
           maxLength={4}
           value={passcode}
           onChange={setPasscode}
           pattern="[0-9]*"
         >
           <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
-            <InputOTPSlot index={3} />
+            <InputOTPSlot index={0} masked />
+            <InputOTPSlot index={1} masked />
+            <InputOTPSlot index={2} masked />
+            <InputOTPSlot index={3} masked />
           </InputOTPGroup>
         </InputOTP>
       )
@@ -92,18 +93,19 @@ export function PasscodeModal({
       return (
         <InputOTP
           ref={passcodeInputRef}
+          id="passcode"
           maxLength={6}
           value={passcode}
           onChange={setPasscode}
           pattern="[0-9]*"
         >
           <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
-            <InputOTPSlot index={3} />
-            <InputOTPSlot index={4} />
-            <InputOTPSlot index={5} />
+            <InputOTPSlot index={0} masked />
+            <InputOTPSlot index={1} masked />
+            <InputOTPSlot index={2} masked />
+            <InputOTPSlot index={3} masked />
+            <InputOTPSlot index={4} masked />
+            <InputOTPSlot index={5} masked />
           </InputOTPGroup>
         </InputOTP>
       )
