@@ -59,8 +59,8 @@ export function FrozenCellControl({
 }: FrozenCellControlProps) {
   const { isStale } = frozen
   const frozenStateLabel = isStale
-    ? "確定済み（確定後に元データが変わっています）"
-    : "確定済み"
+    ? "固定済み（固定後に元データが変わっています）"
+    : "固定済み"
 
   return (
     <Popover>
@@ -87,20 +87,20 @@ export function FrozenCellControl({
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 font-medium">
             <Lock className="h-3.5 w-3.5" />
-            確定済み
+            固定済み
           </div>
           <p className="text-muted-foreground">
-            {new Date(frozen.frozenAt).toLocaleString("ja-JP")} に確定
+            {new Date(frozen.frozenAt).toLocaleString("ja-JP")} に固定
           </p>
 
           {isStale ? (
             <div className="space-y-1.5 rounded border border-amber-300 bg-amber-50 p-2 dark:border-amber-700 dark:bg-amber-950/40">
               <div className="flex items-center gap-1 font-medium text-amber-800 dark:text-amber-300">
                 <TriangleAlert className="h-3.5 w-3.5" />
-                確定後に元データが変わっています
+                固定後に元データが変わっています
               </div>
               <div className="grid grid-cols-[auto_1fr] gap-x-2 tabular-nums">
-                <span className="text-muted-foreground">確定値</span>
+                <span className="text-muted-foreground">固定値</span>
                 <span className="text-right font-medium">
                   {formatValue(frozenPercentage, frozenGradeLabel)}
                 </span>
@@ -110,7 +110,7 @@ export function FrozenCellControl({
                 </span>
               </div>
               <p className="text-muted-foreground">
-                表示は確定値のまま固定されています。追従させる場合のみ再確定してください。
+                表示は固定値のままです。追従させる場合のみ固定し直してください。
               </p>
             </div>
           ) : (
@@ -126,7 +126,7 @@ export function FrozenCellControl({
               className="h-7 flex-1 text-xs"
               onClick={onRefreeze}
             >
-              現在の値で再確定
+              現在の値で固定し直す
             </Button>
             <Button
               size="sm"
@@ -134,7 +134,7 @@ export function FrozenCellControl({
               className="h-7 flex-1 text-xs"
               onClick={onUnfreeze}
             >
-              確定を解除
+              固定を解除
             </Button>
           </div>
         </div>

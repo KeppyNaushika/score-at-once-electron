@@ -87,12 +87,11 @@ export function AiGradingMode({
     <div className="flex h-full min-h-0 min-w-0 flex-1">
       {currentCropRegion &&
       toScoringMethod(currentCropRegion.scoringMethod) === "scale" ? (
-        // 類型評価の設問は AI 採点の対象外（類型の選択肢は §4-8-7 の S6 で足す）。
+        // 類型方式の設問は AI採点の対象外（類型の選択肢は §4-8-7 の S6 で足す）。
         // 作業場を開かないので、AI の判定も点の採点も書かれない
         <>
           <div className="flex flex-1 items-center justify-center p-4 text-sm text-muted-foreground">
-            類型評価の設問は、まだ AI
-            採点では採点できません。一覧表示か個別表示で類型を付けてください
+            類型方式の設問は、まだAI採点では採点できません。一覧表示か個別表示で類型を付けてください
           </div>
           <div className="w-96 shrink-0 overflow-y-auto border-l px-3">
             {questionNavigator}

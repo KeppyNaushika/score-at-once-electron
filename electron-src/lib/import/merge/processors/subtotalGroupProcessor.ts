@@ -96,7 +96,7 @@ export async function processSubtotalGroupIdIntegration(
     idChangeTargets,
     counts,
     warnings,
-    describeRow: (importGroup) => `小計グループ「${importGroup.name}」`,
+    describeRow: (importGroup) => `小計点グループ「${importGroup.name}」`,
     applyColumns: (importGroup, existingId) =>
       applySubtotalGroupColumns(importGroup, existingId, policy, counts, tx),
     createNewRow: async (importGroup, importId) => {

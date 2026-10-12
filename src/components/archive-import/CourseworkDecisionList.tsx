@@ -15,7 +15,7 @@ interface CourseworkDecisionListProps {
 
 /**
  * 旧形式（.coursework / .grade）の取り込みで、資料ごとに
- * 「既存へ統合（uuid一致 / 名前候補）」か「新規作成」かを選ぶ一覧
+ * 「既存に取り込む（uuid一致 / 名前候補）」か「新規作成」かを選ぶ一覧
  */
 export function CourseworkDecisionList({
   courseworkMatches,
@@ -39,7 +39,7 @@ export function CourseworkDecisionList({
           <div className="mb-2 flex items-center gap-2">
             <span className="text-sm font-medium">{courseworkMatch.name}</span>
             <span className="text-xs text-muted-foreground">
-              （評価項目 {courseworkMatch.itemCount} ・名簿{" "}
+              （資料評価項目 {courseworkMatch.itemCount} ・名簿{" "}
               {courseworkMatch.studentCount}名）
             </span>
           </div>
@@ -60,7 +60,7 @@ export function CourseworkDecisionList({
                   htmlFor={`${courseworkMatch.archiveId}-uuid`}
                   className="text-sm font-normal"
                 >
-                  既存へ統合（同一データ・uuid一致）:{" "}
+                  既存に取り込む（同一データ・uuid一致）:{" "}
                   {courseworkMatch.uuidMatch.name}
                 </Label>
               </div>
@@ -75,7 +75,7 @@ export function CourseworkDecisionList({
                   htmlFor={`${courseworkMatch.archiveId}-${nameCandidate.id}`}
                   className="text-sm font-normal"
                 >
-                  既存へ統合（名前一致）: {nameCandidate.name}
+                  既存に取り込む（名前一致）: {nameCandidate.name}
                 </Label>
               </div>
             ))}

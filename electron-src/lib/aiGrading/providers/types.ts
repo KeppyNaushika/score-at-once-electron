@@ -1,5 +1,5 @@
 /**
- * AI 採点の事業者（Anthropic / OpenAI / …）を差し替えられるようにするための境界の型。
+ * AI採点の事業者（Anthropic / OpenAI / …）を差し替えられるようにするための境界の型。
  *
  * ここに置く型は事業者の SDK に依存しない。各事業者の実装（`anthropicProvider.ts` 等）が
  * この形と SDK の形の間を変換する。設計は docs/vlm-grading-design.md §6。

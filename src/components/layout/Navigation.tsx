@@ -43,10 +43,10 @@ interface NavItem {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
-  /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI 採点。設計 §10-1） */
+  /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI採点。設計 §10-1） */
   isExperimental?: boolean
   /**
-   * web 版では出さない（デスクトップ版でだけ動く機能）。AI 採点は API キーを暗号化して
+   * web 版では出さない（デスクトップ版でだけ動く機能）。AI採点は API キーを暗号化して
    * 保存できず、事業者への通信もブラウザからは通らない（docs/web-version-plan.md の判断待ち）
    */
   isDesktopOnly?: boolean
@@ -69,7 +69,7 @@ const navGroups: NavItem[][] = [
     { href: "/students", label: "生徒管理", icon: Users },
     { href: "/classrooms", label: "学級管理", icon: School },
     { href: "/subtotal-groups", label: "小計点管理", icon: ListTree },
-    { href: "/score-scales", label: "類型評価管理", icon: Layers },
+    { href: "/score-scales", label: "類型表管理", icon: Layers },
     { href: "/tags", label: "タグ管理", icon: Tag },
   ],
   [{ href: "/data-export", label: "データ書き出し", icon: FileArchive }],

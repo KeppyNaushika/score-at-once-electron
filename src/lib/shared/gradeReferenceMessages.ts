@@ -31,12 +31,12 @@ const STUDENTS_STEP_LABEL = workflowStep(
   gradeWorkflowSteps,
   "01-students"
 ).label
-const DATA_SOURCES_STEP_LABEL = workflowStep(
+const GRADE_ITEMS_STEP_LABEL = workflowStep(
   gradeWorkflowSteps,
-  "02-data-sources"
+  "02-items"
 ).label
 
-/** 評価項目（成績算出・確定値つき）を同梱したデータソース */
+/** 成績評価項目（成績算出・固定値つき）を同梱したデータソース */
 export type UsingGradeDataSource = Pick<
   GradeDataSource,
   "id" | "type" | "name" | "order" | "subtotalId"
@@ -54,9 +54,9 @@ interface WithGradeDataSources {
 /**
  * データソースが対象をどう使っているか。
  *
- * - `direct`: 対象そのものを指している（設問・小計・評価項目のデータソース）
+ * - `direct`: 対象そのものを指している（設問・小計項目・資料評価項目のデータソース）
  * - `total`: 対象がデータソースの合計に含まれている（設問が「試験の合計点」や
- *   小計に、評価項目が「資料合計」に）。消すと合計が変わる
+ *   小計点に、資料評価項目が「資料の合計点」に）。消すと合計が変わる
  */
 export interface GradeDataSourceUsage {
   dataSource: UsingGradeDataSource
@@ -67,14 +67,14 @@ export interface GradeDataSourceUsage {
 export const GRADE_DATA_SOURCE_TYPE_LABEL: Record<GradeDataSourceType, string> =
   {
     exam_total: "試験の合計点",
-    subtotal: "小計",
-    crop_region: "設問",
-    coursework: "評価項目",
-    coursework_total: "資料合計",
+    subtotal: "小計点",
+    crop_region: "設問の得点",
+    coursework: "資料評価項目",
+    coursework_total: "資料の合計点",
     manual: "手動入力（旧形式）",
   }
 
-/** 同じデータソースは1つにし、成績算出の名前 → 評価項目 → データソースの順に並べる */
+/** 同じデータソースは1つにし、成績算出の名前 → 成績評価項目 → データソースの順に並べる */
 function sortUnique(
   dataSources: UsingGradeDataSource[]
 ): UsingGradeDataSource[] {
@@ -125,7 +125,7 @@ export function examUsingDataSources(
   ])
 }
 
-/** 試験外成績資料を使っているデータソース（資料合計と、評価項目1つずつ） */
+/** 試験外成績資料を使っているデータソース（資料の合計点と、資料評価項目1つずつ） */
 export function courseworkUsingDataSources(
   coursework: CourseworkWithUsage
 ): UsingGradeDataSource[] {
@@ -224,7 +224,7 @@ export function subtotalUsages(
   return toUsages(subtotal.gradeDataSources, [])
 }
 
-/** 評価項目を消すと影響を受けるデータソース（項目を指すものと、資料合計） */
+/** 資料評価項目を消すと影響を受けるデータソース（項目を指すものと、資料の合計点） */
 export function courseworkItemUsages(
   coursework: CourseworkWithUsage,
   courseworkItemId: string
@@ -254,9 +254,9 @@ export function listReferencingGradeNames(
   ]
 }
 
-/** 「成績算出「A」の評価項目「B」のデータソース「C」」 */
+/** 「成績算出「A」の成績評価項目「B」のデータソース「C」」 */
 function describeDataSource(dataSource: UsingGradeDataSource): string {
-  return `成績算出「${dataSource.gradeItem.grade.name}」の評価項目「${dataSource.gradeItem.name}」のデータソース「${dataSource.name}」`
+  return `成績算出「${dataSource.gradeItem.grade.name}」の成績評価項目「${dataSource.gradeItem.name}」のデータソース「${dataSource.name}」`
 }
 
 const toBulletLines = (lines: string[]): string =>
@@ -283,7 +283,7 @@ export function buildDeletionBlockedMessage(
   const label = BLOCKED_TARGET_LABEL[kind]
   return (
     `この${label}は次の成績算出で使われているため、削除できません。` +
-    `削除するには、先に各成績算出の「${DATA_SOURCES_STEP_LABEL}」でこの${label}を使っているデータソースを削除してください。\n` +
+    `削除するには、先に各成績算出の「${GRADE_ITEMS_STEP_LABEL}」でこの${label}を使っているデータソースを削除してください。\n` +
     toBulletLines(dataSources.map(describeDataSource))
   )
 }
@@ -291,8 +291,8 @@ export function buildDeletionBlockedMessage(
 /**
  * 生徒が成績算出の名簿に載っていて消せないことを伝える文言。載っていなければ null。
  *
- * 生徒を消すと名簿（GradeStudent）が Cascade で消え、その生徒の手動点数・上書き・
- * 確定値も一緒に消える。
+ * 生徒を消すと名簿（GradeStudent）が Cascade で消え、その生徒の旧 manual の得点・上書き・
+ * 固定値も一緒に消える。
  */
 export function buildStudentDeletionBlockedMessage(
   gradeStudents: { grade: Pick<Grade, "id" | "name"> }[]
@@ -316,7 +316,7 @@ const WARNED_TARGET_LABEL: Record<WarnedTargetKind, string> = {
   cropRegion: "設問",
   examPage: "模範解答ページ",
   subtotal: "小計項目",
-  courseworkItem: "評価項目",
+  courseworkItem: "資料評価項目",
 }
 
 /** 1件のデータソースに起きることを言う */
@@ -328,7 +328,7 @@ function describeEffect(
   if (usage === "total") {
     const totalLabel =
       GRADE_DATA_SOURCE_TYPE_LABEL[toGradeDataSourceType(dataSource.type)]
-    return `${described}（${totalLabel}）の点数が変わります`
+    return `${described}（${totalLabel}）の得点が変わります`
   }
   switch (kind) {
     case "cropRegion":
@@ -340,12 +340,12 @@ function describeEffect(
       return `${described}（この小計項目）が削除されます`
     case "courseworkItem":
       // coursework データソースは SetNull。行は残るが参照先が空になる
-      return `${described}（この評価項目）が参照先を失い、点数を取り込めなくなります`
+      return `${described}（この資料評価項目）が参照先を失い、得点を取り込めなくなります`
   }
 }
 
 /**
- * 設問・小計項目・評価項目を消すと成績算出に起きることを伝える文言。
+ * 設問・小計項目・資料評価項目を消すと成績算出に起きることを伝える文言。
  * 使われていなければ null。
  */
 export function buildItemDeletionWarning(
@@ -356,7 +356,7 @@ export function buildItemDeletionWarning(
   const label = WARNED_TARGET_LABEL[kind]
   return (
     `この${label}は成績算出で使われています。削除すると次のようになります。` +
-    `削除した後は、各成績算出の「${DATA_SOURCES_STEP_LABEL}」と結果を確認してください。\n` +
+    `削除した後は、各成績算出の「${GRADE_ITEMS_STEP_LABEL}」と結果を確認してください。\n` +
     toBulletLines(usages.map((usage) => describeEffect(kind, usage)))
   )
 }
@@ -388,7 +388,7 @@ export function buildRosterRemovalWarning(
   const { target, roster } = ROSTER_REMOVAL_LABEL[kind]
   return (
     `この${target}は次の成績算出で使われています。` +
-    `${roster}から外した生徒は、各成績算出でこの${target}の点数が欠測になります` +
+    `${roster}から外した生徒は、各成績算出でこの${target}の得点が欠測になります` +
     `（その成績算出の名簿に載っている場合）。\n` +
     toBulletLines(gradeNames.map((gradeName) => `成績算出「${gradeName}」`))
   )

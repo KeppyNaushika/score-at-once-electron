@@ -35,7 +35,7 @@ export function SubtotalGroupIntegrationPanel({
       <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
         <CardContent className="p-4 text-center">
           <p className="text-green-700 dark:text-green-300">
-            すべての小計グループが自動で紐づきました
+            すべての小計点グループが自動で紐づきました
           </p>
         </CardContent>
       </Card>
@@ -49,7 +49,7 @@ export function SubtotalGroupIntegrationPanel({
         <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            他社フォーマットからのインポートです。「大問」「観点」等の同名グループが既に存在する場合、「グループ名で紐づける」の使用をおすすめします。
+            他社フォーマットからの取り込みです。「大問」「観点」等の同名グループが既に存在する場合、「グループ名で紐づける」の使用をおすすめします。
           </p>
         </div>
       )}
@@ -57,10 +57,10 @@ export function SubtotalGroupIntegrationPanel({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
-            判断が必要な小計グループが{needsDecisionCount}グループあります
+            判断が必要な小計点グループが{needsDecisionCount}グループあります
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            どうやって既存の小計グループと紐づけますか？
+            どうやって既存の小計点グループと紐づけますか？
           </p>
         </CardHeader>
         <CardContent>
@@ -75,7 +75,7 @@ export function SubtotalGroupIntegrationPanel({
                 value="by_name"
                 id="subtotal-by-name"
                 label={`グループ名で紐づける (${byNameCount}グループが一致)`}
-                description="グループ名が同じ小計グループと紐づけます"
+                description="グループ名が同じ小計点グループと紐づけます"
                 recommended={byNameCount > 0}
               />
               <StrategyOption

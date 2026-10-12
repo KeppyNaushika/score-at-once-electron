@@ -39,7 +39,7 @@ export async function setGradeExportComparison(selectionInput: {
   })
   if (!comparison) {
     throw new Error(
-      "比較が見つかりません（他の端末で削除された可能性があります）"
+      "比較が見つかりません（他のPCで削除された可能性があります）"
     )
   }
   if (comparison.gradeItem.gradeId !== selectionInput.gradeId) {

@@ -62,7 +62,7 @@ export function AiTokenUsageTab() {
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">使用トークン</h2>
         <p className="text-sm text-muted-foreground">
-          すべての試験で、このアプリから自分が送った分です（採点指示の改訂を含む。消した試行の分は数えられません）。
+          すべての試験で、このアプリから自分が送った分です（採点指示の改訂を含む。消した判定の分は数えられません）。
           金額は「料金」タブで入れた単価による概算で、事業者の残高・請求額ではありません。
         </p>
       </div>

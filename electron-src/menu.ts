@@ -1,6 +1,8 @@
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron"
 import { Menu } from "electron"
 
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
+
 const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
   const mainMenus: MenuItemConstructorOptions[] = [
     {
@@ -105,7 +107,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
               mainWindow.webContents.send("score-panel", "incorrect"),
           },
           {
-            label: "無解答にする",
+            label: `${SCORING_STATUS_LABELS.no_answer}にする`,
             accelerator: "P",
             click: () => mainWindow.webContents.send("score-panel", "noanswer"),
           },
@@ -151,7 +153,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
               ),
           },
           {
-            label: "無解答を表示",
+            label: `${SCORING_STATUS_LABELS.no_answer}を表示`,
             accelerator: "Alt+P",
             // Original had "toggle-show-incorrect", should be "toggle-show-noanswer"
             click: () =>
@@ -178,7 +180,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         click: () => mainWindow.webContents.send("score-panel", "studentName"), // Changed "name" to "studentName" to match IPC listener
       },
       {
-        label: "スコアシンボル表示切替", // Added for toggling overlay
+        label: "採点マークの表示切替", // Added for toggling overlay
         accelerator: "Alt+S",
         click: () =>
           mainWindow.webContents.send("score-panel", "toggleScoreOverlay"),

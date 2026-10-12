@@ -238,7 +238,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
       // 日本語入力の変換中のキーは拾わない（変換の確定の Enter 等をコマンドにしない）
       if (event.isComposing || event.keyCode === 229) return
       // 素の Enter・Space で押すことを選んだボタン（`data-native-activation`）に焦点があれば、
-      // コマンドにせずボタンへ渡す（AI 採点の問いの一覧の行。行の全体がボタン）
+      // コマンドにせずボタンへ渡す（AI採点の問いの一覧の行。行の全体がボタン）
       if (isNativeActivation(event)) return
 
       // キーを正規化（macOSデッドキー対応含む）

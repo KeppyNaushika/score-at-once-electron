@@ -15,13 +15,18 @@ import {
 import prisma from "./client"
 import { isRecordNotFoundError } from "./prismaErrors"
 import { PUBLIC_USER_OMIT } from "./publicUser"
-import { canDecideExamScores } from "./scoreDecision"
+import { checkExamOwner } from "./scoreDecision"
 
 /**
- * 割当の編集権限。確定と同じく試験OWNERのみ。
- * 誰が採点するかの決定は裁定と同じ「試験の運営」の権限に属する。
+ * 割当の編集権限。採点確定と同じく試験OWNERのみ。
+ * 誰が採点するかの決定は採点確定と同じ「試験の運営」の権限に属する。
+ * 設問ごと・生徒ごとの採点担当の両方がここを引く。
  */
-export const canManageAssignments = canDecideExamScores
+export const canManageAssignments = (
+  examId: string,
+  userId: string
+): Promise<{ allowed: boolean; reason?: string }> =>
+  checkExamOwner(examId, userId, "採点担当の割り当ては所有者だけが行えます")
 
 /**
  * 試験のメンバー数。

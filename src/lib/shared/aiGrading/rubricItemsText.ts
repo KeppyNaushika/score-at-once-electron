@@ -1,5 +1,5 @@
 /**
- * ルーブリック項目の一覧を、AI へ送る文にする（docs/vlm-grading-design.md §3-1・§3-3・§3-4）
+ * 採点項目の一覧を、AI へ送る文にする（docs/vlm-grading-design.md §3-1・§3-3・§3-4）
  *
  * 1段目（答案ごと）と2段目（全員分）の両方に同じ書き方で載せる。送った時点の一覧を
  * 採点指示の行（`renderedRubricItems`）へ写すときも、この文をそのまま使う。
@@ -80,7 +80,11 @@ export function formatRubricItemsSection(
     (rubricItem) =>
       `- id: ${rubricItem.id} ／ ${formatEffect(rubricItem)} ／ ${rubricItem.label.trim()}`
   )
-  return ["## ルーブリック項目", ...lines].join("\n")
+  return [
+    "## 採点項目",
+    "教員が定めた、点を動かす基準の項目です。",
+    ...lines,
+  ].join("\n")
 }
 
 /** 項目の行の頭（`- id: <uuid> ／`）。送った文から id を読み戻すのに使う */

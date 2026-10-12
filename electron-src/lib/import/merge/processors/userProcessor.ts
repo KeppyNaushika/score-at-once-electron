@@ -26,7 +26,7 @@ type ArchiveUser = ExtractedArchiveData["usersData"]["users"][number]
 /**
  * 採点者のID統合処理を実行
  *
- * 判断が要るのは「id が一致しない採点者」だけで、同じパソコンから取り込むかぎり
+ * 判断が要るのは「id が一致しない採点者」だけで、同じPCから取り込むかぎり
  * 全員が byId に入る（＝画面には何も出ない）。
  */
 export async function processUserIdIntegration(
@@ -46,7 +46,7 @@ export async function processUserIdIntegration(
     data.usersData.users.map((archiveUser) => [archiveUser.id, archiveUser])
   )
 
-  // id が一致した採点者はそのまま（同じパソコンで作ったデータ）
+  // id が一致した採点者はそのまま（同じPCで作ったデータ）
   for (const match of userPreMatch.byId) {
     idMappings.user[match.importId] = match.existingId
   }
@@ -76,7 +76,7 @@ export async function processUserIdIntegration(
     idMappings.user[archiveUser.id] = archiveUser.id
     counts.created.users++
     warnings.push(
-      `採点者「${archiveUser.name}（${archiveUser.username}）」をこのパソコンの利用者として新しく作りました。ログイン用のパスコードは引き継がれません。`
+      `採点者「${archiveUser.name}（${archiveUser.username}）」をこのPCのユーザーとして新しく作りました。ログイン用のパスコードは引き継がれません。`
     )
   }
 

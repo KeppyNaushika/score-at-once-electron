@@ -29,7 +29,7 @@ export function CourseworkRowSummary({
       <span>
         {coursework.description || "説明なし"}
         {" / 生徒: "}
-        {coursework.students.length}名 / 評価項目: {coursework.items.length}
+        {coursework.students.length}名 / 資料評価項目: {coursework.items.length}
       </span>
     </span>
   )

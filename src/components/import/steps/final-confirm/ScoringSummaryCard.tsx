@@ -42,7 +42,7 @@ export function ScoringSummaryCard({
           {scoringSummary.updated > 0 && (
             <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-purple-500">●</span>
-              読み込んだ採点で上書き: {scoringSummary.updated}件
+              取り込む採点で上書き: {scoringSummary.updated}件
             </li>
           )}
           {scoringSummary.newCount > 0 && (

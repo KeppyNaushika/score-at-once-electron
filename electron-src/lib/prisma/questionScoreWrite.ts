@@ -9,7 +9,11 @@
 import type { CropRegion, Student } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 
-import type { ScoringStatus } from "@/types/scoringStatus.types"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
+import {
+  isScoringStatus,
+  type ScoringStatus,
+} from "@/types/scoringStatus.types"
 
 import { type AuditChange, recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion } from "./auditScope"
@@ -33,28 +37,17 @@ import { PUBLIC_USER_OMIT } from "./publicUser"
 export const SCORE_TARGET_DELETED = "target-deleted" as const
 
 /** QuestionScore.status を日本語表示に変換（監査ログ差分用） */
-const scoreStatusLabel = (status: string | null | undefined): string => {
-  switch (status) {
-    case "correct":
-      return "正解"
-    case "incorrect":
-      return "不正解"
-    case "partial":
-      return "部分点"
-    case "pending":
-      return "保留"
-    case "no_answer":
-      return "無答"
-    case "double_mark":
-      return "複数マーク"
-    case "unscored":
-      return "未採点"
-    case "evaluated":
-      return "類型評価"
-    default:
-      return status ?? "（なし）"
-  }
-}
+const scoreStatusLabel = (status: string | null | undefined): string =>
+  isScoringStatus(status)
+    ? SCORING_STATUS_LABELS[status]
+    : (status ?? "（なし）")
+
+/** 変更前の採点の表示（監査ログ差分用）。類型を付けた採点は状態名でなく類型の記号を出す */
+const previousScoreLabel = (questionScore: {
+  status: string
+  scaleLevel: { label: string } | null
+}): string =>
+  questionScore.scaleLevel?.label ?? scoreStatusLabel(questionScore.status)
 
 /**
  * 採点提案の監査ログを記録（ベストエフォート）。
@@ -160,7 +153,7 @@ const rubricOverrideFor = (row: { rubricApplications: unknown[] }) =>
  */
 const assertPointResult = (result: QuestionScoreResult) => {
   if (result.status === "evaluated") {
-    throw new Error("類型は類型評価の書き込みで付けてください")
+    throw new Error("類型は類型方式の書き込みで付けてください")
   }
 }
 
@@ -273,7 +266,7 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
         cropRegionId: questionScore.cropRegionId,
         userId: questionScore.userId,
       },
-      include: { rubricApplications: true },
+      include: { rubricApplications: true, scaleLevel: true },
     })
 
     if (existing) {
@@ -303,7 +296,7 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
           {
             field: "status",
             label: "採点",
-            before: scoreStatusLabel(existing.status),
+            before: previousScoreLabel(existing),
             after: scoreStatusLabel(questionScore.status),
           },
           {
@@ -374,7 +367,7 @@ export const updateQuestionScore = async (
     // 生の Prisma エラーではなく「削除済み」として返す（協調採点で他教員が削除した場合）。
     const before = await prisma.questionScore.findUnique({
       where: { id },
-      include: { rubricApplications: true },
+      include: { rubricApplications: true, scaleLevel: true },
     })
 
     if (!before) {
@@ -406,7 +399,7 @@ export const updateQuestionScore = async (
         {
           field: "status",
           label: "採点",
-          before: scoreStatusLabel(before.status),
+          before: previousScoreLabel(before),
           after: scoreStatusLabel(updated.status),
         },
         {

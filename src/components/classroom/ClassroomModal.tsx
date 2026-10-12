@@ -122,13 +122,13 @@ export default function ClassroomModal({
             </div>
           </div>
 
-          {/* クラスコード */}
+          {/* 学級コード */}
           <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
             <Label
               htmlFor="classroomCode"
               className="text-right font-normal text-muted-foreground"
             >
-              クラスコード
+              学級コード
             </Label>
             <div className="col-span-3">
               <Input
@@ -138,7 +138,7 @@ export default function ClassroomModal({
                 placeholder="例: E1、M2、1A (任意)"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                生徒の所属表示で使用される短縮表記
+                生徒の在籍学級の表示で使用される短縮表記
               </p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function ClassroomModal({
               </Label>
               {!isVisible && (
                 <span className="text-xs text-muted-foreground">
-                  （非表示の学級は生徒一覧やインポートで使用されません）
+                  （非表示の学級は生徒一覧や取り込みで使用されません）
                 </span>
               )}
             </div>

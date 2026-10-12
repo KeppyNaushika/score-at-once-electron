@@ -285,7 +285,7 @@ const exclusionSeeds = (
       ...othersRows("UserExam", "userId"),
       ...othersRows("CropRegionAssignment", "userId"),
       ...othersRows("ExamStudentAssignment", "userId"),
-      // AI 採点の実行は実行した教員のもの（判定は実行に従って外れる）。プロンプトは
+      // AI採点の実行は実行した教員のもの（判定は実行に従って外れる）。プロンプトは
       // 協働採点者の間で共有するものなので外さない
       ...othersRows("AiGradingRun", "userId"),
       ...rowsOf("ScoreDecision").map((row) => ({

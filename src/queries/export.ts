@@ -157,7 +157,7 @@ export const recordUnresolvedConflictsMutation = () =>
     meta: {
       // 書き出したことは監査ログに残る＝DB を1行書く
       invalidates: [auditLogListKey],
-      errorMessage: "競合の記録を残せませんでした",
+      errorMessage: "採点の不一致の記録を残せませんでした",
     },
   })
 

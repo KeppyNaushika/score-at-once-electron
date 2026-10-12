@@ -1,5 +1,5 @@
 /**
- * AI 採点の問いかけ（docs/vlm-grading-design.md §3-5）の問いを、届いた行から組み立てる。
+ * AI採点の問いかけ（docs/vlm-grading-design.md §3-5）の問いを、届いた行から組み立てる。
  *
  * 並び: 採点方式（直接採点の設問に点を加減する案があるときだけ）→ 2段目の項目の案（既存の項目に
  * 当たる案 → 判定を決める案 → 点を加減する案）→ どの案にも入らない答案。
@@ -237,7 +237,7 @@ interface BuildGradingQuestioningInput {
   points: number | null
 }
 
-/** AI 採点の問いを、問いかける順に、いまの答え付きで */
+/** AI採点の問いを、問いかける順に、いまの答え付きで */
 export function buildGradingQuestioning({
   proposalRun,
   sourceGradeRun,

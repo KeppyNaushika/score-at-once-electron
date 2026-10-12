@@ -76,7 +76,7 @@ const QUESTION1_COL = 9
 describe("appendClassroomAverageRows", () => {
   it("全体平均と学級平均を正しい列・値で出す", () => {
     const workbook = new ExcelJS.Workbook()
-    const worksheet = workbook.addWorksheet("点数一覧")
+    const worksheet = workbook.addWorksheet("得点一覧")
     worksheet.addRow([
       "受験状態",
       "順位",
@@ -115,7 +115,7 @@ describe("appendClassroomAverageRows", () => {
 
   it("複数の学級に属す生徒は、それぞれの学級平均に数える", () => {
     const workbook = new ExcelJS.Workbook()
-    const worksheet = workbook.addWorksheet("点数一覧")
+    const worksheet = workbook.addWorksheet("得点一覧")
     worksheet.addRow([
       "受験状態",
       "順位",
@@ -149,7 +149,7 @@ describe("appendClassroomAverageRows", () => {
 
   it("未採点(totalScore null)は平均母数から除外される", () => {
     const workbook = new ExcelJS.Workbook()
-    const worksheet = workbook.addWorksheet("点数一覧")
+    const worksheet = workbook.addWorksheet("得点一覧")
     worksheet.addRow([
       "受験状態",
       "順位",
@@ -174,7 +174,7 @@ describe("appendClassroomAverageRows", () => {
 
   it("空データなら何も追加しない", () => {
     const workbook = new ExcelJS.Workbook()
-    const worksheet = workbook.addWorksheet("点数一覧")
+    const worksheet = workbook.addWorksheet("得点一覧")
     worksheet.addRow(["氏名", "合計点"])
     appendClassroomAverageRows(worksheet, [], [], [], QUESTION_REGIONS)
     expect(worksheet.rowCount).toBe(1)

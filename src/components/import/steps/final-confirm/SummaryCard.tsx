@@ -41,7 +41,7 @@ export function SummaryCard({ icon, title, unit, summary }: SummaryCardProps) {
             <>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-purple-500">●</span>
-                読み込んだデータで更新: {summary.updated}
+                取り込むデータで更新: {summary.updated}
                 {unit}
               </li>
               {summary.idChangeToImport > 0 && (
@@ -72,7 +72,7 @@ export function SummaryCard({ icon, title, unit, summary }: SummaryCardProps) {
           {summary.skipped > 0 && (
             <li className="flex items-center gap-2 text-muted-foreground">
               <span className="text-gray-400">●</span>
-              インポートしない: {summary.skipped}
+              取り込まない: {summary.skipped}
               {unit}
             </li>
           )}

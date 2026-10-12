@@ -36,7 +36,7 @@ function toDrawableAnnotations<
   const dropped = rows.length - drawable.length
   if (dropped > 0) {
     console.warn(
-      `描画種別が不明な採点マークを ${dropped} 件除外しました（${source}）`
+      `描画種別が不明な注釈を ${dropped} 件除外しました（${source}）`
     )
   }
   return drawable
@@ -90,7 +90,7 @@ export async function getDrawingAnnotationsByTarget(
       "getDrawingAnnotationsByTarget"
     )
   } catch (error) {
-    console.error("描画アノテーション取得エラー:", error)
+    console.error("注釈の取得エラー:", error)
     throw error
   }
 }
@@ -131,7 +131,7 @@ export async function getDrawingAnnotationsByQuestionScore(
       "getDrawingAnnotationsByQuestionScore"
     )
   } catch (error) {
-    console.error("描画アノテーション取得エラー:", error)
+    console.error("注釈の取得エラー:", error)
     throw error
   }
 }
@@ -168,7 +168,7 @@ export async function getDrawingAnnotationsByExamStudent(
       "getDrawingAnnotationsByExamStudent"
     )
   } catch (error) {
-    console.error("学生別描画アノテーション取得エラー:", error)
+    console.error("学生別注釈の取得エラー:", error)
     throw error
   }
 }
@@ -207,7 +207,7 @@ export async function getDrawingAnnotationsByCropRegion(
       "getDrawingAnnotationsByCropRegion"
     )
   } catch (error) {
-    console.error("設問別描画アノテーション取得エラー:", error)
+    console.error("設問別注釈の取得エラー:", error)
     throw error
   }
 }

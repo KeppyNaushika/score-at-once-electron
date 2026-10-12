@@ -263,7 +263,7 @@ describe("利用者の削除", () => {
 
     await expect(
       deleteUser(userA.id, await getUserDeletionCounts(userA.id))
-    ).rejects.toThrow("ログイン中の利用者は削除できません")
+    ).rejects.toThrow("ログイン中のユーザーは削除できません")
 
     expect(
       await testPrisma.user.findUnique({ where: { id: userA.id } })

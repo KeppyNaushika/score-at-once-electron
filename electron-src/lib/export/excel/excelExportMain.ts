@@ -61,7 +61,7 @@ export async function exportGradingDataExcel(
   // Excelワークブック作成
   const workbook = new ExcelJS.Workbook()
 
-  // 点数一覧シート作成（全体平均・学級平均行つき）
+  // 得点一覧シート作成（全体平均・学級平均行つき）
   await createScoreSheet(
     workbook,
     exportData.questionRegions,

@@ -225,12 +225,12 @@ export async function createGradeCells(
 
   if (droppedCells > 0) {
     warnings.push(
-      `対象生徒または評価項目を解決できない上書き・確定値・除外設定 ${droppedCells}件を取り込みませんでした`
+      `対象生徒または成績評価項目を解決できない上書き・固定値・除外設定 ${droppedCells}件を取り込みませんでした`
     )
   }
   if (unknownFrozenByCells > 0) {
     warnings.push(
-      `確定した利用者がこの端末に居ない確定値 ${unknownFrozenByCells}件は、確定者を不明として取り込みました`
+      `固定したユーザーがこのPCに居ない固定値 ${unknownFrozenByCells}件は、固定した人を不明として取り込みました`
     )
   }
 }
@@ -265,7 +265,7 @@ export async function createGradeConstraints(
       resolvedViewpointIds.length !== archiveViewpoints.length
 
     const brokenReason = lostTarget
-      ? "取り込み時に比較先の評価項目を解決できなかったため無効化しました。再設定してください。"
+      ? "取り込み時に比較先の成績評価項目を解決できなかったため無効化しました。再設定してください。"
       : lostViewpoint
         ? "取り込み時に集計対象の観点を解決できなかったため無効化しました。再設定してください。"
         : archiveConstraint.disabledReason
@@ -379,7 +379,7 @@ export async function createGradeComparisons(
   }
   if (droppedComparisons > 0) {
     warnings.push(
-      `比較先の成績算出・評価項目が取り込み先に見つからない比較 ${droppedComparisons}件を取り込みませんでした`
+      `比較先の成績算出・成績評価項目が取り込み先に見つからない比較 ${droppedComparisons}件を取り込みませんでした`
     )
   }
 }

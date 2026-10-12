@@ -7,7 +7,7 @@
  *   絞り込みを action の集合へ展開する。両側が同じ表を引くので `src/lib/shared/` に置く
  *   （renderer は `electron-src/` を値で import できない）。
  *
- *   ※閲覧（read/view）は記録対象外。状態を変える操作とエクスポートのみを定義する。
+ *   ※閲覧（read/view）は記録対象外。状態を変える操作と書き出しのみを定義する。
  */
 
 /** 監査ログのカテゴリ（作業領域単位。UIフィルタの最上位軸） */
@@ -76,12 +76,12 @@ const AUDIT_ACTIONS = {
   "exam.export": {
     category: "exam",
     verb: "export",
-    label: "試験「{target}」をエクスポートしました",
+    label: "試験「{target}」を書き出しました",
   },
   "exam.import": {
     category: "exam",
     verb: "import",
-    label: "試験「{target}」をインポートしました",
+    label: "試験「{target}」を取り込みました",
   },
 
   "exam.page.upload": {
@@ -128,92 +128,92 @@ const AUDIT_ACTIONS = {
   "exam.region.score_scale_update": {
     category: "exam",
     verb: "update",
-    label: "設問の類型評価を変更しました",
+    label: "設問の類型表を変更しました",
   },
 
   /**
-   * 類型評価（docs/vlm-grading-design.md §4-8）。試験のものは `exam.score_scale.*` で
+   * 類型表（docs/vlm-grading-design.md §4-8）。試験のものは `exam.score_scale.*` で
    * 試験の作業領域に入り、共通のものは `score_scale.*` で作業領域に入らない
    */
   "exam.score_scale.create": {
     category: "exam",
     verb: "create",
-    label: "類型評価「{target}」を作成しました",
+    label: "類型表「{target}」を作成しました",
   },
   "exam.score_scale.update": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の名前を変更しました",
+    label: "類型表「{target}」の名前を変更しました",
   },
   "exam.score_scale.delete": {
     category: "exam",
     verb: "delete",
-    label: "類型評価「{target}」を削除しました",
+    label: "類型表「{target}」を削除しました",
   },
   "exam.score_scale.scope_update": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の使える範囲を変更しました",
+    label: "類型表「{target}」の使える範囲を変更しました",
   },
   "exam.score_scale.level.create": {
     category: "exam",
     verb: "create",
-    label: "類型評価「{target}」に類型を追加しました",
+    label: "類型表「{target}」に類型を追加しました",
   },
   "exam.score_scale.level.update": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の類型を編集しました",
+    label: "類型表「{target}」の類型を編集しました",
   },
   "exam.score_scale.level.delete": {
     category: "exam",
     verb: "delete",
-    label: "類型評価「{target}」の類型を削除しました",
+    label: "類型表「{target}」の類型を削除しました",
   },
   "exam.score_scale.level.reorder": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の類型を並び替えました",
+    label: "類型表「{target}」の類型を並び替えました",
   },
   "score_scale.create": {
     category: "exam",
     verb: "create",
-    label: "類型評価「{target}」を作成しました",
+    label: "類型表「{target}」を作成しました",
   },
   "score_scale.update": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の名前を変更しました",
+    label: "類型表「{target}」の名前を変更しました",
   },
   "score_scale.delete": {
     category: "exam",
     verb: "delete",
-    label: "類型評価「{target}」を削除しました",
+    label: "類型表「{target}」を削除しました",
   },
   "score_scale.scope_update": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の使える範囲を変更しました",
+    label: "類型表「{target}」の使える範囲を変更しました",
   },
   "score_scale.level.create": {
     category: "exam",
     verb: "create",
-    label: "類型評価「{target}」に類型を追加しました",
+    label: "類型表「{target}」に類型を追加しました",
   },
   "score_scale.level.update": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の類型を編集しました",
+    label: "類型表「{target}」の類型を編集しました",
   },
   "score_scale.level.delete": {
     category: "exam",
     verb: "delete",
-    label: "類型評価「{target}」の類型を削除しました",
+    label: "類型表「{target}」の類型を削除しました",
   },
   "score_scale.level.reorder": {
     category: "exam",
     verb: "update",
-    label: "類型評価「{target}」の類型を並び替えました",
+    label: "類型表「{target}」の類型を並び替えました",
   },
 
   /**
@@ -305,7 +305,7 @@ const AUDIT_ACTIONS = {
   "exam.score.evaluate": {
     category: "exam",
     verb: "update",
-    label: "類型評価の類型を付けました",
+    label: "類型を付けました",
   },
   "exam.score.batch": {
     category: "exam",
@@ -315,7 +315,7 @@ const AUDIT_ACTIONS = {
   "exam.score.export_unresolved": {
     category: "exam",
     verb: "export",
-    label: "未解決の食い違いを含む採点結果を出力しました",
+    label: "未解決の採点の不一致を含む採点結果を出力しました",
   },
   "exam.score.assign": {
     category: "exam",
@@ -341,20 +341,20 @@ const AUDIT_ACTIONS = {
   "exam.annotation.create": {
     category: "exam",
     verb: "create",
-    label: "採点マークを追加しました",
+    label: "注釈を追加しました",
   },
   "exam.annotation.update": {
     category: "exam",
     verb: "update",
-    label: "採点マークを編集しました",
+    label: "注釈を編集しました",
   },
   "exam.annotation.delete": {
     category: "exam",
     verb: "delete",
-    label: "採点マークを削除しました",
+    label: "注釈を削除しました",
   },
 
-  // ── AI 採点（docs/vlm-grading-design.md）。送り先の事業者・モデルは metadata に入る。
+  // ── AI採点（docs/vlm-grading-design.md）。送り先の事業者・モデルは metadata に入る。
   //    キーや送った本文は残さない
   "exam.ai_prompt.create": {
     category: "exam",
@@ -369,7 +369,7 @@ const AUDIT_ACTIONS = {
   "exam.ai_grading.run": {
     category: "exam",
     verb: "other",
-    label: "答案を AI 採点に送りました",
+    label: "答案をAI採点に送りました",
   },
   "exam.ai_grading.adopt": {
     category: "exam",
@@ -473,7 +473,7 @@ const AUDIT_ACTIONS = {
   "subtotal_group.selection_update": {
     category: "exam",
     verb: "update",
-    label: "個人成績表に載せる小計グループを更新しました",
+    label: "試験採点結果個表に載せる小計点グループを更新しました",
   },
   "exam.class.assign": {
     category: "exam",
@@ -489,7 +489,7 @@ const AUDIT_ACTIONS = {
   "exam.subtotal_assignment.update": {
     category: "exam",
     verb: "update",
-    label: "設問と小計の対応を更新しました",
+    label: "設問と小計項目の関連付けを更新しました",
   },
   "exam.omr_config.update": {
     category: "exam",
@@ -499,7 +499,7 @@ const AUDIT_ACTIONS = {
   "exam.compound_answer.update": {
     category: "exam",
     verb: "update",
-    label: "複合解答スコアを更新しました",
+    label: "複合解答の得点を更新しました",
   },
   "exam.region.reorder": {
     category: "exam",
@@ -515,7 +515,7 @@ const AUDIT_ACTIONS = {
   "exam.user.role_update": {
     category: "exam",
     verb: "update",
-    label: "「{target}」の試験ロールを変更しました",
+    label: "「{target}」の試験での権限を変更しました",
   },
   "exam.anonymous_scoring.update": {
     category: "exam",
@@ -537,22 +537,22 @@ const AUDIT_ACTIONS = {
   "grade.create": {
     category: "grade",
     verb: "create",
-    label: "成績「{target}」を作成しました",
+    label: "成績算出「{target}」を作成しました",
   },
   "grade.update": {
     category: "grade",
     verb: "update",
-    label: "成績「{target}」を編集しました",
+    label: "成績算出「{target}」を編集しました",
   },
   "grade.delete": {
     category: "grade",
     verb: "delete",
-    label: "成績「{target}」を削除しました",
+    label: "成績算出「{target}」を削除しました",
   },
   "grade.duplicate": {
     category: "grade",
     verb: "create",
-    label: "成績「{target}」を複製しました",
+    label: "成績算出「{target}」を複製しました",
   },
   /**
    * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
@@ -561,12 +561,12 @@ const AUDIT_ACTIONS = {
   "grade.export": {
     category: "grade",
     verb: "export",
-    label: "成績「{target}」をエクスポートしました",
+    label: "成績算出「{target}」を書き出しました",
   },
   "grade.import": {
     category: "grade",
     verb: "import",
-    label: "成績「{target}」をインポートしました",
+    label: "成績算出「{target}」を取り込みました",
   },
 
   "grade.student.add": {
@@ -601,67 +601,67 @@ const AUDIT_ACTIONS = {
   "grade.manual_score.update": {
     category: "grade",
     verb: "update",
-    label: "手動スコアを更新しました",
+    label: "得点（旧形式）を更新しました",
   },
   "grade.boundary.create": {
     category: "grade",
     verb: "create",
-    label: "評価の境界を追加しました",
+    label: "成績境界を追加しました",
   },
   "grade.boundary.update": {
     category: "grade",
     verb: "update",
-    label: "境界設定を更新しました",
+    label: "成績境界を更新しました",
   },
   "grade.boundary.replace": {
     category: "grade",
     verb: "update",
-    label: "評価の境界をまとめて置き換えました",
+    label: "成績境界をまとめて置き換えました",
   },
   "grade.boundary.deleteAll": {
     category: "grade",
     verb: "delete",
-    label: "評価の境界をすべて削除しました",
+    label: "成績境界をすべて削除しました",
   },
   "grade.boundary.delete": {
     category: "grade",
     verb: "delete",
-    label: "境界セットを削除しました",
+    label: "成績境界を削除しました",
   },
   "grade.comparison.create": {
     category: "grade",
     verb: "create",
-    label: "成績項目「{target}」に比較を追加しました",
+    label: "成績評価項目「{target}」に比較を追加しました",
   },
   "grade.comparison.delete": {
     category: "grade",
     verb: "delete",
-    label: "成績項目「{target}」の比較を削除しました",
+    label: "成績評価項目「{target}」の比較を削除しました",
   },
   "grade.item.create": {
     category: "grade",
     verb: "create",
-    label: "成績項目「{target}」を作成しました",
+    label: "成績評価項目「{target}」を作成しました",
   },
   "grade.item.update": {
     category: "grade",
     verb: "update",
-    label: "成績項目「{target}」を編集しました",
+    label: "成績評価項目「{target}」を編集しました",
   },
   "grade.item.delete": {
     category: "grade",
     verb: "delete",
-    label: "成績項目「{target}」を削除しました",
+    label: "成績評価項目「{target}」を削除しました",
   },
   "grade.override.delete": {
     category: "grade",
     verb: "delete",
-    label: "成績の上書きを削除しました",
+    label: "成績評価記号の上書きを削除しました",
   },
   "grade.item.reorder": {
     category: "grade",
     verb: "update",
-    label: "成績項目の並び順を変更しました",
+    label: "成績評価項目の並び順を変更しました",
   },
   "grade.student.reorder": {
     category: "grade",
@@ -671,17 +671,17 @@ const AUDIT_ACTIONS = {
   "grade.override.update": {
     category: "grade",
     verb: "update",
-    label: "成績の上書きを更新しました",
+    label: "成績評価記号の上書きを更新しました",
   },
   "grade.frozenScore.freeze": {
     category: "grade",
     verb: "update",
-    label: "成績値を確定しました",
+    label: "成績を固定しました",
   },
   "grade.frozenScore.unfreeze": {
     category: "grade",
     verb: "delete",
-    label: "成績値の確定を解除しました",
+    label: "成績の固定を解除しました",
   },
   "grade.constraint.create": {
     category: "grade",
@@ -705,7 +705,7 @@ const AUDIT_ACTIONS = {
   "grade.exclusion.update": {
     category: "grade",
     verb: "update",
-    label: "評価項目の対象生徒を変更しました",
+    label: "成績評価項目の対象生徒を変更しました",
   },
   /** 個人成績通知書の設定。出力画面で続けて触るので成績算出ごとに1行へまとめる */
   "grade.report_settings.update": {
@@ -754,37 +754,37 @@ const AUDIT_ACTIONS = {
   "coursework.item.create": {
     category: "grade",
     verb: "create",
-    label: "評価項目「{target}」を作成しました",
+    label: "資料評価項目「{target}」を作成しました",
   },
   "coursework.item.update": {
     category: "grade",
     verb: "update",
-    label: "評価項目「{target}」を編集しました",
+    label: "資料評価項目「{target}」を編集しました",
   },
   "coursework.letterScale.create": {
     category: "grade",
     verb: "create",
-    label: "文字評価の刻み「{target}」を追加しました",
+    label: "変換表の行「{target}」を追加しました",
   },
   "coursework.letterScale.update": {
     category: "grade",
     verb: "update",
-    label: "文字評価の刻み「{target}」を編集しました",
+    label: "変換表の行「{target}」を編集しました",
   },
   "coursework.letterScale.delete": {
     category: "grade",
     verb: "delete",
-    label: "文字評価の刻み「{target}」を削除しました",
+    label: "変換表の行「{target}」を削除しました",
   },
   "coursework.item.delete": {
     category: "grade",
     verb: "delete",
-    label: "評価項目「{target}」を削除しました",
+    label: "資料評価項目「{target}」を削除しました",
   },
   "coursework.score.update": {
     category: "grade",
     verb: "update",
-    label: "資料の点数を更新しました",
+    label: "資料の得点を更新しました",
   },
   /**
    * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
@@ -793,12 +793,12 @@ const AUDIT_ACTIONS = {
   "coursework.export": {
     category: "grade",
     verb: "export",
-    label: "試験外成績資料「{target}」をエクスポートしました",
+    label: "試験外成績資料「{target}」を書き出しました",
   },
   "coursework.import": {
     category: "grade",
     verb: "import",
-    label: "試験外成績資料「{target}」をインポートしました",
+    label: "試験外成績資料「{target}」を取り込みました",
   },
 
   // ── 解答用紙作成（answer_sheet） ─────────────────────────────
@@ -824,12 +824,12 @@ const AUDIT_ACTIONS = {
   "answer_sheet.export": {
     category: "answer_sheet",
     verb: "export",
-    label: "解答用紙「{target}」をエクスポートしました",
+    label: "解答用紙「{target}」を書き出しました",
   },
   "answer_sheet.import": {
     category: "answer_sheet",
     verb: "import",
-    label: "解答用紙「{target}」をインポートしました",
+    label: "解答用紙「{target}」を取り込みました",
   },
 
   // ── 生徒・学級・小計グループ（student） ──────────────────────
@@ -851,7 +851,7 @@ const AUDIT_ACTIONS = {
   "student.import": {
     category: "student",
     verb: "import",
-    label: "生徒をインポートしました",
+    label: "生徒を取り込みました",
   },
   /**
    * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
@@ -860,7 +860,7 @@ const AUDIT_ACTIONS = {
   "student.export": {
     category: "student",
     verb: "export",
-    label: "生徒をエクスポートしました",
+    label: "生徒を書き出しました",
   },
 
   "class.create": {
@@ -892,17 +892,17 @@ const AUDIT_ACTIONS = {
   "subtotal_group.create": {
     category: "student",
     verb: "create",
-    label: "小計グループ「{target}」を作成しました",
+    label: "小計点グループ「{target}」を作成しました",
   },
   "subtotal_group.update": {
     category: "student",
     verb: "update",
-    label: "小計グループ「{target}」を編集しました",
+    label: "小計点グループ「{target}」を編集しました",
   },
   "subtotal_group.delete": {
     category: "student",
     verb: "delete",
-    label: "小計グループ「{target}」を削除しました",
+    label: "小計点グループ「{target}」を削除しました",
   },
 
   "tag.create": {
@@ -955,7 +955,7 @@ const AUDIT_ACTIONS = {
   "subtotal_group.tag.update": {
     category: "student",
     verb: "update",
-    label: "小計グループ「{target}」のタグを変更しました",
+    label: "小計点グループ「{target}」のタグを変更しました",
   },
 
   // ── ユーザー・権限（user） ───────────────────────────────────
@@ -1015,7 +1015,7 @@ const AUDIT_ACTIONS = {
     label: "操作履歴を残す期間を変更しました",
   },
   /**
-   * AI 採点（実験的機能）の事業者への同意（設計 §10-1）。同意は端末ごとの設定ファイルに
+   * AI採点（実験的機能）の事業者への同意（設計 §10-1）。同意は端末ごとの設定ファイルに
    * 記録し、ここにも残す。`entityId` は事業者 id、metadata に同意文の版が入る。
    * **キーや同意文の本文は残さない。**
    */
@@ -1024,7 +1024,7 @@ const AUDIT_ACTIONS = {
     verb: "other",
     label: "AI採点（実験的機能）の送信先「{target}」への同意を記録しました",
   },
-  /** AI 採点の同意の取り消し。その端末に保存した API キーも消える */
+  /** AI採点の同意の取り消し。その端末に保存した API キーも消える */
   "ai_grading.consent_revoked": {
     category: "system",
     verb: "other",

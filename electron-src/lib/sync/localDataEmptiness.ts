@@ -72,7 +72,7 @@ function findUserDataInDatabase(databasePath: string): string[] {
     }> = [
       {
         table: "User",
-        label: "利用者",
+        label: "ユーザー",
         sql: `SELECT COUNT(*) AS count FROM "User" WHERE "username" <> ?`,
         parameters: [SAMPLE_SEED_NAMES.adminUsername],
       },
@@ -90,7 +90,7 @@ function findUserDataInDatabase(databasePath: string): string[] {
       },
       {
         table: "SubtotalGroup",
-        label: "小計グループ",
+        label: "小計点グループ",
         sql: `SELECT COUNT(*) AS count FROM "SubtotalGroup" WHERE "name" <> ?`,
         parameters: [SAMPLE_SEED_NAMES.subtotalGroupName],
       },

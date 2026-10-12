@@ -131,7 +131,7 @@ export async function freezeGradeScores(options: {
     entityId: gradeId,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    summary: `${rows.length}件の成績値を確定しました`,
+    summary: `${rows.length}件の成績を固定しました`,
     extra: { cellCount: rows.length, scopeKind: targets ? "cells" : "all" },
   })
 
@@ -175,7 +175,7 @@ export async function unfreezeGradeScores(options: {
       entityId: gradeId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary: `${deleted.count}件の成績値の確定を解除しました`,
+      summary: `${deleted.count}件の成績の固定を解除しました`,
       extra: {
         cellCount: deleted.count,
         scopeKind: targets ? "cells" : "all",

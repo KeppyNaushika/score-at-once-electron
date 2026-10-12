@@ -88,7 +88,7 @@ export function UserDeleteModal({
 
   const handleDelete = async () => {
     if (!(await confirmDeletion())) return
-    toast.success(`利用者「${user.name}」を削除しました`)
+    toast.success(`ユーザー「${user.name}」を削除しました`)
     onClose()
   }
 
@@ -102,14 +102,14 @@ export function UserDeleteModal({
       ? [
           {
             type: "destructive" as const,
-            message: "ログイン中の利用者は削除できません。",
+            message: "ログイン中のユーザーは削除できません。",
           },
         ]
       : []),
     {
       type: "destructive" as const,
       message:
-        "この利用者と、その採点結果などのデータは、同期しているすべての端末から消えます。元に戻せません。",
+        "このユーザーと、その採点結果などのデータは、同期しているすべてのPCから消えます。元に戻せません。",
     },
     ...(isCountingDeletion || isCheckingOwnership
       ? [{ type: "info" as const, message: "消えるデータを数えています…" }]
@@ -136,14 +136,14 @@ export function UserDeleteModal({
       ? [
           {
             type: "info" as const,
-            message: "この利用者の採点結果や解答用紙はありません。",
+            message: "このユーザーの採点結果や解答用紙はありません。",
           },
         ]
       : []),
     {
       type: "warning" as const,
       message:
-        "他の端末でまだ同期していないこの利用者の採点は、削除より前のものは消え、削除より後のものは表示されなくなります。\n削除する前に、この利用者が他の端末で採点していないことを確かめ、同期を済ませてください。",
+        "他のPCでまだ同期していないこのユーザーの採点は、削除より前のものは消え、削除より後のものは表示されなくなります。\n削除する前に、このユーザーが他のPCで採点していないことを確かめ、同期を済ませてください。",
     },
     ...(blockedMessage
       ? [{ type: "destructive" as const, message: blockedMessage }]
@@ -160,8 +160,8 @@ export function UserDeleteModal({
     <ConfirmationModal
       open={isOpen}
       onClose={onClose}
-      title="利用者の削除"
-      description="以下の利用者を削除します。"
+      title="ユーザーの削除"
+      description="以下のユーザーを削除します。"
       confirmText="削除する"
       cancelText="キャンセル"
       variant="destructive"

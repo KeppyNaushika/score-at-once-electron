@@ -1,5 +1,5 @@
 /**
- * AI 採点のジョブへ、Electron の本物をつなぐ（アプリの main だけが使う）。
+ * AI採点のジョブへ、Electron の本物をつなぐ（アプリの main だけが使う）。
  *
  * - 事業者への通信は Electron の `net.fetch` を通す（学校のプロキシ・OS の設定に従わせる）
  * - API キーは保存の口（`providerCredentialStore.ts`）から main の中でだけ復号する
@@ -63,12 +63,12 @@ function notifyProgress(progress: AiGradingRunProgress): void {
  *
  * clientId は起動時に `prepareStorageAtStartup` がこのPCのものに確定させて保存する
  * （別のPCから data を写したときの振り直しもそこで済む）。ここでは読むだけにし、
- * AI 採点の側から同期の設定を書き換えない。
+ * AI採点の側から同期の設定を書き換えない。
  */
 function readClientIdOfThisPc(): string {
   const { clientId } = loadSyncConfig()
   if (clientId === "") {
-    throw new Error("この端末の clientId がまだ決まっていません")
+    throw new Error("このPCの clientId がまだ決まっていません")
   }
   return clientId
 }

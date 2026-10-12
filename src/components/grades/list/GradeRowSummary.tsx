@@ -28,7 +28,7 @@ export function GradeRowSummary({ grade }: { grade: GradeSummary }) {
       <span>
         {classroomNames || "学級未登録"}
         {" / 生徒: "}
-        {grade.gradeStudents.length}名 / 評価項目: {grade.gradeItems.length}
+        {grade.gradeStudents.length}名 / 成績評価項目: {grade.gradeItems.length}
       </span>
     </span>
   )

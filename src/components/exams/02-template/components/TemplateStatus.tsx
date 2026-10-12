@@ -15,7 +15,7 @@ export function TemplateStatus({ isLoading, hasExamId }: TemplateStatusProps) {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p>採点枠情報を読み込み中...</p>
+        <p>採点領域を読み込み中...</p>
       </div>
     )
   }

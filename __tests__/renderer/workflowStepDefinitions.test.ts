@@ -139,12 +139,12 @@ describe("段の一覧と実際のルート", () => {
       })
   })
 
-  it("試験には 8. 採点確定 と 9. 結果 が、この順で並ぶ", () => {
+  it("試験には 8. 採点確定 と 9. 結果と出力 が、この順で並ぶ", () => {
     const stepLabels = examWorkflowTabs
       .filter((tab) => tab.path !== "")
       .map((tab) => tab.label)
 
-    expect(stepLabels.slice(-2)).toEqual(["8. 採点確定", "9. 結果"])
+    expect(stepLabels.slice(-2)).toEqual(["8. 採点確定", "9. 結果と出力"])
   })
 
   it.each(WORKFLOWS)(
@@ -170,7 +170,7 @@ describe("段の一覧と実際のルート", () => {
     expect(findWorkflowStepLabel(examWorkflowTabs, "08-finalize")).toBe(
       "8. 採点確定"
     )
-    expect(findWorkflowStepLabel(examWorkflowTabs, "09-export")).toBe("9. 結果")
+    expect(findWorkflowStepLabel(examWorkflowTabs, "09-export")).toBe("9. 結果と出力")
     // 概要は段ではないので引かない（引けると履歴に「概要」が二重で出る）
     expect(findWorkflowStepLabel(examWorkflowTabs, "detail")).toBeUndefined()
     expect(findWorkflowStepLabel(examWorkflowTabs, undefined)).toBeUndefined()
@@ -178,9 +178,10 @@ describe("段の一覧と実際のルート", () => {
 })
 
 /**
- * 段の長い名前（`title`）は3か所で同じものを言う——ヘッダーの見出し、「次へ」の
- * 文言、一覧の「次のステップ」。**同じ段を違う名前で呼ぶと、一覧から入った人と
- * タブから入った人が別の画面だと思う。** 3つとも段の一覧
+ * 段の長い名前（`title`）は2か所で同じものを言う——ヘッダーの見出しと、一覧の
+ * 「次のステップ」（「次へ」はタブと同じ `label` で「〈段の名前〉へ」と言う）。
+ * **同じ段を違う名前で呼ぶと、一覧から入った人とタブから入った人が別の画面だと
+ * 思う。** どれも段の一覧
  * （`src/lib/shared/workflowSteps.ts`）から引くので、一覧の「次のステップ」を出す
  * 梯子（`src/lib/*Status.ts`）が自分で段の名前を書き始めていないことを確かめる。
  */

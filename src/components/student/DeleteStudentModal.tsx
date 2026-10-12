@@ -89,7 +89,7 @@ export function DeleteStudentModal({
     {
       type: "destructive" as const,
       message:
-        "この操作は取り消せません。学級の所属と、試験の答案・採点結果、試験外成績資料に入力された点数も削除されます。",
+        "この操作は取り消せません。学級の在籍と、試験の答案・採点結果、試験外成績資料に入力された得点も削除されます。",
     },
     ...(blockedMessage
       ? [{ type: "destructive" as const, message: blockedMessage }]

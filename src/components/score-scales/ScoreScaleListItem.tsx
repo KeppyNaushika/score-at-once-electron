@@ -12,7 +12,7 @@ interface ScoreScaleListItemProps {
 }
 
 /**
- * 類型評価管理の一覧の1件。名前・使える範囲（共通か、どの試験のものか）・類型・
+ * 類型表管理の一覧の1件。名前・使える範囲（共通か、どの試験のものか）・類型・
  * どの試験のどの設問が使っているかを示す
  */
 export function ScoreScaleListItem({

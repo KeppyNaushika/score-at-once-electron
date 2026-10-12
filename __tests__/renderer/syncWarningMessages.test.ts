@@ -46,7 +46,7 @@ describe("describeSyncWarnings", () => {
       "Unplaceable ExamStudent:student-1: 親行がまだ届いていない",
     ])
 
-    expect(notice.message).toContain("試験の受験生徒")
+    expect(notice.message).toContain("受験生徒")
     expect(notice.message).not.toContain("ExamStudent")
     // 消えていないことを必ず書く（表に出ないだけで、事実は残っている）
     expect(notice.message).toContain("消えてはいません")
@@ -83,9 +83,9 @@ describe("describeSyncWarnings", () => {
     ])
 
     expect(notices).toHaveLength(2)
-    expect(notices[0].message).toContain("試験の受験生徒")
+    expect(notices[0].message).toContain("受験生徒")
     expect(notices[0].count).toBe(2)
-    expect(notices[1].message).not.toContain("試験の受験生徒")
+    expect(notices[1].message).not.toContain("受験生徒")
     expect(notices[1].count).toBe(1)
   })
 
@@ -118,7 +118,7 @@ describe("describeSyncWarnings", () => {
     const [notice] = describeSyncWarnings([original])
 
     expect(notice.originals).toEqual([original])
-    expect(notice.message).toContain("試験の受験生徒")
+    expect(notice.message).toContain("受験生徒")
     expect(notice.message).toContain("5件")
     expect(notice.message).toContain("表示から外れます")
   })

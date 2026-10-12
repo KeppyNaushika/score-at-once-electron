@@ -151,9 +151,9 @@ export function ArchiveEntityCheckListSection({
       {userIds.length > 0 && (
         <div className="space-y-1 text-sm">
           <p className="text-muted-foreground">
-            含まれる利用者（{userIds.length}人）。パスコードは書き出しません。
+            含まれるユーザー（{userIds.length}人）。パスコードは書き出しません。
           </p>
-          <ul aria-label="含まれる利用者" className="flex flex-wrap gap-1">
+          <ul aria-label="含まれるユーザー" className="flex flex-wrap gap-1">
             {userIds.map((userId) => {
               const isLost = lostEntityKeys.has(`User:${userId}`)
               return (

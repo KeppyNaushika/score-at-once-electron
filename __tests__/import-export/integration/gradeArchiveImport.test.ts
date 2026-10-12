@@ -13,7 +13,7 @@
  *  - 旧書き出しで作った固定ファイル（__tests__/fixtures/legacy-archives/grade-*.grade）。
  *    書き出しが無くなったので、書き出しがあった頃に作って固定した。各テストの冒頭に
  *    どんな成績算出を書き出したものかを書いてある。成績算出の外にある実体（生徒・学級・
- *    試験・小計・資料・比較先の成績算出・利用者）が「書き出したパソコンに既にある」状態が
+ *    試験・小計・資料・比較先の成績算出・利用者）が「書き出したPCに既にある」状態が
  *    要るテストは、固定ファイルの JSON から同じ id の行を作って用意する
  *  - v1.12.0 以前の形をテスト内で手組みしたもの（toLegacyArchive は固定ファイルの中身を
  *    旧形式へ落とす。v1.3.0 / v1.4.0 はリテラルで組む）
@@ -49,7 +49,7 @@ const prisma = getTestPrismaClient()
 
 /**
  * 固定ファイルの生徒・学級・学級所属を、同じ id のまま DB に作る
- * （＝書き出したパソコンに生徒・学級が既にある状態）
+ * （＝書き出したPCに生徒・学級が既にある状態）
  */
 async function seedRosterFromArchive(archive: GradeArchiveData) {
   await prisma.student.createMany({ data: archive.studentsData })
@@ -325,7 +325,7 @@ describe("grade-archive 取り込み", () => {
     // 中間テーブルの行と、タグの実体の両方が載っている（実体が無いと名前を復元できない）
     expect(archive.gradeTags).toHaveLength(1)
     expect(archive.tagsData).toHaveLength(1)
-    // 書き出したパソコンを模す: タグはこの DB に既にある
+    // 書き出したPCを模す: タグはこの DB に既にある
     const tag = await prisma.tag.create({ data: archive.tagsData[0] })
 
     const result = await importGradeArchive(archive)
@@ -350,7 +350,7 @@ describe("grade-archive 取り込み", () => {
     const [previousItemRef] = archive.comparedGradeItemRefs
     expect(previousItemRef.gradeName).toBe("1学期")
 
-    // 書き出したパソコンを模す: 比較先の成績算出はこの DB に既にある
+    // 書き出したPCを模す: 比較先の成績算出はこの DB に既にある
     await prisma.grade.create({
       data: { id: previousItemRef.gradeId, name: previousItemRef.gradeName },
     })
@@ -440,7 +440,7 @@ describe("grade-archive 取り込み", () => {
     ).toBe(true)
   })
 
-  it("内包資料を参照するデータソースは、書き出したパソコンにある資料の項目へ uuid で結ばれ、資料は重複しない", async () => {
+  it("内包資料を参照するデータソースは、書き出したPCにある資料の項目へ uuid で結ばれ、資料は重複しない", async () => {
     // 固定ファイル: 学級「学級_資料内包」・生徒「CW_101」・タグ「タグ_資料内包」を持つ資料
     // 「第2回レポート」（数値の「提出物」85点・調整-5、文字評価の「授業態度」A/B/C で B）と、
     // その2項目を参照する coursework 型データソース2つを持つ成績「成績_資料内包」
@@ -461,7 +461,7 @@ describe("grade-archive 取り込み", () => {
     )!
     expect(referencedItem.name).toBe("提出物")
 
-    // 書き出したパソコンを模す: 資料（と生徒・学級・タグ）はこの DB に既にある
+    // 書き出したPCを模す: 資料（と生徒・学級・タグ）はこの DB に既にある
     await seedCourseworkSections(embedded)
 
     // インポート（新規 Grade が作成され、資料は既存のものが uuid 一致で再利用される）
@@ -1123,7 +1123,7 @@ describe("grade-archive 取り込み", () => {
     // 確定値（0.8/1・80%・A・確定日時 2026-07-20T09:00Z・確定操作者なし）
     const archive = await readLegacyGradeArchive("grade-frozen-score.grade")
     expect(archive.gradeFrozenScores).toHaveLength(1)
-    // 書き出したパソコンを模す: 生徒はこの DB に既にある
+    // 書き出したPCを模す: 生徒はこの DB に既にある
     await seedRosterFromArchive(archive)
     const student = archive.studentsData[0]
 
@@ -1224,7 +1224,7 @@ describe("grade-archive 取り込み", () => {
     })
     expect(overrides).toHaveLength(0)
     expect(
-      result.warnings?.some((warning) => warning.includes("同名の評価項目"))
+      result.warnings?.some((warning) => warning.includes("同名の成績評価項目"))
     ).toBe(true)
   })
 
@@ -1241,7 +1241,7 @@ describe("grade-archive 取り込み", () => {
     expect(archive.gradeClassrooms[0].classroomId).toBe(classroom.id)
     expect(archive.gradeDataSources[0].examId).toBe(examRef.id)
 
-    // 書き出したパソコンを模す: 生徒・学級・試験はこの DB に既にある
+    // 書き出したPCを模す: 生徒・学級・試験はこの DB に既にある
     await seedRosterFromArchive(archive)
     await prisma.exam.create({
       data: { id: examRef.id, examName: examRef.examName },
@@ -1351,7 +1351,7 @@ describe("grade-archive 取り込み", () => {
       { examName: "無関係試験" },
       "他グループ"
     )
-    // 参照先の試験と小計は、書き出したパソコンと同じ id で作る
+    // 参照先の試験と小計は、書き出したPCと同じ id で作る
     const targetSubtotal = await makeSubtotal(
       { id: examRef.id, examName: examRef.examName },
       "対象グループ",
@@ -1436,7 +1436,7 @@ describe("grade-archive 取り込み", () => {
     // 捨てたことは黙らずに伝える
     expect(
       result.warnings?.some((warning) =>
-        warning.includes("上書き・確定値・除外設定 3件")
+        warning.includes("上書き・固定値・除外設定 3件")
       )
     ).toBe(true)
   })
@@ -1499,7 +1499,7 @@ describe("grade-archive 取り込み", () => {
     const frozenByUserId = archive.gradeFrozenScores[0].frozenByUserId!
     expect(frozenByUserId).toBeTruthy()
     await seedRosterFromArchive(archive)
-    // 書き出したパソコンを模す: 確定した利用者はこの DB に居る
+    // 書き出したPCを模す: 確定した利用者はこの DB に居る
     await prisma.user.create({
       data: {
         id: frozenByUserId,

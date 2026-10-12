@@ -138,7 +138,7 @@ export async function applyStudentAnswerPlacements(
         })
         if (!targetExamStudent) {
           throw new Error(
-            `移動先の受験者が見つかりません: ${finalExamStudentId}`
+            `移動先の受験生徒が見つかりません: ${finalExamStudentId}`
           )
         }
 

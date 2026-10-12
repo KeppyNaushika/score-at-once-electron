@@ -47,7 +47,7 @@ export function useFinalizeScreen(examId: string) {
   const editable = canDecide && !locked
   /** 確定できないときの理由（できるなら null） */
   const readOnlyReason = !canDecide
-    ? "採点結果の確定は試験の所有者（OWNER）のみが行えます"
+    ? "採点確定は所有者だけが行えます"
     : locked
       ? "成績算出で使われているため確定できません"
       : null

@@ -28,7 +28,7 @@ export default function GradeWorkflowLayout({
     <div className="flex h-full flex-col">
       <WorkflowTabHeader
         listHref="/grades"
-        entityName={gradeName || "成績"}
+        entityName={gradeName || "成績算出"}
         entityHref={`/grades/${gradeId}`}
         tabs={gradeWorkflowTabs}
       />

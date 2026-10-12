@@ -32,7 +32,7 @@ interface UseDataFileExportsParams {
 }
 
 /**
- * Canvas 描画を伴わないファイル出力（採点データ Excel・分析用 R データ・個人成績表の印刷）を
+ * Canvas 描画を伴わないファイル出力（採点データ Excel・分析用 R データ・試験採点結果個表の印刷）を
  * 管理するフック。バリデーションや警告モーダルの制御は呼び出し側（ExportMainView）が担い、
  * 本フックはバリデーション通過後に実行される出力処理（execute 系）と、バリデーション不要の
  * R データ出力を提供する。
@@ -109,7 +109,7 @@ export function useDataFileExports({
           studentPlacements: await resolveStudentPlacements(),
         })
       } catch (error) {
-        toast.error("個人成績表のデータを取得できませんでした", {
+        toast.error("試験採点結果個表のデータを取得できませんでした", {
           description: error instanceof Error ? error.message : undefined,
         })
         return false
@@ -126,7 +126,7 @@ export function useDataFileExports({
       try {
         await openPrintDialog.mutateAsync({
           html,
-          title: `個人成績表 - ${exam.examName}`,
+          title: `試験採点結果個表 - ${exam.examName}`,
         })
       } catch {
         return false

@@ -318,7 +318,7 @@ export function detectExamArchiveVersion(data: ExamArchiveData): {
   for (const { maxVersion, marker, applies } of SHAPE_VERSION_FLOORS) {
     if (compareVersions(version, maxVersion) > 0 && applies(data)) {
       corrections.push(
-        `アーカイブ(v${data.manifest.version})に旧形式の${marker}が含まれるため v${maxVersion} として読み込みます。`
+        `アーカイブ(v${data.manifest.version})に旧形式の${marker}が含まれるため v${maxVersion} として取り込みます。`
       )
       version = maxVersion
     }

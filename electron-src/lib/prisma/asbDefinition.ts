@@ -362,7 +362,7 @@ export async function transferAsbDefinitionOwner(
     select: { name: true },
   })
   if (!nextUser) {
-    throw new Error("渡す相手の利用者が見つかりません")
+    throw new Error("渡す相手のユーザーが見つかりません")
   }
 
   await prisma.asbDefinition.update({

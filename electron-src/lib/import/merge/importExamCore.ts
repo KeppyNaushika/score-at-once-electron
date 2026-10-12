@@ -80,9 +80,9 @@ async function applyExamColumns(
   warnings.push(
     policy.action === "overwrite"
       ? `試験「${existingExam.examName}」の情報（試験名・試験日・説明・マーク補正の既定）を、` +
-          `読み込んだデータで上書きしました。`
+          `取り込んだデータで上書きしました。`
       : `試験「${existingExam.examName}」の情報（試験名・試験日・説明・マーク補正の既定）を、` +
-          `読み込んだデータの方が新しいため更新しました。`
+          `取り込んだデータの方が新しいため更新しました。`
   )
 }
 

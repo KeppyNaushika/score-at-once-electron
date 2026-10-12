@@ -114,7 +114,7 @@ export function GradeItemBreakdownPopover({
       <PopoverContent className="w-160 p-3" align="start">
         <p className="mb-1 text-xs font-semibold">{itemResult.gradeItemName}</p>
         <p className="mb-2 text-[10px] text-muted-foreground">
-          換算 = (素点 ÷ 満点) × 換算満点 ※欠点は除外／平均・標準偏差 =
+          換算 = (素点 ÷ 配点) × 換算配点 ※欠点は除外／平均・標準偏差 =
           この試験を受けた生徒の実測分布（素点の位置づけ用）
         </p>
         <table className="w-full table-fixed text-xs">
@@ -122,9 +122,9 @@ export function GradeItemBreakdownPopover({
             <tr className="border-b text-muted-foreground">
               <th className="pb-1 text-center font-medium">項目</th>
               <th className={PARENT_TH_NUM}>素点</th>
-              <th className={PARENT_TH_NUM}>満点</th>
+              <th className={PARENT_TH_NUM}>配点</th>
               <th className={PARENT_TH_NUM}>換算</th>
-              <th className={PARENT_TH_NUM}>換算満点</th>
+              <th className={PARENT_TH_NUM}>換算配点</th>
               <th className={PARENT_TH_NUM}>平均</th>
               <th className={PARENT_TH_NUM}>標準偏差</th>
             </tr>

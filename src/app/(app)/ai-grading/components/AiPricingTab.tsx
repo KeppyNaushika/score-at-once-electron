@@ -35,7 +35,7 @@ export function AiPricingTab() {
         <h2 className="text-lg font-semibold">料金</h2>
         <p className="text-sm text-muted-foreground">
           費用の計算に使う単価です。アプリは単価を持たないので、事業者の料金のページやご自身の契約を見て入れてください。
-          単価の無いモデルの実行は「単価未設定」として、金額の合計に入れません。単価はこの端末にだけ保存します。
+          単価の無いモデルの実行は「単価未設定」として、金額の合計に入れません。単価はこのPCにだけ保存します。
         </p>
       </div>
       {providerStates

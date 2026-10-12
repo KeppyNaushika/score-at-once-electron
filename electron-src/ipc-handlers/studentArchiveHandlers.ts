@@ -26,7 +26,7 @@ export const studentArchiveHandlers = {
   // 取り込みウィザードの中でファイルを選び直す（最初のファイルは一覧の「読み込み」で選ぶ）
   "studentArchive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
-      title: "生徒データをインポート",
+      title: "生徒データを取り込む",
       filters: [
         { name: "生徒データ (.students)", extensions: ["students"] },
         { name: "すべてのファイル", extensions: ["*"] },

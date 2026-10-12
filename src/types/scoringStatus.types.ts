@@ -25,7 +25,7 @@ export type ScoringStatus = (typeof SCORING_STATUSES)[number]
 
 /**
  * 型ガード `isScoringStatus` と境界コンバータ `toScoringStatus`（想定外値は未採点 unscored）。
- * QuestionScore.status は常に7値のいずれか（保留=pending）。
+ * QuestionScore.status は常に8値のいずれか（保留=pending）。
  */
 export const { is: isScoringStatus, to: toScoringStatus } = defineStringUnion(
   SCORING_STATUSES,

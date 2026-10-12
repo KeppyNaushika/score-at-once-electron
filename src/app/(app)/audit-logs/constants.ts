@@ -41,8 +41,12 @@ export const VERB_META: Record<
   },
   update: { label: "更新", className: "text-blue-600", Icon: Pencil },
   delete: { label: "削除", className: "text-red-600", Icon: FileXCorner },
-  export: { label: "出力", className: "text-violet-600", Icon: Download },
-  import: { label: "取込", className: "text-amber-600", Icon: Upload },
+  export: {
+    label: "出力・書き出し",
+    className: "text-violet-600",
+    Icon: Download,
+  },
+  import: { label: "取り込み", className: "text-amber-600", Icon: Upload },
   other: {
     label: "操作",
     className: "text-muted-foreground",

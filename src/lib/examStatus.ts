@@ -94,7 +94,7 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
 
   const hasImages = !!(exam.examPages && exam.examPages.length > 0)
   const hasLayout = !!(exam.cropRegions && exam.cropRegions.length > 0)
-  const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
+  const hasRegionInfo = hasLayout // 領域設定は領域が存在すれば設定済みとみなす
 
   // 小計点領域が存在するかチェック
   const hasSubtotalRegions =

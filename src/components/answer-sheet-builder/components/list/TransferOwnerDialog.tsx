@@ -74,7 +74,7 @@ export function TransferOwnerDialog({
         <div className="max-h-72 overflow-y-auto rounded-lg border border-border/50">
           {candidates.length === 0 ? (
             <p className="p-4 text-sm text-muted-foreground">
-              他に利用者がいません。
+              他にユーザーがいません。
             </p>
           ) : (
             candidates.map((candidate) => (

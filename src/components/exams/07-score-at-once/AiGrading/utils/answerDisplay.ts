@@ -3,7 +3,9 @@
  */
 
 import { toAppImageUrl } from "@/lib/appImageUrl"
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { AI_GRADING_CONFIDENCE_LABELS } from "@/lib/shared/aiGrading/confidenceLabels"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
+import { isAiGradingConfidence } from "@/types/aiGrading.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import type { AiGradingAnswer } from "../types"
@@ -38,16 +40,9 @@ export function describeJudgement(
 
 /** 確信度 */
 export function confidenceLabel(confidence: string): string {
-  switch (confidence) {
-    case "high":
-      return "高"
-    case "medium":
-      return "中"
-    case "low":
-      return "低"
-    default:
-      return "—"
-  }
+  return isAiGradingConfidence(confidence)
+    ? AI_GRADING_CONFIDENCE_LABELS[confidence]
+    : "—"
 }
 
 /** 日時を短く（月/日 時:分） */

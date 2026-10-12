@@ -80,7 +80,7 @@ function assertAsbImagePaths(definition: AnswerSheetDefinition): void {
   ).length
   if (unsafeCount > 0) {
     throw new Error(
-      `アーカイブに、画像の場所として扱えない値が ${unsafeCount}件あるため読み込めません`
+      `アーカイブに、画像の場所として扱えない値が ${unsafeCount}件あるため取り込めません`
     )
   }
 }

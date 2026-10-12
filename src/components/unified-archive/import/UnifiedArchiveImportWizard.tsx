@@ -76,7 +76,7 @@ function UnifiedArchiveImportWizardDialog({
         {/* ヘッダー */}
         <DialogHeader className="border-b bg-muted/30 px-6 py-4">
           <DialogTitle className="text-xl font-semibold">
-            統合アーカイブ（.sao）の読み込み
+            統合アーカイブ（.sao）の取り込み
           </DialogTitle>
           <DialogDescription className="sr-only">
             統合アーカイブを開き、紐づけと衝突を確かめてから取り込みます

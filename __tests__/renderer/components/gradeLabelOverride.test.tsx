@@ -264,7 +264,7 @@ describe("結果(05): 基準に無い評定のマス", () => {
   it("境界が1本以上あるとき、基準に無い評定のマスは赤い", () => {
     renderResultsTable(calculationResult("／", true))
 
-    const cell = screen.getByTitle(/手動: ／/)
+    const cell = screen.getByTitle(/上書き: ／/)
     expect(cell).toHaveTextContent("／")
     expect(cell.className).toContain("bg-red-100")
   })
@@ -272,7 +272,7 @@ describe("結果(05): 基準に無い評定のマス", () => {
   it("境界が0本のときは赤くしない（引く前の段階では判定しない）", () => {
     renderResultsTable(calculationResult("／", false))
 
-    const cell = screen.getByTitle(/手動: ／/)
+    const cell = screen.getByTitle(/上書き: ／/)
     expect(cell).toHaveTextContent("／")
     expect(cell.className).not.toContain("bg-red-100")
   })
@@ -280,7 +280,7 @@ describe("結果(05): 基準に無い評定のマス", () => {
   it("基準にある評定への上書きは赤くない（上書きの印だけ）", () => {
     renderResultsTable(calculationResult("A", true))
 
-    const cell = screen.getByTitle(/手動: A/)
+    const cell = screen.getByTitle(/上書き: A/)
     expect(cell.className).not.toContain("bg-red-100")
     expect(cell.className).toContain("bg-amber-100")
   })
@@ -308,7 +308,7 @@ describe("結果(05): 上書きは制限しない", () => {
       </QueryWrapper>
     )
 
-    await user.click(await screen.findByTitle(/手動: A/))
+    await user.click(await screen.findByTitle(/上書き: A/))
     await user.type(screen.getByPlaceholderText("A"), "／{Enter}")
 
     await waitFor(() => {
@@ -377,7 +377,7 @@ describe("境界設定(03): 基準に無い評定の列挙", () => {
     ])
     renderBoundaries()
 
-    const notice = await screen.findByText(/基準にない評定が入力されています/)
+    const notice = await screen.findByText(/成績境界にない成績評価記号で上書きされています/)
     expect(notice).toHaveTextContent("／、認定（3件）")
   })
 
@@ -389,9 +389,9 @@ describe("境界設定(03): 基準に無い評定の列挙", () => {
     renderBoundaries()
 
     // 1つ目の注意が出たことで算出結果は読み込み済み。2つ目（すべて基準内）には出ない
-    await screen.findByText(/基準にない評定が入力されています/)
+    await screen.findByText(/成績境界にない成績評価記号で上書きされています/)
     expect(
-      screen.getAllByText(/基準にない評定が入力されています/)
+      screen.getAllByText(/成績境界にない成績評価記号で上書きされています/)
     ).toHaveLength(1)
   })
 
@@ -403,7 +403,7 @@ describe("境界設定(03): 基準に無い評定の列挙", () => {
 
     expect(
       await screen.findByText(
-        "境界が設定されていません。プリセットを選択するか手動で追加してください。"
+        "境界が設定されていません。プリセットを選択するか行を追加してください。"
       )
     ).toBeInTheDocument()
     await waitFor(() =>
@@ -411,6 +411,6 @@ describe("境界設定(03): 基準に無い評定の列挙", () => {
         "true"
       )
     )
-    expect(screen.queryByText(/基準にない評定が入力されています/)).toBeNull()
+    expect(screen.queryByText(/成績境界にない成績評価記号で上書きされています/)).toBeNull()
   })
 })

@@ -692,12 +692,12 @@ export function flattenLegacyGrade(
 
   if (droppedCells > 0) {
     warnings.push(
-      `1.12.0→1.13.0: 対象生徒または評価項目を解決できない上書き・確定値・除外設定 ${droppedCells}件を破棄しました`
+      `1.12.0→1.13.0: 対象生徒または成績評価項目を解決できない上書き・固定値・除外設定 ${droppedCells}件を破棄しました`
     )
   }
   if (ambiguousReferences > 0) {
     warnings.push(
-      `1.12.0→1.13.0: 同名の評価項目が複数あり対象を特定できない参照 ${ambiguousReferences}件を破棄しました`
+      `1.12.0→1.13.0: 同名の成績評価項目が複数あり対象を特定できない参照 ${ambiguousReferences}件を破棄しました`
     )
   }
 
@@ -733,7 +733,7 @@ export function flattenLegacyGrade(
   }
   if (droppedBoundarySets > 0) {
     warnings.push(
-      `1.12.0→1.13.0: 対象の評価項目を解決できない成績境界セット ${droppedBoundarySets}件を破棄しました`
+      `1.12.0→1.13.0: 対象の成績評価項目を解決できない成績境界セット ${droppedBoundarySets}件を破棄しました`
     )
   }
 
@@ -791,7 +791,7 @@ export function flattenLegacyGrade(
         legacyConstraint.targetGradeItemName
       ) && targetGradeItemId === null
     const disabledReason = lostTarget
-      ? "取り込み時に比較先の評価項目を解決できなかったため無効化しました。再設定してください。"
+      ? "取り込み時に比較先の成績評価項目を解決できなかったため無効化しました。再設定してください。"
       : lostViewpoints > 0
         ? "取り込み時に集計対象の観点を解決できなかったため無効化しました。再設定してください。"
         : null
@@ -847,7 +847,7 @@ export function flattenLegacyGrade(
 
   if (droppedViewpoints > 0) {
     warnings.push(
-      `1.12.0→1.13.0: 評価項目を解決できない制約ルールの観点 ${droppedViewpoints}件を破棄しました`
+      `1.12.0→1.13.0: 成績評価項目を解決できない制約ルールの観点 ${droppedViewpoints}件を破棄しました`
     )
   }
 
@@ -885,7 +885,7 @@ export function flattenLegacyGrade(
   )
   if (studentsData.length > 0) {
     warnings.push(
-      "1.12.0→1.13.0: 旧アーカイブは生徒の氏名・学級所属を持ちません。" +
+      "1.12.0→1.13.0: 旧アーカイブは生徒の氏名・在籍を持ちません。" +
         "取り込み先に居ない生徒は作成されないため、先に生徒を登録してください"
     )
   }

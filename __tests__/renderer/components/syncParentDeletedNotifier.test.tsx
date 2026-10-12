@@ -109,9 +109,9 @@ describe("SyncParentDeletedNotifier", () => {
     // 3件それぞれではなく、まとめて1回
     expect(toastWarning).toHaveBeenCalledTimes(1)
     const description = descriptionOf(toastWarning)
-    expect(description).toContain("試験の受験生徒の削除にともない")
-    expect(description).toContain("設問ごとの点数 2件")
-    expect(description).toContain("答案への書き込み 1件")
+    expect(description).toContain("受験生徒の削除にともない")
+    expect(description).toContain("採点 2件")
+    expect(description).toContain("注釈 1件")
     // 外れただけなので、戻った側のトーストは出さない
     expect(toastInfo).not.toHaveBeenCalled()
   })
@@ -131,7 +131,7 @@ describe("SyncParentDeletedNotifier", () => {
 
     const description = descriptionOf(toastWarning)
     expect(description).toContain(
-      "試験の受験生徒の削除にともない 設問ごとの点数 1件"
+      "受験生徒の削除にともない 採点 1件"
     )
     expect(description).toContain("試験の削除にともない 答案画像 1件")
   })
@@ -159,7 +159,7 @@ describe("SyncParentDeletedNotifier", () => {
     expect(toastInfo).toHaveBeenCalledTimes(1)
     const [title] = toastInfo.mock.calls[0]
     expect(title).toContain("表示に戻しました")
-    expect(descriptionOf(toastInfo)).toContain("設問ごとの点数 1件")
+    expect(descriptionOf(toastInfo)).toContain("採点 1件")
   })
 
   it("同じ同期で外れた行と戻った行があれば、両方を別々に出す", () => {
@@ -173,7 +173,7 @@ describe("SyncParentDeletedNotifier", () => {
     })
 
     expect(toastWarning).toHaveBeenCalledTimes(1)
-    expect(descriptionOf(toastWarning)).toContain("設問ごとの点数 1件")
+    expect(descriptionOf(toastWarning)).toContain("採点 1件")
     expect(descriptionOf(toastWarning)).not.toContain("答案画像")
     expect(toastInfo).toHaveBeenCalledTimes(1)
     expect(descriptionOf(toastInfo)).toContain("答案画像 1件")

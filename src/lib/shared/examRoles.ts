@@ -20,7 +20,7 @@ export type ExamRole = (typeof EXAM_ROLES)[number]
 
 /** 画面と監査ログの文言で使う名前。試験では EDITOR は採点する人なので「採点者」と呼ぶ */
 export const EXAM_ROLE_LABELS: Record<ExamRole, string> = {
-  OWNER: "オーナー",
+  OWNER: "所有者",
   EDITOR: "採点者",
   VIEWER: "閲覧者",
 }
@@ -28,10 +28,10 @@ export const EXAM_ROLE_LABELS: Record<ExamRole, string> = {
 /** ロールでできること（メンバー管理の説明に出す） */
 export const EXAM_ROLE_DESCRIPTIONS: Record<ExamRole, string> = {
   OWNER:
-    "すべての段を使える。試験の設定、参加者の招待・役割の変更、採点担当の割り当て、採点の確定ができる。複数人にできる",
+    "すべての段を使える。試験の設定、参加者の招待・権限の変更、採点担当の割り当て、採点の確定ができる。複数人にできる",
   EDITOR:
-    "「7. 採点」と、許可されていれば「9. 結果出力」を使える。試験の設定は変えられない",
-  VIEWER: "「9. 結果出力」だけを使える。採点はしない",
+    "「7. 採点」と、許可されていれば「9. 結果と出力」を使える。試験の設定は変えられない",
+  VIEWER: "「9. 結果と出力」だけを使える。採点はしない",
 }
 
 /** DB の文字列がロールか（旧値や壊れた値は null として扱う） */

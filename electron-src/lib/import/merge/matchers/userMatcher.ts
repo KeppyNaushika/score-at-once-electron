@@ -66,7 +66,7 @@ const displayLabelOf = (archiveUser: ArchiveUser): string =>
 /**
  * 採点者の事前照合
  *
- * - byId: 同じ id の利用者がこのPCに居る（同じパソコンで作ったデータ）
+ * - byId: 同じ id の利用者がこのPCに居る（同じPCで作ったデータ）
  * - byName: 利用者名が一致する（`username` は unique ではないので候補どまり）
  * - noMatch: どちらも当たらない（新しく作るしかない）
  */
@@ -107,7 +107,7 @@ export async function preMatchUsers(
         importData: archiveGrader,
         existingData: idMatch,
         displayLabel,
-        matchReason: "同じパソコンで作成されたデータ",
+        matchReason: "同じPCで作成されたデータ",
       })
       continue
     }
@@ -123,7 +123,7 @@ export async function preMatchUsers(
         existingData: usernameMatch,
         displayLabel,
         matchReason: describeCandidateCount(
-          "利用者名が一致",
+          "ユーザー名が一致",
           usernameCandidates.length
         ),
       })

@@ -282,7 +282,7 @@ export function FilePreviewCell({
               />
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
-              <p className="font-medium">マーカー補正スキップ</p>
+              <p className="font-medium">OMRマーカー補正スキップ</p>
               {correctionError && (
                 <p className="mt-1 text-xs text-gray-300">{correctionError}</p>
               )}

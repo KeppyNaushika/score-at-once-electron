@@ -70,7 +70,7 @@ const STUDENT_COLUMNS: ColumnHeadDefinition<
   { label: "学籍番号", sortKey: "studentNumber" },
   { label: "氏名", sortKey: "fullName" },
   { label: "入学年度", sortKey: "enrollmentYear" },
-  { label: "所属学級" },
+  { label: "在籍学級" },
   { label: "操作", className: "text-right" },
 ]
 
@@ -203,8 +203,8 @@ export default function StudentTable() {
       options={MEMBERSHIP_STATUS_OPTIONS}
       selectedValues={filterMembershipStatuses}
       onSelectedValuesChange={setFilterMembershipStatuses}
-      emptyText="所属状況"
-      aria-label="所属状況で絞り込む"
+      emptyText="在籍状況"
+      aria-label="在籍状況で絞り込む"
       className="w-36"
     />
   )

@@ -51,7 +51,7 @@ export function RosterTableHeader({
         <TableHead className="w-20">出席番号</TableHead>
         <TableHead className="w-25">学籍番号</TableHead>
         <TableHead>氏名</TableHead>
-        <TableHead>ふりがな</TableHead>
+        <TableHead>カナ</TableHead>
         <TableHead>学級</TableHead>
         {additionalColumns.map((column) => (
           <TableHead key={column.key} className={column.headerClassName}>

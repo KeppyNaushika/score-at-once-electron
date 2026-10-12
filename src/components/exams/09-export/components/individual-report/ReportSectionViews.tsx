@@ -1,5 +1,5 @@
 /**
- * 個人成績表の小さなセクション用純粋ビューコンポーネント
+ * 試験採点結果個表の小さなセクション用純粋ビューコンポーネント
  * hooks不使用 - プレビューとPDF出力（renderToStaticMarkup）の両方で使用可能
  */
 import type { IndividualReportData } from "@/types/individualReport.types"
@@ -68,7 +68,7 @@ export function HeaderView({ report, fontScale }: HeaderViewProps) {
             margin: "2mm 0 0 0",
           }}
         >
-          個人成績表
+          試験採点結果個表
         </p>
       </div>
     </header>

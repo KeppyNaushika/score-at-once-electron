@@ -60,10 +60,10 @@ type VisibilityFilter = (typeof VISIBILITY_FILTERS)[number]
 /** 先頭のチェックボックス列より後ろの見出し */
 const CLASSROOM_COLUMNS: ColumnHeadDefinition<keyof ClassroomSortable>[] = [
   { label: "学級名", sortKey: "name" },
-  { label: "コード", sortKey: "classroomCode" },
+  { label: "学級コード", sortKey: "classroomCode" },
   { label: "学年", sortKey: "grade" },
   { label: "説明" },
-  { label: "所属数", sortKey: "memberCount" },
+  { label: "在籍数", sortKey: "memberCount" },
   { label: "操作", className: "text-right" },
 ]
 

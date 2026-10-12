@@ -62,7 +62,7 @@ export function GradeLockDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>{message.lead}</AlertDialogDescription>
         </AlertDialogHeader>
-        {/* 成績算出ごとに、評価項目とデータソースを表で並べる */}
+        {/* 成績算出ごとに、成績評価項目とデータソースを表で並べる */}
         <div className="max-h-72 scroll-fade space-y-3 overflow-y-auto">
           {message.groups.map((group) => (
             <section
@@ -76,7 +76,7 @@ export function GradeLockDialog({
                 <TableHeader className="text-xs">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="h-auto bg-transparent px-3 py-1 font-normal text-muted-foreground">
-                      評価項目
+                      成績評価項目
                     </TableHead>
                     <TableHead className="h-auto bg-transparent px-3 py-1 font-normal text-muted-foreground">
                       データソース
@@ -93,7 +93,7 @@ export function GradeLockDialog({
                         {dataSource.gradeItem.name}
                         {isFrozenDataSource(dataSource) && (
                           <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                            確定済み
+                            固定済み
                           </span>
                         )}
                       </TableCell>

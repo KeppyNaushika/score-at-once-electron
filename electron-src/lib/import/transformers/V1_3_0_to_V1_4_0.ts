@@ -28,7 +28,7 @@ export class V1_3_0_to_V1_4_0_Transformer implements ExamVersionTransformer {
 
     warnings.push(
       `アーカイブはv0.5.x形式(archive v${this.fromVersion})で作成されています。` +
-        `採点マーク設定・エクスポート設定・タグデータが追加されます。`
+        `採点マーク設定・出力設定・タグデータが追加されます。`
     )
 
     return {

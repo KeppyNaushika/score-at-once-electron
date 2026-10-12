@@ -226,7 +226,7 @@ export default function StudentModal({
                 max="2050"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                学級所属は別途「所属追加」ボタンから設定してください
+                学級の在籍は別途「在籍を追加」ボタンから設定してください
               </p>
             </div>
           </div>

@@ -39,7 +39,7 @@ import type { AiRubricProposalRow } from "./utils/rubricProposals"
 import type { GradingTargetScope } from "./utils/selectGradingTargets"
 
 /**
- * 左パネルのタブ。AI 採点と AI チェックは、タブの中に問いかけ（問い・選択肢・記録・見直し）を出す
+ * 左パネルのタブ。AI採点と AIチェックは、タブの中に問いかけ（問い・選択肢・記録・見直し）を出す
  * （中央はどのタブでも答案の一覧）
  */
 const LEFT_TABS = ["prompt", "grade", "check"] as const
@@ -47,8 +47,8 @@ type LeftTab = (typeof LEFT_TABS)[number]
 
 const LEFT_TAB_LABELS: Record<LeftTab, string> = {
   prompt: "採点指示",
-  grade: "AI 採点",
-  check: "AI チェック",
+  grade: "AI採点",
+  check: "AIチェック",
 }
 
 /** 実行ダイアログを開くときの目的と、初めの送る答案の選び方 */
@@ -84,9 +84,9 @@ interface AiGradingWorkspaceProps {
 }
 
 /**
- * 設問1つぶんの AI 採点の作業場。左に採点指示・AI 採点・AI チェックのタブ
+ * 設問1つぶんの AI採点の作業場。左に採点指示・AI採点・AIチェックのタブ
  * （実行の入口は採点指示のタブ。問いかけ・自分で採点するボタン・その目的の実行の履歴は
- * AI 採点・AI チェックのタブの中）、
+ * AI採点・AIチェックのタブの中）、
  * 中央はどのタブでも**一覧表示と同じ答案の一覧**（色は自分の採点、斜線と札で AI の提案。
  * 問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる）、右端に設問・絞り込み。
  *
@@ -176,7 +176,7 @@ export function AiGradingWorkspace({
     runs,
     answers,
   })
-  // タブを選んでいなければ、AI 採点を実行した設問（案がある・作っている）では AI 採点を開く
+  // タブを選んでいなければ、AI採点を実行した設問（案がある・作っている）では AI採点を開く
   const [chosenLeftTab, setChosenLeftTab] = useState<LeftTab | null>(null)
   const leftTab: LeftTab =
     chosenLeftTab ??
@@ -233,7 +233,7 @@ export function AiGradingWorkspace({
   const selectionOverride = questioning.gridSelectionOverride
   if (!provider) return null
 
-  /** AI 採点・AI チェックのタブの下に、そのタブの目的の実行の履歴 */
+  /** AI採点・AIチェックのタブの下に、そのタブの目的の実行の履歴 */
   const runHistorySection = (purpose: AiGradingStage1Purpose) => (
     <AiRunHistorySection
       purpose={purpose}
@@ -250,7 +250,7 @@ export function AiGradingWorkspace({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* 左: 実行の進み具合と、採点指示・AI 採点・AI チェックのタブ */}
+      {/* 左: 実行の進み具合と、採点指示・AI採点・AIチェックのタブ */}
       <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-r px-3">
         <AiGradingRunProgress
           examId={examId}
@@ -307,7 +307,7 @@ export function AiGradingWorkspace({
                 gradingQuestions.status.kind === "ready"
                   ? "AI は項目の案を返しませんでした。"
                   : gradingQuestions.status.kind === "idle"
-                    ? "「採点指示」のタブから AI 採点を実行してください。"
+                    ? "「採点指示」のタブから AI採点を実行してください。"
                     : "AI の判定から作った項目の案を、ここで1問ずつ問いかけます。"
               }
               notes={gradingQuestions.proposalRun?.notes ?? ""}
@@ -331,8 +331,8 @@ export function AiGradingWorkspace({
                 checkQuestions.status === "running"
                   ? "AI が判定しています…"
                   : checkQuestions.status === "idle"
-                    ? "「採点指示」のタブから AI チェックを実行してください。"
-                    : "食い違いは見つかりませんでした。"
+                    ? "「採点指示」のタブから AIチェックを実行してください。"
+                    : "不一致は見つかりませんでした。"
               }
               notes=""
             />

@@ -142,7 +142,7 @@ export function ExportOptionsCard({
           採点データExcel
         </TabsTrigger>
         <TabsTrigger value="individual-reports" className="text-xs">
-          個人成績表PDF
+          試験採点結果個表PDF
         </TabsTrigger>
       </TabsList>
 
@@ -288,7 +288,7 @@ export function ExportOptionsCard({
         {/* ダウンロードボタン（スクロール外に固定） */}
         <div className="shrink-0">
           <DownloadRow
-            downloadLabel="個人成績表PDFをダウンロード"
+            downloadLabel="試験採点結果個表PDFをダウンロード"
             onDownload={onExportIndividualReports}
             disabled={noStudentSelected || isExporting}
             noStudentSelected={noStudentSelected}

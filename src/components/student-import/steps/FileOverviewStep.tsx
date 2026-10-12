@@ -83,7 +83,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
       <div className="text-center">
         <h3 className="text-lg font-semibold">ファイルの内容</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          生徒 {counts.students}名、学級 {counts.classrooms}件、所属{" "}
+          生徒 {counts.students}名、学級 {counts.classrooms}件、在籍{" "}
           {counts.memberships}件
         </p>
       </div>

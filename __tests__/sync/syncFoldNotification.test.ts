@@ -265,7 +265,7 @@ describe("同期で見え方が変わった行を伝える", () => {
       userId: null,
       entityType: "ExamStudent",
       entityId: "losing-1",
-      target: "試験の受験生徒",
+      target: "受験生徒",
       extra: {
         losingId: "losing-1",
         winningId: "winning-1",
@@ -323,12 +323,12 @@ describe("同期で見え方が変わった行を伝える", () => {
     await waitForDetachedWrites()
 
     expect(mockRecordAuditLog).toHaveBeenCalledTimes(2)
-    // 呼び名を知らない表はテーブル名をそのまま出す
+    // 表名は画面の呼び名で出す（全モデルの呼び名は tableLabels.ts にある）
     expect(mockRecordAuditLog).toHaveBeenLastCalledWith(
       expect.objectContaining({
         entityType: "AsbCharGuide",
         entityId: "losing-2",
-        target: "AsbCharGuide",
+        target: "文字位置マーカー",
       })
     )
   })
@@ -366,7 +366,7 @@ describe("同期で見え方が変わった行を伝える", () => {
       userId: null,
       entityType: "ExamStudent",
       entityId: "exam-student-1",
-      target: "試験の受験生徒",
+      target: "受験生徒",
       extra: {
         causeTable: "ExamStudent",
         causeId: "exam-student-1",
@@ -510,7 +510,7 @@ describe("同期で見え方が変わった行を伝える", () => {
       userId: null,
       entityType: "ExamStudent",
       entityId: "exam-student-1",
-      target: "試験の受験生徒",
+      target: "受験生徒",
       extra: {
         causeTable: "ExamStudent",
         causeId: "exam-student-1",

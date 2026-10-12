@@ -55,7 +55,7 @@ describe("FileOverviewStep", () => {
 
     expect(screen.getByText(/生徒: 3/)).toBeInTheDocument()
     expect(screen.getByText(/学級: 1/)).toBeInTheDocument()
-    expect(screen.getByText(/小計グループ: 1/)).toBeInTheDocument()
+    expect(screen.getByText(/小計点グループ: 1/)).toBeInTheDocument()
   })
 
   it("FO-3: 自動紐づけ件数が正しく表示される", () => {

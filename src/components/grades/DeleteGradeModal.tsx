@@ -54,7 +54,7 @@ export function DeleteGradeModal({
                     variant: "secondary",
                   },
                   {
-                    label: `評価項目 ${target.gradeItems.length}`,
+                    label: `成績評価項目 ${target.gradeItems.length}`,
                     variant: "secondary",
                   },
                 ],
@@ -66,7 +66,7 @@ export function DeleteGradeModal({
         {
           type: "destructive",
           message:
-            "この操作は取り消せません。評価項目・データソース・成績境界・手直しした成績・確定した成績もすべて削除されます。",
+            "この操作は取り消せません。成績評価項目・データソース・成績境界・上書き・成績の固定もすべて削除されます。",
         },
         {
           type: "info",

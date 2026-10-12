@@ -53,11 +53,11 @@ npx vitest                 # ウォッチモード
    - PDF・画像ファイルの高品質変換
    - ページ順序管理
 
-2. **採点領域作成** (`/exams/[examId]/02-template`)
+2. **領域作成** (`/exams/[examId]/02-template`)
    - ドラッグ&ドロップによる視覚的領域定義
    - マルチページ対応、自動保存
 
-3. **領域情報** (`/exams/[examId]/03-region-info`)
+3. **領域設定** (`/exams/[examId]/03-region-info`)
    - 表形式による効率的な設定編集
    - 設問番号・配点・ラベル管理
 
@@ -74,24 +74,24 @@ npx vitest                 # ウォッチモード
 
 7. **採点実行** (`/exams/[examId]/07-score-at-once`)
    - キーボードファースト採点UI
-   - 複数教員による分担採点（食い違いの裁定は 8. 採点確定）
+   - 複数教員による分担採点（採点の不一致の裁定は 8. 採点確定）
 
 8. **採点確定** (`/exams/[examId]/08-finalize`)
    - 設問ごとの担当割り当て
-   - 採点者間の食い違いの裁定
+   - 採点者間の採点の不一致の裁定
 
-9. **結果出力** (`/exams/[examId]/09-export`)
+9. **結果と出力** (`/exams/[examId]/09-export`)
    - Excel/PDF出力
-   - 採点マーク設定
+   - 採点マークと点数の表示設定
 
 ### 📋 6段階成績ワークフロー
 
 1. **生徒管理** (`/grades/[gradeId]/01-students`)
-2. **データソース** (`/grades/[gradeId]/02-data-sources`)
+2. **成績評価項目** (`/grades/[gradeId]/02-items`)
    - 資料のデータソースには点数の入り具合も出す（入力は資料のページで）
 3. **成績境界** (`/grades/[gradeId]/03-boundaries`)
 4. **比較** (`/grades/[gradeId]/04-comparisons`)
-   - 結果に並べて見る、別の成績算出や別の評価項目を対応付ける
+   - 結果に並べて見る、別の成績算出や別の成績評価項目を対応付ける
 5. **結果** (`/grades/[gradeId]/05-results`)
 6. **出力** (`/grades/[gradeId]/06-export`)
 

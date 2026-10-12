@@ -220,7 +220,7 @@ describe("cornerMarkerDetector", () => {
       "TL",
       "TR",
     ])
-    expect(result.error).toMatch(/3\/4 のマーカーのみ検出されました/)
+    expect(result.error).toMatch(/3\/4 のOMRマーカーのみ検出されました/)
   })
 
   it("信頼度が正方形マーカーに対して高い値を返す", async () => {
@@ -493,7 +493,7 @@ describe("cornerMarkerDetector", () => {
         "BR",
         "TR",
       ])
-      expect(result.error).toMatch(/TL: マーカーが画像の端で切れています/)
+      expect(result.error).toMatch(/TL: OMRマーカーが画像の端で切れています/)
     })
   })
 

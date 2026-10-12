@@ -16,6 +16,9 @@ export const SCORING_TERM_IDS = [
   "statusNoAnswer",
   "statusDoubleMark",
   "statusEvaluated",
+  "pointAllocation",
+  "earnedPoints",
+  "pointValue",
   "partialScore",
   "scoringKeys",
   "scoreComment",
@@ -64,7 +67,10 @@ export const SCORING_CATEGORY: GlossaryCategory<ScoringTermId> = {
     scoringStatus: [
       column("QuestionScore", "status"),
       identifier("ScoringStatus", SCORING_STATUS_TYPES),
-      identifier("SCORING_STATUS_LABELS", "src/lib/scoringStatusColors.ts"),
+      identifier(
+        "SCORING_STATUS_LABELS",
+        "src/lib/shared/scoringStatusLabels.ts"
+      ),
     ],
     statusUnscored: [statusValue("unscored")],
     statusCorrect: [statusValue("correct")],
@@ -76,6 +82,22 @@ export const SCORING_CATEGORY: GlossaryCategory<ScoringTermId> = {
     statusEvaluated: [
       statusValue("evaluated"),
       column("QuestionScore", "scaleLevelId"),
+    ],
+    pointAllocation: [
+      column("CropRegion", "points"),
+      column("CourseworkItem", "maxScore"),
+      column("GradeDataSource", "weight"),
+    ],
+    earnedPoints: [
+      column("QuestionScore", "partialScore"),
+      column("ScoreDecision", "score"),
+      column("CompoundAnswerScore", "partialScore"),
+      column("CourseworkScore", "score"),
+      identifier("calculateActualScore", "src/lib/shared/actualScore.ts"),
+    ],
+    pointValue: [
+      column("ScoreScaleLevel", "score"),
+      column("CourseworkLetterScale", "score"),
     ],
     partialScore: [
       column("QuestionScore", "partialScore"),

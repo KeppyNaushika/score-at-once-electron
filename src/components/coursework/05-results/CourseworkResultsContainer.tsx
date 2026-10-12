@@ -106,11 +106,11 @@ export function CourseworkResultsContainer({
   )
 
   /**
-   * 変換表に同じ評語が2行ある評価項目。
+   * 変換表に同じ資料評価記号が2行ある資料評価項目。
    *
    * 換算はどの端末でも同じ行（`id` のいちばん小さい方）を採るので**点は揃う**が、
    * もう一方の行は何もしない幽霊として残る。A=100 のつもりで A=90 を足した人は、
-   * 自分の入れた点が効いていないことに気づけない。**直せるのは 2. 評価項目**なので、
+   * 自分の入れた点が効いていないことに気づけない。**直せるのは 2. 資料評価項目**なので、
    * ここでは在ることだけを伝えて、そちらへ送る。
    */
   const itemsWithDuplicateLabels = useMemo(
@@ -136,7 +136,7 @@ export function CourseworkResultsContainer({
     return (
       <div className="p-6">
         <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-          <p className="text-muted-foreground">評価項目がありません</p>
+          <p className="text-muted-foreground">資料評価項目がありません</p>
         </div>
       </div>
     )
@@ -146,7 +146,7 @@ export function CourseworkResultsContainer({
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">結果</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        各生徒の評価項目ごとの値です。文字評価は記号と換算点、加減点・コメントを表示します。
+        各生徒の資料評価項目ごとの値です。評価記号で入力する項目は資料評価記号と換算点、加減点・コメントを表示します。
       </p>
 
       {itemsWithDuplicateLabels.length > 0 && (
@@ -154,7 +154,7 @@ export function CourseworkResultsContainer({
           <TriangleAlert className="mt-0.5 size-4 shrink-0" />
           <div>
             <p className="font-medium">
-              同じ評価記号が2つある評価項目があります
+              同じ資料評価記号が2つある資料評価項目があります
             </p>
             <ul className="mt-1 list-inside list-disc">
               {itemsWithDuplicateLabels.map(({ item, labels }) => (
@@ -164,8 +164,8 @@ export function CourseworkResultsContainer({
               ))}
             </ul>
             <p className="mt-1">
-              換算にはどちらか一方だけが使われます。「2. 評価項目」の変換表で、
-              要らない行を消してください。
+              換算にはどちらか一方だけが使われます。「2.
+              資料評価項目」の変換表で、 要らない行を消してください。
             </p>
           </div>
         </div>
@@ -183,7 +183,7 @@ export function CourseworkResultsContainer({
                   {item.name}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
                     {item.inputMode === "letter"
-                      ? "(評価)"
+                      ? "(評価記号)"
                       : `(/${item.maxScore})`}
                   </span>
                 </TableHead>

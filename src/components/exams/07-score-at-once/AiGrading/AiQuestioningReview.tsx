@@ -38,7 +38,7 @@ export function AiQuestioningReview({
       className="space-y-2 rounded border border-gray-200 p-2"
     >
       <h3 className="text-xs font-medium text-gray-800">
-        {scoredExamStudentIds.length}件の採点を確定します
+        {scoredExamStudentIds.length}件を採点に反映します
       </h3>
       {overwrittenExamStudentIds.length > 0 && (
         <p
@@ -57,7 +57,8 @@ export function AiQuestioningReview({
       {summary.instructionCount > 0 && (
         <p className="flex items-start gap-1 text-[11px] text-muted-foreground">
           <RotateCcw className="mt-0.5 h-3 w-3 shrink-0" />
-          再採点の指示 {summary.instructionCount} 問は、確定のあとに送れます。
+          再採点の指示 {summary.instructionCount}{" "}
+          問は、採点に反映したあとに送れます。
         </p>
       )}
       {blockedReason && (
@@ -83,7 +84,7 @@ export function AiQuestioningReview({
             blockedReason !== null || summary.draftCount === 0 || isCommitting
           }
         >
-          確定する
+          採点に反映する
         </Button>
       </div>
     </section>

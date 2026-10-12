@@ -1,13 +1,13 @@
 /**
  * 問いかけ（docs/vlm-grading-design.md §3-5・§3-10）の共通の形。
  *
- * AI 採点（2段目の項目の案）と AI チェック（同じ答えに違う点・先生と AI の食い違い）は、
+ * AI採点（2段目の項目の案）と AIチェック（同じ答えに違う点・先生と AI の食い違い）は、
  * どちらも「1問ずつのカード → 決めたことの記録 → 見直して確定」の同じ流れで出す。
  * 問い（`QuestioningStep`）は届いた行から画面が毎回組み立て、教員が決めたこと
  * （`QuestioningDecision`）は AI の層の答えの行から導く（列には持たない）。
  */
 
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /** 答案に付ける点（判定と、部分点・保留の点） */
@@ -32,7 +32,7 @@ export interface QuestioningOption {
   description: string
   recommended: boolean
   /**
-   * 確定で答案に直接書く点（AI チェックで直す点・判定を決める案の点）。点を変えない
+   * 確定で答案に直接書く点（AIチェックで直す点・判定を決める案の点）。点を変えない
    * （このままにする）・項目の計算で決まる（点を加減する案）なら null
    */
   score: QuestioningScore | null
@@ -41,7 +41,7 @@ export interface QuestioningOption {
 }
 
 /**
- * 問いの助言（AI 採点の案だけ。確定で項目の助言になり、朱書きになる）。"" は助言なし
+ * 問いの助言（AI採点の案だけ。確定で項目の助言になり、朱書きになる）。"" は助言なし
  */
 export interface QuestioningAdvice {
   /** 直していないときの文（当たる項目の助言。項目が無ければ AI の文案） */
@@ -74,16 +74,16 @@ export interface QuestioningStep {
   question: string
   /** 問いに添える補足（案の説明・AI の所見）。無ければ "" */
   detail: string
-  /** 助言（AI 採点の案だけ）。助言を持たない問いは null */
+  /** 助言（AI採点の案だけ）。助言を持たない問いは null */
   advice: QuestioningAdvice | null
   members: QuestioningMember[]
   options: QuestioningOption[]
   /** 「自分で採点する」を出すか */
   allowsManual: boolean
-  /** 「その他：再採点を指示する」を出すか（AI 採点の案だけ） */
+  /** 「その他：再採点を指示する」を出すか（AI採点の案だけ） */
   allowsInstruction: boolean
   /**
-   * 「その他」の欄に書いてある文（AI 採点の案だけ。1打鍵ごとに書く行の、いちばん新しいもの）。
+   * 「その他」の欄に書いてある文（AI採点の案だけ。1打鍵ごとに書く行の、いちばん新しいもの）。
    * 書いていない・欄の無い問いは null
    */
   instructionDraft: string | null

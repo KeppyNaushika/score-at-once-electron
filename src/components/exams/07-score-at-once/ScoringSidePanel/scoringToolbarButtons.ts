@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import type { ClickScoringAction } from "@/types/clickScoring.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -28,45 +29,45 @@ export const STATUS_MAP: Record<ScoringStatus, ScoringStatus> = {
 export const SCORING_BUTTONS = [
   {
     status: "unscored",
-    label: "未採点",
+    label: SCORING_STATUS_LABELS.unscored,
     icon: CircleDashed,
     description: "未採点にする",
   },
   {
     status: "correct",
-    label: "正答",
+    label: SCORING_STATUS_LABELS.correct,
     icon: CircleCheckBig,
     description: "正答にする",
   },
   {
     status: "partial",
-    label: "部分点",
+    label: SCORING_STATUS_LABELS.partial,
     icon: Triangle,
     description: "部分点にする",
   },
   {
     status: "pending",
-    label: "保留",
+    label: SCORING_STATUS_LABELS.pending,
     icon: Clock,
     description: "保留にする",
   },
   {
     status: "incorrect",
-    label: "誤答",
+    label: SCORING_STATUS_LABELS.incorrect,
     icon: X,
     description: "誤答にする",
   },
   {
     status: "no_answer",
-    label: "無答",
+    label: SCORING_STATUS_LABELS.no_answer,
     icon: Minus,
     description: "無答にする",
   },
   {
     status: "double_mark",
-    label: "Wマーク",
+    label: SCORING_STATUS_LABELS.double_mark,
     icon: CopyX,
-    description: "ダブルマークにする",
+    description: "Wマークにする",
   },
 ] as const
 

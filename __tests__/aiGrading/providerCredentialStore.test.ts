@@ -1,5 +1,5 @@
 /**
- * AI 採点の API キー・同意の保存のテスト。Electron の safeStorage の代わりに偽の暗号化を渡す
+ * AI採点の API キー・同意の保存のテスト。Electron の safeStorage の代わりに偽の暗号化を渡す
  */
 
 import * as fs from "fs"

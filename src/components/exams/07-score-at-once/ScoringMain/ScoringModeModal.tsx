@@ -63,7 +63,7 @@ export function ScoringModeModal({
             <div className="text-center">
               <div className="font-medium">マウス</div>
               <div className="mt-1 text-[10px] text-gray-500">
-                クリックで直接採点
+                クリックで採点
               </div>
             </div>
           </Button>

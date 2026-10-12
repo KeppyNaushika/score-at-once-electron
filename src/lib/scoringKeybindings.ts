@@ -127,7 +127,7 @@ const CHOICE_NUMBER_COMMANDS: ReadonlySet<string> = new Set([
   "choice.other",
 ])
 /**
- * 問いかけの「次へ」「戻る」（docs/vlm-grading-design.md §3-5・§11-4）。AI 採点の問いかけのタブを
+ * 問いかけの「次へ」「戻る」（docs/vlm-grading-design.md §3-5・§11-4）。AI採点の問いかけのタブを
  * 開いている間は、選択の場面に入っていなくても（Esc で抜けていても）、「その他」の欄の中でも、
  * 自分で採点の最中でも効かせる。そのための登録は `scene: "questioning"` で選ぶ
  * （ダイアログ・部分点の入力欄を開いている間は効かない）

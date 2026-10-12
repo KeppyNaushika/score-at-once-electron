@@ -258,10 +258,10 @@ function renderItemGradesSection(
   )
 
   const buildHeaderRow = (): string => {
-    const headerCols = ["<th>評価項目</th>"]
+    const headerCols = ["<th>成績評価項目</th>"]
     if (cols.score) headerCols.push("<th>得点</th>")
     if (cols.percentage) headerCols.push("<th>得点率</th>")
-    if (cols.gradeLabel) headerCols.push("<th>評価</th>")
+    if (cols.gradeLabel) headerCols.push("<th>成績評価記号</th>")
     return `<tr>${headerCols.join("")}</tr>`
   }
 
@@ -327,7 +327,7 @@ function renderSourceBreakdownSection(
     weight: options.sourceBreakdownColumnWeight,
     comment: options.sourceBreakdownColumnComment,
   }
-  const label = options.dataSourceLabel || "成績資料"
+  const label = options.dataSourceLabel || "データソース"
   const scaleValueDisplay = toScaleValueDisplay(options.scaleValueDisplay)
   const fontSize = options.sourceBreakdownFontSize
   const columns = Math.max(

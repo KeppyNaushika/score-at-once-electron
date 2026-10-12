@@ -138,12 +138,12 @@ export class V1_20_0_to_V1_21_0_Transformer implements ExamVersionTransformer {
     const warnings: string[] = []
     if (rekeyedTotal > 0) {
       warnings.push(
-        `1.20.0→1.21.0: 採点データ ${rekeyedTotal} 件を受験者（ExamStudent）経由へ付け替えました。`
+        `1.20.0→1.21.0: 採点データ ${rekeyedTotal} 件を受験生徒（ExamStudent）経由へ付け替えました。`
       )
     }
     if (droppedTotal > 0) {
       warnings.push(
-        `1.20.0→1.21.0: 受験者として登録されていない生徒の採点データ ${droppedTotal} 件を破棄しました` +
+        `1.20.0→1.21.0: 受験生徒として登録されていない生徒の採点データ ${droppedTotal} 件を破棄しました` +
           `（答案 ${answerImages.dropped} / 採点 ${questionScores.dropped} / 確定 ${scoreDecisions.dropped} /` +
           ` 複合回答 ${compoundScores.dropped} / 返却版 ${returnSnapshots.dropped}` +
           `${droppedAnnotations > 0 ? ` / 手書き注釈 ${droppedAnnotations}` : ""}）。`

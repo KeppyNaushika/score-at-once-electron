@@ -30,7 +30,7 @@ const REPORT_SETTINGS_FIELD_LABELS: Record<keyof GradeReportSettings, string> =
     showItemGrades: "項目別評価",
     itemGradeColumnScore: "項目別評価：得点",
     itemGradeColumnPercentage: "項目別評価：得点率",
-    itemGradeColumnGradeLabel: "項目別評価：評価",
+    itemGradeColumnGradeLabel: "項目別評価：成績評価記号",
     itemGradeComparisonMarks: "項目別評価：比較の記号",
     itemGradeFontSize: "項目別評価：文字",
     itemGradeTableColumns: "項目別評価：列数",
@@ -46,7 +46,7 @@ const REPORT_SETTINGS_FIELD_LABELS: Record<keyof GradeReportSettings, string> =
     footerLeft: "フッター（左）",
     footerCenter: "フッター（中）",
     footerRight: "フッター（右）",
-    scaleValueDisplay: "類型評価の見せ方",
+    scaleValueDisplay: "類型の見せ方",
   }
 
 /** 比べる項目（`diffFields` の形）。項目名の表から作る */

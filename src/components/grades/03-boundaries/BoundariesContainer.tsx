@@ -97,9 +97,9 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
 
   return (
     <div className="p-6">
-      <h2 className="mb-4 text-lg font-semibold">成績境界設定</h2>
+      <h2 className="mb-4 text-lg font-semibold">成績境界</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        各パーセンテージ閾値以上でその成績ラベルが付与されます。
+        各パーセンテージ閾値以上でその成績評価記号が付きます。
       </p>
 
       <div className="space-y-4">
@@ -119,7 +119,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
                     onClick={() => boundaryDeletion.openWith(gradeItem)}
                   >
                     <Trash className="mr-1 h-3.5 w-3.5" />
-                    境界設定を削除
+                    成績境界を削除
                   </Button>
                 )}
               </div>
@@ -132,7 +132,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
               {unknownGradeLabels !== undefined &&
                 unknownGradeLabels.count > 0 && (
                   <p className="text-xs text-amber-700">
-                    基準にない評定が入力されています:{" "}
+                    成績境界にない成績評価記号で上書きされています:{" "}
                     {unknownGradeLabels.values.join("、")}（
                     {unknownGradeLabels.count}件）
                   </p>
@@ -171,7 +171,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
               」の成績境界を削除しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              この評価項目には成績ラベルが付かなくなり、結果画面と出力のラベル欄が空になります。確定済みの成績値に記録されたラベルはそのまま残ります。制約ルールが選べるラベルからもこの評価項目のラベルが外れるため、そのラベルを使っているルールは設定し直してください。
+              この成績評価項目には成績評価記号が付かなくなり、結果画面と出力の成績評価記号の欄が空になります。固定値に記録された成績評価記号はそのまま残ります。制約ルールで選べる成績評価記号からもこの成績評価項目のものが外れるため、それを使っているルールは設定し直してください。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

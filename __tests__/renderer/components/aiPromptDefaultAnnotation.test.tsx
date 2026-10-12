@@ -236,7 +236,7 @@ describe("採点指示の助言の文案の指示の初期値", () => {
 })
 
 describe("採点指示からの実行", () => {
-  it("選んだ採点指示の下に「AI 採点を実行」と「AI チェックを実行」があり、それぞれの目的で開く", async () => {
+  it("選んだ採点指示の下に「AI採点を実行」と「AIチェックを実行」があり、それぞれの目的で開く", async () => {
     const user = userEvent.setup()
     installFakeElectronApi()
     const prompt = makePrompt()
@@ -248,9 +248,9 @@ describe("採点指示からの実行", () => {
       onRunWithPrompt,
     })
 
-    await user.click(screen.getByRole("button", { name: "AI 採点を実行" }))
+    await user.click(screen.getByRole("button", { name: "AI採点を実行" }))
     expect(onRunWithPrompt).toHaveBeenLastCalledWith(prompt.id, "grade")
-    await user.click(screen.getByRole("button", { name: "AI チェックを実行" }))
+    await user.click(screen.getByRole("button", { name: "AIチェックを実行" }))
     expect(onRunWithPrompt).toHaveBeenLastCalledWith(prompt.id, "check")
   })
 })

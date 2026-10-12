@@ -1,5 +1,5 @@
 /**
- * AI 採点で VLM に返させる JSON の形（JSON Schema）
+ * AI採点で VLM に返させる JSON の形（JSON Schema）
  *
  * 全事業者（Anthropic・OpenAI・Gemini・OpenAI 互換）が受け付ける共通の書き方だけを使う
  * （docs/vlm-grading-design.md §6-2）:

@@ -2,7 +2,7 @@
  * 段のあるワークフロー4つ（試験・成績算出・試験外成績資料・解答用紙作成）の段の一覧。
  *
  * **段の名前と URL の出どころはここ1か所だけ。** タブ・「次へ」・概要の段カード・
- * 履歴のラベル・一覧の「次のステップ」・main が返す断りの文言（「2. データソース」で
+ * 履歴のラベル・一覧の「次のステップ」・main が返す断りの文言（「2. 成績評価項目」で
  * 外してください）は、どれもここから引く。写しは黙ってずれる ——実際、成績の段は
  * layout 側が「1. 生徒管理」「2. データソース」…と繰り上がっているのに、履歴側の
  * 写しは「1. 基本設定」「2. 生徒管理」…のまま古い番号を出していた。
@@ -56,15 +56,15 @@ export const examWorkflowSteps = [
   },
   {
     id: "02-template",
-    label: "2. 採点領域",
-    title: "答案の採点領域作成",
+    label: "2. 領域作成",
+    title: "採点領域の作成",
     description: "各設問の採点範囲を枠で囲んで決める",
     path: "/02-template",
   },
   {
     id: "03-region-info",
-    label: "3. 領域情報",
-    title: "採点領域の詳細情報設定",
+    label: "3. 領域設定",
+    title: "採点領域の設定",
     description: "各領域の種類・配点・ラベルを決める",
     path: "/03-region-info",
   },
@@ -100,14 +100,14 @@ export const examWorkflowSteps = [
     id: "08-finalize",
     label: "8. 採点確定",
     title: "採点の確定",
-    description: "採点者どうしで食い違った採点を見比べ、1つに決める",
+    description: "採点者どうしの採点の不一致を見比べ、1つに決める",
     path: "/08-finalize",
   },
   {
     id: "09-export",
-    label: "9. 結果",
-    title: "採点結果のファイル出力",
-    description: "採点結果を Excel・PDF で書き出す",
+    label: "9. 結果と出力",
+    title: "結果と出力",
+    description: "採点結果を Excel・PDF で出力する",
     path: "/09-export",
   },
 ] as const satisfies readonly WorkflowStep[]
@@ -129,24 +129,24 @@ export const gradeWorkflowSteps = [
     path: "/01-students",
   },
   {
-    id: "02-data-sources",
-    label: "2. データソース",
-    title: "データソースの設定",
-    description: "評価項目ごとに、点数の元になる試験や資料を選ぶ",
-    path: "/02-data-sources",
+    id: "02-items",
+    label: "2. 成績評価項目",
+    title: "成績評価項目の設定",
+    description: "成績評価項目ごとに、点数の元になる試験や資料を選ぶ",
+    path: "/02-items",
   },
   {
     id: "03-boundaries",
     label: "3. 成績境界",
-    title: "成績境界の設定",
-    description: "評定を分ける境目を決める",
+    title: "成績境界",
+    description: "成績評価記号を分ける境目を決める",
     path: "/03-boundaries",
   },
   {
     id: "04-comparisons",
     label: "4. 比較",
     title: "比較の設定",
-    description: "結果に並べて見る、別の成績算出や別の評価項目を選ぶ",
+    description: "結果に並べて見る、別の成績算出や別の成績評価項目を選ぶ",
     path: "/04-comparisons",
   },
   {
@@ -160,7 +160,7 @@ export const gradeWorkflowSteps = [
     id: "06-export",
     label: "6. 出力",
     title: "結果の出力",
-    description: "成績を Excel・PDF で書き出す",
+    description: "成績を Excel・PDF で出力する",
     path: "/06-export",
   },
 ] as const satisfies readonly WorkflowStep[]
@@ -183,23 +183,23 @@ export const courseworkWorkflowSteps = [
   },
   {
     id: "03-items",
-    label: "2. 評価項目",
-    title: "評価項目の設定",
-    description: "点数を付ける項目と満点を決める",
+    label: "2. 資料評価項目",
+    title: "資料評価項目の設定",
+    description: "得点を付ける項目と配点を決める",
     path: "/03-items",
   },
   {
     id: "04-scores",
-    label: "3. 点数入力",
-    title: "点数の入力",
-    description: "生徒ごとに点数を入れる",
+    label: "3. 得点入力",
+    title: "得点の入力",
+    description: "生徒ごとに得点を入れる",
     path: "/04-scores",
   },
   {
     id: "05-results",
     label: "4. 結果",
     title: "結果の確認",
-    description: "入力した点数を一覧で確かめる",
+    description: "入力した得点を一覧で確かめる",
     path: "/05-results",
   },
 ] as const satisfies readonly WorkflowStep[]
@@ -249,15 +249,15 @@ export function workflowStepHref<Steps extends readonly WorkflowStep[]>(
 }
 
 /**
- * 段の下端に置く「次へ」の文言。右上の「次へ」（`WorkflowTabHeader`）と同じく
- * 行き先の段の `title` から作る。段ごとに文言を書き写すと、上と下で同じ行き先が
+ * 段の下端に置く「次へ」の文言（「3. 成績境界へ」）。右上の「次へ」（`WorkflowTabHeader`）と
+ * 同じく行き先の段の `label`（タブの名前）から作る。段ごとに文言を書き写すと、上と下で同じ行き先が
  * 違う名前で呼ばれる（成績境界の下が「次へ: 結果」、上が「次へ：成績の確認」だった）。
  */
 export function nextStepLabel<Steps extends readonly WorkflowStep[]>(
   steps: Steps,
   nextStepId: WorkflowStepId<Steps>
 ): string {
-  return `次へ：${workflowStep(steps, nextStepId).title}`
+  return `${workflowStep(steps, nextStepId).label}へ`
 }
 
 /** 一覧の「次のステップ」1つ（段の名前と行き先） */

@@ -174,9 +174,9 @@ export function IndividualGuide({
       </Scene>
 
       <Scene>
-        <FocusSection title="⑦ 答案に記号やコメントを書き込む">
+        <FocusSection title="⑦ 答案に注釈（記号やコメント）を書く">
           <p>
-            個別表示では、答案の上に直接、直線・長方形・楕円やテキストを書き込めます。
+            個別表示では、答案の上に直接、直線・長方形・楕円やテキストの注釈を書けます。
             一覧表示にはない、個別表示だけの機能です。
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -220,9 +220,9 @@ export function IndividualGuide({
           <Callout type="tip" title="色と太さ">
             線や文字の色（8色）と太さは、ツールを選んだときに変えられます。
           </Callout>
-          <Callout type="success" title="書き込みは自動で残ります">
+          <Callout type="success" title="注釈は自動で残ります">
             書いた内容は自動で保存され、一覧表示に戻っても残ります。
-            「結果出力（08）」で採点済み答案PDFを作ると、書き込みもそのまま印刷されます。
+            「結果と出力（09）」で採点済み答案PDFを作ると、注釈もそのまま印刷されます。
           </Callout>
         </FocusSection>
       </Scene>

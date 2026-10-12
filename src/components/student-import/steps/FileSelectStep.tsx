@@ -24,7 +24,7 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
           生徒データファイルを選択してください
         </h3>
         <p className="mt-2 text-sm text-muted-foreground">
-          .studentsファイルを選択して、生徒・学級データをインポートします
+          .studentsファイルを選択して、生徒・学級データを取り込みます
         </p>
       </div>
 

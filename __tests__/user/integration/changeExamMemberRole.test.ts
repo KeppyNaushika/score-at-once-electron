@@ -106,7 +106,7 @@ describe("試験の参加者の役割変更", () => {
       entityType: "UserExam",
       entityId: updated.id,
       scopeId: examId,
-      summary: "「採点者B」をオーナーにしました",
+      summary: "「採点者B」を所有者にしました",
     })
   })
 
@@ -137,7 +137,7 @@ describe("試験の参加者の役割変更", () => {
 
     await expect(
       changeExamMemberRole(examId, owner.id, "VIEWER")
-    ).rejects.toThrow(/最後のオーナーはほかの役割に変えられません/)
+    ).rejects.toThrow(/最後の所有者はほかの権限に変えられません/)
 
     expect(await roleOf(examId, owner.id)).toBe("OWNER")
   })
@@ -148,7 +148,7 @@ describe("試験の参加者の役割変更", () => {
 
     await expect(
       changeExamMemberRole(examId, grader.id, "OWNER")
-    ).rejects.toThrow(/この試験のオーナーだけです/)
+    ).rejects.toThrow(/所有者だけです/)
 
     expect(await roleOf(examId, grader.id)).toBe("EDITOR")
   })
@@ -164,14 +164,14 @@ describe("試験の参加者の役割変更", () => {
     loggedIn.userId = null
     await expect(
       changeExamMemberRole(examId, owner.id, "OWNER")
-    ).rejects.toThrow(/ログインしている利用者が分からない/)
+    ).rejects.toThrow(/ログインしているユーザーが分からない/)
   })
 
   it("最後の1人のオーナーは外せず、オーナーが2人いれば外せる", async () => {
     const { examId, owner, grader } = await buildExam()
 
     await expect(removeExamMember(examId, owner.id, owner.id)).rejects.toThrow(
-      /最後のオーナーは外せません/
+      /最後の所有者は外せません/
     )
     expect(await roleOf(examId, owner.id)).toBe("OWNER")
 
@@ -214,7 +214,7 @@ describe("採点者の結果出力の許可", () => {
 
     await expect(
       setExamMemberExportPermission(examId, grader.id, false)
-    ).rejects.toThrow(/この試験のオーナーだけです/)
+    ).rejects.toThrow(/所有者だけです/)
   })
 })
 
@@ -251,7 +251,7 @@ describe("匿名採点の固定", () => {
     loggedIn.userId = grader.id
 
     await expect(setExamAnonymousScoringEnforced(examId, true)).rejects.toThrow(
-      /この試験のオーナーだけです/
+      /所有者だけです/
     )
   })
 })

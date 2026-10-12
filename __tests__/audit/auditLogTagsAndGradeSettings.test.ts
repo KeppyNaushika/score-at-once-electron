@@ -251,7 +251,7 @@ describe("小計グループのタグ", () => {
     const logs = await logsOf("subtotal_group.tag.update")
     expect(logs).toHaveLength(2)
     expect(logs.every((log) => log.scopeId === null)).toBe(true)
-    expect(logs[0].summary).toBe("小計グループ「観点別」のタグを変更しました")
+    expect(logs[0].summary).toBe("小計点グループ「観点別」のタグを変更しました")
     expect(logs.map((log) => parseAuditMetadata(log.metadata).changes)).toEqual(
       [
         [expect.objectContaining({ before: "", after: "数学" })],

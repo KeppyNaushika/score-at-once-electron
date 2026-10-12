@@ -267,7 +267,7 @@ export function SyncSettingsTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>ローカルモードへ移行しますか？</AlertDialogTitle>
             <AlertDialogDescription className="break-all whitespace-pre-line">
-              {`${migrationSource?.sharedFolderPath ?? ""}\n\nこの共有プロファイルのデータ（データベースと画像）を、このPCのローカルモードへ写します。移せるのは、ローカルモードにまだデータが無いときだけです。共有フォルダには何も書きません。\n統合したい場合は、アーカイブの書き出しと取り込みを使ってください。`}
+              {`${migrationSource?.sharedFolderPath ?? ""}\n\nこの共有プロファイルのデータ（データベースと画像）を、このPCのローカルモードへ写します。移せるのは、ローカルモードにまだデータが無いときだけです。共有フォルダには何も書きません。\nまとめたい場合は、アーカイブの書き出しと取り込みを使ってください。`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

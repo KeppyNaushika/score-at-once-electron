@@ -1,14 +1,7 @@
+import { ABSENT_METHOD_LABELS } from "@/components/grades/absentMethodLabels"
 import type { SourceScoreResult } from "@/types/grade.types"
 
 import { alignColumn, fmt, NumCell } from "./BreakdownCells"
-
-const ABSENT_METHOD_LABELS: Record<string, string> = {
-  zero: "0点",
-  average: "平均比率法",
-  regression: "重回帰法",
-  equipercentile: "順位法",
-  zscore: "標準偏差法",
-}
 
 const FALLBACK_REASON_LABELS: Record<string, string> = {
   insufficient_samples: "サンプル不足",
@@ -98,7 +91,7 @@ function AverageBreakdown({
       <thead>
         <tr className="text-amber-700 dark:text-amber-300">
           <th className="pb-0.5 text-center font-medium">ソース</th>
-          <th className={ESTIMATION_TH}>素点 / 満点</th>
+          <th className={ESTIMATION_TH}>素点 / 配点</th>
           <th className={ESTIMATION_TH}>比率</th>
         </tr>
       </thead>
@@ -226,9 +219,7 @@ export function EstimationExplain({
   const estimation = sourceScore.estimation
   if (!estimation) return null
 
-  const methodLabel =
-    ABSENT_METHOD_LABELS[estimation.effectiveMethod] ??
-    estimation.effectiveMethod
+  const methodLabel = ABSENT_METHOD_LABELS[estimation.effectiveMethod]
   const targetMaxScore = sourceScore.maxScore
   const hasAdjustment = estimation.ratio !== 1 || estimation.offset !== 0
   const isRegression =
@@ -341,13 +332,13 @@ export function EstimationExplain({
         />
         {hasAdjustment && (
           <EstimationFlowRow
-            label="乗率・加減点"
+            label="補正（乗率・加減点）"
             formula={`× ${estimation.ratio} ${estimation.offset >= 0 ? "+" : "−"} ${fmt(Math.abs(estimation.offset))}`}
             value={fmt(estimation.adjustedScore)}
           />
         )}
         <EstimationFlowRow
-          label="最終スコア"
+          label="得点"
           value={fmt(estimation.finalScore)}
           note={clampNote(preClampScore, estimation.finalScore, targetMaxScore)}
           strong

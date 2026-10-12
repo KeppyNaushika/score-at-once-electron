@@ -35,18 +35,18 @@ export function HelpContentClassrooms() {
           <StepItem
             number={2}
             title="学級情報を入力"
-            description="クラスコード・学年・説明を入力します（すべて任意）"
+            description="学級コード・学年・説明を入力します（すべて任意）"
             isImportant
           />
           <StepItem
             number={3}
             title="生徒を追加"
-            description="学級を開いて「生徒を追加」から所属する生徒を登録します"
+            description="学級を開いて「生徒を追加」から在籍する生徒を登録します"
           />
           <StepItem
             number={4}
             title="在籍人数を確認"
-            description="所属する生徒の人数は一覧に自動で表示されます"
+            description="在籍する生徒の人数は一覧に自動で表示されます"
           />
         </div>
       </HelpSection>
@@ -91,7 +91,7 @@ export function HelpContentClassrooms() {
             </div>
             <div className="rounded-lg bg-purple-50 p-3">
               <p className="text-sm text-purple-800">
-                非表示にした学級は、生徒一覧やインポートの選択肢に出てこなくなります。
+                非表示にした学級は、生徒一覧や取り込みの選択肢に出てこなくなります。
               </p>
             </div>
           </div>
@@ -108,7 +108,7 @@ export function HelpContentClassrooms() {
           <div className="space-y-3">
             <TipItem type="info">
               <strong>学級を削除したい：</strong>
-              所属している生徒がいる学級は削除できません。先に生徒の所属を外してから削除してください。
+              在籍している生徒がいる学級は削除できません。先に生徒の在籍を外してから削除してください。
             </TipItem>
 
             <TipItem type="warning">
@@ -129,8 +129,8 @@ export function HelpContentClassrooms() {
         >
           <div className="space-y-3">
             <TipItem type="success">
-              <strong>クラスコードの付け方：</strong>
-              「3A」「M2」のような短い略称にすると、生徒の所属表示で見やすくなります。
+              <strong>学級コードの付け方：</strong>
+              「3A」「M2」のような短い略称にすると、生徒の在籍学級の表示で見やすくなります。
             </TipItem>
 
             <TipItem type="success">

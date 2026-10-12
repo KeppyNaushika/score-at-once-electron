@@ -77,7 +77,7 @@ const attemptsOf = (runId: string) =>
     orderBy: { examStudentId: "asc" },
   })
 
-describe("AI チェック", () => {
+describe("AIチェック", () => {
   it("教員の採点は送らず、1段目だけを走らせて2段目を続けない", async () => {
     const teacherComment = "先生だけが知っている採点の理由"
     for (const examStudent of fixture.exam.examStudents) {

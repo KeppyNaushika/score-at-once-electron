@@ -74,8 +74,9 @@ IPC は `ipc-handlers/unifiedArchiveHandlers.ts`（`unifiedArchive:previewExport
 件数・衝突・成績算出への影響はこれが返す。
 
 画面は `src/components/unified-archive/` の `export/UnifiedArchiveExportDialog.tsx`（書き出し）と
-`import/UnifiedArchiveImportWizard.tsx`（取り込み）。表名・列名の日本語は
-`archiveTableLabels.ts`（載っていない名前はそのまま出る）。
+`import/UnifiedArchiveImportWizard.tsx`（取り込み）。表名の日本語は同期の通知と共通の
+`src/lib/shared/tableLabels.ts`（schema の全モデルを載せる。規約テスト `tableLabelCoverage`）、
+列名の日本語は `archiveColumnLabels.ts`（載っていない名前はそのまま出る）。
 
 書き出しの入口は各画面の書き出しボタンで、どれも同じダイアログを、押した画面の実体を選んだ
 状態で開く。
@@ -262,8 +263,9 @@ courseworks.json    内包する試験外成績資料（coursework-archive 形�
 5. **旧5種の読み込み** — 変えた表を旧形式の取り込みが書いているなら、取り込みが今のスキーマで
    動くよう投入の処理を直す。**変換器は足さず、`*_CURRENT_VERSION` も上げない**（凍結）。
    `Student` にカスケードの子を足したら `idChangeExecutor` の罠（上記）も見る
-6. **画面の見せ方（必要なら）** — 表名・列名の日本語は
-   `src/components/unified-archive/archiveTableLabels.ts`。成績算出が読む表に、値に効かない列
+6. **画面の見せ方** — 表を足したら表名の日本語を `src/lib/shared/tableLabels.ts` に足す
+   （規約テスト `tableLabelCoverage` が縛る）。列名の日本語は
+   `src/components/unified-archive/archiveColumnLabels.ts`。成績算出が読む表に、値に効かない列
    （名前・並び順など）を足したら、`src/components/unified-archive/import/archiveGradeInputDiff.ts`
    の `VALUE_NEUTRAL_COLUMNS` に足す（載っていない列は値に効くものとして扱われるので、足し忘れても
    警告が増えるだけで見落としはしない）

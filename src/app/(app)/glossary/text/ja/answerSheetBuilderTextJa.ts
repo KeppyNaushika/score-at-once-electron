@@ -16,18 +16,18 @@ export const ANSWER_SHEET_BUILDER_TEXT_JA: Record<
     },
   },
   examConversion: {
-    label: "採点試験に変換",
+    label: "試験に変換",
     summary:
       "解答用紙から試験を作り、模範解答の画像・採点領域・配点を自動で作る操作。",
     variants: [],
-    avoidedAliases: [],
+    avoidedAliases: ["採点試験に変換"],
     distinctions: {},
   },
   asbHeaderField: {
     label: "記入欄",
     summary:
       "用紙の上部（ヘッダー）に並べる欄。種類は記入欄・可変スペース・ラベルの3つ。",
-    variants: ["ヘッダー記入欄", "解答用紙のヘッダー欄"],
+    variants: ["ヘッダー記入欄", "解答用紙の記入欄"],
     avoidedAliases: [],
     distinctions: {
       asbTextElement: "テキスト要素は小問・枝問の欄の中に置く文字。",
@@ -36,7 +36,7 @@ export const ANSWER_SHEET_BUILDER_TEXT_JA: Record<
   asbLinkedRegion: {
     label: "採点領域連携",
     summary:
-      "記入欄を、試験にしたときどの種類の採点領域（番号・氏名・合計点・小計点）にするかの指定。",
+      "記入欄を、試験にしたときどの種類の採点領域（番号・氏名・合計・小計）にするかの指定。",
     variants: [],
     avoidedAliases: [],
     distinctions: {
@@ -89,24 +89,24 @@ export const ANSWER_SHEET_BUILDER_TEXT_JA: Record<
     distinctions: {},
   },
   asbOmrConfig: {
-    label: "OMR自動認識",
+    label: "マーク欄",
     summary:
-      "小問・枝問を、塗りつぶして答える選択式の欄にする設定。選択肢の数・記号・並び・正解を持つ。試験にすると採点領域のOMR設定になる。",
-    variants: ["マーク欄", "解答用紙のマーク欄"],
-    avoidedAliases: [],
+      "小問・枝問を、塗りつぶして答える選択式の欄にする設定。選択肢（マーク欄の選択肢）の数・記号・並び・正答を持つ。試験にすると採点領域のOMR設定になる。",
+    variants: [],
+    avoidedAliases: ["OMR自動認識", "解答用紙のマーク欄"],
     distinctions: {
       omrMarker: "OMRマーカーは用紙全体の四隅の印。こちらは設問ごとの設定。",
+      omr: "試験の側では「OMR設定」と呼ぶ。",
     },
   },
   omrMarker: {
     label: "OMRマーカー",
     summary:
       "用紙の四隅に印刷する位置合わせの印。スキャンした答案の傾き・ずれを直すのに使う。",
-    variants: ["OMR", "マーカー"],
-    avoidedAliases: [],
+    variants: ["OMR"],
+    avoidedAliases: ["マーカー"],
     distinctions: {
-      asbCharGuide:
-        "原稿用紙の文字位置マーカーも「マーカー」と呼ぶが別のもの。",
+      asbCharGuide: "文字位置マーカーは原稿用紙の中の目印で、別のもの。",
     },
   },
   asbManuscriptPaper: {
@@ -120,8 +120,8 @@ export const ANSWER_SHEET_BUILDER_TEXT_JA: Record<
     label: "文字位置マーカー",
     summary:
       "原稿用紙の「先頭から何字目か」に置く目印。数字（例: 80）と「○字以内・以上」の区切りの罫線を組み合わせられる。",
-    variants: ["文字数の目印", "マーカー", "字数ガイド"],
-    avoidedAliases: [],
+    variants: [],
+    avoidedAliases: ["文字数の目印", "字数ガイド", "マーカー"],
     distinctions: {},
   },
   verticalLayout: {

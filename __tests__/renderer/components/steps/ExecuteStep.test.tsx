@@ -48,7 +48,7 @@ describe("ExecuteStep", () => {
     const onClose = vi.fn()
     render(<ExecuteStep wizard={wizard} onClose={onClose} />)
 
-    expect(screen.getByText("インポート中...")).toBeInTheDocument()
+    expect(screen.getByText("取り込み中...")).toBeInTheDocument()
 
     // resolveして完了させる
     resolveImport!({
@@ -58,7 +58,7 @@ describe("ExecuteStep", () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText("インポートが完了しました")).toBeInTheDocument()
+      expect(screen.getByText("取り込みが完了しました")).toBeInTheDocument()
     })
   })
 
@@ -77,7 +77,7 @@ describe("ExecuteStep", () => {
     render(<ExecuteStep wizard={wizard} onClose={onClose} />)
 
     await waitFor(() => {
-      expect(screen.getByText("インポートに失敗しました")).toBeInTheDocument()
+      expect(screen.getByText("取り込みに失敗しました")).toBeInTheDocument()
     })
     expect(screen.getByText("DB接続エラー")).toBeInTheDocument()
     expect(screen.queryByText("詳細は不明です")).not.toBeInTheDocument()

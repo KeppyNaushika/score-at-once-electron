@@ -153,7 +153,7 @@ function RemovalChoiceForm({
               {deletionCounts === null
                 ? "対象生徒数を確認中…"
                 : deleteCount === 0
-                  ? "この学級にのみ所属する生徒はいません"
+                  ? "この学級にのみ在籍する生徒はいません"
                   : describeDeletionCounts(deletionCounts)}
             </span>
           </Label>
@@ -309,7 +309,7 @@ export function ClassroomRemovalDialog({
             <AlertDialogTitle>学級の登録を解除しますか？</AlertDialogTitle>
             <AlertDialogDescription>
               「{entry?.name}
-              」の登録を解除します。生徒は受験者に残ります（採点データは削除されません）。
+              」の登録を解除します。生徒は受験生徒に残ります（採点データは削除されません）。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -366,7 +366,7 @@ export function ClassroomRemovalDialog({
             <AlertDialogTitle>生徒データを削除しますか？</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                「{finalConfirm.target?.name}」にのみ所属する{" "}
+                「{finalConfirm.target?.name}」にのみ在籍する{" "}
                 {sumDeletionCounts(deletionCounts)}名 を
                 対象から外します。連動して以下も削除されます：
               </span>

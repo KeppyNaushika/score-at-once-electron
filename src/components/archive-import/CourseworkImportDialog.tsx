@@ -27,7 +27,7 @@ interface CourseworkImportDialogProps {
 
 /**
  * 試験外成績資料アーカイブ（.coursework）のインポート確認ウィザード。
- * 資料ごとに「既存へ統合（uuid一致 / 名前候補）」か「新規作成」かを選ばせる。
+ * 資料ごとに「既存に取り込む（uuid一致 / 名前候補）」か「新規作成」かを選ばせる。
  * uuid一致があれば既定で統合、無ければ新規作成を初期選択にする。
  *
  * 一覧の「読み込み」で .coursework を選んだときに開く（ファイルは選び終えている）。
@@ -52,7 +52,7 @@ export function CourseworkImportDialog({
         action,
       })
       if (!toastImportWarnings(result.warnings)) {
-        toast.success("資料をインポートしました")
+        toast.success("資料を取り込みました")
       }
     } catch {
       // 失敗の通知は MutationCache が出す
@@ -62,7 +62,7 @@ export function CourseworkImportDialog({
 
   return (
     <LegacyArchiveImportDialogFrame
-      title="試験外成績資料のインポート"
+      title="試験外成績資料の取り込み"
       description="資料ごとの取り込み方法を選択してください。"
       importing={importing}
       onConfirm={() => void handleConfirm()}

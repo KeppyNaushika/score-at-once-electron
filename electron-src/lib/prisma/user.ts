@@ -278,7 +278,7 @@ export const deleteUser = async (
   confirmedCounts: ConfirmedDeletionCount[]
 ): Promise<PublicUser> => {
   if (userId === getCurrentActorUserId()) {
-    throw new Error("ログイン中の利用者は削除できません")
+    throw new Error("ログイン中のユーザーは削除できません")
   }
 
   const deletedUser = await deleteAfterRecount({

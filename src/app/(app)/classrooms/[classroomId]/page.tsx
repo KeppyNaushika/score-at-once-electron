@@ -333,7 +333,7 @@ export default function ClassroomDetailPage() {
                 </TabsTrigger>
                 <TabsTrigger value="membership" className="flex-1">
                   <Users className="mr-1.5 h-4 w-4" />
-                  所属管理
+                  在籍管理
                 </TabsTrigger>
               </TabsList>
               <MembershipStatusToggle
@@ -355,7 +355,7 @@ export default function ClassroomDetailPage() {
                 </>
               ) : (
                 <div className="py-16 text-center text-sm text-muted-foreground">
-                  所属生徒がいないか、採点済みの試験がありません
+                  在籍している生徒がいないか、採点済みの試験がありません
                 </div>
               )}
             </TabsContent>
@@ -409,7 +409,7 @@ export default function ClassroomDetailPage() {
       <ConfirmationModal
         open={membershipIdToDelete !== null}
         onClose={() => setMembershipIdToDelete(null)}
-        title="この所属関係を削除しますか？"
+        title="この在籍を削除しますか？"
         confirmText="削除"
         variant="destructive"
         icon="trash"

@@ -176,7 +176,7 @@ export default function StudentDetailPage() {
               </TabsTrigger>
               <TabsTrigger value="membership" className="flex-1">
                 <Users className="mr-1.5 h-4 w-4" />
-                学級所属
+                学級の在籍
               </TabsTrigger>
             </TabsList>
 
@@ -247,8 +247,8 @@ export default function StudentDetailPage() {
       <ConfirmationModal
         open={membershipEnding.isOpen}
         onClose={membershipEnding.close}
-        title="この所属関係を終了しますか？"
-        confirmText="終了する"
+        title="この在籍を今日で終えますか？"
+        confirmText="終える"
         onConfirm={handleConfirmEndMembership}
       />
 

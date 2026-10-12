@@ -237,7 +237,7 @@ describe("1段目のあとに続く2段目", () => {
   })
 })
 
-describe("1段目のルーブリック項目", () => {
+describe("1段目の採点項目", () => {
   it("項目の一覧を送り、送った文を採点指示の新しい行に写し、当てはまりを書く", async () => {
     const rubricItem = await createRubricItem(
       {
@@ -263,7 +263,7 @@ describe("1段目のルーブリック項目", () => {
 
     const [stage1Request] = fake.gradeRequests
     expect(textOf(stage1Request)).toContain(
-      `## ルーブリック項目\n- id: ${rubricItem.id} ／ −2点 ／ 解が無い`
+      `## 採点項目\n教員が定めた、点を動かす基準の項目です。\n- id: ${rubricItem.id} ／ −2点 ／ 解が無い`
     )
     expect(stage1Request.outputSchemaName).toBe("stage1_grading")
     expect(JSON.stringify(stage1Request.outputSchema)).toContain(rubricItem.id)

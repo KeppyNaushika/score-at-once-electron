@@ -26,7 +26,7 @@ export function MutualExclusionFields({
   return (
     <div className="space-y-2 text-sm">
       <Label className="text-xs text-muted-foreground">
-        同時に現れてはいけないラベル（2つ以上選択）
+        同時に現れてはいけない成績評価記号（2つ以上選択）
       </Label>
       <div className="flex flex-wrap gap-2">
         {displayLabels.map((label) => {
@@ -48,7 +48,7 @@ export function MutualExclusionFields({
         })}
       </div>
       <p className="text-xs text-muted-foreground">
-        観点の中に選択したラベルのうち2種以上が現れたら違反とみなします。
+        観点の中に選択した成績評価記号のうち2種以上が現れたら違反とみなします。
       </p>
     </div>
   )

@@ -44,7 +44,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
             すべてのデータが自動で紐づきました
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            同じパソコンで作成されたデータのため、手動の設定は不要です
+            同じPCで作成されたデータのため、手動の設定は不要です
           </p>
         </div>
         <Button onClick={goToNextStep} className="gap-2">

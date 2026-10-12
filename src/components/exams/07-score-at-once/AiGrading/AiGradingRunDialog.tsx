@@ -41,9 +41,9 @@ import {
 } from "./utils/selectGradingTargets"
 
 interface AiGradingRunDialogProps {
-  /** AI 採点（grade）か、AI チェック（check。1段目だけで、2段目は続けない） */
+  /** AI採点（grade）か、AIチェック（check。1段目だけで、2段目は続けない） */
   purpose: AiGradingStage1Purpose
-  /** 開いたときの送る答案の選び方（省けば、AI 採点は未採点・チェックは採点済み） */
+  /** 開いたときの送る答案の選び方（省けば、AI採点は未採点・チェックは採点済み） */
   initialScope?: GradingTargetScope
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -65,7 +65,7 @@ interface AiGradingRunDialogProps {
 }
 
 /**
- * 採点の実行（設計 §3-2・§3-10・§10-1）。送る答案を選び（AI 採点は4通りで既定は自分が未採点の答案、
+ * 採点の実行（設計 §3-2・§3-10・§10-1）。送る答案を選び（AI採点は4通りで既定は自分が未採点の答案、
  * チェックは3通りで既定は採点済みの答案）、件数と費用の概算を見て、送り先と実験的機能であることを
  * 確かめてから送る。閉じている間は中身を持たない（開くたびに初期化）
  */
@@ -173,14 +173,14 @@ function AiGradingRunForm({
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          {purpose === "check" ? "AI チェック" : "AI 採点"}（{cropRegion.label}
+          {purpose === "check" ? "AIチェック" : "AI採点"}（{cropRegion.label}
           ・指示 {promptNumber ?? "?"}）
           <ExperimentalBadge />
         </DialogTitle>
         <DialogDescription>
           {purpose === "check"
-            ? "あなたの点は送りません。確定するまで採点は変わりません。"
-            : "確定するまで採点は変わりません。"}
+            ? "あなたの点は送りません。採点に反映するまで採点は変わりません。"
+            : "採点に反映するまで採点は変わりません。"}
         </DialogDescription>
       </DialogHeader>
 

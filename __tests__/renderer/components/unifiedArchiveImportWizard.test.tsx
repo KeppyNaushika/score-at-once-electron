@@ -308,7 +308,7 @@ describe("UnifiedArchiveImportWizard", () => {
     )
     expect(studentOptions).toContain("取り込まない")
 
-    await user.click(screen.getByRole("tab", { name: /利用者/ }))
+    await user.click(screen.getByRole("tab", { name: /ユーザー/ }))
     const userOptions = await optionNamesOf(
       user,
       await screen.findByRole("combobox", { name: "佐藤（sato）の扱い" })
@@ -329,7 +329,7 @@ describe("UnifiedArchiveImportWizard", () => {
       screen.queryByRole("combobox", { name: "山田 太郎 (1001)の id" })
     ).not.toBeInTheDocument()
     expect(
-      screen.getByText(/このパソコンの id に合わせます/)
+      screen.getByText(/このPCの id に合わせます/)
     ).toBeInTheDocument()
 
     await clickNext(user)
@@ -388,13 +388,13 @@ describe("UnifiedArchiveImportWizard", () => {
     await screen.findByText("取り込む内容の確認")
 
     expect(
-      screen.getByText(/複数の行が、このパソコンの同じ1行に寄せられます/)
+      screen.getByText(/複数の行が、このPCの同じ1行に寄せられます/)
     ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /取り込む/ })).toBeDisabled()
     expect(unifiedArchive.import).not.toHaveBeenCalled()
   })
 
-  it("UA-I8: 確認の段に、値が変わる成績算出と評価項目を出し、確定済みには強い注意を添える", async () => {
+  it("UA-I8: 確認の段に、値が変わる成績算出と評価項目を出し、固定済みには強い注意を添える", async () => {
     const user = userEvent.setup()
     const grade = { id: "grade-1", name: "後学期" }
     const knowledgeItem = {
@@ -432,10 +432,10 @@ describe("UnifiedArchiveImportWizard", () => {
     ).toBeInTheDocument()
     expect(within(section).getByText("後学期")).toBeInTheDocument()
     expect(within(section).getByText(/知識/)).toHaveTextContent(
-      "知識（確定済み）"
+      "知識（固定済み）"
     )
     expect(within(section).getByRole("alert")).toHaveTextContent(
-      /確定した値のまま変わりません/
+      /固定値のまま変わりません/
     )
   })
 

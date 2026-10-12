@@ -81,15 +81,15 @@ export function checkOMRMarkerPlacement(
     warnings.push(
       `${
         narrowestGap < 0
-          ? `マーカーが記入欄に ${formatMm(-narrowestGap)} 重なっています`
-          : `マーカーと記入欄の間が ${formatMm(narrowestGap)} しかありません`
-      }。罫線が接するとマーカーを検出できません。${MIN_MARKER_CONTENT_GAP_MM}mm 以上空くよう、余白を ${formatMm(innerEdge + MIN_MARKER_CONTENT_GAP_MM)} 以上にするか、マーカーを小さく・端に寄せてください`
+          ? `OMRマーカーが記入欄に ${formatMm(-narrowestGap)} 重なっています`
+          : `OMRマーカーと記入欄の間が ${formatMm(narrowestGap)} しかありません`
+      }。罫線が接するとOMRマーカーを検出できません。${MIN_MARKER_CONTENT_GAP_MM}mm 以上空くよう、余白を ${formatMm(innerEdge + MIN_MARKER_CONTENT_GAP_MM)} 以上にするか、OMRマーカーを小さく・端に寄せてください`
     )
   }
 
   if (offsetMm < MIN_MARKER_EDGE_OFFSET_MM) {
     warnings.push(
-      `マーカーが用紙の端に近すぎます（${formatMm(offsetMm)}）。スキャンで紙がずれたりトリミングされたりすると欠けて検出できません。端から ${MIN_MARKER_EDGE_OFFSET_MM}mm 以上離してください`
+      `OMRマーカーが用紙の端に近すぎます（${formatMm(offsetMm)}）。スキャンで紙がずれたりトリミングされたりすると欠けて検出できません。端から ${MIN_MARKER_EDGE_OFFSET_MM}mm 以上離してください`
     )
   }
 
@@ -99,7 +99,7 @@ export function checkOMRMarkerPlacement(
   const reach = Math.min(reachX, reachY) - MARKER_PAPER_SHIFT_MM
   if (innerEdge > reach) {
     warnings.push(
-      `マーカーが隅の探索範囲（端から ${formatMm(reach)} まで）からはみ出します。マーカーを小さくするか、端に寄せてください`
+      `OMRマーカーが隅の探索範囲（端から ${formatMm(reach)} まで）からはみ出します。OMRマーカーを小さくするか、端に寄せてください`
     )
   }
 

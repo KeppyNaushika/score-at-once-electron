@@ -115,7 +115,7 @@ export function detectCornerMarkersFromRaw(
     imageHeight: height,
     error:
       markers.length < 4
-        ? `${markers.length}/4 のマーカーのみ検出されました（${failReasons.join("、")}）`
+        ? `${markers.length}/4 のOMRマーカーのみ検出されました（${failReasons.join("、")}）`
         : undefined,
     diagnostics,
   }
@@ -460,8 +460,8 @@ function detectMarkerInRegion(
   if (cutOuter || cutInner) {
     return fail(
       cutOuter
-        ? "マーカーが画像の端で切れています"
-        : "マーカーが探索範囲の内側の境界で切れています",
+        ? "OMRマーカーが画像の端で切れています"
+        : "OMRマーカーが探索範囲の内側の境界で切れています",
       best.pixelCount,
       aspectRatio
     )
@@ -470,7 +470,7 @@ function detectMarkerInRegion(
   // 4. 正方形でない成分は、マーカーに太い線や塗りが繋がっている。中心がずれるので採らない
   if (aspectRatio < MIN_MARKER_ASPECT || fillRatio < MIN_MARKER_FILL) {
     return fail(
-      `マーカーが正方形になっていません（縦横比 ${aspectRatio.toFixed(2)}・充填率 ${fillRatio.toFixed(2)}）。罫線や枠線が接していないか確認してください`,
+      `OMRマーカーが正方形になっていません（縦横比 ${aspectRatio.toFixed(2)}・充填率 ${fillRatio.toFixed(2)}）。罫線や枠線が接していないか確認してください`,
       best.pixelCount,
       aspectRatio
     )

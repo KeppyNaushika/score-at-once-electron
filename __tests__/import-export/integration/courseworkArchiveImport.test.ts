@@ -8,7 +8,7 @@
  * 学級「学級_資料」・生徒「CW_001 鈴木 一郎」（出席番号1）・タグ「タグ_資料」と、
  * それらを持つ資料「第1回レポート」（説明「レポート評価」）1件。評価項目は
  * 「提出物」（数値・満点100）1つで、点数は 85・調整 -5（提出遅延）・コメント付き。
- * 「書き出したパソコン」の状態が要るテストは、固定ファイルの行をそのまま
+ * 「書き出したPC」の状態が要るテストは、固定ファイルの行をそのまま
  * DB に作って用意する（seedCourseworkSections）。
  */
 
@@ -57,7 +57,7 @@ describe("coursework-archive 取り込み", () => {
     await disconnectTestPrisma()
   })
 
-  it("書き出したパソコンへ取り込み直しても、UUID一致で重複生成されない", async () => {
+  it("書き出したPCへ取り込み直しても、UUID一致で重複生成されない", async () => {
     const archive = await readFixture()
     await seedCourseworkSections(archive)
 

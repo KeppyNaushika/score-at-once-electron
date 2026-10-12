@@ -11,7 +11,7 @@ type UseKeyboardNavigationProps = {
 const FIELD_ORDER = ["label", "points"]
 
 /**
- * 領域情報テーブルの Enter/Tab キーによるセル間移動を管理するフック。
+ * 領域設定テーブルの Enter/Tab キーによるセル間移動を管理するフック。
  *
  * **入力欄は採点領域の id で引く**（`data-row`）。添字で引くと、打鍵のたびに走る
  * 取り直しで並びが変わったとき、隣の行の欄へ飛ぶ。

@@ -96,9 +96,9 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
       <Card className="mb-6 border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
         <CardContent className="p-4">
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            <strong>同じパソコンで作ったデータは自動で紐づきます。</strong>
+            <strong>同じPCで作ったデータは自動で紐づきます。</strong>
             <br />
-            別のパソコンからのデータは、次の画面で紐づけ方を選んでいただきます。
+            別のPCからのデータは、次の画面で紐づけ方を選んでいただきます。
           </p>
         </CardContent>
       </Card>
@@ -150,7 +150,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
             {/* 小計グループ */}
             <CategoryOverviewCard
               icon={<ListTree className="h-5 w-5" />}
-              label="小計グループ"
+              label="小計点グループ"
               total={state.manifest?.counts.subtotalGroups ?? 0}
               autoMatched={subtotalGroupStats?.autoMatched ?? 0}
               needsDecision={subtotalGroupStats?.needsDecision ?? 0}
@@ -227,8 +227,7 @@ function CategoryOverviewCard({
   onToggle,
   autoMatchedItems,
 }: CategoryOverviewCardProps) {
-  const unit =
-    label === "生徒" ? "名" : label === "学級" ? "クラス" : "グループ"
+  const unit = label === "生徒" ? "名" : label === "学級" ? "学級" : "グループ"
 
   return (
     <Card>

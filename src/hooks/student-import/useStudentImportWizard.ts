@@ -233,7 +233,7 @@ export function useStudentImportWizard(
       return result
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "インポートに失敗しました"
+        error instanceof Error ? error.message : "取り込みに失敗しました"
       setState((prev) => ({
         ...prev,
         isProcessing: false,

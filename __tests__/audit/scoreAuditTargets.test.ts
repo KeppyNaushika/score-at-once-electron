@@ -7,6 +7,9 @@
  * - 生徒は `Student.id` で記録する（`ExamStudent.id` ではない。成績・資料と軸を揃える）
  * - 要約に生徒名と採点領域のラベルが載る（全文検索で引ける）
  * - 生徒で絞り込むと、その生徒の採点のログが引ける
+ *
+ * あわせて、差分の表示が採点状態の正規の呼び名（`SCORING_STATUS_LABELS`）を使い、類型を付けた
+ * 採点は状態名でなく類型の記号を出すことも固定する（#1492）。
  */
 
 import * as path from "path"
@@ -104,5 +107,51 @@ describe("採点の監査ログの対象", () => {
       targets: [{ targetType: "Student", targetId: student.id }],
     })
     expect(filtered.total).toBe(2)
+  })
+
+  it("差分は採点状態の正規の呼び名で出し、類型を付けた採点の変更前は類型の記号を出す", async () => {
+    const examStudent = fixture.examStudents[0]
+    const cropRegion = fixture.cropRegions[0]
+    const scoreScale = await testPrisma.scoreScale.create({
+      data: {
+        examId: fixture.exam.id,
+        name: "記述の類型",
+        levels: { create: [{ label: "A", score: 10, sortOrder: 0 }] },
+      },
+      include: { levels: true },
+    })
+    const evaluated = await testPrisma.questionScore.create({
+      data: {
+        examStudentId: examStudent.id,
+        cropRegionId: cropRegion.id,
+        userId: fixture.user.id,
+        status: "evaluated",
+        scaleLevelId: scoreScale.levels[0].id,
+      },
+    })
+
+    await updateQuestionScore(evaluated.id, {
+      status: "no_answer",
+      partialScore: null,
+    })
+    await updateQuestionScore(evaluated.id, {
+      status: "double_mark",
+      partialScore: null,
+    })
+
+    const page = await getAuditLogs()
+    const statusChanges = page.logs
+      .flatMap(
+        (log) =>
+          (
+            JSON.parse(log.metadata ?? "{}") as {
+              changes?: { field: string; before: unknown; after: unknown }[]
+            }
+          ).changes ?? []
+      )
+      .filter((change) => change.field === "status")
+      .map((change) => [change.before, change.after])
+    expect(statusChanges).toContainEqual(["A", "無答"])
+    expect(statusChanges.flat()).toContain("Wマーク")
   })
 })

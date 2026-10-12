@@ -249,7 +249,7 @@ export function GridCell({
               variant="outline"
               className="h-4 border-black bg-white px-1 text-xs text-black"
             >
-              {answer.maxScore}点満点
+              配点 {answer.maxScore}点
             </Badge>
           )}
         </div>

@@ -3,8 +3,8 @@
 import { CircleAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveTableLabel } from "../archiveTableLabels"
 import {
   type ArchiveEntityCatalog,
   archiveEntityLabel,
@@ -45,13 +45,13 @@ export function ForcedExclusionAlert({
           <ul className="list-disc pl-5 text-destructive/80">
             {targets.map((target) => (
               <li key={`${target.kind}:${target.id}`}>
-                {archiveTableLabel(target.kind)}『
+                {tableLabel(target.kind)}『
                 {archiveEntityLabel(catalog, target.kind, target.id)}』
               </li>
             ))}
             {unnamedCount > 0 && (
               <li>
-                含めない試験・資料・小計グループの中の項目 {unnamedCount}件
+                含めない試験・資料・小計点グループの中の項目 {unnamedCount}件
               </li>
             )}
           </ul>

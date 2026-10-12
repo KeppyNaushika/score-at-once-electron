@@ -379,7 +379,7 @@ describe("点数入力(04): 評語の受け取り方", () => {
   it("変換表が0本のときは赤くしない（作る前の段階では判定しない）", async () => {
     mockCourseworkApi([], [storedLetterScore(COURSEWORK_STUDENT_ID, "認定")])
 
-    const cell = await renderScores("評価記号")
+    const cell = await renderScores("資料評価記号")
 
     await waitFor(() => expect(cell).toHaveValue("認定"))
     expect(cell.className).not.toContain("bg-red-100")
@@ -402,7 +402,7 @@ describe("評価項目(03): 変換表に無い評語の列挙", () => {
       wrapper: QueryWrapper,
     })
 
-    const notice = await screen.findByText(/変換表にない評価が入力されています/)
+    const notice = await screen.findByText(/変換表にない資料評価記号が入力されています/)
     expect(notice).toHaveTextContent("認定、b（3件）")
   })
 
@@ -428,6 +428,6 @@ describe("評価項目(03): 変換表に無い評語の列挙", () => {
     await waitFor(() =>
       expect(screen.getByTestId("scores-loaded")).toHaveTextContent("true")
     )
-    expect(screen.queryByText(/変換表にない評価が入力されています/)).toBeNull()
+    expect(screen.queryByText(/変換表にない資料評価記号が入力されています/)).toBeNull()
   })
 })

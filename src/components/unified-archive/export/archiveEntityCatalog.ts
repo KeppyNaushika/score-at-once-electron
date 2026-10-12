@@ -13,8 +13,8 @@ import {
   dateSearchKeywords,
   studentOption,
 } from "@/lib/searchKeywords"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveTableLabel } from "../archiveTableLabels"
 import type { ArchiveEntityKind } from "./types"
 
 /** 名前と日付を持つ実体（試験だけ名前の列が `examName`） */
@@ -119,7 +119,5 @@ export function archiveEntityLabel(
   kind: ArchiveEntityKind,
   id: string
 ): string {
-  return (
-    catalog[kind].get(id)?.label ?? `（一覧に無い${archiveTableLabel(kind)}）`
-  )
+  return catalog[kind].get(id)?.label ?? `（一覧に無い${tableLabel(kind)}）`
 }

@@ -51,7 +51,7 @@ export function AiProviderSection({
     revokeConsent.mutate(status.provider, {
       onSuccess: () =>
         toast.success(
-          `${providerName} を無効にし、この端末の API キーを削除しました`
+          `${providerName} を無効にし、このPCの API キーを削除しました`
         ),
     })
   }
@@ -96,7 +96,7 @@ export function AiProviderSection({
         <div className="space-y-3">
           {status.consent !== null && (
             <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-              同意文が改訂されたか、別の利用者による同意が記録されています。この利用者で使用するには、改めて同意してください。
+              同意文が改訂されたか、別のユーザーによる同意が記録されています。このユーザーで使用するには、改めて同意してください。
             </p>
           )}
           <p className="text-sm text-muted-foreground">
@@ -130,7 +130,7 @@ export function AiProviderSection({
               {providerName} を無効にしますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              この端末に保存した {providerName} の API
+              このPCに保存した {providerName} の API
               キーを削除し、以後は送信しません。再び使用するには、同意から始め直してください。
               {AI_GRADING_REVOCATION_ITEM.title}。
             </AlertDialogDescription>

@@ -9,6 +9,7 @@ import { SubtotalGroupSelector } from "@/components/exams/04-question-group/comp
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { useRouteParams } from "@/hooks/useRouteParams"
+import { examWorkflowSteps, workflowStep } from "@/lib/shared/workflowSteps"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import { scopeKeys } from "@/queries/keys"
 import {
@@ -19,6 +20,9 @@ import {
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_REGIONS: CropRegionRow[] = []
 const EMPTY_EXAM_SUBTOTAL_GROUPS: ExamSubtotalGroupRow[] = []
+
+/** 採点領域を作る段の名前（空表示の案内に出す） */
+const TEMPLATE_STEP_LABEL = workflowStep(examWorkflowSteps, "02-template").label
 
 export default function SubtotalGroupPage() {
   const params = useRouteParams()
@@ -125,13 +129,13 @@ export default function SubtotalGroupPage() {
             </div>
           )}
 
-          {/* 小計点領域との関連付け */}
+          {/* 小計の領域と小計項目の関連付け */}
           {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
             <div className="rounded-lg border p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Group className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">
-                  小計点領域との関連付け
+                  小計の領域と小計項目の関連付け
                 </h2>
               </div>
               <CropSubtotalAssignmentTable
@@ -148,7 +152,8 @@ export default function SubtotalGroupPage() {
           {questionRegions.length === 0 && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
               <p className="text-sm text-yellow-800">
-                まず「採点領域作成」で設問領域と小計点領域を作成してください。
+                まず「{TEMPLATE_STEP_LABEL}
+                」で設問の領域と小計の領域を作成してください。
               </p>
             </div>
           )}
@@ -156,7 +161,8 @@ export default function SubtotalGroupPage() {
           {subtotalRegions.length === 0 && questionRegions.length > 0 && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
               <p className="text-sm text-yellow-800">
-                小計点領域が作成されていません。「採点領域作成」で小計点領域を追加してください。
+                小計の領域が作成されていません。「{TEMPLATE_STEP_LABEL}
+                」で小計の領域を追加してください。
               </p>
             </div>
           )}

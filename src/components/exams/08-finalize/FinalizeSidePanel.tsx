@@ -33,7 +33,7 @@ const FILTER_BUTTONS: ReadonlyArray<{
 }> = [
   {
     reason: "conflict",
-    label: "食い違い",
+    label: "不一致",
     activeClassName: "border-purple-600 bg-purple-50 text-purple-800",
   },
   {
@@ -158,12 +158,12 @@ export function FinalizeSidePanel({
         }
       >
         <p className="text-sm">
-          要裁定 <span className="font-semibold">{pendingCount}</span>件 ／
-          確定済み {summary?.decidedCount ?? 0}件
+          採点の不一致 <span className="font-semibold">{pendingCount}</span>件
+          ／ 確定済み {summary?.decidedCount ?? 0}件
         </p>
         {summary && summary.conflictCount > 0 && (
           <p className="mt-1 text-[11px] text-purple-700">
-            食い違いは確定するまで未採点として出力されます（合計点が最大{" "}
+            採点の不一致は確定するまで未採点として出力されます（合計点が最大{" "}
             {summary.totalScoreImpact} 点低く出ます）
           </p>
         )}

@@ -68,7 +68,7 @@ export function useDrawingToolShortcuts({
       condition: "gradingMode == 'individual'",
       metadata: {
         title: "ハンドツール",
-        category: "描画ツール",
+        category: "注釈ツール",
         description: "画面のパン操作を行います",
       },
     }
@@ -82,7 +82,7 @@ export function useDrawingToolShortcuts({
       condition: "gradingMode == 'individual'",
       metadata: {
         title: "選択ツール",
-        category: "描画ツール",
+        category: "注釈ツール",
         description: "図形を選択・移動・編集します",
       },
     }
@@ -96,7 +96,7 @@ export function useDrawingToolShortcuts({
       condition: "gradingMode == 'individual'",
       metadata: {
         title: "テキストツール",
-        category: "描画ツール",
+        category: "注釈ツール",
         description: "テキストを追加します",
       },
     }
@@ -110,8 +110,8 @@ export function useDrawingToolShortcuts({
       condition: "gradingMode == 'individual'",
       metadata: {
         title: "線ツール",
-        category: "描画ツール",
-        description: "直線を描画します",
+        category: "注釈ツール",
+        description: "直線を描きます",
       },
     }
   )
@@ -124,8 +124,8 @@ export function useDrawingToolShortcuts({
       condition: "gradingMode == 'individual'",
       metadata: {
         title: "矩形ツール",
-        category: "描画ツール",
-        description: "矩形を描画します",
+        category: "注釈ツール",
+        description: "長方形を描きます",
       },
     }
   )
@@ -138,8 +138,8 @@ export function useDrawingToolShortcuts({
       condition: "gradingMode == 'individual'",
       metadata: {
         title: "楕円ツール",
-        category: "描画ツール",
-        description: "楕円・円を描画します",
+        category: "注釈ツール",
+        description: "楕円・円を描きます",
       },
     }
   )

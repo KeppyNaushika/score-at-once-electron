@@ -17,7 +17,7 @@ import { rendererOrigin } from "./rendererPort"
 import { startRendererStaticServer } from "./rendererStaticServer"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
-/** AI 採点のバッチ回収を止める口（起動に成功したときだけ入る） */
+/** AI採点のバッチ回収を止める口（起動に成功したときだけ入る） */
 let stopAiGradingBatchPolling: (() => void) | null = null
 
 // Windows用デバッグ出力の有効化
@@ -142,7 +142,7 @@ app.on("ready", async () => {
     // IPCハンドラーの設定
     setupAllIPCHandlers()
 
-    // AI 採点: この端末が預けたバッチの結果を、起動時と一定間隔で回収する
+    // AI採点: この端末が預けたバッチの結果を、起動時と一定間隔で回収する
     // （同意してキーを設定した事業者が無い端末では何もしない）
     try {
       stopAiGradingBatchPolling = startAiGradingBatchPolling()
@@ -196,7 +196,7 @@ app.on("before-quit", async (_event) => {
     console.warn("Failed to stop unified archive export worker:", error)
   }
 
-  // AI 採点のバッチ回収を止める（預けたバッチは次の起動で回収する）
+  // AI採点のバッチ回収を止める（預けたバッチは次の起動で回収する）
   stopAiGradingBatchPolling?.()
 
   // NAS同期の停止

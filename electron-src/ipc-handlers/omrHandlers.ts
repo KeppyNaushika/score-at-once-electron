@@ -310,7 +310,7 @@ export const omrHandlers = {
     if (!masterResult.success) {
       return {
         status: "skipped",
-        reason: "マスター画像のマーカーが検出できませんでした",
+        reason: "模範解答画像のOMRマーカーが検出できませんでした",
       }
     }
 

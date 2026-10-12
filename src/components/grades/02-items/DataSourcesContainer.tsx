@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
 
 import { SortableTableProvider } from "@/components/common/sortable-table"
+import { ABSENT_METHOD_LABELS } from "@/components/grades/absentMethodLabels"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -239,18 +240,18 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">データソース</h2>
+        <h2 className="text-lg font-semibold">成績評価項目</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          評価項目を作成し、各項目にデータソースを追加してください。
+          成績評価項目を作成し、各項目にデータソースを追加してください。
         </p>
       </div>
 
-      {/* 評価項目追加 + 一括設定ボタン */}
+      {/* 成績評価項目追加 + 一括設定ボタン */}
       <div className="mb-6 flex items-center gap-2">
         <Input
           value={newItemName}
           onChange={(e) => setNewItemName(e.target.value)}
-          placeholder="評価項目名（例: 知識・技能）"
+          placeholder="成績評価項目名（例: 知識・技能）"
           className="max-w-xs"
           onKeyDown={(e) =>
             e.key === "Enter" && !e.nativeEvent.isComposing && handleAddItem()
@@ -262,7 +263,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
           disabled={!newItemName.trim()}
         >
           <Plus className="mr-2 h-4 w-4" />
-          評価項目追加
+          成績評価項目追加
         </Button>
         {allDataSources.length > 0 && (
           <>
@@ -307,12 +308,13 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="null">なし</SelectItem>
-                <SelectItem value="zero">0点</SelectItem>
-                <SelectItem value="average">平均比率法</SelectItem>
-                <SelectItem value="regression">重回帰法</SelectItem>
-                <SelectItem value="equipercentile">順位法</SelectItem>
-                <SelectItem value="zscore">標準偏差法</SelectItem>
+                {Object.entries(ABSENT_METHOD_LABELS).map(
+                  ([absentMethod, label]) => (
+                    <SelectItem key={absentMethod} value={absentMethod}>
+                      {label}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
             {batchMethod !== "null" && batchMethod !== "zero" && (
@@ -342,10 +344,10 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             </Button>
           </div>
 
-          {/* 推定に使用するソース（他ソースを使う4手法のみ。個別行 popover の methodUsesPredictors と同じ） */}
+          {/* 推定に使うデータソース（他ソースを使う4手法のみ。個別行 popover の methodUsesPredictors と同じ） */}
           {usesEstimationSources && (
             <div className="mt-3 space-y-2 border-t border-amber-200 pt-3">
-              <Label className="text-xs">推定に使用するソース</Label>
+              <Label className="text-xs">推定に使うデータソース</Label>
               <RadioGroup
                 value={batchEstimationMode}
                 onValueChange={(value) =>
@@ -454,7 +456,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
 
       {exam.gradeItems.length === 0 && (
         <div className="py-8 text-center text-sm text-muted-foreground">
-          評価項目がありません。上のフォームから追加してください。
+          成績評価項目がありません。上のフォームから追加してください。
         </div>
       )}
 

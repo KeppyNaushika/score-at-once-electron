@@ -125,8 +125,8 @@ export const updateStudent = async (
       changes: diffFields(before ?? undefined, student, [
         { field: "lastName", label: "姓" },
         { field: "firstName", label: "名" },
-        { field: "lastNameKana", label: "姓（かな）" },
-        { field: "firstNameKana", label: "名（かな）" },
+        { field: "lastNameKana", label: "姓カナ" },
+        { field: "firstNameKana", label: "名カナ" },
         { field: "studentNumber", label: "学籍番号" },
         { field: "enrollmentYear", label: "入学年度" },
       ]),

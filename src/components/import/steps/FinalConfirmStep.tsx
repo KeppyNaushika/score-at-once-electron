@@ -76,8 +76,8 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
           <ClipboardList className="h-10 w-10 text-primary" />
         </div>
-        <h3 className="mb-2 text-xl font-semibold">インポート内容の最終確認</h3>
-        <p className="text-muted-foreground">以下の内容でインポートします</p>
+        <h3 className="mb-2 text-xl font-semibold">取り込み内容の最終確認</h3>
+        <p className="text-muted-foreground">以下の内容で取り込みます</p>
       </div>
 
       {/* サマリー */}
@@ -94,7 +94,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
                 {idIntegrationConfig.exam === "separate" && (
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <span className="text-blue-500">●</span>
-                    別で追加する（このパソコンの「
+                    別で追加する（このPCの「
                     {fileOverviewData.exam.displayLabel}」はそのまま残ります）
                   </li>
                 )}
@@ -102,7 +102,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <span className="text-amber-500">●</span>
                     既存の試験「{fileOverviewData.exam.displayLabel}
-                    」を上書き（試験名・試験日・説明・マーク補正の既定を読み込んだ内容で置き換え）
+                    」を上書き（試験名・試験日・説明・マーク補正の既定を取り込む内容で置き換え）
                   </li>
                 )}
                 {idIntegrationConfig.exam !== "separate" &&
@@ -110,7 +110,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
                     <li className="flex items-center gap-2 text-muted-foreground">
                       <span className="text-purple-500">●</span>
                       既存の試験「{fileOverviewData.exam.displayLabel}
-                      」へ統合（試験名・試験日・説明・マーク補正の既定は後に書かれた方を採用）
+                      」と合わせる（試験名・試験日・説明・マーク補正の既定は後に書かれた方を採用）
                     </li>
                   )}
               </ul>
@@ -133,7 +133,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
           <SummaryCard
             icon={<School className="h-5 w-5" />}
             title="学級"
-            unit="クラス"
+            unit="学級"
             summary={classroomSummary}
           />
         )}
@@ -142,7 +142,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         {subtotalGroupSummary && (
           <SummaryCard
             icon={<ListTree className="h-5 w-5" />}
-            title="小計グループ"
+            title="小計点グループ"
             unit="グループ"
             summary={subtotalGroupSummary}
           />
@@ -165,13 +165,13 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
           totalScores={manifest?.counts.scores ?? 0}
         />
 
-        {/* 書き込み（アノテーション） */}
+        {/* 注釈 */}
         {manifest && manifest.counts.annotations > 0 && (
           <Card>
             <CardContent className="p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Pencil className="h-5 w-5 text-muted-foreground" />
-                <h4 className="font-medium">書き込み</h4>
+                <h4 className="font-medium">注釈</h4>
               </div>
               <ul className="text-sm">
                 <li className="flex items-center gap-2 text-muted-foreground">
@@ -189,7 +189,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         <CardContent className="flex items-start gap-3 p-4">
           <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
-            注意: インポート後は元に戻せません
+            注意: 取り込み後は元に戻せません
           </p>
         </CardContent>
       </Card>
@@ -202,7 +202,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         </Button>
         <Button onClick={onExecute} size="lg" className="gap-2 px-8">
           <Import className="h-5 w-5" />
-          インポート実行
+          取り込みを実行
         </Button>
       </div>
     </div>

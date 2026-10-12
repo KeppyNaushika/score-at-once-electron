@@ -32,7 +32,7 @@ export function HelpContentCourseworkList() {
         </h2>
         <p className="text-muted-foreground">
           小テスト・提出物・実技など、答案を採点しない成績をここに入れます。
-          入れた点数は成績算出のデータソースとして呼び出せます。
+          入れた得点は成績算出のデータソースとして呼び出せます。
         </p>
       </div>
 
@@ -50,12 +50,12 @@ export function HelpContentCourseworkList() {
           <StepItem
             number={2}
             title="名前の下は要約"
-            description="説明・生徒数・評価項目数と、付いているタグが出ます"
+            description="説明・生徒数・資料評価項目数と、付いているタグが出ます"
           />
           <StepItem
             number={3}
             title="「次のステップ」を押すと続きから"
-            description="生徒がまだなら生徒の登録へ、評価項目がまだならその設定へ、揃っていれば点数の入力へ進みます"
+            description="生徒がまだなら生徒の登録へ、資料評価項目がまだならその設定へ、揃っていれば得点の入力へ進みます"
           />
           <StepItem
             number={4}
@@ -70,12 +70,12 @@ export function HelpContentCourseworkList() {
       <div className="grid gap-6 lg:grid-cols-2">
         <HelpSection
           icon={<FolderInput className="h-5 w-5 text-purple-600" />}
-          title="作る・読み込む"
+          title="作る・取り込む"
         >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規作成</Badge>
-              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">取り込み</Badge>
               <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -83,7 +83,7 @@ export function HelpContentCourseworkList() {
               資料名・実施日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
             </p>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った資料は「読み込み」で取り込めます
+              別のPCで作った資料は「取り込み」から取り込めます
               <ArchiveImportFormatsNote legacyFormats=".coursework" />
               。書き出しと削除は行末の「…」から行います。成績算出から参照されている資料は削除できません
               （どの成績算出が使っているかを知らせます）。

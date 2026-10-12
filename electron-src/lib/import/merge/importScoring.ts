@@ -34,7 +34,7 @@ import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
  * 触るのも取り込んだ人自身の行だけになる。
  *
  * 解決できないのは、採点者の行が users.json に入っていない古いアーカイブを、
- * 書き出したのとは別のパソコンへ持ってきたとき。名前も利用者名も分からないので
+ * 書き出したのとは別のPCへ持ってきたとき。名前も利用者名も分からないので
  * 新しく作ることもできない。
  */
 function resolveGraderUserId(
@@ -495,12 +495,12 @@ export async function processReturnSnapshots(
   const warnings: string[] = []
   if (unmappedExamStudentCount > 0) {
     warnings.push(
-      `${unmappedExamStudentCount}件の返却版を取り込めませんでした（対応する受験者が取り込まれていません）。`
+      `${unmappedExamStudentCount}件の返却版を取り込めませんでした（対応する受験生徒が取り込まれていません）。`
     )
   }
   if (unresolvedCapturerCount > 0) {
     warnings.push(
-      `${unresolvedCapturerCount}件の返却版は、記録した利用者がこのデータベースに存在しないため記録者なしとして取り込みました。`
+      `${unresolvedCapturerCount}件の返却版は、記録したユーザーがこのデータベースに存在しないため記録者なしとして取り込みました。`
     )
   }
   return warnings

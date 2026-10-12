@@ -64,7 +64,7 @@ function buildAverageRow(
 }
 
 /**
- * 学級平均行を点数一覧シートへ追加する（Phase 4・主成果）
+ * 学級平均行を得点一覧シートへ追加する（Phase 4・主成果）
  *
  * - 1行目: 全体平均（受験者＝合計点 non-null）
  * - 以降: teacherStatistics=true の登録学級ごとの学級平均

@@ -224,7 +224,7 @@ export async function openHtmlPrintPreview(
 ): Promise<void> {
   const tempPdfPath = path.join(
     app.getPath("temp"),
-    `${toSafeFileName(options.title ?? "", "個人成績表")}-${Date.now()}.pdf`
+    `${toSafeFileName(options.title ?? "", "試験採点結果個表")}-${Date.now()}.pdf`
   )
   // マージンはCSSの@page marginに任せるため0に設定
   const pdfBuffer = await renderHtmlToPdf({

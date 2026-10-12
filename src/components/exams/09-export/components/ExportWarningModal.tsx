@@ -17,12 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
+import { examWorkflowSteps, workflowStep } from "@/lib/shared/workflowSteps"
 import type {
   ConflictWarning,
   QuestionWarning,
   ScoringValidationWarnings,
 } from "@/types/exportValidation.types"
+
+/** 採点の不一致を裁定する段の名前（タブと同じ名前で呼ぶ） */
+const FINALIZE_STEP_LABEL = workflowStep(examWorkflowSteps, "08-finalize").label
 
 interface ExportWarningModalProps {
   isOpen: boolean
@@ -31,9 +35,9 @@ interface ExportWarningModalProps {
   /** 「8. 採点確定」の段へ誘導する。競合があるときだけ表示される */
   onGoToFinalize: () => void
   warnings: ScoringValidationWarnings
-  /** 食い違いを未解決のまま出力した場合に合計点から失われる最大値 */
+  /** 採点の不一致を未解決のまま出力した場合に合計点から失われる最大値 */
   conflictScoreImpact: number
-  /** 食い違いの検査自体に失敗した理由（この場合 conflicted は当てにならない） */
+  /** 採点の不一致の検査自体に失敗した理由（この場合 conflicted は当てにならない） */
   conflictCheckError?: string
 }
 
@@ -99,7 +103,7 @@ function CollapsibleWarningGroup({
   )
 }
 
-/** 対処が必要な食い違い1件の内訳（誰が何点を付けたか） */
+/** 対処が必要な採点の不一致1件の内訳（誰が何点を付けたか） */
 function ConflictRow({ conflict }: { conflict: ConflictWarning }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-1">
@@ -149,31 +153,31 @@ export default function ExportWarningModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 食い違いを確認できなかった場合。「食い違いなし」と誤読させない */}
+          {/* 採点の不一致を確認できなかった場合。「不一致なし」と誤読させない */}
           {conflictCheckError !== undefined && (
             <Alert className="border-red-300 bg-red-50">
               <TriangleAlert className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
                 <div className="mb-1 font-medium">
-                  採点者間の食い違いを確認できませんでした
+                  採点の不一致を確認できませんでした
                 </div>
                 <div className="text-sm">
                   {conflictCheckError}
                   <br />
-                  食い違いが無いことの確認は取れていません。出力し直すか、
-                  採点画面の確定パネルで状況を確認してください。
+                  採点の不一致が無いことの確認は取れていません。出力し直すか、
+                  「{FINALIZE_STEP_LABEL}」のページで状況を確認してください。
                 </div>
               </AlertDescription>
             </Alert>
           )}
 
-          {/* 対処が必要: 採点者間の食い違い（値が出ない・OWNERしか直せない） */}
+          {/* 対処が必要: 採点の不一致（値が出ない・OWNERしか直せない） */}
           {conflicted.length > 0 && (
             <Alert className="border-purple-300 bg-purple-50">
               <TriangleAlert className="h-4 w-4 text-purple-600" />
               <AlertDescription className="text-purple-800">
                 <div className="mb-1 font-medium">
-                  採点者間で結果が食い違っています {conflicted.length}件
+                  採点の不一致 {conflicted.length}件
                 </div>
                 <div className="mb-2 text-sm">
                   この設問答案は未採点として出力されます（合計点が最大{" "}

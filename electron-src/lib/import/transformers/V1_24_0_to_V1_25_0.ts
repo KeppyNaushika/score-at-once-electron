@@ -57,7 +57,7 @@ export class V1_24_0_to_V1_25_0_Transformer implements ExamVersionTransformer {
 
     if (sourcedCount > 0) {
       warnings.push(
-        `1.24.0→1.25.0: 確定${sourcedCount}件が採用元の採点データを指していましたが、採用元は保持しません。確定の判定・得点はそのまま取り込み、手書きの採点マークはそのセルのものをすべて表示します。`
+        `1.24.0→1.25.0: 確定${sourcedCount}件が採用元の採点データを指していましたが、採用元は保持しません。確定の判定・得点はそのまま取り込み、注釈はそのセルのものをすべて表示します。`
       )
     }
 

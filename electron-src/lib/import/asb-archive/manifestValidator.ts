@@ -24,7 +24,7 @@ export function validateAsbManifest(manifest: AsbArchiveManifest): {
     return { valid: false, error: "定義名がありません" }
   }
   if (!manifest.exportedAt) {
-    return { valid: false, error: "エクスポート日時がありません" }
+    return { valid: false, error: "書き出し日時がありません" }
   }
 
   // バージョン互換性チェック

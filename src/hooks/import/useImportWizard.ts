@@ -379,7 +379,7 @@ export function useImportWizard(startState: ImportWizardState = initialState) {
         error:
           error instanceof Error
             ? error.message
-            : "採点競合の検出中にエラーが発生しました",
+            : "競合の検出中にエラーが発生しました",
       }))
     }
   }, [state.archivePath, state.fileOverviewData, state.idIntegrationConfig])

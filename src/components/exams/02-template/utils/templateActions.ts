@@ -14,7 +14,7 @@ export function buildNewCropRegionLabel(
     case "STUDENT_NAME":
       return "氏名"
     case "STUDENT_ID":
-      return "生徒番号"
+      return "番号"
     case "QUESTION_ANSWER":
       return `設問 ${
         existingAreas.filter((area) => area.type === "QUESTION_ANSWER").length +

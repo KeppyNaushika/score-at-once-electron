@@ -13,7 +13,7 @@
  * 取り込むのは旧書き出しで作った固定ファイル `exam-full.score`。元データは
  * createFullTestExam（2ページ×2設問・3名・採点ほか）で、試験の列は既定と違う値
  * （試験名「書き出した側の試験名」・試験日 2026-03-01・説明「書き出した側の説明」・
- * 赤ペン補正あり）にしてから書き出した。「このパソコンに同じ試験がある」状態は、
+ * 赤ペン補正あり）にしてから書き出した。「このPCに同じ試験がある」状態は、
  * 同じ固定ファイルを空の DB へ一度取り込んで作る（seedExamFromLegacyArchive）。
  */
 
@@ -260,7 +260,7 @@ describe("examMergeOrSeparate", () => {
     // 黙って上書きしない
     expect(
       warnings.some((warning) =>
-        warning.includes("読み込んだデータの方が新しい")
+        warning.includes("取り込んだデータの方が新しい")
       )
     ).toBe(true)
 
@@ -268,7 +268,7 @@ describe("examMergeOrSeparate", () => {
     const secondImport = await importIntoSameDatabase(exporterId, "merge")
     expect(
       secondImport.warnings.some((warning) =>
-        warning.includes("読み込んだデータの方が新しい")
+        warning.includes("取り込んだデータの方が新しい")
       )
     ).toBe(false)
     expect(await prisma.exam.count()).toBe(1)
@@ -299,7 +299,7 @@ describe("examMergeOrSeparate", () => {
     expect(merged!.updatedAt.toISOString()).toBe(localUpdatedAt.toISOString())
     expect(
       warnings.some((warning) =>
-        warning.includes("読み込んだデータの方が新しい")
+        warning.includes("取り込んだデータの方が新しい")
       )
     ).toBe(false)
   })
@@ -346,16 +346,16 @@ describe("examMergeOrSeparate", () => {
     )
     expect(await prisma.exam.count()).toBe(1)
     expect(
-      warnings.some((warning) => warning.includes("読み込んだデータで上書き"))
+      warnings.some((warning) => warning.includes("取り込んだデータで上書き"))
     ).toBe(true)
   })
 
-  it("別で追加しても、このパソコンの生徒の情報には触らない", async () => {
+  it("別で追加しても、このPCの生徒の情報には触らない", async () => {
     const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
     const archive = await readFixtureContents()
     const student = archive.studentsData.students[0]
 
-    // 書き出したあとに、このパソコンで氏名を直した（＝アーカイブより新しい）
+    // 書き出したあとに、このPCで氏名を直した（＝アーカイブより新しい）
     await prisma.student.update({
       where: { id: student.id },
       data: { lastName: "このPCで直した姓" },
@@ -374,11 +374,11 @@ describe("examMergeOrSeparate", () => {
     expect(await prisma.exam.count()).toBe(2)
   })
 
-  it("統合すると、このパソコンの生徒の情報もアーカイブが新しければ書き換わる", async () => {
+  it("統合すると、このPCの生徒の情報もアーカイブが新しければ書き換わる", async () => {
     const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
     const student = (await readFixtureContents()).studentsData.students[0]
 
-    // このパソコンの側を古い時刻のまま別の値にしておく
+    // このPCの側を古い時刻のまま別の値にしておく
     await prisma.student.update({
       where: { id: student.id },
       data: {
@@ -400,7 +400,7 @@ describe("examMergeOrSeparate", () => {
     const archive = await readFixtureContents()
     const archivedExamId = archive.examData.exam.id
 
-    // 取り込み元（このパソコン）の名簿の並びを、重複と穴のある状態にしておく
+    // 取り込み元（このPC）の名簿の並びを、重複と穴のある状態にしておく
     await prisma.examStudent.updateMany({
       where: { examId: archivedExamId },
       data: { customOrder: 7 },

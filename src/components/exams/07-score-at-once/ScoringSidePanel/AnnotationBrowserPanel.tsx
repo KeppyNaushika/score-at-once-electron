@@ -183,7 +183,7 @@ export function AnnotationBrowserPanel({
 
         // 結果に応じたフィードバック
         if (result && result.created === 0 && result.skipped > 0) {
-          toast.info("既に追加済みのアノテーションです")
+          toast.info("既に追加済みの注釈です")
           return
         }
 
@@ -222,7 +222,7 @@ export function AnnotationBrowserPanel({
           </div>
         ) : displayItems.length === 0 ? (
           <div className="flex items-center justify-center p-8 text-sm text-gray-400">
-            アノテーションがありません
+            注釈がありません
           </div>
         ) : (
           <div className="divide-y">

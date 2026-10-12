@@ -60,7 +60,7 @@ const PRESENTATION_BY_ASSIGNMENT_TYPE: Record<
     emptyIcon: FileText,
     emptyTitle: "設問がありません",
     emptyHint: "採点領域から設問を作成してください",
-    headerTitle: "設問とグループ項目の関連付け",
+    headerTitle: "設問と小計項目の関連付け",
     tableTitle: "関連付け対応表",
     rowHeading: "設問",
     groupHeadClassName: "border-blue-200 bg-blue-50/50",
@@ -78,20 +78,20 @@ const PRESENTATION_BY_ASSIGNMENT_TYPE: Record<
     explanationItems: (
       <>
         <li>
-          • 各設問に対して、関連付けたいグループ項目にチェックを入れてください
+          • 各設問に対して、関連付けたい小計項目にチェックを入れてください
         </li>
-        <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
+        <li>• 一つの設問は複数の小計項目に関連付けることができます</li>
         <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
       </>
     ),
   },
   SUBTOTAL_DEFINITION: {
     emptyIcon: ListOrdered,
-    emptyTitle: "小計点領域がありません",
-    emptyHint: "採点領域から小計点領域を作成してください",
-    headerTitle: "小計点領域とグループ項目の関連付け",
+    emptyTitle: "小計の領域がありません",
+    emptyHint: "採点領域から小計の領域を作成してください",
+    headerTitle: "小計の領域と小計項目の関連付け",
     tableTitle: "小計点の関連付け対応表",
-    rowHeading: "小計点領域",
+    rowHeading: "小計の領域",
     groupHeadClassName: "border-green-200 bg-green-50/50",
     groupHeadTextClassName: "text-green-700",
     renderRowLabel: (cropRegion) =>

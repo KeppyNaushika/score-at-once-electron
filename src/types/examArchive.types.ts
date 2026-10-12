@@ -239,7 +239,7 @@ export interface ExamChainTransformResult {
  * Step 2 で「自動で紐づく」「判断が必要」の件数を表示するために使用
  */
 export interface PreMatchingResult {
-  /** ID一致（同じパソコンで作ったデータ） */
+  /** ID一致（同じPCで作ったデータ） */
   byId: MatchedItem[]
   /** 学籍番号一致（生徒のみ） */
   byStudentNumber?: MatchedItem[]
@@ -330,7 +330,7 @@ export interface ImportItem {
  * 試験の事前照合結果
  */
 export interface ExamPreMatchingResult {
-  /** ID一致（同じパソコンで作った試験） */
+  /** ID一致（同じPCで作った試験） */
   isIdMatch: boolean
   /** インポートデータの試験ID */
   importExamId: string
@@ -478,7 +478,7 @@ export interface IdIntegrationConfig {
  * エクスポートモード
  *
  * - full: 全データ（現行動作）
- * - template: 模範解答＋領域情報のみ（採点テンプレート）
+ * - template: 模範解答＋領域設定のみ（採点テンプレート）
  * - template_with_subtotals: テンプレート＋小計設定
  */
 type ArchiveExportMode = "full" | "template" | "template_with_subtotals"

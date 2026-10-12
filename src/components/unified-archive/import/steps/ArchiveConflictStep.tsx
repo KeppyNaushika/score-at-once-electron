@@ -13,8 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { ArchiveIdChoice } from "@/electron-src/lib/import/unified-archive/types"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
-import { archiveColumnLabel, archiveTableLabel } from "../../archiveTableLabels"
+import { archiveColumnLabel } from "../../archiveColumnLabels"
 import { uniqueKeyValueText } from "../archiveImportLabels"
 import type { UnifiedArchiveImportWizardState } from "../hooks/useUnifiedArchiveImportWizard"
 import type { ArchiveUniqueConflict } from "../types"
@@ -25,7 +26,7 @@ const isArchiveIdChoice = (value: string): value is ArchiveIdChoice =>
   value === "existing" || value === "archive"
 
 const ID_CHOICE_LABELS: Record<ArchiveIdChoice, string> = {
-  existing: "このパソコンの id",
+  existing: "このPCの id",
   archive: "アーカイブの id",
 }
 
@@ -88,8 +89,8 @@ export function ArchiveConflictStep({
           ))}
         </RadioGroup>
         <p className="text-xs text-muted-foreground">
-          このパソコンの id
-          は、同期している他のパソコンで既に使われていることがあるため、ふだんはこのパソコンの
+          このPCの id
+          は、同期している他のPCで既に使われていることがあるため、ふだんはこのPCの
           id に合わせます。
         </p>
       </CardContent>
@@ -127,7 +128,7 @@ export function ArchiveConflictStep({
           {bulkChoice}
           {isSeparate && conflicts.length > 0 && (
             <p className="mb-4 text-sm text-muted-foreground">
-              別で追加では、このパソコンの行に触りません。重なった行は既存の行に合わせます。
+              別で追加では、このPCの行に触りません。重なった行は既存の行に合わせます。
             </p>
           )}
           <div className="space-y-4">
@@ -135,7 +136,7 @@ export function ArchiveConflictStep({
               <Card key={table}>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">
-                    {archiveTableLabel(table)}（{tableConflicts.length}件）
+                    {tableLabel(table)}（{tableConflicts.length}件）
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -154,9 +155,7 @@ export function ArchiveConflictStep({
                             <dd className="text-muted-foreground">
                               アーカイブ
                             </dd>
-                            <dd className="text-muted-foreground">
-                              このパソコン
-                            </dd>
+                            <dd className="text-muted-foreground">このPC</dd>
                             {conflict.columns.map((column) => (
                               <div key={column} className="contents">
                                 <dt className="text-muted-foreground">
@@ -180,7 +179,7 @@ export function ArchiveConflictStep({
                           {conflict.migrated && (
                             <p className="text-xs text-amber-700 dark:text-amber-300">
                               このアーカイブは古い版で作られたため、
-                              {archiveTableLabel(table)}
+                              {tableLabel(table)}
                               は版をまたいで同じものかを id で判断できません。
                             </p>
                           )}
@@ -200,7 +199,7 @@ export function ArchiveConflictStep({
                           >
                             <SelectTrigger
                               className="w-48 shrink-0"
-                              aria-label={`${archiveTableLabel(table)}の採用する id`}
+                              aria-label={`${tableLabel(table)}の採用する id`}
                             >
                               <SelectValue />
                             </SelectTrigger>

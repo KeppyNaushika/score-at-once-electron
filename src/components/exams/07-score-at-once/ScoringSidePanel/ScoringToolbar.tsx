@@ -61,7 +61,7 @@ interface ScoringToolbarProps {
   visibleUnscoredCount?: number
   hiddenUnscoredCount?: number
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
-  /** 今の設問の類型評価。類型評価の設問では部分点・正答・誤答の代わりに類型のボタンを並べる */
+  /** 今の設問の類型評価。類型方式の設問では部分点・正答・誤答の代わりに類型のボタンを並べる */
   scaleQuestion?: ScaleQuestionState
   /** 選んでいる答案に類型を付ける */
   onApplyScaleLevel?: (scaleLevelId: string) => void
@@ -155,7 +155,7 @@ export default function ScoringToolbar({
             </ToggleGroup>
           )}
 
-          {/* 類型評価の設問の類型（キーボード・マウス共通。部分点は持たない） */}
+          {/* 類型方式の設問の類型（キーボード・マウス共通。部分点は持たない） */}
           {scaleQuestion?.isScaleQuestion && onApplyScaleLevel && (
             <ScaleLevelButtons
               scaleLevels={scaleQuestion.scaleLevels}

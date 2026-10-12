@@ -1,5 +1,5 @@
 /**
- * AI 採点の実行（AiGradingRun）と試行（AiGradingAttempt）の読み書き。
+ * AI採点の実行（AiGradingRun）と試行（AiGradingAttempt）の読み書き。
  *
  * 試行は書き換えない（結果を受け取って state を決めるまでを除く）。
  * やり直しは新しい run の新しい行（docs/vlm-grading-design.md §5-3）。
@@ -160,7 +160,7 @@ export async function setAiQuestioningScoringMethod(
     throw new Error("問いかけの実行が見つかりません")
   }
   if (run.userId !== actorUserId) {
-    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+    throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
   return prisma.aiGradingRun.update({
     where: { id: run.id },
@@ -257,7 +257,7 @@ export async function closePendingAiGradingAttempts(
 
 /**
  * 一覧で返す木。実行者は秘密を落として連れてくる。試行には1段目の当てはまりと、案の外の
- * 問いかけ（AI チェック・どの案にも入らない答案）への教員の答え（古い順）を同梱する
+ * 問いかけ（AIチェック・どの案にも入らない答案）への教員の答え（古い順）を同梱する
  */
 const aiGradingRunListInclude = {
   attempts: {

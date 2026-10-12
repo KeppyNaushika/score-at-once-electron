@@ -21,7 +21,7 @@ interface AiPromptPanelProps {
   promptNumberById: ReadonlyMap<string, number>
   selectedPromptId: string | null
   onSelectPrompt: (promptId: string) => void
-  /** その採点指示を選んで、AI 採点（grade）か AI チェック（check）の送信ダイアログを開く */
+  /** その採点指示を選んで、AI採点（grade）か AIチェック（check）の送信ダイアログを開く */
   onRunWithPrompt: (promptId: string, purpose: AiGradingStage1Purpose) => void
   settings: AiGradingSettings | undefined
 }
@@ -33,7 +33,7 @@ type EditorTarget = { basePrompt: AiPromptRow | null }
  * 設問の採点指示（設計 §3-1）。
  *
  * 上の「新規追加」は白紙から書く。履歴の採点指示をクリックすると選ばれ、中身と
- * 「AI 採点を実行」「AI チェックを実行」が出る（実行の入口はここだけ）。中身のどこを押しても（右上の鉛筆が目印。Enter・Space でも）編集が開く。
+ * 「AI採点を実行」「AIチェックを実行」が出る（実行の入口はここだけ）。中身のどこを押しても（右上の鉛筆が目印。Enter・Space でも）編集が開く。
  * 中の問題の画像のサムネイルは押すと拡大のまま（編集は開かない）。編集して保存すると、それを親にした新しい採点指示になり、
  * 元の採点指示は書き換えない
  */
@@ -97,7 +97,7 @@ export function AiPromptPanel({
                     </span>
                   )}
                   <span className="block text-muted-foreground">
-                    {prompt.createdBy?.name ?? "（削除された利用者）"}・
+                    {prompt.createdBy?.name ?? "（削除されたユーザー）"}・
                     {formatShortDateTime(prompt.createdAt)}
                   </span>
                 </button>
@@ -117,7 +117,7 @@ export function AiPromptPanel({
                         disabled={!settings}
                       >
                         <Play className="h-3 w-3" />
-                        AI 採点を実行
+                        AI採点を実行
                       </Button>
                       <Button
                         variant="outline"
@@ -127,7 +127,7 @@ export function AiPromptPanel({
                         disabled={!settings}
                       >
                         <SearchCheck className="h-3 w-3" />
-                        AI チェックを実行
+                        AIチェックを実行
                       </Button>
                     </div>
                   </div>

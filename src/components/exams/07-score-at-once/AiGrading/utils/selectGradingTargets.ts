@@ -15,7 +15,7 @@ import { toScoringStatus } from "@/types/scoringStatus.types"
 import type { AiGradingAnswer } from "../types"
 import { findOwnQuestionScore, isScored } from "./scoreComparison"
 
-/** AI 採点で送る答案の選び方（並び順＝画面の並び順） */
+/** AI採点で送る答案の選び方（並び順＝画面の並び順） */
 export const GRADING_TARGET_SCOPES = [
   "unscored",
   "non_blank",
@@ -23,7 +23,7 @@ export const GRADING_TARGET_SCOPES = [
   "selected",
 ] as const
 /**
- * AI チェックで送る答案の選び方（docs/vlm-grading-design.md §3-10）。scored は採点済みの答案
+ * AIチェックで送る答案の選び方（docs/vlm-grading-design.md §3-10）。scored は採点済みの答案
  * （自分が無答を付けたものを除く。既定）、scored_all は採点済みの全て
  */
 export const CHECK_TARGET_SCOPES = ["scored", "scored_all", "selected"] as const

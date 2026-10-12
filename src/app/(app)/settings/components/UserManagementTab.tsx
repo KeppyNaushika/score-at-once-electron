@@ -79,7 +79,7 @@ export function UserManagementTab({
               {user.id === currentUser.id ? (
                 // ログイン中の本人は消せない（main も断る）。押せない理由を添える。
                 // 無効のボタンはポインタを拾わないので、外側の span で受ける
-                <WithTooltip content="ログイン中の利用者は削除できません">
+                <WithTooltip content="ログイン中のユーザーは削除できません">
                   <span tabIndex={0} className="inline-flex">
                     <Button variant="outline" size="sm" disabled>
                       <Trash className="mr-2 h-4 w-4" />

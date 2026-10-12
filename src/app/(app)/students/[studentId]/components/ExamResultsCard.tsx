@@ -140,7 +140,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                       requestSort(key as keyof ExamResultSortable)
                     }
                   >
-                    実施日
+                    試験日
                   </SortableTableHead>
                   <SortableTableHead
                     sortKey="totalScore"

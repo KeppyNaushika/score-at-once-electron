@@ -69,7 +69,7 @@ export function useUnifiedArchiveImportWizard({
   const [rejection, setRejection] = useState<RejectedUnifiedArchive | null>(
     startWith?.kind === "rejected" ? startWith : null
   )
-  // 同じ試験の続きを取り込むのが普通なので、今の試験の取り込みと同じく「統合する」が既定
+  // 同じ試験の続きを取り込むのが普通なので、今の試験の取り込みと同じく「新しい方を残す」が既定
   const [action, setAction] = useState<ImportAction>("merge")
   const [matchDecisions, setMatchDecisions] = useState<
     Record<string, ArchiveMatchDecision>

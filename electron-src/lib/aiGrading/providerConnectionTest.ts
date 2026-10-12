@@ -177,7 +177,7 @@ export async function fetchProviderModels(
   ) {
     return {
       outcome: "consent_required",
-      message: "この事業者への今の利用者の同意がありません",
+      message: "この事業者への今のユーザーの同意がありません",
       catalog: null,
     }
   }

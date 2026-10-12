@@ -48,7 +48,7 @@ describe("ImportWizardModal", () => {
   it("IM-1: モーダルが開くとfile_selectステップが表示される", () => {
     render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
-    expect(screen.getByText("試験インポート")).toBeInTheDocument()
+    expect(screen.getByText("試験の取り込み")).toBeInTheDocument()
     expect(screen.getByText("試験アーカイブを選択")).toBeInTheDocument()
   })
 

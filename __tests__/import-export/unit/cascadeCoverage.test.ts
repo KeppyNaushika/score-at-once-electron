@@ -92,7 +92,7 @@ describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () =
  */
 describe("採点層の親は ExamStudent（#962 の再発防止）", () => {
   const SCORING_TABLES = [
-    // AI 採点の判定（答案1件への AI の1回の判定）。受験生を外せば一緒に消える
+    // AI採点の判定（答案1件への AI の1回の判定）。受験生を外せば一緒に消える
     "AiGradingAttempt",
     "CompoundAnswerScore",
     "QuestionScore",

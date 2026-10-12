@@ -27,36 +27,13 @@ import type {
   ReturnScoreCellState,
   ReturnStudentDiff,
 } from "@/electron-src/lib/prisma/returnSnapshot"
-
-/** 採点判定コードを日本語表示に変換 */
-const statusLabel = (status: string): string => {
-  switch (status) {
-    case "correct":
-      return "正解"
-    case "incorrect":
-      return "不正解"
-    case "partial":
-      return "部分点"
-    case "pending":
-      return "保留"
-    case "no_answer":
-      return "無答"
-    case "double_mark":
-      return "二重マーク"
-    case "unscored":
-      return "未採点"
-    case "evaluated":
-      return "類型評価"
-    default:
-      return status
-  }
-}
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 
 /** セル状態を「判定（得点）」形式の文字列にする */
 const cellText = (cell: ReturnScoreCellState | null): string => {
   if (!cell) return "（なし）"
   // 類型評価は判定の名前でなく、付けた類型の記号を出す
-  const label = cell.scaleLabel ?? statusLabel(cell.status)
+  const label = cell.scaleLabel ?? SCORING_STATUS_LABELS[cell.status]
   if (cell.value !== null) return `${label}（${cell.value}点）`
   return label
 }
@@ -152,7 +129,7 @@ export function ReturnDiffPanel({
               答案返却・差分
             </div>
             <p className="mt-2 text-muted-foreground">
-              現在の採点内容を「返却版」として記録すると、以降に採点（スコア・採点マーク）を
+              現在の採点内容を「返却版」として記録すると、以降に採点（得点・注釈）を
               修正した生徒だけを抽出して再印刷できます。
             </p>
           </PopoverContent>
@@ -180,7 +157,7 @@ export function ReturnDiffPanel({
                     {diff.annotationChanged && (
                       <Badge variant="secondary" className="gap-1">
                         <PencilLine className="h-3 w-3" />
-                        採点マーク変更
+                        注釈の変更
                       </Badge>
                     )}
                   </div>
@@ -203,9 +180,7 @@ export function ReturnDiffPanel({
                       ))}
                     </ul>
                   ) : (
-                    <div className="text-muted-foreground">
-                      採点マークのみ変更
-                    </div>
+                    <div className="text-muted-foreground">注釈のみ変更</div>
                   )}
                 </div>
               ))}

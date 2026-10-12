@@ -30,7 +30,7 @@ export default function ImportPanel({
   return (
     <div className="flex h-full min-w-0 flex-col border-r">
       <div className="border-b p-4">
-        <h2 className="text-lg font-semibold">インポート</h2>
+        <h2 className="text-lg font-semibold">取り込み</h2>
         <p className="text-sm text-muted-foreground">
           PDFファイルをドラッグ&ドロップ
         </p>

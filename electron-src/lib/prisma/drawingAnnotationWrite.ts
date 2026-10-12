@@ -120,7 +120,7 @@ export async function createDrawingAnnotation(
 
     return narrowAnnotationUnions(serializePrisma(result))
   } catch (error) {
-    console.error("描画アノテーション作成エラー:", error)
+    console.error("注釈の作成エラー:", error)
     throw error
   }
 }
@@ -185,7 +185,7 @@ export async function updateDrawingAnnotation(
 
     return narrowAnnotationUnions(serializePrisma(result))
   } catch (error) {
-    console.error("描画アノテーション更新エラー:", error)
+    console.error("注釈の更新エラー:", error)
     throw error
   }
 }
@@ -229,7 +229,7 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
       })
     }
   } catch (error) {
-    console.error("描画アノテーション削除エラー:", error)
+    console.error("注釈の削除エラー:", error)
     throw error
   }
 }
@@ -259,7 +259,7 @@ export async function deleteDrawingAnnotationsByTarget(
       },
     })
   } catch (error) {
-    console.error("描画アノテーション一括削除エラー:", error)
+    console.error("注釈の一括削除エラー:", error)
     throw error
   }
 }
@@ -288,7 +288,7 @@ export async function batchCreateDrawingAnnotations(
     }
     return results
   } catch (error) {
-    console.error("描画アノテーション一括作成エラー:", error)
+    console.error("注釈の一括作成エラー:", error)
     throw error
   }
 }

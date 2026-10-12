@@ -70,12 +70,12 @@ export function HelpContentExamList() {
       <div className="grid gap-6 lg:grid-cols-2">
         <HelpSection
           icon={<FolderInput className="h-5 w-5 text-purple-600" />}
-          title="作る・読み込む"
+          title="作る・取り込む"
         >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規試験作成</Badge>
-              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">取り込み</Badge>
               <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -83,7 +83,7 @@ export function HelpContentExamList() {
               試験名・試験日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
             </p>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った試験は「読み込み」で取り込めます
+              別のPCで作った試験は「取り込み」から取り込めます
               <ArchiveImportFormatsNote legacyFormats=".score や外部の .hsz・.dat" />
               。書き出しは行末の「…」から1件ずつ、チェックを付ければまとめて
               .sao に書き出せます。

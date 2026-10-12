@@ -51,7 +51,7 @@ export function AnonymousScoringSection({
         <div className="flex-1">
           <div className="text-sm font-medium">匿名採点を固定する</div>
           <div className="text-xs text-muted-foreground">
-            オンの間、オーナー以外は採点の画面で生徒の名前・答案の氏名欄・名簿の順を見られず、自分では解除できません
+            オンの間、所有者以外は採点の画面で生徒の名前・答案の氏名欄・名簿の順を見られず、自分では解除できません
           </div>
         </div>
         <Switch

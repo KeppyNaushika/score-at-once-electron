@@ -253,7 +253,9 @@ export function ScoringMarkSettingsContainer({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Settings className="h-4 w-4" />
-        <Label className="text-sm font-medium">採点マーク設定</Label>
+        <Label className="text-sm font-medium">
+          採点マークと点数の表示設定
+        </Label>
       </div>
 
       <StatusDisplaySection
@@ -284,7 +286,7 @@ export function ScoringMarkSettingsContainer({
       <Separator />
 
       {renderStyleSection(
-        "設問部分点数",
+        "設問の得点",
         config.styles.partial,
         (updates) =>
           updateConfig({
@@ -299,7 +301,7 @@ export function ScoringMarkSettingsContainer({
       <Separator />
 
       {renderStyleSection(
-        "小計点数",
+        "小計点",
         config.styles.subtotal,
         (updates) =>
           updateConfig({
@@ -314,7 +316,7 @@ export function ScoringMarkSettingsContainer({
       <Separator />
 
       {renderStyleSection(
-        "合計点数",
+        "合計点",
         config.styles.total,
         (updates) =>
           updateConfig({

@@ -114,7 +114,7 @@ function assertSharedFolderEmpty(sharedFolderPath: string): void {
   if (inspection.kind === "shared") {
     throw new Error(
       "この共有フォルダには既に共有しているデータがあります。移行先にできるのは空の共有フォルダだけです。" +
-        "統合したい場合は、アーカイブの書き出しと取り込みを使ってください。"
+        "まとめたい場合は、アーカイブの書き出しと取り込みを使ってください。"
     )
   }
   throw new Error(`この共有フォルダは使えません: ${inspection.reason}`)
@@ -331,7 +331,7 @@ function describeJoinFailure(
       .prepare<[], { count: number }>(`SELECT COUNT(*) AS count FROM "User"`)
       .get()
     if (row === undefined || row.count === 0) {
-      return "共有フォルダから利用者を1人も読み込めませんでした。"
+      return "共有フォルダからユーザーを1人も読み込めませんでした。"
     }
   } finally {
     db.close()
@@ -425,7 +425,7 @@ export async function migrateSharedProfileToLocal({
   if (found.length > 0) {
     throw new Error(
       `ローカルモードに既にデータがあります（${found.join("・")}）。移行先にできるのは空のローカルモードだけです。` +
-        "統合したい場合は、アーカイブの書き出しと取り込みを使ってください。"
+        "まとめたい場合は、アーカイブの書き出しと取り込みを使ってください。"
     )
   }
   if (readSharedFolderId(profile.sharedFolderPath) !== profile.sharedFolderId) {

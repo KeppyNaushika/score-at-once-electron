@@ -55,7 +55,7 @@ export const examWorkflowTabs = withIcons(examWorkflowSteps, {
 export const gradeWorkflowTabs = withIcons(gradeWorkflowSteps, {
   detail: LayoutDashboard,
   "01-students": Users,
-  "02-data-sources": Database,
+  "02-items": Database,
   "03-boundaries": SlidersHorizontal,
   "04-comparisons": GitCompareArrows,
   "05-results": ChartColumn,
@@ -138,17 +138,17 @@ export const examWorkflowPhases: readonly WorkflowPhaseGroup[] = [
 export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "準備",
-    description: "生徒と、点数の元になるデータの設定",
-    stepIds: ["01-students", "02-data-sources"],
+    description: "生徒と成績評価項目の設定",
+    stepIds: ["01-students", "02-items"],
   },
   {
     title: "算出",
-    description: "評定を分ける境目と、結果に並べる比較の設定",
+    description: "成績評価記号を分ける境目と、結果に並べる比較の設定",
     stepIds: ["03-boundaries", "04-comparisons"],
   },
   {
     title: "出力",
-    description: "成績の確認と書き出し",
+    description: "成績の確認と出力",
     stepIds: ["05-results", "06-export"],
   },
 ]
@@ -157,17 +157,17 @@ export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
 export const courseworkWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "準備",
-    description: "生徒と評価項目の設定",
+    description: "生徒と資料評価項目の設定",
     stepIds: ["02-students", "03-items"],
   },
   {
     title: "入力",
-    description: "生徒ごとの点数入力",
+    description: "生徒ごとの得点入力",
     stepIds: ["04-scores"],
   },
   {
     title: "結果",
-    description: "入力した点数の確認",
+    description: "入力した得点の確認",
     stepIds: ["05-results"],
   },
 ]

@@ -1,5 +1,5 @@
 /**
- * AI 採点（VLM 採点）の IPC（docs/vlm-grading-design.md §10）。
+ * AI採点（VLM 採点）の IPC（docs/vlm-grading-design.md §10）。
  *
  * プロンプト・画像の測定・実行（1段目・2段目）・問いかけ（項目の案と答え）の口。事業者の同意とキーの口（`aiProvider:*`）は
  * 別のファイルにある。**API キーを返すチャンネルはここにも作らない**（キーは
@@ -64,7 +64,7 @@ function requireActorUserId(): string {
   return actorUserId
 }
 
-/** AI 採点のプロンプト・測定・実行・問いかけの IPC チャンネル */
+/** AI採点のプロンプト・測定・実行・問いかけの IPC チャンネル */
 export const aiGradingHandlers = {
   // ── プロンプト（書き換え・削除の口は作らない） ──────────────────
   /** 設問のプロンプトを全部（どの教員が作ったものも）。作成者付き */
@@ -193,7 +193,7 @@ export const aiGradingHandlers = {
   ) => discardAiRubricProposalInstructionDrafts(input, requireActorUserId()),
 
   /**
-   * 案の外の問いかけ（AI チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書くだけ
+   * 案の外の問いかけ（AIチェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書くだけ
    */
   "aiGrading:recordAttemptResponses": async (input: {
     responses: AiAttemptResponseInput[]
@@ -214,7 +214,7 @@ export const aiGradingHandlers = {
     input: CommitAiRubricProposalResponseInput
   ) => commitAiRubricProposalResponse(input, requireActorUserId()),
 
-  /** 問いかけで教員が直接決めた点（自分で採点・AI チェックで直す点）を自分の採点として書く */
+  /** 問いかけで教員が直接決めた点（自分で採点・AIチェックで直す点）を自分の採点として書く */
   "aiGrading:writeQuestioningScores": async (input: {
     cropRegionId: string
     scores: AiQuestioningScoreWrite[]

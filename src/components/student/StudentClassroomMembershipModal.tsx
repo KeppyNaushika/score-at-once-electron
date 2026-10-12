@@ -145,10 +145,10 @@ export default function StudentClassroomMembershipModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {membershipToEdit ? "学級所属を編集" : "学級所属を追加"}
+            {membershipToEdit ? "在籍を編集" : "在籍を追加"}
           </DialogTitle>
           <DialogDescription>
-            生徒の学級所属情報を入力してください。
+            生徒の学級の在籍を入力してください。
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -248,7 +248,7 @@ export default function StudentClassroomMembershipModal({
                 onChange={(e) => setEndDate(e.target.value)}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                未指定の場合は現在所属中（終了日なし）になります
+                未指定の場合は在籍中のまま（終了日なし）になります
               </p>
             </div>
           </div>

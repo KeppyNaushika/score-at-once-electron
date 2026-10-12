@@ -231,7 +231,7 @@ describe("deleteStudentAnswer", () => {
       image(page1.id, examStudentA.id).id,
       [
         { countedName: "採点済みの設問", shownCount: 5 },
-        { countedName: "答案への書き込み", shownCount: 2 },
+        { countedName: "注釈", shownCount: 2 },
       ]
     )
     expect(deletedCounts).toEqual([
@@ -374,10 +374,10 @@ describe("getStudentAnswerDeletionCounts", () => {
     const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
-    // 0件の項目（確定した点数・採点済みの複合回答）は出さない（見せていない＝0件と見せた扱い）
+    // 0件の項目（確定した得点・採点済みの複合解答）は出さない（見せていない＝0件と見せた扱い）
     expect(result).toEqual([
       { countedName: "採点済みの設問", shownCount: 1 },
-      { countedName: "答案への書き込み", shownCount: 1 },
+      { countedName: "注釈", shownCount: 1 },
     ])
   })
 
@@ -443,7 +443,7 @@ describe("getStudentAnswerDeletionCounts", () => {
     const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
-    expect(countOf(result, "採点済みの複合回答")).toBe(1)
+    expect(countOf(result, "採点済みの複合解答")).toBe(1)
     expect(result.length).toBeGreaterThan(0)
   })
 

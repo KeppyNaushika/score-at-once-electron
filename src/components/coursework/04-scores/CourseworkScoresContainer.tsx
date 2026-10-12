@@ -182,9 +182,9 @@ export function CourseworkScoresContainer({
     return (
       <div className="p-6">
         <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-          <p className="mb-2 text-muted-foreground">評価項目がありません</p>
+          <p className="mb-2 text-muted-foreground">資料評価項目がありません</p>
           <p className="text-sm text-muted-foreground">
-            {`「${workflowStep(courseworkWorkflowSteps, "03-items").label}」の段で評価項目を追加してください`}
+            {`「${workflowStep(courseworkWorkflowSteps, "03-items").label}」の段で資料評価項目を追加してください`}
           </p>
         </div>
         <div className="mt-6 flex justify-end">
@@ -206,10 +206,10 @@ export function CourseworkScoresContainer({
 
   return (
     <div className="p-6">
-      <h2 className="mb-4 text-lg font-semibold">点数入力</h2>
+      <h2 className="mb-4 text-lg font-semibold">得点入力</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        各生徒の評価項目ごとの点数を入力してください。文字評価の項目は評価記号（例:
-        A/B/C）で入力します。加減点・理由・コメントは、「点数だけ表示」を切ると記入できます。変更は自動保存されます。
+        各生徒の資料評価項目ごとの得点を入力してください。評価記号で入力する項目は資料評価記号（例:
+        A/B/C）で入力します。加減点・理由・コメントは、「得点だけ表示」を切ると記入できます。変更は自動保存されます。
       </p>
 
       <div className="mb-4 space-y-1">
@@ -225,17 +225,17 @@ export function CourseworkScoresContainer({
             }
           />
           <Label htmlFor="coursework-score-only">
-            点数だけ表示（加減点・理由・コメントを隠す）
+            得点だけ表示（加減点・理由・コメントを隠す）
           </Label>
         </div>
         <p className="text-sm text-muted-foreground">
           Excel
-          から点数を複数列まとめて貼るときは、点数だけ表示にしてください。加減点などの列が並んでいると、2列目以降が加減点の列に入ります。隠している間も、入力済みの加減点・理由・コメントは消えません。
+          から得点を複数列まとめて貼るときは、得点だけ表示にしてください。加減点などの列が並んでいると、2列目以降が加減点の列に入ります。隠している間も、入力済みの加減点・理由・コメントは消えません。
         </p>
         {hiddenFilledCellCount > 0 && (
           <p className="text-sm text-amber-700">
             隠している列に入力があります（{hiddenFilledCellCount}
-            件）。見るときは「点数だけ表示」を切ってください。
+            件）。見るときは「得点だけ表示」を切ってください。
           </p>
         )}
       </div>

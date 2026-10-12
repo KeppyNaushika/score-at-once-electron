@@ -271,9 +271,9 @@ test("04 を開いた後に 03 へ移っても、ページと採点領域の画�
   })
   await markDocument(page)
 
-  await clickWorkflowTab(page, "3. 領域情報")
+  await clickWorkflowTab(page, "3. 領域設定")
   await expect(
-    page.getByRole("heading", { name: /^採点領域の詳細情報設定/ })
+    page.getByRole("heading", { name: /^採点領域の設定/ })
   ).toBeVisible({ timeout: 30_000 })
   // 04 の画面ではなく 03 の画面が出ていること
   await expect(page.getByRole("heading", { name: /小計/ })).toHaveCount(0)
@@ -310,7 +310,7 @@ test("09 で変えた出力設定は、07 へ移って戻っても残る", async
   )
   await page.waitForTimeout(2_000)
 
-  await clickWorkflowTab(page, "9. 結果")
+  await clickWorkflowTab(page, "9. 結果と出力")
   await expect(markUnscored).toBeVisible({ timeout: 30_000 })
   await expect(markUnscored).toHaveAttribute("aria-checked", after ?? "")
   await expectSameDocument(page)
@@ -334,11 +334,11 @@ test("資料の概要と評価項目を往復しても、どちらの画面も�
   })
   await markDocument(page)
 
-  await clickWorkflowTab(page, "2. 評価項目")
-  // 段のヘッダーも `評価項目の設定｜…` という見出しを出すので、部分一致では2つに
+  await clickWorkflowTab(page, "2. 資料評価項目")
+  // 段のヘッダーも `資料評価項目の設定｜…` という見出しを出すので、部分一致では2つに
   // 当たる（段階65）。画面そのものの見出しを名指しする
   await expect(
-    page.getByRole("heading", { name: "評価項目", exact: true })
+    page.getByRole("heading", { name: "資料評価項目", exact: true })
   ).toBeVisible({ timeout: 30_000 })
 
   // 戻っても資料本体が出る（項目の配列で上書きされていない）
@@ -346,7 +346,7 @@ test("資料の概要と評価項目を往復しても、どちらの画面も�
   await expect(page).toHaveURL(`${E2E_BASE_URL}/coursework/${courseworkId}`, {
     timeout: 15_000,
   })
-  // 評価項目の段の見出しも「評価項目の設定｜<名前>」なので、名前は完全一致で引く
+  // 資料評価項目の段の見出しも「資料評価項目の設定｜<名前>」なので、名前は完全一致で引く
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible({
     timeout: 30_000,
   })

@@ -121,7 +121,7 @@ export default function ExamDetailPage() {
         }}
         onCommitBasics={handleCommitBasics}
         canEdit={access.canManageExam}
-        editDisabledReason="試験の名前・試験日・説明・タグを変えられるのは、この試験のオーナーだけです"
+        editDisabledReason="試験の名前・試験日・説明・タグを変えられるのは、所有者だけです"
         tags={exam.examTags.map((examTag) => examTag.tag)}
         isReloadingTags={isReloading}
         onReplaceTags={handleReplaceTags}

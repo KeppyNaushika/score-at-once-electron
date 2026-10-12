@@ -111,7 +111,7 @@ export const createAnnotationMutation = () =>
     scope: { id: "annotation" },
     meta: {
       invalidates: [scopeKeys.annotation()],
-      errorMessage: "手書きを保存できませんでした",
+      errorMessage: "注釈を保存できませんでした",
     },
   })
 
@@ -122,7 +122,7 @@ export const updateAnnotationMutation = () =>
     scope: { id: "annotation" },
     meta: {
       invalidates: [scopeKeys.annotation()],
-      errorMessage: "手書きを保存できませんでした",
+      errorMessage: "注釈を保存できませんでした",
     },
   })
 
@@ -133,7 +133,7 @@ export const deleteAnnotationMutation = () =>
     scope: { id: "annotation" },
     meta: {
       invalidates: [scopeKeys.annotation()],
-      errorMessage: "手書きを削除できませんでした",
+      errorMessage: "注釈を削除できませんでした",
     },
   })
 
@@ -151,7 +151,7 @@ export const batchCreateAnnotationsMutation = () =>
     scope: { id: "annotation" },
     meta: {
       invalidates: [scopeKeys.annotation()],
-      errorMessage: "手書きを保存できませんでした",
+      errorMessage: "注釈を保存できませんでした",
     },
   })
 
@@ -184,7 +184,7 @@ export const replaceTargetAnnotationsMutation = () =>
     scope: { id: "annotation" },
     meta: {
       invalidates: [scopeKeys.annotation()],
-      errorMessage: "手書きを保存できませんでした",
+      errorMessage: "注釈を保存できませんでした",
     },
   })
 

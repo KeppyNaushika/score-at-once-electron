@@ -181,7 +181,7 @@ export function LetterScaleEditor({
         onClick={addRow}
       >
         <Plus className="mr-1 h-3 w-3" />
-        評価を追加
+        資料評価記号を追加
       </Button>
     </div>
   )

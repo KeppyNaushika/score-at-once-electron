@@ -71,8 +71,8 @@ export class V1_10_0_to_V1_11_0_Transformer implements GradeVersionTransformer {
     })
 
     warnings.push(
-      `1.10.0→1.11.0: 制約ルール${legacyConstraints.length}件の設定を評価項目名で復元しました。` +
-        `同名の評価項目が複数ある場合は取り込み後に「観点間の制約ルール」を確認してください。`
+      `1.10.0→1.11.0: 制約ルール${legacyConstraints.length}件の設定を成績評価項目名で復元しました。` +
+        `同名の成績評価項目が複数ある場合は取り込み後に「観点間の制約ルール」を確認してください。`
     )
 
     return {

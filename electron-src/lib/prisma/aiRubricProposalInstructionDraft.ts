@@ -30,7 +30,7 @@ export async function setAiRubricProposalInstructionDraft(
   })
   if (!proposal) throw new Error("項目の案が見つかりません")
   if (proposal.run.userId !== actorUserId) {
-    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+    throw new Error("問いかけに答えられるのは、AI採点を実行した教員だけです")
   }
   const latest = await prisma.aiRubricProposalInstructionDraft.findFirst({
     where: { proposalId: proposal.id, userId: actorUserId },

@@ -1,5 +1,5 @@
 /**
- * AI 採点の実行（1段目の run）を走らせる（docs/vlm-grading-design.md §3-3・§11 jobRunner）。
+ * AI採点の実行（1段目の run）を走らせる（docs/vlm-grading-design.md §3-3・§11 jobRunner）。
  *
  * - 対象の答案（examStudentId）は renderer が選んで明示的に渡す。選び方はここに無い
  * - 1段目は答案ごとに、判定・読み取り・所見・当てはまる項目・確信度を返させる。
@@ -9,7 +9,7 @@
  *   進み具合を押し出す。run ごとに AbortController を持ち、中止できる。最後まで送れたら
  *   **そのまま2段目（項目の案）を続ける**（`groupingRunner.ts`）
  * - バッチ（batch）: まとめて事業者へ預け、回収は `batchPoller.ts` が行う（回収したら2段目を続ける）
- * - AI チェック（purpose: check）: 採点済みの答案を1段目だけで判定させる。**教員の点は送らない**
+ * - AIチェック（purpose: check）: 採点済みの答案を1段目だけで判定させる。**教員の点は送らない**
  *   （送るのは採点のときと同じプロンプトと答案の画像だけ）。比べるのは画面の側で、2段目は続けない
  *
  * 認証・権限の失敗は、どの答案でも同じ結果になるので run 全体を止める。
@@ -70,7 +70,7 @@ const IMAGE_SCALE_MAX = 4
 
 /** 採点を始めるときに渡すもの */
 export interface StartGradingRunInput {
-  /** 採点（grade。終われば2段目が続く）か、AI チェック（check。1段目だけ） */
+  /** 採点（grade。終われば2段目が続く）か、AIチェック（check。1段目だけ） */
   purpose: AiGradingStage1Purpose
   promptId: string
   /** 送る答案。renderer が選び方（§3-2）に従って選んだもの */
@@ -170,7 +170,7 @@ export function createGradingJobRunner(
     const startingRunKey = startingRunKeyOf(input, actorUserId)
     if (startingRunKeys.has(startingRunKey)) {
       throw new Error(
-        "同じ答案の AI 採点を始めているところです。2重に送らないよう、この実行は受け付けませんでした"
+        "同じ答案の AI採点を始めているところです。2重に送らないよう、この実行は受け付けませんでした"
       )
     }
     startingRunKeys.add(startingRunKey)
@@ -323,7 +323,7 @@ export function createGradingJobRunner(
     })
       .then(async (status) => {
         activeControllers.delete(run.id)
-        // 最後まで送れたら、そのまま2段目（項目の案）を続ける。中止・失敗と、AI チェックでは続けない
+        // 最後まで送れたら、そのまま2段目（項目の案）を続ける。中止・失敗と、AIチェックでは続けない
         if (status === "ended" && input.purpose === "grade") {
           await groupingRunner.runGroupingAfterGrading(run.id, actorUserId)
         }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 「3. 領域情報」の採点担当（設問 × 採点者の対応表）の検査。
+ * 「3. 領域設定」の採点担当（設問 × 採点者の対応表）の検査。
  *
  * 見るのは3つ。
  *
@@ -322,7 +322,7 @@ describe("採点担当タブの出し分け", () => {
       screen.queryByRole("tab", { name: "採点担当" })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole("tab", { name: "領域情報" })
+      screen.queryByRole("tab", { name: "領域設定" })
     ).not.toBeInTheDocument()
     // 担当という概念が要らないので、列の候補も引きに行かない
     expect(getMembers).not.toHaveBeenCalled()
@@ -332,11 +332,11 @@ describe("採点担当タブの出し分け", () => {
     ).toBeInTheDocument()
   })
 
-  it("参加者が2人以上ならタブ帯を描き、既定では領域情報を開く", async () => {
+  it("参加者が2人以上ならタブ帯を描き、既定では領域設定を開く", async () => {
     await renderRegionInfoPage({ members: [OWNER, GRADER_A] })
 
     expect(
-      await screen.findByRole("tab", { name: "領域情報" })
+      await screen.findByRole("tab", { name: "領域設定" })
     ).toHaveAttribute("data-state", "active")
     expect(screen.getByRole("tab", { name: "採点担当" })).toHaveAttribute(
       "data-state",

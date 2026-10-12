@@ -1,7 +1,7 @@
 import { toast } from "sonner"
 
 import { BETA_ORIGIN_PREFIX } from "@/components/common/BetaBadge"
-import { syncTableLabel } from "@/lib/shared/syncTableLabels"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
 /**
  * 同期から届いた出来事を知らせるトースト（注意・隠した行・外した行の3つの窓が使う）。
@@ -28,6 +28,6 @@ export function countByTableLabel(tableNames: string[]): string {
     countByTable.set(tableName, (countByTable.get(tableName) ?? 0) + 1)
   }
   return [...countByTable]
-    .map(([tableName, count]) => `${syncTableLabel(tableName)} ${count}件`)
+    .map(([tableName, count]) => `${tableLabel(tableName)} ${count}件`)
     .join("、")
 }

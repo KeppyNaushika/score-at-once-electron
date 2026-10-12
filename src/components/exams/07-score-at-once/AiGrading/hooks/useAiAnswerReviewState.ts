@@ -17,7 +17,7 @@ interface UseAiAnswerReviewStateOptions {
   /** 設問の自分の実行（実行の履歴で選んだ実行がまだあるかを見る） */
   runs: readonly AiGradingRunRow[]
   currentUserId: string
-  /** いま開いている AI 採点・AI チェックのタブの目的（採点指示のタブなら null）。選んだ実行はその目的のものだけが効く */
+  /** いま開いている AI採点・AIチェックのタブの目的（採点指示のタブなら null）。選んだ実行はその目的のものだけが効く */
   purpose: AiGradingStage1Purpose | null
   /** 並べ方（設問をまたいで残すので、AI採点モードの根から受け取る） */
   answerOrder: AnswerOrder

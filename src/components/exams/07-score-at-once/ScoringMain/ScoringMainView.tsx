@@ -284,7 +284,7 @@ function ScoringMainViewContent() {
         </div>
       ) : (
         <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
-          {/* 左のルーブリック項目（減点・加点方式の設問だけ。直接採点の設問では出さない） */}
+          {/* 左のルーブリック項目（減点・加点方式の設問だけ。正誤方式の設問では出さない） */}
           {rubricCropRegion && (
             <RubricPanel
               key={rubricCropRegion.id}

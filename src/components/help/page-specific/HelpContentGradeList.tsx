@@ -20,7 +20,7 @@ import {
  * 成績算出（トップページ）の使い方。
  *
  * 一覧の読み方・押し方は4つのトップページで同じ。ここに固有なのは
- * 「試験と資料の点数を集めて評定にする」場所だという説明。
+ * 「試験と資料の得点を集めて評定にする」場所だという説明。
  */
 export function HelpContentGradeList() {
   return (
@@ -31,7 +31,7 @@ export function HelpContentGradeList() {
           成績算出
         </h2>
         <p className="text-muted-foreground">
-          試験と試験外成績資料の点数を集めて、観点別評価や評定を出します。
+          試験と試験外成績資料の得点を集めて、観点別評価や評定を出します。
           学期や年度など、成績を出す単位ごとに1つ作ります。
         </p>
       </div>
@@ -50,12 +50,12 @@ export function HelpContentGradeList() {
           <StepItem
             number={2}
             title="名前の下は要約"
-            description="対象の学級・生徒数・評価項目数と、付いているタグが出ます"
+            description="対象の学級・生徒数・成績評価項目数と、付いているタグが出ます"
           />
           <StepItem
             number={3}
             title="「次のステップ」を押すと続きから"
-            description="生徒・データソース・外部成績・成績境界のうち、まだ埋まっていない段を指します"
+            description="生徒・成績評価項目・成績境界のうち、まだ埋まっていない段を指します"
           />
           <StepItem
             number={4}
@@ -70,13 +70,13 @@ export function HelpContentGradeList() {
       <div className="grid gap-6 lg:grid-cols-2">
         <HelpSection
           icon={<FolderInput className="h-5 w-5 text-purple-600" />}
-          title="作る・複製する・読み込む"
+          title="作る・複製する・取り込む"
         >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規作成</Badge>
               <Badge variant="outline">複製</Badge>
-              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">取り込み</Badge>
               <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -87,7 +87,7 @@ export function HelpContentGradeList() {
               前の学期と同じ作りで出すときは、行末の「…」から「複製」を選ぶと設定ごと写せます。
             </p>
             <p className="text-sm text-muted-foreground">
-              別の端末で作った成績算出は「読み込み」で取り込めます
+              別のPCで作った成績算出は「取り込み」から取り込めます
               <ArchiveImportFormatsNote legacyFormats=".grade" />
               。書き出しは行末の「…」から行います。
             </p>

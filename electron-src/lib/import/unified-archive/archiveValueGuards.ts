@@ -65,7 +65,7 @@ const ASB_IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
   "svg",
 ])
 
-/** AI 採点の問題の画像（取り込みで PNG か JPEG に符号化し直して保存する） */
+/** AI採点の問題の画像（取り込みで PNG か JPEG に符号化し直して保存する） */
 const AI_QUESTION_IMAGE_EXTENSIONS: ReadonlySet<string> = new Set([
   "png",
   "jpg",

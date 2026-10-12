@@ -100,7 +100,7 @@ describe("getCourseworkStatus", () => {
   it("生徒だけ登録されているときは評価項目を指す", () => {
     const status = getCourseworkStatus(buildCoursework(1, 0))
 
-    expect(status.text).toBe("評価項目の設定")
+    expect(status.text).toBe("資料評価項目の設定")
     expect(status.url).toBe(urlOfStep(3))
   })
 
@@ -116,7 +116,7 @@ describe("getCourseworkStatus", () => {
     // 試験・成績が最後の段を指し続けるのと同じく、ここが行き止まりになる
     const status = getCourseworkStatus(buildCoursework(2, 1))
 
-    expect(status.text).toBe("点数の入力")
+    expect(status.text).toBe("得点の入力")
     expect(status.url).toBe(urlOfStep(4))
   })
 })

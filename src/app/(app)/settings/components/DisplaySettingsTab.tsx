@@ -21,11 +21,11 @@ import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
   SCORING_COLOR_PRESETS,
-  SCORING_STATUS_LABELS,
   SCORING_STATUS_ORDER,
   toScoringStatusColors,
   toStatusColorValues,
 } from "@/lib/scoringStatusColors"
+import { SCORING_STATUS_LABELS } from "@/lib/shared/scoringStatusLabels"
 import { parsePreference } from "@/lib/userPreferences"
 import { cn } from "@/lib/utils"
 import {

@@ -13,13 +13,13 @@ import {
   type QuestioningStepState,
 } from "./questioningSteps"
 
-/** AI 採点か、AI チェックか */
+/** AI採点か、AIチェックか */
 export type QuestioningMode = "grade" | "check"
 
 export interface QuestioningReviewSummary {
   /** 確定で点が付く答案（受験者。重なりは1件） */
   scoredExamStudentIds: string[]
-  /** そのうち、いま自分の採点がある答案（AI 採点で置き換わるもの） */
+  /** そのうち、いま自分の採点がある答案（AI採点で置き換わるもの） */
   overwrittenExamStudentIds: string[]
   /** 下書きで「その他：再採点を指示」と答えた問いの数 */
   instructionCount: number

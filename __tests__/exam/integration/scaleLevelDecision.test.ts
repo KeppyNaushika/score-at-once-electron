@@ -149,7 +149,7 @@ describe("類型の確定", () => {
 
   it("別の類型評価の類型は拒む", async () => {
     await expect(decide({ scaleLevelId: foreignLevel.id })).rejects.toThrow(
-      /この設問の類型評価の類型ではありません/
+      /この設問の類型表の類型ではありません/
     )
     expect(await findDecision()).toBeNull()
   })

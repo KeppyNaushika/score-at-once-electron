@@ -32,7 +32,7 @@ interface AiGradingDefaultsSectionProps {
 }
 
 /**
- * AI 採点の実行の既定値（送信先・モデル・Effort・処理）。「既定値」タブに置く。
+ * AI採点の実行の既定値（送信先・モデル・Effort・処理）。「既定値」タブに置く。
  * 07 の実行のダイアログは、開いたときにここの値を選んだ状態から始まる
  */
 export function AiGradingDefaultsSection({

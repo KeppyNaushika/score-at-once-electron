@@ -182,7 +182,7 @@ describe("受験生徒ごとの採点担当", () => {
         assigned: true,
         requestedByUserId: grader.id,
       })
-    ).rejects.toThrow(/試験の所有者（OWNER）のみ/)
+    ).rejects.toThrow("採点担当の割り当ては所有者だけが行えます")
     expect(await testPrisma.examStudentAssignment.count()).toBe(0)
   })
 

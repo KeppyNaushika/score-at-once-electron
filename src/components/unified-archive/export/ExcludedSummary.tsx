@@ -1,6 +1,7 @@
 "use client"
 
-import { archiveTableLabel } from "../archiveTableLabels"
+import { tableLabel } from "@/lib/shared/tableLabels"
+
 import {
   type ArchiveEntityCatalog,
   archiveEntityLabel,
@@ -53,7 +54,7 @@ export function ExcludedSummary({
       <h3 className="font-semibold">含めないもの</h3>
       {excludedGroups.map((group) => (
         <p key={group.kind}>
-          <span className="font-medium">{archiveTableLabel(group.kind)}:</span>{" "}
+          <span className="font-medium">{tableLabel(group.kind)}:</span>{" "}
           {group.ids
             .map((id) => archiveEntityLabel(catalog, group.kind, id))
             .join("、")}
@@ -63,9 +64,7 @@ export function ExcludedSummary({
         <p>
           <span className="font-medium">書き出されなくなる行:</span>{" "}
           {excludedTableCounts
-            .map(
-              ([table, rowCount]) => `${archiveTableLabel(table)} ${rowCount}件`
-            )
+            .map(([table, rowCount]) => `${tableLabel(table)} ${rowCount}件`)
             .join("、")}
         </p>
       )}

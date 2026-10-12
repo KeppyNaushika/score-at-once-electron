@@ -86,7 +86,7 @@ interface AnswerGridViewProps {
   /** マスの類型の見せ方（類型評価の設問の類型） */
   scaleAppearanceOf?: (answer: GridAnswerItem) => ScaleCellAppearance | null
   /**
-   * 助言の朱書きの下見（重なった助言の決まりを選ぶとき・AI 採点の問いかけで助言を直すとき）。
+   * 助言の朱書きの下見（重なった助言の決まりを選ぶとき・AI採点の問いかけで助言を直すとき）。
    * 配列を返した答案は、保存した助言の朱書き（`isRubricAdvice`）の代わりにこれを描く（空なら助言の
    * 朱書きを描かない）。undefined を返した答案は保存したまま。手で書いた注釈はそのまま描く
    */

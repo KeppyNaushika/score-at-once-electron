@@ -188,7 +188,7 @@ export function GradeItemComparisons({
             setSelectedGradeItemId("")
           }}
           placeholder="成績算出を選択"
-          searchPlaceholder="成績算出名・基準日で検索"
+          searchPlaceholder="成績算出名・成績算出日で検索"
           emptyText="該当する成績算出がありません"
           aria-label="比較相手の成績算出"
           className="h-8 w-64"
@@ -202,8 +202,8 @@ export function GradeItemComparisons({
             <SelectValue
               placeholder={
                 selectedGrade && selectableGradeItems.length === 0
-                  ? "選べる評価項目がありません"
-                  : "評価項目を選択"
+                  ? "選べる成績評価項目がありません"
+                  : "成績評価項目を選択"
               }
             />
           </SelectTrigger>

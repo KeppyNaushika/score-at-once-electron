@@ -168,7 +168,7 @@ export function AnswerSheetDefinitionDetail({
         isReloadingTags={isReloadingTags}
         onReplaceTags={handleReplaceTags}
         canEdit={isOwner}
-        editDisabledReason={`編集できるのは担当の${ownerName ?? "利用者"}さんだけです。`}
+        editDisabledReason={`編集できるのは担当の${ownerName ?? "ユーザー"}さんだけです。`}
         stats={stats}
         tabs={answerSheetBuilderWorkflowTabs}
         entityHref={`/answer-sheet-builder/${definitionId}`}

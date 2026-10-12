@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 「3. 領域情報」の表（`RegionDetailsTable`）の検査。
+ * 「3. 領域設定」の表（`RegionDetailsTable`）の検査。
  *
  * 見るのは**選択（ハイライト）が意図どおり点くこと**と、**この表が担当を持たない
  * こと**の3つ。
@@ -138,7 +138,7 @@ function rowOf(cropRegionId: string): HTMLElement {
   return row
 }
 
-describe("領域情報テーブルの選択", () => {
+describe("領域設定テーブルの選択", () => {
   it("入力欄を押すと選択が点き、同じ操作で消えない", async () => {
     const user = userEvent.setup()
     render(<RegionTableHarness regions={[REGION_A, REGION_B]} />, {

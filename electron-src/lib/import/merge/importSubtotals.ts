@@ -114,7 +114,7 @@ export async function processSubtotals(
   // スキップされた小計の警告を出力
   for (const [groupName, subtotalNames] of Object.entries(skippedByGroup)) {
     warnings.push(
-      `小計グループ「${groupName}」がスキップされたため、配下の小計項目（${subtotalNames.join("、")}）もスキップされました`
+      `小計点グループ「${groupName}」がスキップされたため、配下の小計項目（${subtotalNames.join("、")}）もスキップされました`
     )
   }
 
@@ -228,7 +228,7 @@ export async function processCropSubtotals(
 
   if (skippedCount > 0) {
     warnings.push(
-      `${skippedCount}件の設問-小計の紐づけがスキップされました（関連データがインポートされなかったため）`
+      `${skippedCount}件の設問-小計の紐づけがスキップされました（関連データが取り込まれなかったため）`
     )
   }
 }

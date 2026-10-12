@@ -23,12 +23,12 @@ export function buildArchiveGradeImpactMessage(
   const frozenNotes: string[] = []
   if (hasKeptFrozen) {
     frozenNotes.push(
-      "「確定済み」の評価項目は、確定した値のまま変わりません。取り込むと、成績算出に「確定後に元データが変わっています」と表示され、確定し直すまで新しい値は成績に反映されません。"
+      "「固定済み」の成績評価項目は、固定値のまま変わりません。取り込むと、成績算出に「固定後に元データが変わっています」と表示され、固定し直すまで新しい値は成績に反映されません。"
     )
   }
   if (hasReplacedFrozen) {
     frozenNotes.push(
-      "「確定した値を置き換え」の評価項目は、確定した値そのものがアーカイブの値に置き換わります。"
+      "「固定値を置き換え」の成績評価項目は、固定値そのものがアーカイブの値に置き換わります。"
     )
   }
   return {
@@ -38,19 +38,19 @@ export function buildArchiveGradeImpactMessage(
         ? "成績算出の値は変わりません。"
         : "この取り込みで、次の成績算出の値が変わります。取り込んだ後は、各成績算出の結果を確認してください。",
     /**
-     * 確定済みの評価項目があるときの注意。無ければ null（確定の話は出さない。出すと、
-     * 確定済みの値があって守られるかのように読めるため）
+     * 固定済みの成績評価項目があるときの注意。無ければ null（固定の話は出さない。出すと、
+     * 固定値があって守られるかのように読めるため）
      */
     frozenNote: frozenNotes.length > 0 ? frozenNotes.join("") : null,
   }
 }
 
-/** 評価項目の名前に添える印。確定済みでなければ null */
+/** 成績評価項目の名前に添える印。固定済みでなければ null */
 export function archiveGradeItemImpactBadge(
   item: ArchiveGradeItemImpact
 ): string | null {
   if (!item.frozen) return null
-  return item.frozenScoresReplaced ? "確定した値を置き換え" : "確定済み"
+  return item.frozenScoresReplaced ? "固定値を置き換え" : "固定済み"
 }
 
 /** 評価項目より大きな単位で変わること（名簿・成績算出の設定） */
@@ -58,7 +58,7 @@ export function archiveGradeWideChanges(impact: ArchiveGradeImpact): string[] {
   const lines: string[] = []
   if (impact.rosterChanged) lines.push("名簿（生徒・在籍・学級）が変わります")
   if (impact.settingsChanged) {
-    lines.push("成績算出の設定（基準日・統計対象の学級）が変わります")
+    lines.push("成績算出の設定（成績算出日・統計対象の学級）が変わります")
   }
   return lines
 }

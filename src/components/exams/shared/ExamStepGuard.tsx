@@ -65,14 +65,14 @@ export function ExamStepGuard({
     <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
       <Lock className="h-8 w-8 text-muted-foreground" />
       <p className="font-medium">
-        「{currentTab.title}」は、この試験のオーナーが使う段です
+        「{currentTab.title}」は、この試験の所有者が使う段です
       </p>
       <p className="text-sm text-muted-foreground">
         あなたはこの試験の{EXAM_ROLE_LABELS[role]}です。
         {role === "EDITOR"
           ? "採点と、許可されていれば結果出力を使えます。"
           : "結果出力を使えます。"}
-        ほかの段を使うには、オーナーに役割を変えてもらってください。
+        ほかの段を使うには、所有者に権限を変えてもらってください。
       </p>
       {destination && (
         <Button asChild>

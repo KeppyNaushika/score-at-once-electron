@@ -4,7 +4,7 @@ import { bind } from "./invoke"
 import { subscribe } from "./subscribe"
 
 /**
- * AI 採点（VLM 採点）の IPC API（プロンプト・画像の測定・実行・問いかけ）。
+ * AI採点（VLM 採点）の IPC API（プロンプト・画像の測定・実行・問いかけ）。
  *
  * 事業者の同意とキーの口は別の API にある。API キーを返すメソッドは無い。
  */

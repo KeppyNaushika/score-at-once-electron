@@ -13,7 +13,7 @@ type UseDragAndDropProps = {
   onReorder: (reordered: CropRegionRow[]) => void
 }
 
-/** 領域情報テーブルの行ドラッグ&ドロップによる並び替えを管理するフック */
+/** 領域設定テーブルの行ドラッグ&ドロップによる並び替えを管理するフック */
 export const useDragAndDrop = ({ regions, onReorder }: UseDragAndDropProps) => {
   const [dragState, setDragState] = useState<DragState>({
     draggedIndex: null,

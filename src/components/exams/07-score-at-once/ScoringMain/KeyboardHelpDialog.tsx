@@ -34,14 +34,14 @@ export function KeyboardHelpDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Keyboard className="mr-2 h-4 w-4" />
-          キーボード
+          ショートカットキー
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>キーボードショートカット</DialogTitle>
+          <DialogTitle>ショートカットキー</DialogTitle>
           <DialogDescription>
-            いま使えるキーの一覧です。キーは設定画面の「キーボード」で変えられます
+            いま使えるキーの一覧です。キーは設定画面の「ショートカットキー」で変えられます
           </DialogDescription>
         </DialogHeader>
         <div className="grid max-h-[70vh] grid-cols-2 gap-6 overflow-y-auto pr-2">
@@ -76,11 +76,11 @@ export function KeyboardHelpDialog({
                     </code>
                   </div>
                 )}
-                {/* 類型評価の設問では、同じ数字キーが部分点の代わりに類型を並び順に選ぶ */}
+                {/* 類型方式の設問では、同じ数字キーが部分点の代わりに類型を並び順に選ぶ */}
                 {section.showPartialScoreStart && (
                   <div className="flex justify-between gap-2">
                     <span>
-                      類型を選ぶ（類型評価の設問。1
+                      類型を選ぶ（類型方式の設問。1
                       が先頭の類型。正答・誤答・部分点のキーは効きません）
                     </span>
                     <code className="h-fit rounded bg-gray-100 px-2 py-1 whitespace-nowrap">

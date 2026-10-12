@@ -150,7 +150,7 @@ export function GraderAssignmentTable({
         <Users className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>設問がありません</p>
         <p className="text-sm">
-          「領域情報」タブで種類を「設問解答」にすると、ここに並びます
+          「領域設定」タブで種類を「設問」にすると、ここに並びます
         </p>
       </div>
     )
@@ -177,7 +177,7 @@ export function GraderAssignmentTable({
         )}
         {!canManage && (
           <Badge variant="outline" className="text-xs">
-            読み取り専用（担当を決められるのは試験の所有者だけです）
+            読み取り専用（担当を決められるのは所有者だけです）
           </Badge>
         )}
       </div>
@@ -318,7 +318,7 @@ export function GraderAssignmentTable({
           <li>
             • <strong>変更は自動で保存されます</strong>（逐次保存）
           </li>
-          <li>• 採点結果が食い違ったときの裁定は「8. 採点確定」で行います</li>
+          <li>• 採点の不一致の裁定は「8. 採点確定」で行います</li>
         </ul>
       </div>
     </div>

@@ -1,5 +1,5 @@
 /**
- * AI 採点で事業者へ送る文面の部品（docs/vlm-grading-design.md §3-1・§7-1）
+ * AI採点で事業者へ送る文面の部品（docs/vlm-grading-design.md §3-1・§7-1）
  *
  * 1段目（`stage1Grading.ts`）と2段目（`stage2Grouping.ts`）が共有する、節の組み方と
  * 片の並べ方を置く。送った全文は保存しないので、各段の文面の組み立てが組み立て直しの

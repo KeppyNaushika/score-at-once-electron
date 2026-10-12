@@ -177,7 +177,7 @@ export const createCourseworkItemMutation = (courseworkId: string) =>
     }) => window.electronAPI.coursework.createItem({ courseworkId, ...input }),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価項目を追加できませんでした",
+      errorMessage: "資料評価項目を追加できませんでした",
     },
   })
 
@@ -195,7 +195,7 @@ export const updateCourseworkItemMutation = (courseworkId: string) =>
     scope: { id: `coursework:${courseworkId}:items` },
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価項目を保存できませんでした",
+      errorMessage: "資料評価項目を保存できませんでした",
     },
   })
 
@@ -205,7 +205,7 @@ export const deleteCourseworkItemMutation = (courseworkId: string) =>
       window.electronAPI.coursework.deleteItem(courseworkItemId),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価項目を削除できませんでした",
+      errorMessage: "資料評価項目を削除できませんでした",
     },
   })
 
@@ -215,7 +215,7 @@ export const reorderCourseworkItemsMutation = (courseworkId: string) =>
       window.electronAPI.coursework.reorderItems(orders),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価項目の並び順を保存できませんでした",
+      errorMessage: "資料評価項目の並び順を保存できませんでした",
     },
   })
 
@@ -235,7 +235,7 @@ export const createCourseworkLetterScaleMutation = (courseworkId: string) =>
     scope: { id: `coursework:${courseworkId}:letterScales` },
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価の刻みを追加できませんでした",
+      errorMessage: "変換表の行を追加できませんでした",
     },
   })
 
@@ -246,7 +246,7 @@ export const updateCourseworkLetterScaleMutation = (courseworkId: string) =>
     scope: { id: `coursework:${courseworkId}:letterScales` },
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価の刻みを保存できませんでした",
+      errorMessage: "変換表の行を保存できませんでした",
     },
   })
 
@@ -257,7 +257,7 @@ export const deleteCourseworkLetterScaleMutation = (courseworkId: string) =>
     scope: { id: `coursework:${courseworkId}:letterScales` },
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価の刻みを削除できませんでした",
+      errorMessage: "変換表の行を削除できませんでした",
     },
   })
 
@@ -268,7 +268,7 @@ export const reorderCourseworkLetterScalesMutation = (courseworkId: string) =>
     scope: { id: `coursework:${courseworkId}:letterScales` },
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "評価の刻みの並び順を保存できませんでした",
+      errorMessage: "変換表の行の並び順を保存できませんでした",
     },
   })
 
@@ -288,7 +288,7 @@ export const upsertCourseworkScoresMutation = () =>
     scope: { id: "courseworkScores" },
     meta: {
       invalidates: [["courseworkScores"]],
-      errorMessage: "点数を保存できませんでした",
+      errorMessage: "得点を保存できませんでした",
     },
   })
 

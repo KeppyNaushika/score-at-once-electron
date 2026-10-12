@@ -168,7 +168,7 @@ export const removeExamMember = async (
       })
       if (ownerCount <= 1) {
         throw new Error(
-          "最後のオーナーは外せません。先に別の参加者をオーナーにしてください"
+          "最後の所有者は外せません。先に別の参加者を所有者にしてください"
         )
       }
     }
@@ -223,18 +223,18 @@ export const changeExamMemberRole = async (
   const actorUserId = getCurrentActorUserId()
   if (actorUserId === null) {
     throw new Error(
-      "ログインしている利用者が分からないため、役割を変更できません"
+      "ログインしているユーザーが分からないため、権限を変更できません"
     )
   }
   if ((await getUserRoleInExam(actorUserId, examId)) !== "OWNER") {
-    throw new Error("役割を変更できるのは、この試験のオーナーだけです")
+    throw new Error("権限を変更できるのは、所有者だけです")
   }
 
   const before = await prisma.userExam.findUnique({
     where: { userId_examId: { userId, examId } },
   })
   if (!before) {
-    throw new Error("この利用者は試験の参加者ではありません")
+    throw new Error("このユーザーは試験の参加者ではありません")
   }
 
   if (before.role === "OWNER" && role !== "OWNER") {
@@ -243,7 +243,7 @@ export const changeExamMemberRole = async (
     })
     if (ownerCount <= 1) {
       throw new Error(
-        "最後のオーナーはほかの役割に変えられません。先に別の参加者をオーナーにしてください"
+        "最後の所有者はほかの権限に変えられません。先に別の参加者を所有者にしてください"
       )
     }
   }
@@ -258,7 +258,7 @@ export const changeExamMemberRole = async (
   })
 
   const changes = diffFields(before, updated, [
-    { field: "role", label: "役割" },
+    { field: "role", label: "権限" },
   ])
   if (changes.length > 0) {
     const scope = await resolveExamScope(examId)
@@ -291,20 +291,18 @@ export const setExamMemberExportPermission = async (
   const actorUserId = getCurrentActorUserId()
   if (actorUserId === null) {
     throw new Error(
-      "ログインしている利用者が分からないため、結果出力の許可を変更できません"
+      "ログインしているユーザーが分からないため、結果出力の許可を変更できません"
     )
   }
   if ((await getUserRoleInExam(actorUserId, examId)) !== "OWNER") {
-    throw new Error(
-      "結果出力の許可を変更できるのは、この試験のオーナーだけです"
-    )
+    throw new Error("結果出力の許可を変更できるのは、所有者だけです")
   }
 
   const before = await prisma.userExam.findUnique({
     where: { userId_examId: { userId, examId } },
   })
   if (!before) {
-    throw new Error("この利用者は試験の参加者ではありません")
+    throw new Error("このユーザーは試験の参加者ではありません")
   }
 
   const updated = await prisma.userExam.update({
@@ -352,13 +350,11 @@ export const setExamAnonymousScoringEnforced = async (
   const actorUserId = getCurrentActorUserId()
   if (actorUserId === null) {
     throw new Error(
-      "ログインしている利用者が分からないため、匿名採点の設定を変更できません"
+      "ログインしているユーザーが分からないため、匿名採点の設定を変更できません"
     )
   }
   if ((await getUserRoleInExam(actorUserId, examId)) !== "OWNER") {
-    throw new Error(
-      "匿名採点の設定を変更できるのは、この試験のオーナーだけです"
-    )
+    throw new Error("匿名採点の設定を変更できるのは、所有者だけです")
   }
 
   const before = await prisma.exam.findUniqueOrThrow({ where: { id: examId } })

@@ -242,7 +242,7 @@ describe("roundTripFieldFidelity", () => {
       (user) => user.username === LEGACY_EXAM_EXPORTER_USERNAME
     )!
 
-    // 同じパソコンへ戻す場合を模す（利用者の id まで一致する）
+    // 同じPCへ戻す場合を模す（利用者の id まで一致する）
     const importUser = await createTestUser({ id: exporter.id })
     const { examId, warnings } = await importArchive(importUser.id)
 

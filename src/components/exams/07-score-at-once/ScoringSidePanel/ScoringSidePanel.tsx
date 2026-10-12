@@ -247,7 +247,7 @@ export function ScoringSidePanel({
       <Tabs defaultValue="scoring" className="flex h-full flex-col">
         <TabsList className="mx-4 mt-2 w-[calc(100%-2rem)] shrink-0">
           <TabsTrigger value="scoring">採点</TabsTrigger>
-          <TabsTrigger value="annotations">アノテーション</TabsTrigger>
+          <TabsTrigger value="annotations">注釈</TabsTrigger>
         </TabsList>
 
         <TabsContent value="scoring" className="flex-1 overflow-y-auto px-3">
@@ -279,7 +279,7 @@ export function ScoringSidePanel({
             onToggle={() => toggleSection("question")}
           />
 
-          {/* 採点方式（直接採点・減点方式・加点方式） */}
+          {/* 採点方式（正誤方式・減点方式・加点方式・類型方式） */}
           {currentCropRegion && (
             <ScoringMethodSection
               key={currentCropRegion.id}

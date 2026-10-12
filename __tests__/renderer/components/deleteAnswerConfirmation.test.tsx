@@ -38,7 +38,7 @@ const noScores: ConfirmedDeletionCount[] = []
 /** 採点済みの答案 */
 const scored: ConfirmedDeletionCount[] = [
   { countedName: "採点済みの設問", shownCount: 12 },
-  { countedName: "答案への書き込み", shownCount: 5 },
+  { countedName: "注釈", shownCount: 5 },
 ]
 
 /**

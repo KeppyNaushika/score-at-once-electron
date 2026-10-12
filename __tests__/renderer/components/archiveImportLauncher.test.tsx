@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 一覧の「読み込み」の振り分け（docs/unified-archive-design.md §7.6）。
+ * 一覧の「取り込み」の振り分け（docs/unified-archive-design.md §7.6）。
  *
  * ファイル選択（main）が返す種類で、開く取り込み画面が決まることを確かめる。
  * 取り込み画面そのものは差し替え、どの画面が・どの始まりで開いたかだけを見る
@@ -134,7 +134,7 @@ beforeEach(() => {
   })
 })
 
-/** 一覧と同じ置き方（ツールバーの「読み込み」と取り込み画面） */
+/** 一覧と同じ置き方（ツールバーの「取り込み」と取り込み画面） */
 function ListWithImport() {
   const launcher = useArchiveImportLauncher()
   const action = archiveImportToolbarAction({
@@ -158,17 +158,17 @@ function Wrapper({ children }: { children: ReactNode }) {
   )
 }
 
-/** 「読み込み」を押して、指定のファイルを選んだことにする */
+/** 「取り込み」を押して、指定のファイルを選んだことにする */
 async function chooseFile(selected: { path: string; kind: string | null }) {
   electronAPI.unifiedArchive.selectAnyImportFile.mockResolvedValue(selected)
   render(<ListWithImport />, { wrapper: Wrapper })
-  await userEvent.click(screen.getByRole("button", { name: "読み込み" }))
+  await userEvent.click(screen.getByRole("button", { name: "取り込み" }))
 }
 
-describe("「読み込み」の振り分け", () => {
-  it("ボタンは1つで、名前は「読み込み」", () => {
+describe("「取り込み」の振り分け", () => {
+  it("ボタンは1つで、名前は「取り込み」", () => {
     render(<ListWithImport />, { wrapper: Wrapper })
-    expect(screen.getByRole("button", { name: "読み込み" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "取り込み" })).toBeInTheDocument()
   })
 
   it(".sao は統合版のウィザードを、開いた結果から始める", async () => {
@@ -252,7 +252,7 @@ describe("「読み込み」の振り分け", () => {
         electronAPI.answerSheetBuilder.importDefinition
       ).toHaveBeenCalledWith("/tmp/a.asb", "user-1")
     )
-    expect(toast.success).toHaveBeenCalledWith("解答用紙を読み込みました")
+    expect(toast.success).toHaveBeenCalledWith("解答用紙を取り込みました")
     expect(screen.queryByTestId("screen")).not.toBeInTheDocument()
   })
 
@@ -260,7 +260,7 @@ describe("「読み込み」の振り分け", () => {
     await chooseFile({ path: "/tmp/a.txt", kind: null })
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "このファイルは読み込めません",
+        "このファイルは取り込めません",
         expect.anything()
       )
     )
@@ -286,7 +286,7 @@ describe("「読み込み」の振り分け", () => {
   it("選ばずに閉じたら何も開かない", async () => {
     electronAPI.unifiedArchive.selectAnyImportFile.mockResolvedValue(null)
     render(<ListWithImport />, { wrapper: Wrapper })
-    await userEvent.click(screen.getByRole("button", { name: "読み込み" }))
+    await userEvent.click(screen.getByRole("button", { name: "取り込み" }))
     await waitFor(() =>
       expect(electronAPI.unifiedArchive.selectAnyImportFile).toHaveBeenCalled()
     )

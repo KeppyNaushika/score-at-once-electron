@@ -50,7 +50,7 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
       importId: item.importId,
       displayLabel: item.displayLabel,
       suggestedExistingId: undefined,
-      matchNote: "このPCに同じ利用者なし",
+      matchNote: "このPCに同じユーザーなし",
     })),
   ]
 
@@ -69,7 +69,7 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
   // 名前と利用者名が違えば「名前（利用者名）」、同じなら名前だけ。
   // 利用者名は keywords にも載せて、利用者名でも探せるようにする
   const userOptions = [
-    { value: CREATE_NEW_USER, label: "新しい利用者として登録する" },
+    { value: CREATE_NEW_USER, label: "新しいユーザーとして登録する" },
     ...overview.allExistingUsers.map((existingUser) => ({
       value: existingUser.id,
       label:
@@ -94,7 +94,7 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
             判断が必要な採点者が{graderRows.length}名います
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            読み込んだ採点は、ここで選んだ利用者の採点として登録されます。取り込んだ人のものにはしません（誰が付けた点かが分からなくなるため）。
+            取り込む採点は、ここで選んだユーザーの採点として登録されます。取り込んだ人のものにはしません（誰が付けた点かが分からなくなるため）。
           </p>
         </CardHeader>
         <CardContent>
@@ -133,10 +133,10 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
                           value === CREATE_NEW_USER ? undefined : value,
                       })
                     }
-                    placeholder="利用者を選択"
-                    searchPlaceholder="名前・利用者名で検索"
-                    emptyText="該当する利用者がいません"
-                    aria-label={`${graderRow.displayLabel}を結ぶ利用者`}
+                    placeholder="ユーザーを選択"
+                    searchPlaceholder="名前・ユーザー名で検索"
+                    emptyText="該当するユーザーがいません"
+                    aria-label={`${graderRow.displayLabel}を結ぶユーザー`}
                     className="w-full"
                   />
                 </div>

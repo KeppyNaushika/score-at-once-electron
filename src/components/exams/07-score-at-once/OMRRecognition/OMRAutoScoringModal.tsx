@@ -174,7 +174,7 @@ export function OMRAutoScoringModal({
 
               {/* 隅のマーカーで問題のあった答案 */}
               <MarkerIssueList
-                title="マーカー検出失敗（認識していません）"
+                title="OMRマーカー検出失敗（認識していません）"
                 sheets={markerFailedSheets}
                 tone="error"
               />

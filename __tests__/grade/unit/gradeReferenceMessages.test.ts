@@ -197,10 +197,10 @@ describe("buildDeletionBlockedMessage", () => {
       "この試験は次の成績算出で使われているため、削除できません。"
     )
     expect(message).toContain(
-      "・成績算出「1学期成績」の評価項目「知識・技能」のデータソース「中間」"
+      "・成績算出「1学期成績」の成績評価項目「知識・技能」のデータソース「中間」"
     )
     expect(message).toContain(
-      "・成績算出「2学期成績」の評価項目「知識・技能」のデータソース「問1」"
+      "・成績算出「2学期成績」の成績評価項目「知識・技能」のデータソース「問1」"
     )
   })
 
@@ -218,7 +218,7 @@ describe("buildDeletionBlockedMessage", () => {
       "この小計点グループは次の成績算出で使われているため、削除できません。"
     )
     expect(message).toContain(
-      "・成績算出「1学期成績」の評価項目「知識・技能」のデータソース「計算」"
+      "・成績算出「1学期成績」の成績評価項目「知識・技能」のデータソース「計算」"
     )
   })
 })
@@ -261,9 +261,11 @@ describe("buildItemDeletionWarning", () => {
     ])
     expect(message).toContain("データソース「問1」（この設問）が削除されます")
     expect(message).toContain(
-      "データソース「中間テスト」（試験の合計点）の点数が変わります"
+      "データソース「中間テスト」（試験の合計点）の得点が変わります"
     )
-    expect(message).toContain("データソース「計算」（小計）の点数が変わります")
+    expect(message).toContain(
+      "データソース「計算」（小計点）の得点が変わります"
+    )
   })
 
   it("評価項目: そのものを使うデータソースは参照先を失い、資料合計は変わる", () => {
@@ -272,10 +274,10 @@ describe("buildItemDeletionWarning", () => {
       total(dataSource({ name: "課題合計", type: "coursework_total" })),
     ])
     expect(message).toContain(
-      "データソース「提出物」（この評価項目）が参照先を失い、点数を取り込めなくなります"
+      "データソース「提出物」（この資料評価項目）が参照先を失い、得点を取り込めなくなります"
     )
     expect(message).toContain(
-      "データソース「課題合計」（資料合計）の点数が変わります"
+      "データソース「課題合計」（資料の合計点）の得点が変わります"
     )
   })
 
@@ -299,7 +301,7 @@ describe("buildItemDeletionWarning（模範解答ページ）", () => {
       "データソース「問1」（このページの設問）が削除されます"
     )
     expect(message).toContain(
-      "データソース「中間テスト」（試験の合計点）の点数が変わります"
+      "データソース「中間テスト」（試験の合計点）の得点が変わります"
     )
   })
 })
@@ -317,7 +319,7 @@ describe("buildRosterRemovalWarning", () => {
     ])
     expect(message).toBe(
       "この試験は次の成績算出で使われています。" +
-        "受験生徒から外した生徒は、各成績算出でこの試験の点数が欠測になります" +
+        "受験生徒から外した生徒は、各成績算出でこの試験の得点が欠測になります" +
         "（その成績算出の名簿に載っている場合）。\n" +
         "・成績算出「A」\n" +
         "・成績算出「B」"
@@ -330,7 +332,7 @@ describe("buildRosterRemovalWarning", () => {
         dataSource({ type: "coursework_total" }),
       ])
     ).toContain(
-      "対象生徒から外した生徒は、各成績算出でこの試験外成績資料の点数が欠測になります"
+      "対象生徒から外した生徒は、各成績算出でこの試験外成績資料の得点が欠測になります"
     )
   })
 })

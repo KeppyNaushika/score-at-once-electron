@@ -234,7 +234,7 @@ describe("ClassroomRemovalDialog", () => {
     )
     expect(screen.getByRole("alertdialog").textContent).toContain("3件 → 4件")
     expect(screen.getByRole("alertdialog").textContent).not.toContain(
-      "所属する 3名"
+      "在籍する 3名"
     )
 
     // もう一度押したときに消えるのは、本文が言っている4名

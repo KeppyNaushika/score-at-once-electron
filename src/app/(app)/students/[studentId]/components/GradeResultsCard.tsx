@@ -116,8 +116,8 @@ export function GradeResultsCard({
                     <Table>
                       <TableHeader className="bg-card">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead>評価項目</TableHead>
-                          <TableHead className="w-28">評価</TableHead>
+                          <TableHead>成績評価項目</TableHead>
+                          <TableHead className="w-28">成績評価記号</TableHead>
                           <TableHead className="w-36">得点</TableHead>
                           <TableHead className="w-24">得点率</TableHead>
                           <TableHead className="w-40" />
@@ -179,7 +179,7 @@ export function GradeResultsCard({
                                       className="gap-1 text-xs"
                                     >
                                       <Lock className="h-3 w-3" />
-                                      確定
+                                      固定
                                       {gradeItemResult.frozen.isStale &&
                                         "（要確認）"}
                                     </Badge>

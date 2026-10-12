@@ -21,7 +21,7 @@ import {
 } from "./utils/runHistory"
 
 interface AiRunHistorySectionProps {
-  /** 出す実行の目的（AI 採点のタブは grade、AI チェックのタブは check） */
+  /** 出す実行の目的（AI採点のタブは grade、AIチェックのタブは check） */
   purpose: AiGradingStage1Purpose
   runs: AiGradingRunRow[]
   questionScores: QuestionScoreRow[]
@@ -55,7 +55,7 @@ const HISTORY_TITLES: Record<AiGradingStage1Purpose, string> = {
 }
 
 /**
- * 設問の実行の履歴（設計 §3-3・§10）。AI 採点・AI チェックのタブの下に、そのタブの目的の
+ * 設問の実行の履歴（設計 §3-3・§10）。AI採点・AIチェックのタブの下に、そのタブの目的の
  * 自分の実行を新しい順に並べ（番号は目的ごとに古い順に 1 から）、押した実行の判定を
  * 一覧に出す（その実行に判定の無い答案は、いつもどおり最新の判定）。一致率は自分の採点と
  * 同じ判定だった割合で、設定の良し悪しを見比べるのに使う

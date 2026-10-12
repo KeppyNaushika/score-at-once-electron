@@ -21,13 +21,13 @@ const OPTIONAL_ITEMS: readonly {
 }[] = [
   {
     value: "userSettings",
-    label: "利用者個人の設定",
-    description: "書き出しに入る利用者の、ショートカットや表示の設定",
+    label: "ユーザーごとの設定",
+    description: "書き出しに入るユーザーの、ショートカットキーや表示の設定",
   },
   {
     value: "appPreference",
-    label: "組織の設定",
-    description: "全員で共通の設定",
+    label: "全員で共通の設定",
+    description: "操作履歴を残す期間・年度など、全員で1つの設定",
   },
   {
     value: "auditLog",

@@ -61,7 +61,7 @@ export async function extractLegacyExamArchive(
 /** 試験の固定ファイルで、書き出した本人の利用者名（固定ファイルを作るときに付けた） */
 export const LEGACY_EXAM_EXPORTER_USERNAME = "exporter"
 
-/** users.json の利用者を、同じ id のままこの DB に作る（＝書き出したパソコンを模す） */
+/** users.json の利用者を、同じ id のままこの DB に作る（＝書き出したPCを模す） */
 export async function createUsersFromArchive(
   usersData: ArchiveUsersData
 ): Promise<void> {
@@ -79,7 +79,7 @@ export async function createUsersFromArchive(
 }
 
 /**
- * 試験の固定ファイルの中身を、空の DB に「書き出したパソコンの状態」として作る。
+ * 試験の固定ファイルの中身を、空の DB に「書き出したPCの状態」として作る。
  *
  * 利用者を同じ id で作り、書き出した本人として取り込む。試験・生徒・学級・
  * 採点などの行は固定ファイルの id のまま入るので、続けて同じ固定ファイルを
@@ -131,7 +131,7 @@ export async function readLegacyGradeArchive(
 
 /**
  * 資料アーカイブの各セクションの行を、そのままの id・時刻でこの DB に作る
- * （＝書き出したパソコンの状態を模す）。生徒・学級・所属・タグも含む。
+ * （＝書き出したPCの状態を模す）。生徒・学級・所属・タグも含む。
  *
  * .grade に内包される資料（`courseworkArchive`）も同じ形なので、これで作れる。
  */

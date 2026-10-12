@@ -174,7 +174,7 @@ export function ArchiveMatchRow({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="existing">
-                      このパソコンの id に合わせる
+                      このPCの id に合わせる
                     </SelectItem>
                     <SelectItem value="archive">
                       アーカイブの id に合わせる
@@ -184,8 +184,7 @@ export function ArchiveMatchRow({
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                このパソコンの id
-                に合わせます（別で追加では既存のものに触りません）
+                このPCの id に合わせます（別で追加では既存のものに触りません）
               </p>
             )}
           </div>

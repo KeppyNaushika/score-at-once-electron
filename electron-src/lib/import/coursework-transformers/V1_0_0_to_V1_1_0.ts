@@ -42,7 +42,7 @@ export class V1_0_0_to_V1_1_0_Transformer implements CourseworkVersionTransforme
     ]
     if (discardedScoreCount > 0) {
       warnings.push(
-        `1.0.0→1.1.0: 対象生徒として登録されていない生徒の点数 ${discardedScoreCount} 件を破棄しました`
+        `1.0.0→1.1.0: 対象生徒として登録されていない生徒の得点 ${discardedScoreCount} 件を破棄しました`
       )
     }
 

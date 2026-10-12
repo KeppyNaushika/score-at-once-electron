@@ -110,8 +110,8 @@ export function ClassroomExamManager({
       removalMode="unlink-only"
       description={
         <>
-          再採番（並べ替え・出席番号）の対象クラスを管理します。生徒の追加は「生徒を追加」から行います。
-          {entries.length > 0 && <> • 再採番対象: {administeredCount}クラス</>}
+          再採番（並べ替え・出席番号）の対象の学級を管理します。生徒の追加は「生徒を追加」から行います。
+          {entries.length > 0 && <> • 再採番対象: {administeredCount}学級</>}
         </>
       }
       emptyHint="「学級を追加」ボタンから学級を追加してください"

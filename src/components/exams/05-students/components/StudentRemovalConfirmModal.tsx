@@ -94,7 +94,7 @@ export default function StudentRemovalConfirmModal({
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
                     {placementByStudent[examStudent.studentId]?.classroom
-                      ?.name ?? "未所属"}
+                      ?.name ?? "未在籍"}
                   </Badge>
                 </div>
               </div>

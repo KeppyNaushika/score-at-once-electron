@@ -61,7 +61,7 @@ export async function cleanupTestDatabase(): Promise<void> {
   await prisma.courseworkClassroom.deleteMany()
   await prisma.courseworkStudent.deleteMany()
   await prisma.coursework.deleteMany()
-  // AI 採点（試行は採点行・注釈を指すので、それより先に消す）
+  // AI採点（試行は採点行・注釈を指すので、それより先に消す）
   await prisma.aiGradingAttempt.deleteMany()
   await prisma.aiGradingRun.deleteMany()
   await prisma.aiPrompt.deleteMany()
