@@ -1,19 +1,19 @@
 /**
  * 統合アーカイブ（.sao）を書き出す
  *
- * 範囲を決め（`archiveScopeResolver.ts`）、範囲の行だけを持つ DB を書き
- * （`archiveDatabaseWriter.ts`）、その DB が指すファイルと manifest.json を ZIP に詰める。
- * ZIP の形は docs/unified-archive-design.md §4。
+ * 範囲を決め（`archiveScopeResolver.ts`）、範囲の行だけを持つ DB をメモリ上に作り
+ * （`archiveDatabaseWriter.ts`）、その DB が指すファイルと manifest.json を ZIP に詰める
+ * （`archiveZipWriter.ts`）。ZIP の形は docs/unified-archive-design.md §4。
+ *
+ * デスクトップ版（main の作業者）と web 版（Worker）で同じコードが動く。ファイルは
+ * `fs/promises` だけで読み書きし、作業用の一時ファイルは作らない。
  *
  * electron（app・dataManager）には依存しない。DB とデータディレクトリの場所、アプリの版は
  * 呼び出し側が渡す。
  */
 
-import { ZipArchive, type ZipEntryData } from "archiver"
 import Database from "better-sqlite3"
-import * as fs from "fs"
 import * as fsPromises from "fs/promises"
-import * as os from "os"
 import * as path from "path"
 
 import {
@@ -26,7 +26,7 @@ import {
 } from "../../../../src/types/unifiedArchive.types"
 import { pathExists } from "../../pathExists"
 import { hasTable, type SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
-import { writeArchiveDatabase } from "./archiveDatabaseWriter"
+import { buildArchiveDatabase } from "./archiveDatabaseWriter"
 import {
   collectArchiveFilePaths,
   resolveArchiveFile,
@@ -37,6 +37,7 @@ import {
   loadScopeRows,
   resolveArchiveScope,
 } from "./archiveScopeResolver"
+import { createArchiveZipWriter } from "./archiveZipWriter"
 
 export type UnifiedArchiveExportPhase =
   "resolvingScope" | "writingDatabase" | "packing"
@@ -51,11 +52,6 @@ export interface CreateUnifiedArchiveOptions {
   exportedByUserId: string | null
   appVersion: string
   onProgress?: (phase: UnifiedArchiveExportPhase) => void
-  /**
-   * 作業用のディレクトリを作る場所。既定は OS の一時ディレクトリ。作業者で書き出すとき、
-   * 作業者が途中で終わっても作りかけを main が消せるよう、main が用意した場所を渡す
-   */
-  temporaryDirectory?: string
   /** テスト用。既定は現在時刻 */
   now?: () => Date
 }
@@ -134,21 +130,13 @@ const readRowCounts = (db: SqliteDatabase): Record<string, number> => {
   return rowCounts
 }
 
-const readArchiveDatabase = (databasePath: string): ArchiveDatabaseContents => {
-  const archive = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  })
-  try {
-    return {
-      lastMigration: readLastMigration(archive),
-      rowCounts: readRowCounts(archive),
-      filePaths: collectArchiveFilePaths(archive),
-    }
-  } finally {
-    archive.close()
-  }
-}
+const readArchiveDatabase = (
+  archive: SqliteDatabase
+): ArchiveDatabaseContents => ({
+  lastMigration: readLastMigration(archive),
+  rowCounts: readRowCounts(archive),
+  filePaths: collectArchiveFilePaths(archive),
+})
 
 /**
  * DB が指すファイルを、同梱するものと欠けているものに分ける。欠けていても書き出しは続け、
@@ -224,66 +212,39 @@ const buildManifest = (
 }
 
 /**
- * ZIP を書く。失敗したら作りかけの出力を消してから reject する。出力は `wx` で開き、
+ * ZIP を書く。失敗したら作りかけの出力を消してから投げる。出力は `wx` で作り、
  * 確かめたあとに別の誰かが置いたファイルを上書きしない（その場合は消しもしない）
  */
-const packArchive = (
+const packArchive = async (
   outputPath: string,
   manifest: UnifiedArchiveManifest,
-  databasePath: string,
+  databaseImage: Uint8Array,
   packedFiles: readonly PackedFile[]
-): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const output = fs.createWriteStream(outputPath, { flags: "wx" })
-    const archive = new ZipArchive({ zlib: { level: 9 } })
-    let opened = false
-    let failure: Error | null = null
-
-    const fail = (error: Error): void => {
-      if (failure) return
-      failure = error
-      archive.abort()
-      output.destroy()
-    }
-
-    output.on("open", () => {
-      opened = true
-    })
-    output.on("close", () => {
-      if (!failure) {
-        resolve()
-        return
-      }
-      if (!opened) {
-        reject(failure)
-        return
-      }
-      const failed = failure
-      fsPromises.rm(outputPath, { force: true }).then(
-        () => reject(failed),
-        () => reject(failed)
-      )
-    })
-    output.on("error", fail)
-    archive.on("error", fail)
-    // 同梱するファイルは確かめてあるので、ここでの警告（消えた等）は manifest と食い違う
-    archive.on("warning", fail)
-
-    archive.pipe(output)
-    archive.append(JSON.stringify(manifest, null, 2), {
-      name: UNIFIED_ARCHIVE_MANIFEST_NAME,
-    })
-    archive.file(databasePath, { name: UNIFIED_ARCHIVE_DATABASE_NAME })
+): Promise<void> => {
+  const writer = await createArchiveZipWriter(outputPath)
+  try {
+    await writer.add(
+      UNIFIED_ARCHIVE_MANIFEST_NAME,
+      Buffer.from(JSON.stringify(manifest, null, 2), "utf8"),
+      "deflate"
+    )
+    await writer.add(UNIFIED_ARCHIVE_DATABASE_NAME, databaseImage, "deflate")
     for (const packedFile of packedFiles) {
-      // 画像は既に圧縮されているので、縮めずに入れる
-      const storedEntry: ZipEntryData = {
-        name: packedFile.zipPath,
-        store: true,
-      }
-      archive.file(packedFile.absolutePath, storedEntry)
+      // 画像は既に圧縮されているので、縮めずに入れる。同梱するファイルは確かめてあるので、
+      // ここで読めない（消えた等）なら manifest と食い違う。書き出しを失敗させる
+      await writer.add(
+        packedFile.zipPath,
+        await fsPromises.readFile(packedFile.absolutePath),
+        "store"
+      )
     }
-    archive.finalize().catch(fail)
-  })
+    await writer.finish()
+  } catch (error) {
+    await writer.discard().catch(() => undefined)
+    await fsPromises.rm(outputPath, { force: true }).catch(() => undefined)
+    throw error
+  }
+}
 
 /**
  * 選んだ範囲の統合アーカイブを `outputPath` に書き出す。
@@ -298,28 +259,27 @@ export async function createUnifiedArchive(
   }
   await fsPromises.mkdir(path.dirname(outputPath), { recursive: true })
 
-  const workDirectory = await fsPromises.mkdtemp(
-    path.join(options.temporaryDirectory ?? os.tmpdir(), "sao-export-")
+  onProgress?.("resolvingScope")
+  const scope = resolveScopeFromSource(
+    options.sourceDatabasePath,
+    options.selection
   )
+
+  onProgress?.("writingDatabase")
+  const archive = buildArchiveDatabase(options.sourceDatabasePath, scope)
+  let contents: ArchiveDatabaseContents
+  let databaseImage: Buffer
   try {
-    onProgress?.("resolvingScope")
-    const scope = resolveScopeFromSource(
-      options.sourceDatabasePath,
-      options.selection
-    )
-
-    onProgress?.("writingDatabase")
-    const databasePath = path.join(workDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
-    await writeArchiveDatabase(options.sourceDatabasePath, databasePath, scope)
-    const contents = readArchiveDatabase(databasePath)
-    const files = await resolveFiles(options.dataDirectory, contents.filePaths)
-    const exportedAt = (options.now ?? (() => new Date()))()
-    const manifest = buildManifest(options, scope, contents, files, exportedAt)
-
-    onProgress?.("packing")
-    await packArchive(outputPath, manifest, databasePath, files.packed)
-    return { outputPath, manifest }
+    contents = readArchiveDatabase(archive)
+    databaseImage = archive.serialize()
   } finally {
-    await fsPromises.rm(workDirectory, { recursive: true, force: true })
+    archive.close()
   }
+  const files = await resolveFiles(options.dataDirectory, contents.filePaths)
+  const exportedAt = (options.now ?? (() => new Date()))()
+  const manifest = buildManifest(options, scope, contents, files, exportedAt)
+
+  onProgress?.("packing")
+  await packArchive(outputPath, manifest, databaseImage, files.packed)
+  return { outputPath, manifest }
 }

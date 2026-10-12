@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
@@ -194,13 +195,8 @@ export const miscHandlers = {
   },
 
   "resolve-file-protocol-path": async (relativePath: string) => {
-    // パスを適切にエンコード
-    // appimg:/// (スラッシュ3つ) にすることで、URLパース時にpathname全体が取得できる
-    // renderer 側の同じ規則は src/lib/appImageUrl.ts（あちらはエンコードしない）
-    const encodedPath = encodeURI(relativePath)
-    const result = `appimg:///${encodedPath}`
-
-    return result
+    // 規則は renderer と同じ src/lib/appImageUrl.ts（web 版では Worker でも web の URL になる）
+    return toAppImageUrl(encodeURI(relativePath))
   },
 
   "get-student-answer-images-by-exam-id": (examId: string) =>

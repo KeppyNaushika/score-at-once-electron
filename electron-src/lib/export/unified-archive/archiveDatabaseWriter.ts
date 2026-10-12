@@ -1,7 +1,8 @@
 /**
  * 統合アーカイブ（.sao）の中身の DB を書く
  *
- * 元の DB を `VACUUM INTO` で複製し、範囲（`archiveScopeResolver.ts`）に入らない行を消す。
+ * 元の DB の中身をメモリ上に複製し（`serialize`。デスクトップ版と web 版で同じ形で動く。
+ * `archiveDatabaseImage.ts`）、範囲（`archiveScopeResolver.ts`）に入らない行を消す。
  * スキーマは元の DB と同じで、`_prisma_migrations` も残す（取り込み側はこれで版を知り、
  * 足りない migration を当てる。docs/unified-archive-design.md §4）。
  *
@@ -10,10 +11,9 @@
  */
 
 import Database from "better-sqlite3"
-import * as fsPromises from "fs/promises"
 
-import { pathExists } from "../../pathExists"
 import type { SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
+import { openDatabaseImage } from "./archiveDatabaseImage"
 import type { ArchiveScope } from "./archiveScopeResolver"
 import { ARCHIVE_TABLES } from "./archiveTableRegistry"
 
@@ -133,30 +133,26 @@ const assertReferencesClosed = (db: SqliteDatabase): void => {
 }
 
 /**
- * `sourcePath` の DB から、`scope` に入る行だけを持つ DB を `outputPath` に書く。
- * `outputPath` が既にあれば失敗する（上書きしない）。
+ * `sourcePath` の DB から、`scope` に入る行だけを持つメモリ上の DB を作って返す。
+ * 閉じるのは呼び出し側（中身は `serialize()` で取り出す）
  */
-export async function writeArchiveDatabase(
+export function buildArchiveDatabase(
   sourcePath: string,
-  outputPath: string,
   scope: ArchiveScope
-): Promise<void> {
-  if (await pathExists(outputPath)) {
-    throw new Error(`書き出し先が既にあります: ${outputPath}`)
-  }
+): SqliteDatabase {
   const source = new Database(sourcePath, {
     readonly: true,
     fileMustExist: true,
   })
+  let sourceImage: Buffer
   try {
-    source.prepare<[string]>("VACUUM INTO ?").run(outputPath)
+    sourceImage = source.serialize()
   } finally {
     source.close()
   }
 
-  const archive = new Database(outputPath)
+  const archive = openDatabaseImage(sourceImage, { readonly: false })
   try {
-    archive.pragma("journal_mode = DELETE")
     archive.pragma("foreign_keys = OFF")
     dropNonApplicationObjects(archive)
     assertAllTablesRegistered(archive)
@@ -168,8 +164,7 @@ export async function writeArchiveDatabase(
     archive.exec("VACUUM")
   } catch (error) {
     archive.close()
-    await fsPromises.rm(outputPath, { force: true })
     throw error
   }
-  archive.close()
+  return archive
 }

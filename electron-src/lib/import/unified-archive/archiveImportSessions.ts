@@ -8,12 +8,15 @@
  * electron には依存しない。migration の場所と、表・列を比べる相手の DB は呼び出し側が渡す。
  */
 
-import Database from "better-sqlite3"
 import * as crypto from "crypto"
 import * as fsPromises from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 
+import {
+  openDatabaseFile,
+  writeDatabaseFile,
+} from "../../export/unified-archive/archiveDatabaseImage"
 import { convertArchiveAnswerOverlayLengths } from "../../prisma/answerOverlayLengthConversion"
 import {
   openUnifiedArchive,
@@ -55,9 +58,10 @@ interface OpenUnifiedArchiveImportSessionOptions {
 const finishOpenedArchiveMigration = async (
   opened: OpenedUnifiedArchive
 ): Promise<void> => {
-  const db = new Database(opened.databasePath, { fileMustExist: true })
+  const db = await openDatabaseFile(opened.databasePath, { readonly: false })
   try {
     await convertArchiveAnswerOverlayLengths(db, opened.filesDirectory)
+    await writeDatabaseFile(db, opened.databasePath, { exclusive: false })
   } finally {
     db.close()
   }

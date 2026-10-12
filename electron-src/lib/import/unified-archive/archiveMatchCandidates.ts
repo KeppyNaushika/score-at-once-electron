@@ -13,8 +13,7 @@
  *   「学籍番号が一致」のような文言は renderer が `matchedBy` から作る
  */
 
-import Database from "better-sqlite3"
-
+import { openDatabaseFile } from "../../export/unified-archive/archiveDatabaseImage"
 import { groupByHumanKey } from "../humanKeyMatching"
 import type { ArchiveTargetConnection } from "./archiveRowImporter"
 import type { ArchiveMatchDecision, OpenedUnifiedArchive } from "./types"
@@ -151,12 +150,11 @@ const createdAtOf = (columnValue: unknown): Date => {
 }
 
 /** archive.db から照合する表の行を読む（表が無ければ空） */
-const readArchiveMatchRows = (
+const readArchiveMatchRows = async (
   databasePath: string
-): Map<ArchiveMatchTable, Record<string, unknown>[]> => {
-  const archiveDatabase = new Database(databasePath, {
+): Promise<Map<ArchiveMatchTable, Record<string, unknown>[]>> => {
+  const archiveDatabase = await openDatabaseFile(databasePath, {
     readonly: true,
-    fileMustExist: true,
   })
   try {
     const rowsByTable = new Map<ArchiveMatchTable, Record<string, unknown>[]>()
@@ -259,7 +257,7 @@ export async function findArchiveMatchCandidates(
   target: ArchiveTargetConnection,
   archive: OpenedUnifiedArchive
 ): Promise<ArchiveMatchCandidate[]> {
-  const archiveRowsByTable = readArchiveMatchRows(archive.databasePath)
+  const archiveRowsByTable = await readArchiveMatchRows(archive.databasePath)
   const matchCandidates: ArchiveMatchCandidate[] = []
   for (const table of ARCHIVE_MATCH_TABLES) {
     const archiveRows = archiveRowsByTable.get(table) ?? []

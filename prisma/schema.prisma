@@ -3,6 +3,13 @@ generator client {
   output   = "../generated/prisma"
 }
 
+/// web 版（ブラウザの Worker）用。sqlite-wasm のドライバアダプタ（web/worker）でつなぐ
+generator webClient {
+  provider = "prisma-client"
+  output   = "../generated/prisma-web"
+  runtime  = "workerd"
+}
+
 datasource db {
   provider = "sqlite"
 }

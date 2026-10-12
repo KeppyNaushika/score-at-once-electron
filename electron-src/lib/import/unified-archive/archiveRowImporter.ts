@@ -254,7 +254,7 @@ async function writeUnifiedArchiveRows(
   result: UnifiedArchiveImportResult
   gradeInputChanges: ArchiveGradeInputChange[]
 }> {
-  const archiveRows = readArchiveRows(archive.databasePath)
+  const archiveRows = await readArchiveRows(archive.databasePath)
   const idMap: Record<string, Record<string, string>> = action === "separate"
     ? renumberSeparateRows(archiveRows.tables)
     : {}

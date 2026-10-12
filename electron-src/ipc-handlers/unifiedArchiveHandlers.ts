@@ -10,6 +10,7 @@
  *
  * 書き出しと下見は better-sqlite3 の同期処理が重いので、main では行わず作業者（utilityProcess）に
  * 頼む（`archiveExportWorkerClient.ts`）。.partial からの置き換えと監査ログは main に残す。
+ * web 版には utilityProcess が無いので、main の処理を動かす Worker の中でそのまま行う。
  */
 
 import * as crypto from "crypto"
@@ -29,6 +30,7 @@ import type { ArchiveExportWorkerResponse } from "../lib/export/unified-archive/
 import {
   type ArchiveExportWorkerProcess,
   createArchiveExportWorkerClient,
+  spawnInProcessArchiveExportWorker,
 } from "../lib/export/unified-archive/archiveExportWorkerClient"
 import type { ArchiveSelection } from "../lib/export/unified-archive/archiveScopeResolver"
 import type {
@@ -89,6 +91,13 @@ const ANY_IMPORT_FILE_FILTERS = [
   },
 ]
 
+/**
+ * web 版で旧形式・外部の形式を選んだときの断り。それらの取り込みは adm-zip と同期の fs に
+ * 依存していて、web 版では動かない（docs/web-version-plan.md の判断待ち「旧形式5種の取り込み」）
+ */
+const WEB_LEGACY_IMPORT_MESSAGE =
+  "web 版で読み込めるのは統合アーカイブ（.sao）だけです。旧形式（.score・.coursework・.grade・.asb・.students）と .hsz・.dat は、デスクトップ版で読み込んでから統合アーカイブに書き出してください"
+
 interface UnifiedArchiveImportInput {
   sessionId: string
   action: ImportAction
@@ -132,8 +141,13 @@ const spawnArchiveExportWorker = (): ArchiveExportWorkerProcess => {
   }
 }
 
+/** web 版（入口が大域の `scoreAtOnceWeb` を立てる。`src/lib/appImageUrl.ts`）で動いているか */
+const isWebRuntime = (): boolean => globalThis.scoreAtOnceWeb === true
+
 const archiveExportWorker = createArchiveExportWorkerClient({
-  spawn: spawnArchiveExportWorker,
+  spawn: isWebRuntime()
+    ? spawnInProcessArchiveExportWorker
+    : spawnArchiveExportWorker,
 })
 
 /** 書き出しの作業者を終わらせ、終わっていない書き出し・下見を失敗にする（アプリの終了時） */
@@ -185,15 +199,19 @@ export const unifiedArchiveHandlers = {
   /**
    * 書き出す。同じ場所の一時ファイルへ書いてから置き換えるので、書きかけのファイルが残らず、
    * 保存ダイアログで上書きを選んだ既存のファイルは書き終えてから置き換わる。
-   * 作業者の作業ディレクトリも main が用意して消すので、作業者が途中で終わっても残らない
+   *
+   * web 版の保存先（保存ダイアログが返すダウンロードの領域）は、書いたものがその都度
+   * ダウンロードとして画面へ渡るので、一時ファイルは一時ディレクトリ（OPFS）に置き、
+   * 書き終えてから保存先へ移して1度だけ渡す
    */
   "unifiedArchive:export": async (input: {
     selection: ArchiveSelection
     outputPath: string
   }) => {
-    const partialPath = `${input.outputPath}.${crypto.randomUUID()}.partial`
-    const temporaryDirectory = await fsPromises.mkdtemp(
-      path.join(os.tmpdir(), "sao-export-job-")
+    const partialName = `${path.basename(input.outputPath)}.${crypto.randomUUID()}.partial`
+    const partialPath = path.join(
+      isWebRuntime() ? os.tmpdir() : path.dirname(input.outputPath),
+      partialName
     )
     let exported: UnifiedArchiveExportResult
     try {
@@ -205,14 +223,12 @@ export const unifiedArchiveHandlers = {
           selection: input.selection,
           exportedByUserId: getCurrentActorUserId(),
           appVersion: getAppVersion(),
-          temporaryDirectory,
         },
         broadcastExportProgress
       )
       await fsPromises.rename(partialPath, input.outputPath)
     } finally {
       await fsPromises.rm(partialPath, { force: true })
-      await fsPromises.rm(temporaryDirectory, { recursive: true, force: true })
     }
     const { manifest } = exported
 
@@ -238,18 +254,24 @@ export const unifiedArchiveHandlers = {
 
   /**
    * 一覧の「読み込み」のファイル選択。統合アーカイブも旧形式も受け付け、拡張子から種類を
-   * 決めて返す（どの取り込み画面を開くかは renderer が種類で決める）。選ばずに閉じたら null
+   * 決めて返す（どの取り込み画面を開くかは renderer が種類で決める）。選ばずに閉じたら null。
+   * web 版は統合アーカイブだけを受け付け、ほかを選んだら取り込み画面を開く前に断る
    */
   "unifiedArchive:selectAnyImportFile":
     async (): Promise<SelectedArchiveImportFile | null> => {
+      const webRuntime = isWebRuntime()
       const result = await dialog.showOpenDialog({
         title: "読み込む",
-        filters: ANY_IMPORT_FILE_FILTERS,
+        filters: webRuntime ? [ARCHIVE_FILE_FILTER] : ANY_IMPORT_FILE_FILTERS,
         properties: ["openFile"],
       })
       if (result.canceled || result.filePaths.length === 0) return null
       const filePath = result.filePaths[0]
-      return { path: filePath, kind: archiveImportFileKindOf(filePath) }
+      const kind = archiveImportFileKindOf(filePath)
+      if (webRuntime && kind !== "sao") {
+        throw new Error(WEB_LEGACY_IMPORT_MESSAGE)
+      }
+      return { path: filePath, kind }
     },
 
   /** 取り込みウィザードの中で、統合アーカイブを選び直す。選ばずに閉じたら null */
