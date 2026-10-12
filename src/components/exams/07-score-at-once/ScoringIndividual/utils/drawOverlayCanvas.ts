@@ -8,27 +8,22 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {
-  pageIndexOfCropRegion,
-  pageOffsetX,
-  pageOffsetY,
+  loadedPageIndexOfCropRegion,
+  type PagePlacement,
+  pagePlacementAt,
   stackedCanvasSize,
 } from "./canvasPageLayout"
 
 interface OverlayCanvasParams {
   pageSpacing: number
   zoom: number
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: readonly string[]
   currentCropRegion: QuestionAnswerRegionRow | null | undefined
   drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   hoveredElementId: string | null | undefined
   isDraggingElement: boolean | undefined
-}
-
-/** 描画要素の位置をキャンバス座標へ写すための、現在設問のページ */
-interface PagePlacement {
-  pageImage: HTMLImageElement
-  offsetX: number
-  offsetY: number
 }
 
 /** オーバーレイキャンバスを描き直す */
@@ -38,6 +33,7 @@ export function drawOverlayCanvas(
   {
     pageSpacing,
     zoom,
+    loadedExamPageIds,
     currentCropRegion,
     drawingElements,
     selectedElementIds,
@@ -58,17 +54,13 @@ export function drawOverlayCanvas(
 
   ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height)
 
-  // 現在設問のページオフセットを計算
-  const currentPageIndex = pageIndexOfCropRegion(
+  // 現在設問のページ（答案に無ければハンドルも描かない）
+  const currentPageIndex = loadedPageIndexOfCropRegion(
     currentCropRegion,
-    loadedImages.length
+    loadedExamPageIds
   )
-  const currentPageImg = loadedImages[currentPageIndex] || loadedImages[0]
-  const placement: PagePlacement = {
-    pageImage: currentPageImg,
-    offsetX: pageOffsetX(canvasWidth, currentPageImg),
-    offsetY: pageOffsetY(loadedImages, currentPageIndex, pageSpacing),
-  }
+  if (currentPageIndex === null) return
+  const placement = pagePlacementAt(loadedImages, currentPageIndex, pageSpacing)
 
   const baseHandleSize = 8
   const handleSize = baseHandleSize / zoom

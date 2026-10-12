@@ -21,12 +21,12 @@ interface UseQuestionAutoScrollParams {
   imageLoaded: boolean
   /** 読み込み済み画像配列 */
   loadedImages: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: string[]
   /** ページ間隔 */
   pageSpacing?: number
   /** 現在の設問領域 */
   currentCropRegion?: QuestionAnswerRegionRow | null
-  /** split表示モード（スクロール中心の補正用） */
-  splitMode?: "horizontal" | "vertical" | null
 }
 
 /**
@@ -44,9 +44,9 @@ export function useQuestionAutoScroll({
   zoom,
   imageLoaded,
   loadedImages,
+  loadedExamPageIds,
   pageSpacing = 20,
   currentCropRegion,
-  splitMode,
 }: UseQuestionAutoScrollParams): void {
   useEffect(() => {
     if (
@@ -62,6 +62,7 @@ export function useQuestionAutoScroll({
     const questionLocation = locateQuestionOnCanvas(
       currentCropRegion,
       loadedImages,
+      loadedExamPageIds,
       pageSpacing
     )
     if (!questionLocation) return
@@ -71,7 +72,6 @@ export function useQuestionAutoScroll({
       // 理想的なスクロール位置（設問を中央に）
       const idealScroll = scrollCenteringCanvasPoint(
         container,
-        splitMode,
         { x: questionLocation.centerX, y: questionLocation.centerY },
         zoom
       )
@@ -93,8 +93,8 @@ export function useQuestionAutoScroll({
     containerRef,
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
     pageSpacing,
     zoom,
-    splitMode,
   ])
 }

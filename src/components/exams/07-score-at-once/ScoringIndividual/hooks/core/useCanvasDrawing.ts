@@ -122,6 +122,7 @@ export function useCanvasDrawing({
         pageSpacing,
         zoom,
         pageSize,
+        loadedExamPageIds,
         nameRegionsByPageIndex,
         currentCropRegion,
         currentCropRegionId,
@@ -157,6 +158,7 @@ export function useCanvasDrawing({
       allCropRegionsWithStatus,
       scoringMarkConfig,
       pageSize,
+      loadedExamPageIds,
       nameRegionsByPageIndex,
     ]
   )
@@ -171,6 +173,7 @@ export function useCanvasDrawing({
     drawOverlayCanvas(overlayCanvas, loadedImages, {
       pageSpacing,
       zoom,
+      loadedExamPageIds,
       currentCropRegion,
       drawingElements,
       selectedElementIds,
@@ -181,6 +184,7 @@ export function useCanvasDrawing({
     overlayCanvasRef,
     canvasRef,
     loadedImages,
+    loadedExamPageIds,
     pageSpacing,
     zoom,
     hoveredElementId,
@@ -199,6 +203,7 @@ export function useCanvasDrawing({
     await drawTextCanvas(textCanvas, loadedImages, {
       pageSpacing,
       pageSize,
+      loadedExamPageIds,
       currentCropRegion,
       currentCropRegionId,
       allCropRegionsWithStatus,
@@ -210,6 +215,7 @@ export function useCanvasDrawing({
   }, [
     textCanvasRef,
     loadedImages,
+    loadedExamPageIds,
     pageSpacing,
     drawingElements,
     selectedElementIds,

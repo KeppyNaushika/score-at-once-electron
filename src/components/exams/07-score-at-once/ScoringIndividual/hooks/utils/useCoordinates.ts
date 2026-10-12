@@ -4,16 +4,25 @@
  */
 import { useCallback } from "react"
 
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+
+import {
+  canvasPointToPageCoordinates,
+  loadedPageIndexOfCropRegion,
+} from "../../utils/canvasPageLayout"
+
 /** 座標フックのプロパティ */
 interface UseCoordinatesProps {
   /** キャンバス参照 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>
-  /** 画像参照 */
-  imageRef: React.RefObject<HTMLImageElement | null>
   /** ズーム倍率 */
   zoom: number
   /** 読み込み済み画像配列（複数ページ対応用） */
   loadedImages?: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds?: string[]
+  /** 現在の設問領域（描画要素はこの設問のページに属する） */
+  currentCropRegion?: QuestionAnswerRegionRow | null
   /** ページ間のスペーシング */
   pageSpacing?: number
 }
@@ -31,6 +40,10 @@ interface UseCoordinatesReturn {
   }
 }
 
+/** 既定値（毎レンダー新しい配列を作ると useCallback が作り直されるので定数で持つ） */
+const NO_IMAGES: HTMLImageElement[] = []
+const NO_EXAM_PAGE_IDS: string[] = []
+
 /**
  * 座標変換・座標取得フック
  *
@@ -44,19 +57,21 @@ interface UseCoordinatesReturn {
  */
 export function useCoordinates({
   canvasRef,
-  imageRef,
   zoom,
-  loadedImages = [],
+  loadedImages = NO_IMAGES,
+  loadedExamPageIds = NO_EXAM_PAGE_IDS,
+  currentCropRegion,
   pageSpacing = 20,
 }: UseCoordinatesProps): UseCoordinatesReturn {
   /**
    * イベントから画像座標（正規化）を取得
    *
    * @description
-   * ポインターイベントからCSS scale方式を考慮して
-   * 0-1の正規化座標を計算する。
-   * 複数ページ対応：クリック位置がどのページに属するかを判断し、
-   * そのページ内の相対座標（0-1）を返す。
+   * ポインターイベントからCSS scale方式を考慮して、**現在の設問のページ**の中の
+   * 正規化座標（0-1。ページの外を指せば範囲を外れる）を計算する。
+   * 描画要素は現在の設問に属し、そのページに描かれるので、クリックしたページでは
+   * なく設問のページ（examPageId で同定）を基準にする。
+   * その生徒の答案に設問のページが無ければ null（描画・選択を始めない）。
    *
    * @param e - マウス/ポインターイベント
    * @returns 正規化座標またはnull
@@ -64,69 +79,34 @@ export function useCoordinates({
   const getImageCoordinatesFromEvent = useCallback(
     (e: React.MouseEvent | React.PointerEvent) => {
       const canvas = canvasRef.current
-      const image = imageRef.current
+      if (!canvas || loadedImages.length === 0) return null
 
-      if (!canvas || !image) {
-        return null
-      }
-
-      if (!image.naturalWidth || !image.naturalHeight) {
-        return null
-      }
-
-      const rect = canvas.getBoundingClientRect()
-      const canvasX = e.clientX - rect.left
-      const canvasY = e.clientY - rect.top
+      const pageIndex = loadedPageIndexOfCropRegion(
+        currentCropRegion,
+        loadedExamPageIds
+      )
+      if (pageIndex === null) return null
 
       // CSS scale方式：Canvas要素がzoom倍サイズなので、Canvas内部座標に変換
-      const actualX = canvasX / zoom
-      const actualY = canvasY / zoom
-
-      // Canvasでの画像中央配置オフセットを考慮
-      const canvasElement = canvasRef.current
-      if (!canvasElement) return null
-
-      const canvasWidth = canvasElement.width
-      const imageOffsetX = (canvasWidth - image.naturalWidth) / 2
-
-      const imageX = actualX - imageOffsetX
-      let imageY = actualY
-
-      // 複数ページ対応：クリック位置がどのページに属するかを判断
-      // loadedImagesが2枚以上ある場合、Y座標をページ内座標に変換
-      if (loadedImages.length > 1) {
-        let pageOffsetY = 0
-        let targetPageHeight = image.naturalHeight // デフォルトは1ページ目の高さ
-
-        for (let i = 0; i < loadedImages.length; i++) {
-          const pageHeight = loadedImages[i].naturalHeight
-          const pageBottom = pageOffsetY + pageHeight
-
-          if (actualY < pageBottom || i === loadedImages.length - 1) {
-            // このページに属する
-            imageY = actualY - pageOffsetY
-            targetPageHeight = pageHeight
-            break
-          }
-
-          // 次のページへ
-          pageOffsetY += pageHeight + pageSpacing
-        }
-
-        // ページ内座標で正規化（0-1の範囲）
-        return {
-          x: imageX / image.naturalWidth,
-          y: imageY / targetPageHeight,
-        }
-      }
-
-      // 単一ページの場合：従来通りの正規化（0-1の範囲）
-      return {
-        x: imageX / image.naturalWidth,
-        y: imageY / image.naturalHeight,
-      }
+      const rect = canvas.getBoundingClientRect()
+      return canvasPointToPageCoordinates(
+        {
+          x: (e.clientX - rect.left) / zoom,
+          y: (e.clientY - rect.top) / zoom,
+        },
+        loadedImages,
+        pageIndex,
+        pageSpacing
+      )
     },
-    [canvasRef, imageRef, zoom, loadedImages, pageSpacing]
+    [
+      canvasRef,
+      zoom,
+      loadedImages,
+      loadedExamPageIds,
+      currentCropRegion,
+      pageSpacing,
+    ]
   )
 
   /**

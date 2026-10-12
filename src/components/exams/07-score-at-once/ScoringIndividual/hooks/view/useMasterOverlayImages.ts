@@ -1,50 +1,60 @@
 /**
- * @fileoverview 模範解答オーバーレイ用の画像読み込み（全ページ）
+ * @fileoverview 模範解答の画像読み込み（全ページ。答案に重ねる表示・左右に並べる表示）
  */
 import { useEffect, useState } from "react"
 
+import type { MasterPageImage } from "../../types"
+
+/** 読み込めた模範解答の1ページ（どのページかと画像） */
+export interface LoadedMasterPage {
+  examPageId: string
+  image: HTMLImageElement
+}
+
 /** 未読み込み時の空配列（毎レンダー作り直すと下流の再描画を誘発するため定数で持つ） */
-const NO_OVERLAY_IMAGES: HTMLImageElement[] = []
+const NO_OVERLAY_PAGES: LoadedMasterPage[] = []
 
 /**
- * 模範解答の画像を読み込む。読み込めなかったページは飛ばす。
+ * 模範解答の画像を読み込む。読み込めなかったページは飛ばす（ページは examPageId で
+ * 答案と対応させるので、飛ばしても後ろのページはずれない）。
  *
- * 読み込み結果はどのURL列のものかを一緒に持ち、URLが差し替わったら（＝
+ * 読み込み結果はどのページ列のものかを一緒に持ち、ページ列が差し替わったら（＝
  * オーバーレイOFFや別の試験）自然に外れるようにする
  *
- * @param masterOverlayImageUrls - 模範解答のページ画像のURL
- * @returns 読み込めたページ画像
+ * @param masterOverlayPages - 模範解答のページ画像
+ * @returns 読み込めたページ
  */
 export function useMasterOverlayImages(
-  masterOverlayImageUrls: string[] | undefined
-): HTMLImageElement[] {
+  masterOverlayPages: MasterPageImage[] | undefined
+): LoadedMasterPage[] {
   const [loadedOverlay, setLoadedOverlay] = useState<{
-    urls: string[]
-    images: HTMLImageElement[]
+    masterPages: MasterPageImage[]
+    loadedPages: LoadedMasterPage[]
   } | null>(null)
 
   useEffect(() => {
-    const urls = masterOverlayImageUrls
-    if (!urls || urls.length === 0) return
+    const masterPages = masterOverlayPages
+    if (!masterPages || masterPages.length === 0) return
     let cancelled = false
     const loadAll = async () => {
       const results = await Promise.allSettled(
-        urls.map(
-          (url) =>
-            new Promise<HTMLImageElement>((resolve, reject) => {
+        masterPages.map(
+          (masterPage) =>
+            new Promise<LoadedMasterPage>((resolve, reject) => {
               const image = document.createElement("img")
-              image.onload = () => resolve(image)
+              image.onload = () =>
+                resolve({ examPageId: masterPage.examPageId, image })
               image.onerror = reject
-              image.src = url
+              image.src = masterPage.imageUrl
             })
         )
       )
       if (cancelled) return
       setLoadedOverlay({
-        urls,
-        images: results
+        masterPages,
+        loadedPages: results
           .filter(
-            (result): result is PromiseFulfilledResult<HTMLImageElement> =>
+            (result): result is PromiseFulfilledResult<LoadedMasterPage> =>
               result.status === "fulfilled"
           )
           .map((result) => result.value),
@@ -54,9 +64,10 @@ export function useMasterOverlayImages(
     return () => {
       cancelled = true
     }
-  }, [masterOverlayImageUrls])
+  }, [masterOverlayPages])
 
-  return loadedOverlay !== null && loadedOverlay.urls === masterOverlayImageUrls
-    ? loadedOverlay.images
-    : NO_OVERLAY_IMAGES
+  return loadedOverlay !== null &&
+    loadedOverlay.masterPages === masterOverlayPages
+    ? loadedOverlay.loadedPages
+    : NO_OVERLAY_PAGES
 }

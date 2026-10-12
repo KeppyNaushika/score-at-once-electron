@@ -186,6 +186,14 @@ export function useScoringScreen({
       : NO_QUESTION_SCORES,
   })
 
+  /**
+   * 個別表示で、現在の設問のページが表示中の答案に無いか（判定は個別表示の描画側が持ち、
+   * `onCurrentQuestionPageMissingChange` で伝えてくる）。無い間は採点の口を止める。
+   * 個別表示を離れると（`AnswerIndividualView` が外れると）false に戻る
+   */
+  const [isCurrentQuestionPageMissing, setIsCurrentQuestionPageMissing] =
+    useState(false)
+
   const { calculateQuestionProgress, ...guardedScoring } = useGuardedScoring({
     scoringData: {
       examId,
@@ -214,6 +222,7 @@ export function useScoringScreen({
     },
     currentCropRegion,
     scaleQuestion,
+    isCurrentQuestionPageMissing,
   })
 
   /** 模範解答の表示（トグル／押している間だけ） */
@@ -223,7 +232,7 @@ export function useScoringScreen({
     gradingMode,
   })
 
-  /** 用紙サイズと、全ページの模範解答画像URL（ページ番号順） */
+  /** 用紙サイズと、全ページの模範解答画像（ページ番号順。答案とは examPageId で対応させる） */
   const masterAnswerPages = useMasterAnswerPages(exam?.examPages)
 
   /** キー操作の文脈・ショートカット・担当外の設問からの退避 */
@@ -304,6 +313,8 @@ export function useScoringScreen({
     exam,
     examId,
     gradingMode,
+    handleCurrentQuestionPageMissingChange: setIsCurrentQuestionPageMissing,
+    isCurrentQuestionPageMissing,
     loading,
     questionProgress,
     questionScoresByCropRegionId,

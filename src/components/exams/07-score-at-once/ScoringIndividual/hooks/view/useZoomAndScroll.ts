@@ -11,7 +11,6 @@ import {
   locateQuestionOnCanvas,
   scrollCenteringCanvasPoint,
   scrollKeepingViewportCenter,
-  splitCellSize,
 } from "./scrollGeometry"
 
 /** ズーム・スクロール操作フックのパラメータ */
@@ -26,12 +25,12 @@ interface UseZoomAndScrollParams {
   imageLoaded: boolean
   /** 読み込み済み画像配列 */
   loadedImages: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: string[]
   /** ページ間隔 */
   pageSpacing?: number
   /** 現在の設問領域 */
   currentCropRegion?: QuestionAnswerRegionRow | null
-  /** split表示モード（利用可能幅/高さの補正用） */
-  splitMode?: "horizontal" | "vertical" | null
 }
 
 /** ズーム・スクロール操作フックの戻り値 */
@@ -62,9 +61,9 @@ export function useZoomAndScroll({
   onZoomChange,
   imageLoaded,
   loadedImages,
+  loadedExamPageIds,
   pageSpacing = 20,
   currentCropRegion,
-  splitMode,
 }: UseZoomAndScrollParams): UseZoomAndScrollReturn {
   // ズームイン（CSS scale + scroll 方式）
   const handleZoomIn = useCallback(() => {
@@ -107,11 +106,8 @@ export function useZoomAndScroll({
       return
 
     const container = containerRef.current
-    // split時は利用可能領域を補正（gridの1セル分）
-    const { width: availableWidth, height: availableHeight } = splitCellSize(
-      container,
-      splitMode
-    )
+    const availableWidth = container.offsetWidth
+    const availableHeight = container.offsetHeight
 
     // パディングを考慮
     const padding = 40
@@ -152,14 +148,7 @@ export function useZoomAndScroll({
     requestAnimationFrame(() => {
       container.scrollTo(Math.max(0, scrollLeft), Math.max(0, scrollTop))
     })
-  }, [
-    containerRef,
-    imageLoaded,
-    loadedImages,
-    pageSpacing,
-    onZoomChange,
-    splitMode,
-  ])
+  }, [containerRef, imageLoaded, loadedImages, pageSpacing, onZoomChange])
 
   // 設問表示（CSS scale + scroll 方式）
   const handleCropView = useCallback(() => {
@@ -172,11 +161,8 @@ export function useZoomAndScroll({
       return
 
     const container = containerRef.current
-    // split時は利用可能領域を補正（gridの1セル分）
-    const { width: availableWidth, height: availableHeight } = splitCellSize(
-      container,
-      splitMode
-    )
+    const availableWidth = container.offsetWidth
+    const availableHeight = container.offsetHeight
 
     // 余白の比率: 2:6:2（左右/上下に20%ずつの余白、中央60%に設問を表示）
     const marginRatio = 0.2
@@ -187,6 +173,7 @@ export function useZoomAndScroll({
     const questionLocation = locateQuestionOnCanvas(
       currentCropRegion,
       loadedImages,
+      loadedExamPageIds,
       pageSpacing
     )
     if (!questionLocation) {
@@ -215,7 +202,6 @@ export function useZoomAndScroll({
       // 設問中心をコンテナ中心に配置するためのスクロール位置
       const centeredScroll = scrollCenteringCanvasPoint(
         container,
-        splitMode,
         { x: questionLocation.centerX, y: questionLocation.centerY },
         newZoom
       )
@@ -226,9 +212,9 @@ export function useZoomAndScroll({
     containerRef,
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
     onZoomChange,
     pageSpacing,
-    splitMode,
   ])
 
   return {

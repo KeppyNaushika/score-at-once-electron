@@ -29,8 +29,11 @@ import { useQuestionAutoScroll } from "./hooks/view/useQuestionAutoScroll"
 import { useZoomAndScroll } from "./hooks/view/useZoomAndScroll"
 import { MasterOverlayImages } from "./MasterOverlayImages"
 import { RichTextEditorModal } from "./RichTextEditorModal"
-import type { AnswerIndividualViewProps } from "./types"
-import { stackedCanvasSize } from "./utils/canvasPageLayout"
+import type { AnswerIndividualViewProps, AnswerPageSize } from "./types"
+import {
+  isQuestionPageMissingFromAnswer,
+  stackedCanvasSize,
+} from "./utils/canvasPageLayout"
 
 export default function AnswerIndividualView({
   scoringDatas,
@@ -45,13 +48,14 @@ export default function AnswerIndividualView({
   currentUserId,
   onAnnotationChanged,
   annotationRefreshKey,
-  masterOverlayImageUrls,
+  masterOverlayPages,
   masterOverlayOpacity = 50,
   masterOverlayVisible = false,
   masterDisplayMode = "overlay",
   onZoomChanged,
   scrollContainerRef,
   onImageSizeChanged,
+  onCurrentQuestionPageMissingChange,
   pageSize = "A4",
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
@@ -157,6 +161,8 @@ export default function AnswerIndividualView({
     containerRef,
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
+    loadedExamStudentId,
     textBoundsCacheRef,
   } = useImageCanvas({
     currentScoringData,
@@ -189,15 +195,41 @@ export default function AnswerIndividualView({
     pageSize,
   })
 
+  // 読み込んだ答案のページの大きさ（模範解答をページごとに examPageId で重ねる・並べる基準）
+  const answerPageSizes = useMemo<AnswerPageSize[]>(
+    () =>
+      loadedImages.map((image, pageIndex) => ({
+        examPageId: loadedExamPageIds[pageIndex],
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })),
+    [loadedImages, loadedExamPageIds]
+  )
+
   // 画像サイズ通知（split表示のMasterパネルで参照サイズとして使用）
   useEffect(() => {
-    if (onImageSizeChanged && loadedImages.length > 0) {
-      onImageSizeChanged({
-        width: loadedImages[0].naturalWidth,
-        heights: loadedImages.map((image) => image.naturalHeight),
-      })
+    if (onImageSizeChanged && answerPageSizes.length > 0) {
+      onImageSizeChanged(answerPageSizes)
     }
-  }, [loadedImages, onImageSizeChanged])
+  }, [answerPageSizes, onImageSizeChanged])
+
+  // 現在の設問のページが、この生徒の答案（読み込めた画像）に無い。
+  // 枠・採点記号・注釈は描かず、スクロールもしないので、その旨を知らせ、採点も止める。
+  // 読み込み中（読み込んだ画像がまだこの生徒のものでない）は判定せず止めない
+  const isCurrentQuestionPageMissing = isQuestionPageMissingFromAnswer({
+    cropRegion: currentCropRegion,
+    examStudentId: currentScoringData?.examStudentId,
+    imageLoaded,
+    loadedExamStudentId,
+    loadedExamPageIds,
+  })
+
+  // 採点の口（採点画面の配線）へ伝える。個別表示を離れたら（外れたら）止めない側へ戻す
+  useEffect(() => {
+    if (!onCurrentQuestionPageMissingChange) return
+    onCurrentQuestionPageMissingChange(isCurrentQuestionPageMissing)
+    return () => onCurrentQuestionPageMissingChange(false)
+  }, [isCurrentQuestionPageMissing, onCurrentQuestionPageMissingChange])
 
   // scrollContainerRefの同期（split表示のスクロール同期用）
   // コールバックrefならDOMのコミットと同時に両方のrefへ行き渡る
@@ -238,9 +270,9 @@ export default function AnswerIndividualView({
       onZoomChange,
       imageLoaded,
       loadedImages,
+      loadedExamPageIds,
       pageSpacing,
       currentCropRegion,
-      splitMode: null,
     })
 
   // テキスト編集モーダルが開いていることを、ショートカットの実行条件へ渡す。
@@ -263,9 +295,9 @@ export default function AnswerIndividualView({
     zoom,
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
     pageSpacing,
     currentCropRegion,
-    splitMode: null,
   })
 
   // イベントハンドリング
@@ -273,14 +305,15 @@ export default function AnswerIndividualView({
     useAnswerIndividualEvents({
       canvasRef,
       containerRef,
-      imageRef,
       zoom,
       position,
       onZoomChange,
       onPositionChange,
       imageLoaded,
-      // 複数ページ対応
+      // 複数ページ対応（描画要素の座標は現在の設問のページが基準）
       loadedImages,
+      loadedExamPageIds,
+      currentCropRegion,
       pageSpacing,
       currentTool: drawingState.currentTool,
       annotationTarget,
@@ -350,7 +383,7 @@ export default function AnswerIndividualView({
   })
 
   // 模範解答オーバーレイ用の画像読み込み（全ページ）
-  const masterOverlayImages = useMasterOverlayImages(masterOverlayImageUrls)
+  const masterOverlayImages = useMasterOverlayImages(masterOverlayPages)
 
   // 答案コンテンツの自然サイズ（ズーム前、ピクセル単位）
   const answerNaturalSize =
@@ -389,8 +422,8 @@ export default function AnswerIndividualView({
         {/* 模範解答オーバーレイ画像（overlay モード時・ページごとに描画） */}
         {isOverlayMode && (
           <MasterOverlayImages
-            masterOverlayImages={masterOverlayImages}
-            loadedImages={loadedImages}
+            masterOverlayPages={masterOverlayImages}
+            answerPageSizes={answerPageSizes}
             pageSpacing={pageSpacing}
             zoom={zoom}
             masterOverlayVisible={masterOverlayVisible}
@@ -407,6 +440,16 @@ export default function AnswerIndividualView({
             模範解答
           </div>
         )}
+
+      {/* 現在の設問のページが答案に無い場合（採点は止める。移動・ズーム・パンは止めない） */}
+      {isCurrentQuestionPageMissing && (
+        <div
+          role="status"
+          className="pointer-events-none absolute top-2 left-1/2 z-10 -translate-x-1/2 rounded bg-amber-500 px-3 py-1 text-xs font-medium text-white shadow"
+        >
+          この設問のページは答案にありません
+        </div>
+      )}
 
       {/* 画像が読み込まれていない場合 */}
       {!imageLoaded && (

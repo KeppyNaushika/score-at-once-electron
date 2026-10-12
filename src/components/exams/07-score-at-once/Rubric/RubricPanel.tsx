@@ -52,6 +52,8 @@ interface RubricPanelProps {
   pageSize: string
   /** 助言の朱書きを書いた（一覧・個別表示の注釈を取り直す合図） */
   onAnnotationsChanged?: () => void
+  /** 個別表示で、現在の設問のページが答案に無いか（無い間は項目を当てない） */
+  isAnswerPageMissing?: boolean
 }
 
 /** 編集画面の開き方。null は閉じている */
@@ -81,6 +83,7 @@ export function RubricPanel({
   scoringDatas,
   pageSize,
   onAnnotationsChanged,
+  isAnswerPageMissing = false,
 }: RubricPanelProps) {
   const scoringMethod = toScoringMethod(cropRegion.scoringMethod)
   const { rubricItems, ownCellOf, ownAppliedCells } = useRubricQuestion({
@@ -121,6 +124,7 @@ export function RubricPanel({
     selectedCells,
     onScored,
     syncAdviceRows: adviceSync.syncRows,
+    isAnswerPageMissing,
   })
   const { runWithRecalculation, pending, cancel } = useRubricRecalculation({
     examId,
