@@ -23,8 +23,7 @@ export function ClassroomIntegrationPanel({
   if (!overview) return null
 
   const byNameCount = overview.byName?.length ?? 0
-  const noMatchCount = overview.noMatch.length
-  const needsDecisionCount = byNameCount + noMatchCount
+  const needsDecisionCount = byNameCount + overview.noMatch.length
 
   if (needsDecisionCount === 0) {
     return (
@@ -86,21 +85,7 @@ export function ClassroomIntegrationPanel({
         <DetailPanel
           wizard={wizard}
           entityType="classroom"
-          byName={overview.byName ?? []}
-          noMatch={overview.noMatch}
           showIndividualMessage={strategy === "individual"}
-          onBatchIdChoice={(idChoice) => {
-            const items = (overview.byName ?? []).map((item) => ({
-              importId: item.importId,
-              existingId: item.existingId,
-            }))
-            wizard.batchUpdateIdIntegrationDecisions(
-              "classroom",
-              items,
-              "same_person",
-              idChoice
-            )
-          }}
         />
       )}
     </div>

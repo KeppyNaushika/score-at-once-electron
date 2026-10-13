@@ -41,8 +41,13 @@ export function GradeImportDialog({
   const router = useRouter()
   const executeImport = useMutation(executeGradeImportMutation())
   const importing = executeImport.isPending
-  const { effectiveSelections, selectArchive, buildDecisions } =
-    useCourseworkImportDecisions(preview.courseworkMatches)
+  const {
+    effectiveSelections,
+    selectArchive,
+    adoptIdOf,
+    selectAdoptId,
+    buildDecisions,
+  } = useCourseworkImportDecisions(preview.courseworkMatches)
 
   const classroomMatched = preview.classroomMatches.filter(
     (classroomMatch) => classroomMatch.found
@@ -154,6 +159,8 @@ export function GradeImportDialog({
           courseworkMatches={preview.courseworkMatches}
           effectiveSelections={effectiveSelections}
           onSelect={selectArchive}
+          adoptIdOf={adoptIdOf}
+          onSelectAdoptId={selectAdoptId}
           heading="試験外成績資料の取り込み"
         />
       </ScrollArea>

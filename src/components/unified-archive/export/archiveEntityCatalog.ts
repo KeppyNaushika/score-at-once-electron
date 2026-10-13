@@ -9,9 +9,9 @@ import type { Classroom, Student } from "@prisma/client"
 
 import type { ComboboxOption } from "@/components/common/Combobox"
 import {
-  classroomSearchKeywords,
+  classroomOptions,
   dateSearchKeywords,
-  studentOption,
+  studentOptions,
 } from "@/lib/searchKeywords"
 import { tableLabel } from "@/lib/shared/tableLabels"
 
@@ -83,18 +83,11 @@ export function buildArchiveEntityCatalog(
     Grade: toOptionMap(sources.grades.map(namedOption)),
     AsbDefinition: toOptionMap(sources.answerSheetDefinitions.map(namedOption)),
     Student: toOptionMap(
-      sources.students.map((student) => studentOption(student.id, student))
+      studentOptions(
+        sources.students.map((student) => ({ value: student.id, student }))
+      )
     ),
-    Classroom: toOptionMap(
-      sources.classrooms.map((classroom) => ({
-        value: classroom.id,
-        label:
-          classroom.isVisible === false
-            ? `${classroom.name}（非表示）`
-            : classroom.name,
-        keywords: classroomSearchKeywords(classroom),
-      }))
-    ),
+    Classroom: toOptionMap(classroomOptions(sources.classrooms)),
     SubtotalGroup: toOptionMap(
       sources.subtotalGroups.map((subtotalGroup) => ({
         value: subtotalGroup.id,

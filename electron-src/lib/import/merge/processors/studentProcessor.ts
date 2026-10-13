@@ -85,19 +85,16 @@ export async function processStudentIdIntegration(
     importRowById: new Map(
       data.studentsData.students.map((student) => [student.id, student])
     ),
-    idMatchedItems: studentPreMatch.byId,
     matchedItemGroups: [
       // 学籍番号一致
       {
         matchedItems: studentPreMatch.byStudentNumber,
         sameRowStrategy: "by_student_number",
-        skipAlreadyMapped: false,
       },
-      // 氏名一致。学籍番号一致で既に処理済みのものは飛ばす
+      // 氏名一致（学籍番号一致と重なってよい）
       {
         matchedItems: studentPreMatch.byName,
         sameRowStrategy: "by_name",
-        skipAlreadyMapped: true,
       },
     ],
     noMatchItems: studentPreMatch.noMatch,
@@ -110,14 +107,9 @@ export async function processStudentIdIntegration(
       `生徒「${importStudent.lastName} ${importStudent.firstName}」`,
     applyColumns: (importStudent, existingId) =>
       applyStudentColumns(importStudent, existingId, policy, counts, tx),
+    existsById: async (id) =>
+      (await tx.student.findUnique({ where: { id } })) !== null,
     createNewRow: async (importStudent, importId) => {
-      const existingById = await tx.student.findUnique({
-        where: { id: importId },
-      })
-      if (existingById) {
-        idMappings.student[importId] = importId
-        return
-      }
       await tx.student.create({
         data: {
           id: importId,

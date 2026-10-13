@@ -47,6 +47,7 @@ import {
   openUnifiedArchiveImportSession,
 } from "../lib/import/unified-archive/archiveImportSessions"
 import {
+  findArchiveLinkableRows,
   findArchiveMatchCandidates,
   suggestedMatchDecisions,
 } from "../lib/import/unified-archive/archiveMatchCandidates"
@@ -297,6 +298,10 @@ export const unifiedArchiveHandlers = {
         prismaArchiveTarget(prisma),
         session.opened
       )
+      const linkableRows = await findArchiveLinkableRows(
+        prismaArchiveTarget(prisma),
+        session.opened
+      )
       return {
         kind: "opened" as const,
         sessionId,
@@ -304,6 +309,7 @@ export const unifiedArchiveHandlers = {
         appliedMigrations: [...session.opened.appliedMigrations],
         migratedRowCounts: countIdLists(session.opened.migratedRowIds),
         matchCandidates,
+        linkableRows,
         suggestedDecisions: suggestedMatchDecisions(matchCandidates),
       }
     } catch (error) {

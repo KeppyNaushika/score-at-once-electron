@@ -5,7 +5,7 @@
  *
  * 2段階処理:
  * 1. マッピング段階: .scoreのIDを既存IDにマッピングしてデータ挿入
- * 2. ID変更段階: 「書き出したPCに合わせる」を選んだ場合、既存IDを.scoreのIDに変更
+ * 2. ID変更段階: 「ファイルの id に合わせる」を選んだ場合、全て書き終えてから既存IDを.scoreのIDに変更
  *
  * エンティティ別の挿入ロジックはドメイン単位で別モジュールへ分割している:
  * - importExamCore: Exam根・ExamPage・CropRegion・参加情報
@@ -107,9 +107,13 @@ export async function executeIdIntegrationImport(
   // 「別で追加する」を選んだときは、DBへ触る前に試験配下の id を振り直す。
   // 振り直した後のデータは「一度も取り込んでいないアーカイブ」と同じ形になるので、
   // 事前照合の試験の欄も一致なしへ倒し、後段は新規作成の道を通す。
+  // 試験の id が一致するかは事前照合ではなく今の取り込み先で決める（照合の後に同期などで
+  // 入ってくることがある）
   const importAsSeparateExam =
-    (archivePreMatchResult.exam?.isIdMatch ?? false) &&
-    examAction === "separate"
+    examAction === "separate" &&
+    (await prisma.exam.findUnique({
+      where: { id: archiveData.examData.exam.id },
+    })) !== null
   const data = importAsSeparateExam
     ? rewriteAsSeparateExam(archiveData)
     : archiveData
@@ -216,13 +220,15 @@ export async function executeIdIntegrationImport(
           integrationConfig.subtotalMappings
         )
 
-        // 5. 試験処理
-        const isExamIdMatch = preMatchResult.exam?.isIdMatch ?? false
+        // 5. 試験処理。id が一致すれば同じ試験（実行の時点で引く）
+        const isExamIdMatch =
+          (await tx.exam.findUnique({
+            where: { id: data.examData.exam.id },
+          })) !== null
         const newExamId = await processExam(
           data,
-          preMatchResult,
+          isExamIdMatch,
           idMappings,
-          counts,
           warnings,
           policy,
           tx
@@ -230,9 +236,11 @@ export async function executeIdIntegrationImport(
 
         // 6. UserExam
         await processUserExam(
+          data,
           isExamIdMatch,
           newExamId,
           currentUserId,
+          idMappings,
           policy,
           tx
         )
@@ -243,29 +251,17 @@ export async function executeIdIntegrationImport(
         // 8. ExamStudent
         const examStudentResult = await processExamStudents(
           data,
-          isExamIdMatch,
           newExamId,
           idMappings,
           policy,
           tx
         )
 
-        // 9. ExamPage（不一致時のみ）
-        if (!isExamIdMatch) {
-          await processExamPages(
-            data,
-            newExamId,
-            idMappings,
-            counts,
-            policy,
-            tx
-          )
-        }
+        // 9. ExamPage（id が一致すれば同じページ）
+        await processExamPages(data, newExamId, idMappings, counts, policy, tx)
 
-        // 10. CropRegion（不一致時のみ）
-        if (!isExamIdMatch) {
-          await processCropRegions(data, idMappings, counts, policy, tx)
-        }
+        // 10. CropRegion（id が一致すれば同じ領域）
+        await processCropRegions(data, idMappings, counts, policy, tx)
 
         // 10a. ExamMarkingFormat (v1.4.0+)
 
@@ -291,10 +287,10 @@ export async function executeIdIntegrationImport(
         )
 
         // 10e. OMR設定（CropRegionOmrConfig/ChoiceOption） (v1.7.0+)
-        await processOmrConfigs(data, idMappings, policy, tx)
+        await processOmrConfigs(data, idMappings, warnings, policy, tx)
 
         // 10f. 複合解答（CompoundAnswer/Member） (v1.11.0+)
-        await processCompoundAnswers(data, idMappings, policy, tx)
+        await processCompoundAnswers(data, idMappings, warnings, policy, tx)
 
         // 11. CropSubtotal
         await processCropSubtotals(data, idMappings, warnings, policy, tx)
@@ -369,11 +365,6 @@ export async function executeIdIntegrationImport(
           tx
         )
 
-        // 15. ID変更処理（「書き出したPCに合わせる」を選んだ場合）
-        if (idChangeTargets.length > 0) {
-          await executeIdChanges(idChangeTargets, idMappings, warnings, tx)
-        }
-
         // 16. 画像レコード作成（DB操作のみ）
         await createImportImageRecords(data, idMappings, policy, tx)
 
@@ -395,6 +386,10 @@ export async function executeIdIntegrationImport(
         for (const subtotalGroupId of groupIdsWithOrderWritten) {
           await reorderSubtotals(subtotalGroupId, tx)
         }
+
+        // 18. ID変更処理（「ファイルの id に合わせる」を選んだ場合）。
+        // ここまでは全てこのPCの id で書いてある。最後に id だけを変える
+        await executeIdChanges(idChangeTargets, idMappings, warnings, tx)
       },
       { timeout: 60000 }
     )

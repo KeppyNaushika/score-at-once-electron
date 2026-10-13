@@ -74,6 +74,7 @@ export function createArchiveClassesData(
     studentId: string
     classroomId: string
     attendanceNumber?: number | null
+    startDate?: string
   }> = []
 ): ArchiveClassesData {
   return {
@@ -91,7 +92,7 @@ export function createArchiveClassesData(
       id: membership.id ?? generateId(),
       studentId: membership.studentId,
       classroomId: membership.classroomId,
-      startDate: new Date().toISOString(),
+      startDate: membership.startDate ?? new Date().toISOString(),
       endDate: null,
       attendanceNumber: membership.attendanceNumber ?? null,
       notes: null,
@@ -305,11 +306,14 @@ export function createExtractedArchiveData(
 export function createMatchedItem(
   overrides: Partial<MatchedItem> = {}
 ): MatchedItem {
+  const existingId = overrides.existingId ?? generateId()
+  const existingData = overrides.existingData ?? {}
   return {
     importId: overrides.importId ?? generateId(),
-    existingId: overrides.existingId ?? generateId(),
+    existingId,
     importData: overrides.importData ?? {},
-    existingData: overrides.existingData ?? {},
+    existingData,
+    candidates: overrides.candidates ?? [{ existingId, existingData }],
     displayLabel: overrides.displayLabel ?? "テスト",
     matchReason: overrides.matchReason ?? "ID一致",
   }

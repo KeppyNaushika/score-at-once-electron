@@ -158,9 +158,10 @@ describe("examMergeOrSeparate", () => {
     expect(exams.find((exam) => exam.id === archivedExam.id)!.examName).toBe(
       archivedExam.examName
     )
-    // 名前はアーカイブの値のまま。同じ名前の試験が2つ並び、id で区別する
+    // 取り込んだ方の名前には、一覧で見分けるための番号が付く（試験名に unique は無く、
+    // 制約のためではない）
     const importedExam = exams.find((exam) => exam.id === examId)!
-    expect(importedExam.examName).toBe(archivedExam.examName)
+    expect(importedExam.examName).toBe(`${archivedExam.examName} (2)`)
     // 新しい行なので誰とも競合しない。時刻はアーカイブの値をそのまま持つ
     expect(importedExam.createdAt.toISOString()).toBe(
       new Date(archivedExam.createdAt).toISOString()
@@ -223,6 +224,28 @@ describe("examMergeOrSeparate", () => {
     expect(await prisma.subtotalGroup.count()).toBe(
       archive.subtotalsData.subtotalGroups.length
     )
+  })
+
+  it("別で追加を重ねると、試験名の番号が (2)・(3) と進む", async () => {
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archive = await readFixtureContents()
+
+    await importIntoSameDatabase(exporterId, "separate")
+    const { examId, warnings } = await importIntoSameDatabase(
+      exporterId,
+      "separate"
+    )
+
+    const examName = archive.examData.exam.examName
+    expect(
+      (await prisma.exam.findMany()).map((exam) => exam.examName).sort()
+    ).toEqual([examName, `${examName} (2)`, `${examName} (3)`].sort())
+    expect(
+      (await prisma.exam.findUniqueOrThrow({ where: { id: examId } })).examName
+    ).toBe(`${examName} (3)`)
+    expect(
+      warnings.some((warning) => warning.includes(`${examName} (3)`))
+    ).toBe(true)
   })
 
   it("統合を選ぶと、アーカイブが新しければ試験自身の列が更新される", async () => {

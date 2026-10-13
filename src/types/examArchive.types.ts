@@ -247,7 +247,7 @@ export interface PreMatchingResult {
   byName?: MatchedItem[]
   /** どれにも一致しない */
   noMatch: ImportItem[]
-  /** 全既存アイテム一覧（手動紐づけ用、小計グループで使用） */
+  /** 手で紐づけるときの選択肢（別のアーカイブの行が id で取った既存の行は除く） */
   allExistingItems?: ExistingItemInfo[]
 }
 
@@ -270,11 +270,16 @@ export interface UserPreMatchingResult extends Omit<
 }
 
 /**
- * 既存アイテムの概要情報（手動紐づけ用）
+ * 手で紐づけるときの選択肢になる既存の行1つ。
+ *
+ * 表示名は renderer が行から作る（main で文字列に畳むと、見分ける材料と検索の手掛かりが
+ * 失われる）。別のアーカイブの行が id で取った既存の行は含まない。
  */
 export interface ExistingItemInfo {
   id: string
-  name: string
+  /** 既存の行（生徒は所属学級、学級は所属の行を include した形） */
+  existingData: Record<string, unknown>
+  /** 小計グループの配下の小計項目 */
   subtotals?: SubtotalInfo[]
 }
 
@@ -285,20 +290,42 @@ export interface SubtotalInfo {
   id: string
   name: string
   order: number
+  /**
+   * 作成時刻（ISO 文字列）。同じ名前の項目が並ぶとき、取り込みは古い方へ寄せる
+   * （humanKeyMatching の決まり）ので、画面の既定もそれに揃える
+   */
+  createdAt: string
+}
+
+/**
+ * 照合の候補（取り込み先の既存の行）1つ
+ */
+export interface MatchCandidate {
+  /** 既存データのID */
+  existingId: string
+  /** 既存データ（生徒は所属学級、学級は所属の行を include した形） */
+  existingData: Record<string, unknown>
 }
 
 /**
  * 照合でマッチしたアイテム
+ *
+ * 同じ生徒が学籍番号一致と氏名一致の両方の一覧に載ることがある（一覧は重なってよい）。
  */
 export interface MatchedItem {
   /** インポートデータのID */
   importId: string
-  /** 既存データのID */
+  /** 既存データのID（既定の結び付け先 = candidates の先頭） */
   existingId: string
-  /** インポートデータ */
+  /** インポートデータ（生徒はアーカイブ上の所属学級を include した形） */
   importData: Record<string, unknown>
-  /** 既存データ */
+  /** 既存データ（candidates の先頭のもの） */
   existingData: Record<string, unknown>
+  /**
+   * 同じ値で当たった既存の行の全部（いちばん古い順）。別のアーカイブの行が id で取った
+   * 既存の行は含まない
+   */
+  candidates: MatchCandidate[]
   /** 表示用ラベル（例: "山田太郎（001）"） */
   displayLabel: string
   /** 一致理由（例: "学籍番号が一致"） */

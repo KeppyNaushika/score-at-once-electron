@@ -3,11 +3,8 @@
  *
  * テスト対象: electron-src/lib/import/merge/idChangeExecutor.ts
  * 実際のSQLiteテスト用DBを使用し、Stage 2のID変更処理を検証する
- * FK参照の連鎖的更新と古いレコードの削除を確認する
- *
- * Student.studentNumber / Classroom.name は temp-value 方式（一時値を挟んでから新しい行を作る）
- * を通る。この2列の UNIQUE は 2026-08-22 に外したので制約の迂回ではなく、旧と新が同じ値で
- * 並ぶ時間帯を作らないため（idChangeExecutor.ts 冒頭）。
+ * 行の id を UPDATE で付け替え、参照する子の外部キーと監査ログも付け替わることを確認する
+ * （削除して作り直さないので、カスケードの子も失われない）
  */
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -46,7 +43,7 @@ describe("executeIdChanges", () => {
   // 小計グループID変更のテスト
   // =========================================================================
   describe("小計グループID変更", () => {
-    it("新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {
+    it("行の id を付け替え、FK参照を更新し、古い id の行は残らない", async () => {
       const existingGroupId = generateId()
       const newGroupId = generateId()
       const examId = generateId()
@@ -108,7 +105,7 @@ describe("executeIdChanges", () => {
       expect(newGroup).not.toBeNull()
       expect(newGroup!.name).toBe("知識・技能")
 
-      // 古いIDのレコードが削除されていること
+      // 古いIDの行は残らないこと
       const oldGroup = await prisma.subtotalGroup.findUnique({
         where: { id: existingGroupId },
       })
@@ -260,7 +257,7 @@ describe("executeIdChanges", () => {
   // 生徒ID変更のテスト（temp-value方式）
   // =========================================================================
   describe("生徒ID変更", () => {
-    it("temp-value方式により新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {
+    it("temp-value方式により行の id を付け替え、FK参照を更新し、古い id の行は残らない", async () => {
       const existingStudentId = generateId()
       const newStudentId = generateId()
 
@@ -299,7 +296,7 @@ describe("executeIdChanges", () => {
       expect(newStudent).not.toBeNull()
       expect(newStudent!.studentNumber).toBe("S001")
 
-      // 古いIDのレコードが削除されていること
+      // 古いIDの行は残らないこと
       const oldStudent = await prisma.student.findUnique({
         where: { id: existingStudentId },
       })
@@ -498,7 +495,7 @@ describe("executeIdChanges", () => {
   // 学級ID変更のテスト（temp-value方式）
   // =========================================================================
   describe("学級ID変更", () => {
-    it("temp-value方式により新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {
+    it("temp-value方式により行の id を付け替え、FK参照を更新し、古い id の行は残らない", async () => {
       const existingClassroomId = generateId()
       const newClassroomId = generateId()
       const studentId = generateId()
@@ -563,7 +560,7 @@ describe("executeIdChanges", () => {
       expect(newClassroom).not.toBeNull()
       expect(newClassroom!.name).toBe("1年A組")
 
-      // 古いIDのレコードが削除されていること
+      // 古いIDの行は残らないこと
       const oldClass = await prisma.classroom.findUnique({
         where: { id: existingClassroomId },
       })
@@ -592,7 +589,7 @@ describe("executeIdChanges", () => {
   // エラーハンドリング: 対象が存在しない場合
   // =========================================================================
   describe("エラーハンドリング", () => {
-    it("変更対象の生徒が存在しない場合、警告なしにスキップされる", async () => {
+    it("変更対象の生徒が存在しない場合、付け替えずに警告を残す", async () => {
       const nonExistentId = generateId()
       const newId = generateId()
 
@@ -611,10 +608,10 @@ describe("executeIdChanges", () => {
       // 新しいIDのレコードは作成されないこと
       const student = await prisma.student.findUnique({ where: { id: newId } })
       expect(student).toBeNull()
-      expect(warnings).toHaveLength(0)
+      expect(warnings).toHaveLength(1)
     })
 
-    it("変更対象の学級が存在しない場合、警告なしにスキップされる", async () => {
+    it("変更対象の学級が存在しない場合、付け替えずに警告を残す", async () => {
       const nonExistentId = generateId()
       const newId = generateId()
 
@@ -633,10 +630,10 @@ describe("executeIdChanges", () => {
         where: { id: newId },
       })
       expect(classroom).toBeNull()
-      expect(warnings).toHaveLength(0)
+      expect(warnings).toHaveLength(1)
     })
 
-    it("変更対象の小計グループが存在しない場合、警告なしにスキップされる", async () => {
+    it("変更対象の小計グループが存在しない場合、付け替えずに警告を残す", async () => {
       const nonExistentId = generateId()
       const newId = generateId()
 
@@ -655,7 +652,57 @@ describe("executeIdChanges", () => {
         where: { id: newId },
       })
       expect(group).toBeNull()
-      expect(warnings).toHaveLength(0)
+      expect(warnings).toHaveLength(1)
+    })
+
+    it("付け替え先の id が別の行で使われているときは付け替えず、警告を残す", async () => {
+      const existingStudentId = generateId()
+      const takenId = generateId()
+      for (const [id, studentNumber] of [
+        [existingStudentId, "S100"],
+        [takenId, "S200"],
+      ]) {
+        await prisma.student.create({
+          data: {
+            id,
+            studentNumber,
+            lastName: "田中",
+            firstName: "太郎",
+            lastNameKana: "タナカ",
+            firstNameKana: "タロウ",
+          },
+        })
+      }
+
+      const idMappings = createEmptyIdMappings()
+      idMappings.student["import-id-1"] = existingStudentId
+      const warnings: string[] = []
+
+      await prisma.$transaction(async (tx) => {
+        await executeIdChanges(
+          [
+            {
+              category: "student",
+              existingId: existingStudentId,
+              newId: takenId,
+            },
+          ],
+          idMappings,
+          warnings,
+          tx
+        )
+      })
+
+      const students = await prisma.student.findMany({
+        where: { id: { in: [existingStudentId, takenId] } },
+        orderBy: { studentNumber: "asc" },
+      })
+      expect(students.map((student) => student.id)).toEqual([
+        existingStudentId,
+        takenId,
+      ])
+      expect(idMappings.student["import-id-1"]).toBe(existingStudentId)
+      expect(warnings).toHaveLength(1)
     })
   })
 

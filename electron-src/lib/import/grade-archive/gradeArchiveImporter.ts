@@ -10,6 +10,11 @@
  *   小計・領域 = uuid 一次 → 当該試験内の名前・ラベル
  *   資料       = 内包する courseworkArchive の取り込み結果から解決
  *
+ * **id が一致すれば同じ行。** 成績算出もその下の全ての表も、アーカイブの id で取り込み先を
+ * 引いて、在れば同じ行として取り込みの規則（importValuePolicy）どおり値を書き、無ければ
+ * アーカイブの id で作る（gradeArchiveRowCreators）。同じ成績算出を取り込み直すと、元の
+ * 成績算出へ戻る（別の成績算出は増えない）。
+ *
  * 生徒・学級は uuid・名前のどちらでも当たらなければ**作る**（.exam / .coursework と同じ）。
  * 学級所属も復元するので、対象生徒と、その紐づけ先の学級が取り込み先に増える。
  * 学籍番号・学級名が既存と同じでも付け替えず、アーカイブの値のまま別の行として作る。
@@ -40,6 +45,8 @@ import {
   describeClassroom,
   pickOldest,
 } from "../humanKeyMatching"
+import { createImportValuePolicy } from "../merge/importValuePolicy"
+import { writeIdFirstRow } from "../shared/idFirstRow"
 import {
   type IdMap,
   resolveCourseworkIds,
@@ -47,11 +54,13 @@ import {
   resolveSubtotalIds,
 } from "./gradeArchiveRefResolvers"
 import {
-  createDataSources,
-  createGradeCells,
-  createGradeComparisons,
-  createGradeConstraints,
-  createGradeStudents,
+  writeDataSources,
+  writeGradeCells,
+  writeGradeComparisons,
+  writeGradeConstraints,
+  writeGradeItemBoundaries,
+  writeGradeItems,
+  writeGradeStudents,
 } from "./gradeArchiveRowCreators"
 
 /**
@@ -259,6 +268,8 @@ export async function importGradeArchive(
   warnings: string[]
 }> {
   const { examMapping, courseworkDecisions = {} } = options
+  // 取り込みの方針。省略時は統合（後に書かれた方を採る）
+  const policy = createImportValuePolicy(options.action ?? "merge")
   // 旧バージョン（1.3.0 manual / 1.4.0 名前ベース / 1.12.0 射影形式）を現行へ正規化
   const { data, warnings: transformWarnings } = transformGradeToLatest(rawData)
   const warnings: string[] = [...transformWarnings]
@@ -284,6 +295,7 @@ export async function importGradeArchive(
           allowCreate: true,
           studentMatching: "studentNumber",
           courseworkDecisions,
+          action: policy.action,
         }
       )
       warnings.push(...courseworkResult.warnings)
@@ -294,12 +306,13 @@ export async function importGradeArchive(
       const studentResolution = await resolveStudents(tx, data.studentsData, {
         method: "studentNumber",
         allowCreate: true,
+        policy,
       })
       warnings.push(...studentResolution.warnings)
       const classroomResolution = await resolveClassrooms(
         tx,
         data.classesData,
-        { allowCreate: true }
+        { allowCreate: true, policy }
       )
       warnings.push(...classroomResolution.warnings)
       // 学級所属を戻すのは「この取り込みで新規作成した生徒」だけ。既存生徒にも
@@ -310,7 +323,8 @@ export async function importGradeArchive(
         data.membershipsData,
         studentResolution.map,
         classroomResolution.map,
-        studentResolution.createdIds
+        studentResolution.createdIds,
+        policy
       )
       const examIdMap = await resolveExams(
         tx,
@@ -333,16 +347,38 @@ export async function importGradeArchive(
         courseworkItemIdMap
       )
 
-      // ── 3. 成績本体を写す（アーカイブ uuid → 新 id の対応を作りながら） ──
-      const grade = await tx.grade.create({
-        data: {
-          name: archiveGrade.name,
-          description: archiveGrade.description,
-          referenceDate: archiveGrade.referenceDate
-            ? new Date(archiveGrade.referenceDate)
-            : null,
-        },
+      // ── 3. 成績本体（id が一致すれば同じ成績算出） ──────────────
+      const gradeValues = {
+        name: archiveGrade.name,
+        description: archiveGrade.description,
+        referenceDate: archiveGrade.referenceDate
+          ? new Date(archiveGrade.referenceDate)
+          : null,
+      }
+      const grade = await writeIdFirstRow({
+        archiveId: archiveGrade.id,
+        archiveUpdatedAt: archiveGrade.updatedAt,
+        policy,
+        findById: (id) => tx.grade.findUnique({ where: { id } }),
+        create: (id) =>
+          tx.grade.create({
+            data: {
+              ...(id ? { id } : {}),
+              ...gradeValues,
+              ...policy.createdTimestamps(archiveGrade),
+            },
+          }),
+        update: (existing, updatedAt) =>
+          tx.grade.update({
+            where: { id: existing.id },
+            data: { ...gradeValues, updatedAt },
+          }),
       })
+      if (grade.kind !== "created") {
+        warnings.push(
+          `成績算出「${archiveGrade.name}」はこのPCに既にあるため、同じ成績算出として取り込みました`
+        )
+      }
 
       for (const reportSettings of data.gradeIndividualReportSettings) {
         const {
@@ -352,19 +388,65 @@ export async function importGradeArchive(
           updatedAt: _updatedAt,
           ...values
         } = reportSettings
-        await tx.gradeIndividualReportSettings.create({
-          data: { gradeId: grade.id, ...values },
+        await writeIdFirstRow({
+          archiveId: reportSettings.id,
+          archiveUpdatedAt: reportSettings.updatedAt,
+          policy,
+          findById: (id) =>
+            tx.gradeIndividualReportSettings.findUnique({ where: { id } }),
+          findByKey: () =>
+            tx.gradeIndividualReportSettings.findUnique({
+              where: { gradeId: grade.targetId },
+            }),
+          create: (id) =>
+            tx.gradeIndividualReportSettings.create({
+              data: {
+                ...(id ? { id } : {}),
+                gradeId: grade.targetId,
+                ...values,
+                ...policy.createdTimestamps(reportSettings),
+              },
+            }),
+          update: (existing, updatedAt, writeKey) =>
+            tx.gradeIndividualReportSettings.update({
+              where: { id: existing.id },
+              data: {
+                ...(writeKey ? { gradeId: grade.targetId } : {}),
+                ...values,
+                updatedAt,
+              },
+            }),
         })
       }
 
       // タグは成績の外にある共有物なので、既存を uuid → 名前で当て、無ければ作る
-      // （資料アーカイブと同じ resolveTags を使う）。中間テーブルは常に新規作成した
-      // 成績に対して作るので、@@unique(gradeId, tagId) の衝突は起きない
-      const tagMap = await resolveTags(tx, data.tagsData)
+      // （資料アーカイブと同じ resolveTags を使う）
+      const tagMap = await resolveTags(tx, data.tagsData, policy)
       for (const gradeTag of data.gradeTags) {
         const tagId = tagMap.get(gradeTag.tagId)
         if (!tagId) continue
-        await tx.gradeTag.create({ data: { gradeId: grade.id, tagId } })
+        const pairKey = { gradeId: grade.targetId, tagId }
+        await writeIdFirstRow({
+          archiveId: gradeTag.id,
+          archiveUpdatedAt: gradeTag.updatedAt,
+          policy,
+          findById: (id) => tx.gradeTag.findUnique({ where: { id } }),
+          findByKey: () =>
+            tx.gradeTag.findUnique({ where: { gradeId_tagId: pairKey } }),
+          create: (id) =>
+            tx.gradeTag.create({
+              data: {
+                ...(id ? { id } : {}),
+                ...pairKey,
+                ...policy.createdTimestamps(gradeTag),
+              },
+            }),
+          update: (existing, updatedAt, writeKey) =>
+            tx.gradeTag.update({
+              where: { id: existing.id },
+              data: { ...(writeKey ? pairKey : {}), updatedAt },
+            }),
+        })
       }
 
       for (const gradeClassroom of data.gradeClassrooms) {
@@ -372,36 +454,54 @@ export async function importGradeArchive(
           gradeClassroom.classroomId
         )
         if (!classroomId) continue
-        await tx.gradeClassroom.create({
-          data: {
-            gradeId: grade.id,
-            classroomId,
-            order: gradeClassroom.order,
-          },
+        const pairKey = { gradeId: grade.targetId, classroomId }
+        await writeIdFirstRow({
+          archiveId: gradeClassroom.id,
+          archiveUpdatedAt: gradeClassroom.updatedAt,
+          policy,
+          findById: (id) => tx.gradeClassroom.findUnique({ where: { id } }),
+          findByKey: () =>
+            tx.gradeClassroom.findUnique({
+              where: { gradeId_classroomId: pairKey },
+            }),
+          create: (id) =>
+            tx.gradeClassroom.create({
+              data: {
+                ...(id ? { id } : {}),
+                ...pairKey,
+                order: gradeClassroom.order,
+                ...policy.createdTimestamps(gradeClassroom),
+              },
+            }),
+          update: (existing, updatedAt, writeKey) =>
+            tx.gradeClassroom.update({
+              where: { id: existing.id },
+              data: {
+                ...(writeKey ? pairKey : {}),
+                order: gradeClassroom.order,
+                updatedAt,
+              },
+            }),
         })
       }
 
-      const gradeStudentIdMap = await createGradeStudents(
+      const gradeStudentIdMap = await writeGradeStudents(
         tx,
         data,
-        grade.id,
+        grade.targetId,
         studentResolution.map,
+        policy,
         warnings
       )
 
-      const gradeItemIdMap: IdMap = new Map()
-      for (const archiveGradeItem of data.gradeItems) {
-        const created = await tx.gradeItem.create({
-          data: {
-            gradeId: grade.id,
-            name: archiveGradeItem.name,
-            order: archiveGradeItem.order,
-          },
-        })
-        gradeItemIdMap.set(archiveGradeItem.id, created.id)
-      }
+      const gradeItemIdMap = await writeGradeItems(
+        tx,
+        data,
+        grade.targetId,
+        policy
+      )
 
-      await createDataSources(
+      await writeDataSources(
         tx,
         data,
         gradeItemIdMap,
@@ -412,44 +512,37 @@ export async function importGradeArchive(
           courseworkItemIdMap,
           courseworkIdMap,
         },
+        policy,
         warnings
       )
 
       // ── 4. 成績境界 ──────────────────────────────────────
-      const boundaryRows = data.gradeItemBoundaries.flatMap(
-        (archiveBoundary) => {
-          const gradeItemId = gradeItemIdMap.get(archiveBoundary.gradeItemId)
-          if (!gradeItemId) return []
-          return [
-            {
-              gradeItemId,
-              label: archiveBoundary.label,
-              minPercentage: archiveBoundary.minPercentage,
-              order: archiveBoundary.order,
-            },
-          ]
-        }
-      )
-      if (boundaryRows.length > 0) {
-        await tx.gradeItemBoundary.createMany({ data: boundaryRows })
-      }
+      await writeGradeItemBoundaries(tx, data, gradeItemIdMap, policy)
 
       // ── 5. セル3種 ──────────────────────────────────────
-      await createGradeCells(
+      await writeGradeCells(
         tx,
         data,
         gradeStudentIdMap,
         gradeItemIdMap,
+        policy,
         warnings
       )
 
       // ── 6. 観点間の制約ルール ─────────────────────────────
-      await createGradeConstraints(tx, data, grade.id, gradeItemIdMap, warnings)
+      await writeGradeConstraints(
+        tx,
+        data,
+        grade.targetId,
+        gradeItemIdMap,
+        policy,
+        warnings
+      )
 
       // ── 7. 比較 ────────────────────────────────────────
-      await createGradeComparisons(tx, data, gradeItemIdMap, warnings)
+      await writeGradeComparisons(tx, data, gradeItemIdMap, policy, warnings)
 
-      return { gradeId: grade.id }
+      return { gradeId: grade.targetId }
     }
   )
 

@@ -60,10 +60,13 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
   // カテゴリ別の統計を計算
   const getStats = (result: PreMatchingResult) => {
     const autoMatched = result.byId.length
+    // 学籍番号一致と氏名一致は重なるので、行で数える
     const needsDecision =
-      (result.byStudentNumber?.length ?? 0) +
-      (result.byName?.length ?? 0) +
-      result.noMatch.length
+      new Set(
+        [...(result.byStudentNumber ?? []), ...(result.byName ?? [])].map(
+          (matchedItem) => matchedItem.importId
+        )
+      ).size + result.noMatch.length
     return { autoMatched, needsDecision }
   }
 

@@ -95,6 +95,7 @@ const openedResult = {
   appliedMigrations: [],
   migratedRowCounts: {},
   matchCandidates: [studentCandidate, userCandidate],
+  linkableRows: {},
   suggestedDecisions: {
     "Student:student-archive": {
       kind: "same",

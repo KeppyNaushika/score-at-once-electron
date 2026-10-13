@@ -175,6 +175,7 @@ describe("生徒管理の一覧: 在籍予定の生徒", () => {
         <tbody>
           <StudentTableRow
             student={STUDENT_UPCOMING}
+            hasSameLookingStudent={false}
             isSelected={false}
             onOpen={vi.fn()}
             onToggleSelect={vi.fn()}

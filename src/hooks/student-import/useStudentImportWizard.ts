@@ -129,39 +129,27 @@ export function useStudentImportWizard(
   )
 
   // 個別のID統合決定を更新
+  // 1行の判断を置き換える（照合の画面が判断の全体を渡す）
   const updateIdIntegrationDecision = useCallback(
     (
       category: "student" | "classroom",
       importId: string,
-      decision: Partial<IdIntegrationDecision>
+      decision: IdIntegrationDecision
     ) => {
       setState((prev) => {
         const currentConfig = prev.idIntegrationConfig[category]
-        const existingIndex = currentConfig.decisions.findIndex(
-          (d) => d.importId === importId
-        )
-        const newDecisions = [...currentConfig.decisions]
-
-        if (existingIndex >= 0) {
-          newDecisions[existingIndex] = {
-            ...newDecisions[existingIndex],
-            ...decision,
-          }
-        } else {
-          newDecisions.push({
-            importId,
-            decisionType: "same_person",
-            ...decision,
-          } as IdIntegrationDecision)
-        }
-
         return {
           ...prev,
           idIntegrationConfig: {
             ...prev.idIntegrationConfig,
             [category]: {
               ...currentConfig,
-              decisions: newDecisions,
+              decisions: [
+                ...currentConfig.decisions.filter(
+                  (storedDecision) => storedDecision.importId !== importId
+                ),
+                decision,
+              ],
             },
           },
         }
@@ -170,23 +158,35 @@ export function useStudentImportWizard(
     []
   )
 
-  // 一括ID選択更新
+  // 複数の行の判断をまとめて置き換える
   const batchUpdateIdIntegrationDecisions = useCallback(
-    (category: "student" | "classroom", idChoice: IdChoice) => {
+    (
+      category: "student" | "classroom",
+      items: Array<{ importId: string; existingId: string }>,
+      decisionType: IdIntegrationDecision["decisionType"],
+      idChoice?: IdChoice
+    ) => {
       setState((prev) => {
         const currentConfig = prev.idIntegrationConfig[category]
-        const newDecisions = currentConfig.decisions.map((decision) => ({
-          ...decision,
-          idChoice:
-            decision.decisionType === "same_person"
-              ? idChoice
-              : decision.idChoice,
-        }))
+        const targetIds = new Set(items.map((item) => item.importId))
         return {
           ...prev,
           idIntegrationConfig: {
             ...prev.idIntegrationConfig,
-            [category]: { ...currentConfig, decisions: newDecisions },
+            [category]: {
+              ...currentConfig,
+              decisions: [
+                ...currentConfig.decisions.filter(
+                  (storedDecision) => !targetIds.has(storedDecision.importId)
+                ),
+                ...items.map((item) => ({
+                  importId: item.importId,
+                  decisionType,
+                  existingId: item.existingId,
+                  idChoice,
+                })),
+              ],
+            },
           },
         }
       })

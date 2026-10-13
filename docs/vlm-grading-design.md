@@ -609,7 +609,7 @@ AI 採点では、1段目の判定と2段目の案の選択肢が類型になる
 - `ScoreScale.examId` は試験が消えたら Cascade（試験のものだけが消え、共通のものは null なので残る）
 - 一意制約は置かない。id は uuidv4
 - 足したら `node scripts/bundleMigrations.mjs` と `npx prisma generate`。規約テスト（`bundledMigrations`・`unifiedArchiveRegistry`・
-  `cascadeCoverage`・日時の正規化の網羅・`freshInstallChain`）を流す
+  日時の正規化の網羅・`freshInstallChain`）を流す
 
 **統合アーカイブ（`.sao`）**
 

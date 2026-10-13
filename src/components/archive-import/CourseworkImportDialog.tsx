@@ -39,8 +39,13 @@ export function CourseworkImportDialog({
 }: CourseworkImportDialogProps) {
   const importArchive = useMutation(importCourseworkArchiveMutation())
   const [action, setAction] = useState<ImportAction>("merge")
-  const { effectiveSelections, selectArchive, buildDecisions } =
-    useCourseworkImportDecisions(preview.matches)
+  const {
+    effectiveSelections,
+    selectArchive,
+    adoptIdOf,
+    selectAdoptId,
+    buildDecisions,
+  } = useCourseworkImportDecisions(preview.matches)
 
   const importing = importArchive.isPending
 
@@ -88,6 +93,8 @@ export function CourseworkImportDialog({
           courseworkMatches={preview.matches}
           effectiveSelections={effectiveSelections}
           onSelect={selectArchive}
+          adoptIdOf={adoptIdOf}
+          onSelectAdoptId={selectAdoptId}
         />
       </ScrollArea>
     </LegacyArchiveImportDialogFrame>

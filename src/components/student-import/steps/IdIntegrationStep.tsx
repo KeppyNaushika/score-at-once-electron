@@ -3,8 +3,10 @@
 import { ChevronRight, CircleCheck } from "lucide-react"
 import { useState } from "react"
 
+import { resolveIdIntegrationRows } from "@/components/import/idIntegrationRows"
 import { ClassroomIntegrationPanel } from "@/components/import/steps/id-integration/ClassroomIntegrationPanel"
 import { StudentIntegrationPanel } from "@/components/import/steps/id-integration/StudentIntegrationPanel"
+import type { IdIntegrationWizard } from "@/components/import/steps/id-integration/types"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
@@ -22,13 +24,15 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
   const { student: studentResult, classroom: classroomResult } =
     state.fileOverviewData
 
-  // 全てID一致で自動照合できる場合はファストパス
-  const studentNeedsDecision =
-    (studentResult.byStudentNumber?.length ?? 0) +
-    (studentResult.byName?.length ?? 0) +
-    studentResult.noMatch.length
-  const classroomNeedsDecision =
-    (classroomResult.byName?.length ?? 0) + classroomResult.noMatch.length
+  // 全てID一致で自動照合できる場合はファストパス。学籍番号一致と氏名一致は重なるので行で数える
+  const studentNeedsDecision = resolveIdIntegrationRows(
+    studentResult,
+    state.idIntegrationConfig.student
+  ).length
+  const classroomNeedsDecision = resolveIdIntegrationRows(
+    classroomResult,
+    state.idIntegrationConfig.classroom
+  ).length
 
   const allAutoMatched =
     studentNeedsDecision === 0 && classroomNeedsDecision === 0
@@ -55,45 +59,33 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     )
   }
 
-  // 既存のパネルに渡す互換オブジェクトを作成
-  // StudentIntegrationPanel / ClassroomIntegrationPanel は
-  // examArchive の useImportWizard を想定しているため、アダプターを作成
-  const wizardAdapter = {
+  // 照合の画面（試験の取り込みと共通）が使う形に揃える。生徒の取り込みには小計グループが無い
+  const integrationWizard: IdIntegrationWizard = {
     state: {
-      ...state,
-      idIntegrationConfig: {
-        ...state.idIntegrationConfig,
-        subtotalGroup: { strategy: "by_name" as const, decisions: [] },
-      },
       fileOverviewData: {
         student: studentResult,
         classroom: classroomResult,
-        subtotalGroup: { byId: [], noMatch: [] },
       },
+      idIntegrationConfig: state.idIntegrationConfig,
     },
-    updateIdIntegrationConfig: (
-      category: string,
-      config: Record<string, unknown>
-    ) => {
-      if (category === "student" || category === "classroom") {
-        wizard.updateIdIntegrationConfig(category, config)
-      }
-    },
-    updateIdIntegrationDecision: (
-      category: string,
-      importId: string,
-      decision: Record<string, unknown>
-    ) => {
+    updateIdIntegrationDecision: (category, importId, decision) => {
       if (category === "student" || category === "classroom") {
         wizard.updateIdIntegrationDecision(category, importId, decision)
       }
     },
     batchUpdateIdIntegrationDecisions: (
-      category: string,
-      idChoice: "use_import_id" | "use_existing_id"
+      category,
+      items,
+      decisionType,
+      idChoice
     ) => {
       if (category === "student" || category === "classroom") {
-        wizard.batchUpdateIdIntegrationDecisions(category, idChoice)
+        wizard.batchUpdateIdIntegrationDecisions(
+          category,
+          items,
+          decisionType,
+          idChoice
+        )
       }
     },
   }
@@ -125,7 +117,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
         <TabsContent value="student" className="mt-4">
           <StudentIntegrationPanel
-            wizard={wizardAdapter as never}
+            wizard={integrationWizard}
             onStrategyChange={(strategy) =>
               wizard.updateIdIntegrationConfig("student", { strategy })
             }
@@ -134,7 +126,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
         <TabsContent value="classroom" className="mt-4">
           <ClassroomIntegrationPanel
-            wizard={wizardAdapter as never}
+            wizard={integrationWizard}
             onStrategyChange={(strategy) =>
               wizard.updateIdIntegrationConfig("classroom", { strategy })
             }

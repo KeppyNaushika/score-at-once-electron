@@ -11,8 +11,9 @@
  *   として受け取る
  * - 一意制約の衝突も3択に従う（§7.3）。上書き・統合は採用する id を選べる（既定は取り込み先の
  *   id、1件ずつ変えられる）。別で追加は既存の id で固定し、アーカイブ側の子を既存の行へ付け替える
- * - アーカイブ側の id を採るときは、取り込み先の行の id と、それを参照する子の外部キーを
- *   UPDATE で付け替える（`archiveIdRenamer.ts`）。削除して作り直さない
+ * - アーカイブ側の id を採るときも、まず取り込み先の id で全ての表を書き、最後に取り込み先の
+ *   行の id と、それを参照する子の外部キーを UPDATE で付け替える（`archiveIdRenamer.ts`）。
+ *   削除して作り直さない
  * - 別で追加は、根の子孫の id を振り直す（`renumberSeparateRows`）
  * - 付け替えの途中は親子が一時的にずれるので、外部キーの検査はコミットまで遅らせる
  *   （`PRAGMA defer_foreign_keys = ON`。違反が残ればコミットで SQLite が拒む）
@@ -27,6 +28,7 @@ import type { Prisma, PrismaClient } from "@prisma/client"
 
 import type { ImportAction } from "../../../../src/types/importAction.types"
 import { createImportValuePolicy } from "../merge/importValuePolicy"
+import { separateExamName } from "../shared/separateExamName"
 import type { ArchiveIdMap } from "./archiveFileImporter"
 import {
   type ArchiveGradeInputChange,
@@ -35,6 +37,7 @@ import {
 import { filePathsOf, type PlannedRow } from "./archiveRowPlanning"
 import { readArchiveRows, renumberSeparateRows } from "./archiveRowReader"
 import {
+  applyPendingRenames,
   type ArchiveImportContext,
   resolveArchiveTable,
 } from "./archiveTableResolver"
@@ -86,7 +89,6 @@ export interface UnifiedArchiveRenamedId {
  * - sharedExisting: 複数のアーカイブ行が同じ既存行に寄る（id の一致・照合・衝突の解決を含む）
  * - replacementCollides: id が一致した行が値を置き換えると別の既存行とぶつかる（選べる id が無い）
  * - duplicateInArchive: 参照を書き換えた結果、アーカイブの複数の行が同じ一意キーになる
- * - idTaken: 付け替え先のアーカイブの id が、取り込み先に既にある
  * - matchTargetMissing: 照合で選んだ既存の行が、取り込み先に無い
  * - renameInSeparate: 別で追加なのに、既存の行をアーカイブの id へ付け替える照合の決定がある
  */
@@ -95,7 +97,6 @@ export type UnifiedArchiveUnresolvableKind =
   | "sharedExisting"
   | "replacementCollides"
   | "duplicateInArchive"
-  | "idTaken"
   | "matchTargetMissing"
   | "renameInSeparate"
 
@@ -217,6 +218,42 @@ const finalIdMap = (context: ArchiveImportContext): ArchiveIdMap =>
   )
 
 /**
+ * 別で追加で作る試験の名前に、同じ名前の試験と見分けるための ` (2)`・` (3)` … を付ける
+ * （separateExamName）。同じ取り込みで作る試験どうしも重ならないようにする
+ */
+async function withSeparateExamNames(
+  target: ArchiveTargetConnection,
+  plans: readonly PlannedRow[]
+): Promise<PlannedRow[]> {
+  const namesUsedHere = new Set<string>()
+  const numberedPlans: PlannedRow[] = []
+  for (const plan of plans) {
+    const examName = plan.values.examName
+    if (plan.kind !== "create" || typeof examName !== "string") {
+      numberedPlans.push(plan)
+      continue
+    }
+    const numberedName = await separateExamName(
+      examName,
+      async (candidateName) =>
+        namesUsedHere.has(candidateName) ||
+        (
+          await target.query<unknown>(
+            `SELECT 1 FROM "Exam" WHERE "examName" = ? LIMIT 1`,
+            [candidateName]
+          )
+        ).length > 0
+    )
+    namesUsedHere.add(numberedName)
+    numberedPlans.push({
+      ...plan,
+      values: { ...plan.values, examName: numberedName },
+    })
+  }
+  return numberedPlans
+}
+
+/**
  * アーカイブの行を取り込み先へ書く。`target` は1本のトランザクションであること。
  * 解けない衝突があれば `UnifiedArchiveUnresolvableConflictError` を投げる（呼び出し側の
  * トランザクションがロールバックする）
@@ -270,6 +307,7 @@ async function writeUnifiedArchiveRows(
     ),
     droppedIds: new Map(),
     renamedIds: [],
+    pendingRenames: [],
     warnings: [],
   }
 
@@ -280,10 +318,17 @@ async function writeUnifiedArchiveRows(
   const uniqueConflicts: UnifiedArchiveUniqueConflict[] = []
   const gradeInputChanges: ArchiveGradeInputChange[] = []
   for (const tableRows of archiveRows.tables) {
-    const resolved = await resolveArchiveTable(context, tableRows)
-    if (resolved.reasons.length > 0) {
-      throw new UnifiedArchiveUnresolvableConflictError(resolved.reasons)
+    const resolvedTable = await resolveArchiveTable(context, tableRows)
+    if (resolvedTable.reasons.length > 0) {
+      throw new UnifiedArchiveUnresolvableConflictError(resolvedTable.reasons)
     }
+    const resolved =
+      action === "separate" && tableRows.table === "Exam"
+        ? {
+            ...resolvedTable,
+            plans: await withSeparateExamNames(target, resolvedTable.plans),
+          }
+        : resolvedTable
     const writePlans = async (): Promise<void> => {
       await insertPlannedRows(
         target,
@@ -318,6 +363,8 @@ async function writeUnifiedArchiveRows(
     }
     for (const filePath of resolved.keptFilePaths) keptFilePaths.add(filePath)
   }
+  // アーカイブの id を選んだ行は、ここまで取り込み先の id で書いてある。最後に id だけ変える
+  await applyPendingRenames(context)
   return {
     result: {
       action,

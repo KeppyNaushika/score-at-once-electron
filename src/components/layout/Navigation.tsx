@@ -8,6 +8,7 @@ import {
   FileArchive,
   FilePen,
   FileStack,
+  FolderInput,
   Info,
   Layers,
   ListTree,
@@ -83,7 +84,10 @@ const navGroups: NavItem[][] = [
     { href: "/score-scales", label: "類型表管理", icon: Layers },
     { href: "/tags", label: "タグ管理", icon: Tag },
   ],
-  [{ href: "/data-export", label: "データ書き出し", icon: FileArchive }],
+  [
+    { href: "/data-import", label: "データ読み込み", icon: FolderInput },
+    { href: "/data-export", label: "データ書き出し", icon: FileArchive },
+  ],
   [
     { href: "/settings", label: "設定", icon: Settings },
     {

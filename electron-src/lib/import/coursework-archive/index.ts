@@ -38,9 +38,10 @@ export async function previewCourseworkImport(
     const uuidMatch = await prisma.coursework.findUnique({
       where: { id: coursework.id },
     })
-    const nameCandidates = await prisma.coursework.findMany({
-      where: { name: coursework.name },
-    })
+    // 名前の候補から、id が一致した資料は除く（id が一致すれば同じ資料で、選ぶものではない）
+    const nameCandidates = (
+      await prisma.coursework.findMany({ where: { name: coursework.name } })
+    ).filter((candidate) => candidate.id !== uuidMatch?.id)
     matches.push({
       archiveId: coursework.id,
       name: coursework.name,

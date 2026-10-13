@@ -27,8 +27,12 @@ function CategoryOverviewCard({
   result: PreMatchingResult
 }) {
   const autoMatched = result.byId.length
-  const secondaryMatched =
-    (result.byStudentNumber?.length ?? 0) + (result.byName?.length ?? 0)
+  // 学籍番号一致と氏名一致は重なるので、行で数える
+  const secondaryMatched = new Set(
+    [...(result.byStudentNumber ?? []), ...(result.byName ?? [])].map(
+      (matchedItem) => matchedItem.importId
+    )
+  ).size
   const noMatch = result.noMatch.length
   const total = autoMatched + secondaryMatched + noMatch
 

@@ -637,41 +637,39 @@ describe("統合アーカイブの取り込み: 衝突と照合", () => {
       }
       expect(countTableRows(TEST_DB_PATH)).toEqual(countsBefore)
     })
+  })
 
-    it("付け替え先のアーカイブの id が取り込み先に既にあるなら止める", async () => {
-      const other = await prisma.student.create({
-        data: {
-          studentNumber: "S999",
-          lastName: "別",
-          firstName: "人",
-          lastNameKana: "ベツ",
-          firstNameKana: "ヒト",
-        },
-      })
-      const student = fixture.examA.students[0]
-
-      const failure = await catchError(
-        importRows(archive, "merge", {
-          matches: {
-            [archiveRowKey("Student", student.id)]: {
-              kind: "same",
-              existingId: other.id,
-              adoptId: "archive",
-            },
-          },
-        })
-      )
-
-      expect(failure).toBeInstanceOf(UnifiedArchiveUnresolvableConflictError)
-      if (failure instanceof UnifiedArchiveUnresolvableConflictError) {
-        expect(failure.reasons.map((reason) => reason.kind)).toEqual([
-          "idTaken",
-        ])
-      }
-      expect(
-        await prisma.student.findUnique({ where: { id: other.id } })
-      ).not.toBeNull()
+  it("アーカイブの id が取り込み先に在る行は、照合の決定を見ずに同じ行として扱う", async () => {
+    const other = await prisma.student.create({
+      data: {
+        studentNumber: "S999",
+        lastName: "別",
+        firstName: "人",
+        lastNameKana: "ベツ",
+        firstNameKana: "ヒト",
+      },
     })
+    const student = fixture.examA.students[0]
+
+    const result = await importRows(archive, "merge", {
+      matches: {
+        [archiveRowKey("Student", student.id)]: {
+          kind: "same",
+          existingId: other.id,
+          adoptId: "archive",
+        },
+      },
+    })
+
+    // 別の生徒には結ばず、付け替えもしない
+    expect(result.renamedIds).toEqual([])
+    expect(result.idMap.Student?.[student.id]).toBeUndefined()
+    expect(
+      await prisma.student.findUnique({ where: { id: other.id } })
+    ).toMatchObject({ studentNumber: "S999" })
+    expect(
+      await prisma.student.findUnique({ where: { id: student.id } })
+    ).not.toBeNull()
   })
 
   it("試し取り込み: 結果は本番の取り込みと一致し、DB は何も変わっていない", async () => {

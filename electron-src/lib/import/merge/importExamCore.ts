@@ -1,23 +1,25 @@
 /**
  * ID統合インポート: 試験骨格（Exam根・ExamPage・CropRegion・参加情報）の処理
  *
- * 試験ID一致時は既存の試験へ（ExamPage/CropRegionはID一致でマッピング）、
- * 不一致時は新規作成する。UserExam/ExamSubtotalGroup/ExamStudentの参加情報も扱う。
+ * **id が一致すれば同じ行**: 試験・ページ・採点領域・参加・小計グループの採用・受験者の
+ * どれも、まずアーカイブの id で取り込み先を引き、在れば同じ行として規則どおり値（親を指す
+ * 列も含む）を書く。無ければ一意キー（(試験, 生徒) など）で引き、それも無ければアーカイブの
+ * id で作る。試験の id が一致したかは、事前照合ではなく実行の時点で決める（呼び出し側）。
  *
  * **値の扱いは importValuePolicy に一本化されている**（上書きする／統合する／別で追加する）。
  * 一致した行を置き換えるかどうかも、新しく作る行の時刻も、この規則だけで決まる。
  *
  * 「別で追加する」を人が選んだ場合、id は呼び出し前に振り直されている
  * （separateExamRewriter）ので、ここから見ると単なるID不一致＝新規作成になる。
- * 試験名はアーカイブの値のまま作る。同じ名前の試験が並ぶのは正常で、id で区別する
- * （どちらが取り込んだ方かを見分けるのは画面の役目）。
+ * そのとき同じ名前の試験が既にあれば、試験名に ` (2)`・` (3)` … を付ける（separateExamName）。
+ * 試験名に unique は無く、制約のためではなく一覧で見分けるための添え字。
  */
 
 import * as crypto from "crypto"
 
-import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { lastPathSegmentOf } from "../exam-archive/archiveValueValidator"
+import { separateExamName } from "../shared/separateExamName"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
@@ -41,7 +43,7 @@ function toImportedMasterImagePath(
  *
  * **Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
  * anonymousScoringEnforced / createdAt / updatedAt で全部**（prisma/schema.prisma）。
- * id は同定そのもの、createdAt は「既にある行」なので動かさない。残り5列がここの対象。
+ * id は同定そのもの、createdAt は「既にある行」なので動かさない。残り6列がここの対象。
  * 列を足したらここにも足すこと。
  */
 async function applyExamColumns(
@@ -90,6 +92,7 @@ async function applyExamColumns(
  * 既にあるページの列を規則に従って書き換える。
  *
  * ExamPage の列は id / examId / pageNumber / imagePath / pageSize / createdAt / updatedAt。
+ * id が一致したページは同じページなので、親（examId）もアーカイブの値（取り込む試験）にする。
  * 模範解答画像だけは実体（ファイル）を伴うので、置き換えるのは**アーカイブが画像を
  * 持っているときだけ**にする。持っていないアーカイブで既存の画像を消すと、
  * 参照の切れたページになり画面から復旧できない。
@@ -126,6 +129,7 @@ async function applyExamPageColumns(
   await tx.examPage.update({
     where: { id: existingPage.id },
     data: {
+      examId: newExamId,
       pageNumber: archivePage.pageNumber,
       imagePath: importedImagePath ?? existingPage.imagePath,
       pageSize: archivePage.pageSize,
@@ -238,58 +242,44 @@ async function importCropRegion(
   counts.created.regions++
 }
 
+/**
+ * 試験の根。`isExamIdMatch` は実行の時点で取り込み先に同じ id の試験があるか
+ */
 export async function processExam(
   data: ExtractedArchiveData,
-  preMatchResult: FileOverviewData,
+  isExamIdMatch: boolean,
   idMappings: IdMappings,
-  counts: ImportCounts,
   warnings: string[],
   policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<string> {
   const exam = data.examData.exam
-  const isExamIdMatch = preMatchResult.exam?.isIdMatch ?? false
-  const importAsSeparateExam = policy.action === "separate"
+  idMappings.exam[exam.id] = exam.id
 
-  if (isExamIdMatch && preMatchResult.exam?.existingExamId) {
-    // 試験ID一致 → 既存試験を使用（上書き / 統合）
-    const newExamId = preMatchResult.exam.existingExamId
-    idMappings.exam[exam.id] = newExamId
-
-    await applyExamColumns(exam, newExamId, policy, warnings, tx)
-
-    // 既存のExamPageとCropRegionをID一致でマッピング
-    await mapExistingExamPages(data, newExamId, idMappings, counts, policy, tx)
-    await mapExistingCropRegions(
-      data,
-      newExamId,
-      idMappings,
-      counts,
-      policy,
-      tx
-    )
-
-    return newExamId
-  }
-
-  // 試験ID不一致 → 新規作成
-  const existingById = await tx.exam.findUnique({
-    where: { id: exam.id },
-  })
-  if (existingById) {
-    idMappings.exam[exam.id] = exam.id
-    warnings.push(
-      `試験ID「${exam.id}」は既に使用されています。既存試験にデータがマージされます。`
-    )
+  if (isExamIdMatch) {
+    // 同じ試験（上書き / 統合 / 別で追加なら書かない）
+    await applyExamColumns(exam, exam.id, policy, warnings, tx)
     return exam.id
   }
+
+  // 別の試験として取り込むときは、同じ名前の試験と見分けられるよう名前に番号を付ける
+  const examName =
+    policy.action === "separate"
+      ? await separateExamName(
+          exam.examName,
+          async (candidateName) =>
+            (await tx.exam.findFirst({
+              where: { examName: candidateName },
+            })) !== null
+        )
+      : exam.examName
 
   // Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
   // anonymousScoringEnforced / createdAt / updatedAt で全部。列を足したらここも足すこと。
   await tx.exam.create({
     data: {
       id: exam.id,
-      examName: exam.examName,
+      examName,
       referenceDate: exam.referenceDate ? new Date(exam.referenceDate) : null,
       description: exam.description,
       // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
@@ -297,125 +287,101 @@ export async function processExam(
       ...policy.createdTimestamps(exam),
     },
   })
-  idMappings.exam[exam.id] = exam.id
 
-  if (importAsSeparateExam) {
+  if (policy.action === "separate") {
     warnings.push(
-      `「${exam.examName}」を別の試験として取り込みました。既存の試験はそのまま残っています。`
+      `「${exam.examName}」を別の試験として取り込みました` +
+        `${examName === exam.examName ? "" : `（試験名は「${examName}」）`}。既存の試験はそのまま残っています。`
     )
   }
 
   return exam.id
 }
 
-async function mapExistingExamPages(
-  data: ExtractedArchiveData,
-  newExamId: string,
-  idMappings: IdMappings,
-  counts: ImportCounts,
-  policy: ImportValuePolicy,
-  tx: PrismaTransaction
-): Promise<void> {
-  const existingExamPages = await tx.examPage.findMany({
-    where: { examId: newExamId },
-  })
-  const existingPageById = new Map(
-    existingExamPages.map((page) => [page.id, page])
-  )
-
-  for (const page of data.examData.examPages) {
-    const existingPage =
-      existingPageById.get(page.id) ??
-      (await tx.examPage.findUnique({ where: { id: page.id } }))
-
-    await importExamPage(
-      page,
-      existingPage,
-      newExamId,
-      idMappings,
-      counts,
-      policy,
-      tx
-    )
-  }
-}
-
-async function mapExistingCropRegions(
-  data: ExtractedArchiveData,
-  newExamId: string,
-  idMappings: IdMappings,
-  counts: ImportCounts,
-  policy: ImportValuePolicy,
-  tx: PrismaTransaction
-): Promise<void> {
-  const existingCropRegions = await tx.cropRegion.findMany({
-    where: {
-      examPage: { examId: newExamId },
-    },
-  })
-  const existingRegionById = new Map(
-    existingCropRegions.map((cropRegion) => [cropRegion.id, cropRegion])
-  )
-
-  for (const region of data.examData.cropRegions) {
-    const mappedPageId = idMappings.examPage[region.examPageId]
-    if (!mappedPageId) continue
-
-    const existingRegion =
-      existingRegionById.get(region.id) ??
-      (await tx.cropRegion.findUnique({ where: { id: region.id } }))
-
-    await importCropRegion(
-      region,
-      existingRegion,
-      mappedPageId,
-      idMappings,
-      counts,
-      policy,
-      tx
-    )
-  }
-}
-
+/**
+ * 試験の参加者（UserExam）。アーカイブの行を id で取り込み、取り込んだ人の参加も確かめる。
+ *
+ * UserExam の列は id / userId / examId / role / canExportResults / invitedAt / invitedBy /
+ * createdAt / updatedAt。canExportResults は旧形式（凍結）に無いので書かない。
+ * 採点者として結べなかった利用者（`idMappings.user` に無い人）の参加は取り込めない
+ * （親の利用者が取り込み先に無い）。
+ */
 export async function processUserExam(
+  data: ExtractedArchiveData,
   isExamIdMatch: boolean,
   newExamId: string,
   currentUserId: string,
+  idMappings: IdMappings,
   policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
-  if (isExamIdMatch) {
-    const existingUserExam = await tx.userExam.findUnique({
-      where: {
-        userId_examId: {
-          userId: currentUserId,
-          examId: newExamId,
-        },
-      },
-    })
-    if (existingUserExam) return
+  for (const userExam of data.examData.userExams) {
+    const userId = idMappings.user[userExam.userId]
+    if (!userId) continue
+    const invitedBy = userExam.invitedBy
+      ? (idMappings.user[userExam.invitedBy] ?? null)
+      : null
 
-    await tx.userExam.create({
+    const existing =
+      (await tx.userExam.findUnique({ where: { id: userExam.id } })) ??
+      (await tx.userExam.findUnique({
+        where: { userId_examId: { userId, examId: newExamId } },
+      }))
+
+    if (!existing) {
+      await tx.userExam.create({
+        data: {
+          id: userExam.id,
+          userId,
+          examId: newExamId,
+          role: userExam.role,
+          invitedAt: new Date(userExam.invitedAt),
+          invitedBy,
+          ...policy.createdTimestamps(userExam),
+        },
+      })
+      idMappings.userExam[userExam.id] = userExam.id
+      continue
+    }
+
+    idMappings.userExam[userExam.id] = existing.id
+    const updatedAt = replacementUpdatedAt(
+      policy,
+      userExam.updatedAt,
+      existing.updatedAt
+    )
+    if (!updatedAt) continue
+    // 親（利用者・試験）を変えると別の行と (userId, examId) が重なるなら、親は変えない
+    const keyTaken =
+      (existing.userId !== userId || existing.examId !== newExamId) &&
+      (await tx.userExam.findUnique({
+        where: { userId_examId: { userId, examId: newExamId } },
+      })) !== null
+    await tx.userExam.update({
+      where: { id: existing.id },
       data: {
-        id: crypto.randomUUID(),
-        userId: currentUserId,
-        examId: newExamId,
-        role: "MEMBER",
-        // 参加した事実はアーカイブに書かれていない（この取り込みで今いま起きた）ので
-        // 取り込み時刻。ここは規則の対象外＝アーカイブ由来の値を持たない行
-        invitedAt: policy.importedAt,
-        invitedBy: null,
+        ...(keyTaken ? {} : { userId, examId: newExamId }),
+        role: userExam.role,
+        invitedAt: new Date(userExam.invitedAt),
+        invitedBy,
+        updatedAt,
       },
     })
-    return
   }
 
+  // 取り込んだ人がこの試験に参加していなければ加える。参加した事実はアーカイブに
+  // 書かれていない（この取り込みで今いま起きた）ので取り込み時刻
+  const currentUserExam = await tx.userExam.findUnique({
+    where: { userId_examId: { userId: currentUserId, examId: newExamId } },
+  })
+  if (currentUserExam) return
   await tx.userExam.create({
     data: {
       id: crypto.randomUUID(),
       userId: currentUserId,
       examId: newExamId,
-      role: "OWNER",
+      // 新しく作った試験は取り込んだ人のもの。既にある試験には採点者として加わる
+      role: isExamIdMatch ? "EDITOR" : "OWNER",
       invitedAt: policy.importedAt,
       invitedBy: null,
     },
@@ -434,18 +400,20 @@ export async function processExamSubtotalGroups(
       idMappings.subtotalGroup[examSubtotalGroup.subtotalGroupId]
     if (!newGroupId) continue
 
-    // **探すキーは DB が守っているキーに合わせる。** id は uuidv4 なので端末ごとに異なり、
-    // アーカイブ側の id とも一致しない。ここで id を探しにいくと、同じ組み合わせの行が
-    // あるのに見つけられず create 側へ落ち、unique 違反でアーカイブ取り込みが
-    // トランザクションごと巻き戻る。
-    const existing = await tx.examSubtotalGroup.findUnique({
-      where: {
-        examId_subtotalGroupId: {
-          examId: newExamId,
-          subtotalGroupId: newGroupId,
+    // id が一致すれば同じ行。無ければ DB が守っている一意キー (試験, グループ) で引く
+    // （同じ組み合わせの別 id の行があるのに作ると、unique 違反で取り込みが巻き戻る）
+    const existing =
+      (await tx.examSubtotalGroup.findUnique({
+        where: { id: examSubtotalGroup.id },
+      })) ??
+      (await tx.examSubtotalGroup.findUnique({
+        where: {
+          examId_subtotalGroupId: {
+            examId: newExamId,
+            subtotalGroupId: newGroupId,
+          },
         },
-      },
-    })
+      }))
 
     if (existing) {
       const updatedAt = replacementUpdatedAt(
@@ -454,9 +422,23 @@ export async function processExamSubtotalGroups(
         existing.updatedAt
       )
       if (!updatedAt) continue
+      const keyTaken =
+        (existing.examId !== newExamId ||
+          existing.subtotalGroupId !== newGroupId) &&
+        (await tx.examSubtotalGroup.findUnique({
+          where: {
+            examId_subtotalGroupId: {
+              examId: newExamId,
+              subtotalGroupId: newGroupId,
+            },
+          },
+        })) !== null
       await tx.examSubtotalGroup.update({
         where: { id: existing.id },
         data: {
+          ...(keyTaken
+            ? {}
+            : { examId: newExamId, subtotalGroupId: newGroupId }),
           selectedForTable: examSubtotalGroup.selectedForTable ?? false,
           selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
           updatedAt,
@@ -467,6 +449,7 @@ export async function processExamSubtotalGroups(
 
     await tx.examSubtotalGroup.create({
       data: {
+        id: examSubtotalGroup.id,
         examId: newExamId,
         subtotalGroupId: newGroupId,
         selectedForTable: examSubtotalGroup.selectedForTable ?? false,
@@ -479,7 +462,6 @@ export async function processExamSubtotalGroups(
 
 export async function processExamStudents(
   data: ExtractedArchiveData,
-  isExamIdMatch: boolean,
   newExamId: string,
   idMappings: IdMappings,
   policy: ImportValuePolicy,
@@ -493,12 +475,14 @@ export async function processExamStudents(
     const newStudentId = idMappings.student[examStudent.studentId]
     if (!newStudentId) continue
 
-    const existing = isExamIdMatch
-      ? ((await tx.examStudent.findFirst({
-          where: { examId: newExamId, studentId: newStudentId },
-        })) ??
-        (await tx.examStudent.findUnique({ where: { id: examStudent.id } })))
-      : await tx.examStudent.findUnique({ where: { id: examStudent.id } })
+    // id が一致すれば同じ行。無ければ一意キー (試験, 生徒) で引く
+    const existing =
+      (await tx.examStudent.findUnique({ where: { id: examStudent.id } })) ??
+      (await tx.examStudent.findUnique({
+        where: {
+          examId_studentId: { examId: newExamId, studentId: newStudentId },
+        },
+      }))
 
     if (existing) {
       idMappings.examStudent[examStudent.id] = existing.id
@@ -508,9 +492,18 @@ export async function processExamStudents(
         existing.updatedAt
       )
       if (!updatedAt) continue
+      const keyTaken =
+        (existing.examId !== newExamId ||
+          existing.studentId !== newStudentId) &&
+        (await tx.examStudent.findUnique({
+          where: {
+            examId_studentId: { examId: newExamId, studentId: newStudentId },
+          },
+        })) !== null
       await tx.examStudent.update({
         where: { id: existing.id },
         data: {
+          ...(keyTaken ? {} : { examId: newExamId, studentId: newStudentId }),
           status: examStudent.status,
           // 並び順は列全体の性質なので、値をそのまま入れると重複と穴ができる。
           // 取り込みの最後に名簿ごと詰め直す（reorderAfterImport）

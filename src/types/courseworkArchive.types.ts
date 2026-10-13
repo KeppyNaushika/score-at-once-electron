@@ -215,7 +215,16 @@ export interface CollectedCourseworkData
 
 /** インポート時に資料ごとにユーザーが選ぶ取り込み方法 */
 export type CourseworkImportDecision =
-  { action: "reuse"; existingId: string } | { action: "new" }
+  | {
+      action: "reuse"
+      existingId: string
+      /**
+       * id をどちらに合わせるか。"archive" なら、取り込みをこのPCの id で終えてから、
+       * 既存の資料の id をアーカイブの id へ付け替える。省略時は "existing"
+       */
+      adoptId?: "existing" | "archive"
+    }
+  | { action: "new" }
 
 /** アーカイブ内の資料 uuid → ユーザー決定 */
 export type CourseworkImportDecisions = Record<string, CourseworkImportDecision>
@@ -230,7 +239,10 @@ export interface CourseworkImportOptions {
    * **この1つが取り込む全レコードの全ての値に効く**（merge/importValuePolicy）。
    */
   action?: ImportAction
-  /** 資料ごとの取り込み判断（archiveCourseworkId → 決定）。未指定は uuid 一致なら流用、無ければ新規 */
+  /**
+   * 資料ごとの取り込み判断（archiveCourseworkId → 決定）。id が取り込み先に在る資料は判断を見ずに
+   * 同じ資料として取り込む。未指定で id が無ければ新規
+   */
   courseworkDecisions?: CourseworkImportDecisions
   /** 生徒の二次照合方法（既定: studentNumber） */
   studentMatching?: CourseworkMatchingMethod

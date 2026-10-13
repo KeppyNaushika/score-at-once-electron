@@ -31,6 +31,17 @@ const subtotalGroupWithSubtotalsInclude = {
   },
 } satisfies Prisma.SubtotalGroupInclude
 
+/**
+ * 試験へ追加できる小計点グループの include。同じ名前のグループを見分けるため、
+ * 使っている試験も取る（#1452）
+ */
+const availableSubtotalGroupInclude = {
+  subtotals: {
+    orderBy: { order: "asc" },
+  },
+  examSubtotalGroups: { include: { exam: true } },
+} satisfies Prisma.SubtotalGroupInclude
+
 const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
   subtotals: {
     // 小計項目を使っている成績算出のデータソース。編集で小計項目を消すときの警告と、
@@ -341,7 +352,7 @@ export async function getAvailableSubtotalGroupsForExam(examId: string) {
         },
       },
     },
-    include: subtotalGroupWithSubtotalsInclude,
+    include: availableSubtotalGroupInclude,
     orderBy: { name: "asc" },
   })
 

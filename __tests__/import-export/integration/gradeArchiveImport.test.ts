@@ -19,6 +19,7 @@
  *    旧形式へ落とす。v1.3.0 / v1.4.0 はリテラルで組む）
  */
 
+import * as crypto from "crypto"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/grade-transformers/legacyShape"
@@ -798,10 +799,10 @@ describe("grade-archive 取り込み", () => {
     ).toBe(0)
   })
 
-  it("v1.4.0: uuid一次照合で再インポートは冪等、明示的newで複製（ユーザー判断）", async () => {
+  it("v1.4.0: id が一致すれば再インポートは冪等で、明示的な new でも複製しない", async () => {
     const suffix = Date.now()
-    const cwId = `cw_uuid_${suffix}`
-    const itemId = `cwi_uuid_${suffix}`
+    const cwId = crypto.randomUUID()
+    const itemId = crypto.randomUUID()
     const cwName = `uuid資料_${suffix}`
     await prisma.student.create({
       data: {
@@ -897,7 +898,7 @@ describe("grade-archive 取り込み", () => {
       boundariesData: { boundarySets: [] },
     })
 
-    // 1回目: decision未指定 → 元uuidを保持して新規作成
+    // 1回目: decision未指定 → アーカイブの id で新規作成
     await importGradeArchive(buildArchive())
     const created = await prisma.coursework.findUnique({ where: { id: cwId } })
     expect(created).not.toBeNull()
@@ -918,14 +919,14 @@ describe("grade-archive 取り込み", () => {
     })
     expect(ds2!.courseworkItemId).toBe(itemId)
 
-    // 3回目: 明示的 new → ユーザー判断で別資料として複製（新uuid）
+    // 3回目: 明示的 new でも、id が一致すれば同じ資料（人の判断より id が先）
     await importGradeArchive(buildArchive(), {
       courseworkDecisions: { [cwId]: { action: "new" } },
     })
     const afterNew = await prisma.coursework.findMany({
       where: { name: cwName },
     })
-    expect(afterNew).toHaveLength(2)
+    expect(afterNew).toHaveLength(1)
   })
 
   it("v1.4.0: reuse判断で既存資料に統合し、不足項目だけ補完する", async () => {
@@ -1087,7 +1088,7 @@ describe("grade-archive 取り込み", () => {
       "C",
     ])
 
-    // 参照は取り込み先の評価項目を指す（元Gradeの項目idのままではない）
+    // 評価項目はアーカイブの id のまま作られ、参照もその項目を指す
     const importedItems = await prisma.gradeItem.findMany({
       where: { gradeId: result.gradeId! },
     })
@@ -1097,7 +1098,7 @@ describe("grade-archive 取り込み", () => {
     const importedKnowledge = importedItems.find(
       (gradeItem) => gradeItem.name === "知識・技能"
     )!
-    expect(importedHyotei.id).not.toBe(archivedHyotei.id)
+    expect(importedHyotei.id).toBe(archivedHyotei.id)
     expect(imported[1].kind).toBe("consistency")
     expect(imported[1].targetGradeItemId).toBe(importedHyotei.id)
     expect(
@@ -1517,9 +1518,10 @@ describe("grade-archive 取り込み", () => {
       ).frozenByUserId
     ).toBe(frozenByUserId)
 
-    // 取り込み先に居ない操作者は null（値そのものは残す）
+    // 取り込み先に居ない操作者は null（値そのものは残す）。同じ成績算出・同じ確定値なので、
+    // 置き換えるのは上書きを選んだとき（統合では時刻が同じアーカイブは採らない）
     archive.gradeFrozenScores[0].frozenByUserId = "missing-user"
-    const dropped = await importGradeArchive(archive)
+    const dropped = await importGradeArchive(archive, { action: "overwrite" })
     const restored = await prisma.gradeFrozenScore.findFirstOrThrow({
       where: { gradeStudent: { gradeId: dropped.gradeId! } },
     })
@@ -1557,7 +1559,28 @@ describe("grade-archive 取り込み", () => {
     expect(memberships[0].classroom.name).toBe("新学級")
   })
 
-  it("アーカイブの別々の生徒が同じ既存生徒へ一致しても取り込みは失敗しない", async () => {
+  it("同じ成績算出を取り込み直すと、別の成績算出を増やさず元の成績算出へ戻る", async () => {
+    // 固定ファイル: 生徒「SDUP001」1名だけを名簿に持つ成績「成績_一人」
+    const archive = await readLegacyGradeArchive("grade-one-student.grade")
+    await seedRosterFromArchive(archive)
+
+    const first = await importGradeArchive(archive)
+    const second = await importGradeArchive(archive)
+
+    expect(first.gradeId).toBe(archive.grades[0].id)
+    expect(second.gradeId).toBe(first.gradeId)
+    expect(
+      await prisma.grade.count({ where: { name: archive.grades[0].name } })
+    ).toBe(1)
+    expect(
+      await prisma.gradeStudent.count({ where: { gradeId: first.gradeId! } })
+    ).toBe(1)
+    expect(
+      second.warnings.some((warning) => warning.includes("同じ成績算出"))
+    ).toBe(true)
+  })
+
+  it("id で取られた既存の生徒には、学籍番号が同じ別の生徒を結ばない", async () => {
     // 固定ファイル: 生徒「SDUP001」1名だけを名簿に持つ成績「成績_一人」
     const archive = await readLegacyGradeArchive("grade-one-student.grade")
     await seedRosterFromArchive(archive)
@@ -1579,15 +1602,18 @@ describe("grade-archive 取り込み", () => {
 
     const result = await importGradeArchive(archive)
 
-    // unique 違反で全体がロールバックせず、1名にまとめたことを伝える
+    // 既存の生徒は1人目が id で取っているので、2人目は別の生徒として作られ、
+    // 名簿は2名になる（同じ生徒へまとめない）
     expect(
       await prisma.gradeStudent.count({
         where: { gradeId: result.gradeId! },
       })
-    ).toBe(1)
+    ).toBe(2)
     expect(
-      result.warnings?.some((warning) => warning.includes("1名にまとめました"))
-    ).toBe(true)
+      await prisma.student.count({
+        where: { studentNumber: archive.studentsData[0].studentNumber },
+      })
+    ).toBe(2)
   })
 
   it("旧アーカイブから作る学級の id は uuid になる（合成idを主キーにしない）", async () => {

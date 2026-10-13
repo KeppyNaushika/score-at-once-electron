@@ -14,12 +14,14 @@
  * 持っていること自体が、採点者ごとの行を前提にしている。
  * アーカイブの採点者は `idMappings.user`（processUserIdIntegration が張る）で解決する。
  *
+ * **id が一致すれば同じ行。** どの表もまずアーカイブの id で取り込み先を引き、在れば同じ行と
+ * して規則どおり値（親を指す列も含む）を書く。無ければ一意キー（採点行は3つ組）で引き、それも
+ * 無ければアーカイブの id で作る。
+ *
  * 事前照合の競合一覧（scoringConflicts）は**最終確認に件数を見せるためのもの**で、
  * 書き込みには通さない。どちらを採るかは他の全ての値と同じ規則（上書き=無条件 /
  * 統合=LWW）で決まるので、一覧に載ったかどうかで書き込みの規則が変わってはいけない。
  */
-
-import * as crypto from "crypto"
 
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { ImportValuePolicy } from "./importValuePolicy"
@@ -64,6 +66,9 @@ function unresolvedGraderWarnings(unresolvedGraderIds: Set<string>): string[] {
  * 「同じマスに教員の数だけ行が並ぶ」のが正常だからで、採点者を見ずに1行拾って上書きすると
  * **別の教員の採点が黙って消える**。取り込んだ採点はアーカイブの採点者のままにする。
  *
+ * ただし **id が一致する行は同じ採点行**で、3つ組より先に id で引く（受験者や採点者の
+ * 結び付けが変わっても、同じ行として値と親を書く）。
+ *
  * 同じ採点者の同じマスの行がローカルに複数あることは、unique が無い以上ありうる。
  * そのときは **updatedAt の新しい方だけを見て、古い方には触らない**（数を減らす操作を
  * 取り込みに混ぜない。畳むなら畳むで、別の操作として人が選ぶべきもの）。
@@ -92,25 +97,21 @@ export async function processQuestionScores(
       unresolvedGraderIds
     )
 
+    // id が一致すれば同じ行。無ければ (設問, 受験者, 採点者) の3つ組で引く。
     // 同じ採点者の同じマスの行が複数あったら、いちばん新しい1行だけを相手にする。
     // 時刻が並んだときは id で決着させる（どの端末で走らせても同じ答えになる）
-    const existingByCell = await tx.questionScore.findFirst({
-      where: {
-        cropRegionId: newRegionId,
-        examStudentId: newExamStudentId,
-        userId: graderUserId,
-      },
-      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-    })
-
-    // 3つ組で当たらなかったのに同じ id の行が既にある、ということはありうる
-    // （別の教員の行がその id を持っている / 受験者の結び付けが変わった）。
-    // **その行は書き換えない** —— 相手のマスも持ち主も違うので、この採点行ではない。
-    // 見るのは「その id では作れない」という一点だけ
-    const takenScoreId = existingByCell
-      ? null
-      : await tx.questionScore.findUnique({ where: { id: questionScore.id } })
-    const existingScore = existingByCell
+    const existingScore =
+      (await tx.questionScore.findUnique({
+        where: { id: questionScore.id },
+      })) ??
+      (await tx.questionScore.findFirst({
+        where: {
+          cropRegionId: newRegionId,
+          examStudentId: newExamStudentId,
+          userId: graderUserId,
+        },
+        orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      }))
 
     const incomingPartialScore = questionScore.partialScore
       ? parseFloat(questionScore.partialScore)
@@ -125,6 +126,9 @@ export async function processQuestionScores(
         ? Number(existingScore.partialScore)
         : null
       if (
+        existingScore.cropRegionId === newRegionId &&
+        existingScore.examStudentId === newExamStudentId &&
+        existingScore.userId === graderUserId &&
         existingScore.status === questionScore.status &&
         existingPartialScore === incomingPartialScore &&
         existingScore.comment === questionScore.comment
@@ -146,6 +150,9 @@ export async function processQuestionScores(
       await tx.questionScore.update({
         where: { id: existingScore.id },
         data: {
+          cropRegionId: newRegionId,
+          examStudentId: newExamStudentId,
+          userId: graderUserId,
           partialScore: incomingPartialScore,
           status: questionScore.status,
           comment: questionScore.comment,
@@ -156,12 +163,9 @@ export async function processQuestionScores(
       continue
     }
 
-    // id が別の行に取られているなら、その id では作れない。
-    // 採点行の id は誰からも参照されない不透明な値なので、振り直して構わない
-    const newScoreId = takenScoreId ? crypto.randomUUID() : questionScore.id
     await tx.questionScore.create({
       data: {
-        id: newScoreId,
+        id: questionScore.id,
         cropRegionId: newRegionId,
         examStudentId: newExamStudentId,
         partialScore: incomingPartialScore,
@@ -171,7 +175,7 @@ export async function processQuestionScores(
         ...policy.createdTimestamps(questionScore),
       },
     })
-    idMappings.questionScore[questionScore.id] = newScoreId
+    idMappings.questionScore[questionScore.id] = questionScore.id
     counts.created.scores++
   }
 
@@ -212,22 +216,33 @@ export async function processScoreDecisions(
       unresolvedGraderIds
     )
 
-    const existing = await tx.scoreDecision.findUnique({
-      where: {
-        cropRegionId_examStudentId: {
-          cropRegionId: newRegionId,
-          examStudentId: newExamStudentId,
-        },
+    // id が一致すれば同じ行。無ければ一意キー (設問, 受験者) で引く
+    const cellKey = {
+      cropRegionId_examStudentId: {
+        cropRegionId: newRegionId,
+        examStudentId: newExamStudentId,
       },
-    })
+    }
+    const existing =
+      (await tx.scoreDecision.findUnique({
+        where: { id: scoreDecision.id },
+      })) ?? (await tx.scoreDecision.findUnique({ where: cellKey }))
 
     if (existing) {
       // 置き換えるかどうかは取り込みの規則（上書き=無条件 / 統合=LWW）。
       // 比べるのは確定の時刻（decidedAt）で、これが確定レイヤーの「書かれた時刻」
       if (policy.shouldReplaceExisting(incomingDecidedAt, existing.decidedAt)) {
+        // 親（設問・受験者）を変えると別の行と一意キーが重なるなら、親は変えない
+        const keyTaken =
+          (existing.cropRegionId !== newRegionId ||
+            existing.examStudentId !== newExamStudentId) &&
+          (await tx.scoreDecision.findUnique({ where: cellKey })) !== null
         await tx.scoreDecision.update({
           where: { id: existing.id },
           data: {
+            ...(keyTaken
+              ? {}
+              : { cropRegionId: newRegionId, examStudentId: newExamStudentId }),
             verdict: scoreDecision.verdict,
             score: scoreDecision.score ? parseFloat(scoreDecision.score) : null,
             // 旧形式のアーカイブは類型を持たない（類型評価より前の凍結形式）。確定は
@@ -246,15 +261,6 @@ export async function processScoreDecisions(
         counts.skipped.scores++
       }
       idMappings.scoreDecision[scoreDecision.id] = existing.id
-      continue
-    }
-
-    const existingById = await tx.scoreDecision.findUnique({
-      where: { id: scoreDecision.id },
-    })
-    if (existingById) {
-      idMappings.scoreDecision[scoreDecision.id] = scoreDecision.id
-      counts.unchanged.scores++
       continue
     }
 
@@ -312,14 +318,17 @@ export async function processCompoundAnswerScores(
       unresolvedGraderIds
     )
 
-    const existing = await tx.compoundAnswerScore.findUnique({
-      where: {
-        compoundAnswerId_examStudentId: {
-          compoundAnswerId: newCompoundAnswerId,
-          examStudentId: newExamStudentId,
-        },
+    // id が一致すれば同じ行。無ければ一意キー (複合解答, 受験者) で引く
+    const cellKey = {
+      compoundAnswerId_examStudentId: {
+        compoundAnswerId: newCompoundAnswerId,
+        examStudentId: newExamStudentId,
       },
-    })
+    }
+    const existing =
+      (await tx.compoundAnswerScore.findUnique({
+        where: { id: compoundAnswerScore.id },
+      })) ?? (await tx.compoundAnswerScore.findUnique({ where: cellKey }))
 
     if (existing) {
       const replacedUpdatedAt = replacementUpdatedAt(
@@ -328,9 +337,19 @@ export async function processCompoundAnswerScores(
         existing.updatedAt
       )
       if (replacedUpdatedAt) {
+        const keyTaken =
+          (existing.compoundAnswerId !== newCompoundAnswerId ||
+            existing.examStudentId !== newExamStudentId) &&
+          (await tx.compoundAnswerScore.findUnique({ where: cellKey })) !== null
         await tx.compoundAnswerScore.update({
           where: { id: existing.id },
           data: {
+            ...(keyTaken
+              ? {}
+              : {
+                  compoundAnswerId: newCompoundAnswerId,
+                  examStudentId: newExamStudentId,
+                }),
             userId: graderUserId,
             recognizedAnswer: compoundAnswerScore.recognizedAnswer,
             status: compoundAnswerScore.status,
@@ -345,16 +364,6 @@ export async function processCompoundAnswerScores(
         counts.skipped.scores++
       }
       idMappings.compoundAnswerScore[compoundAnswerScore.id] = existing.id
-      continue
-    }
-
-    const existingById = await tx.compoundAnswerScore.findUnique({
-      where: { id: compoundAnswerScore.id },
-    })
-    if (existingById) {
-      idMappings.compoundAnswerScore[compoundAnswerScore.id] =
-        compoundAnswerScore.id
-      counts.unchanged.scores++
       continue
     }
 
@@ -440,18 +449,27 @@ export async function processReturnSnapshots(
 
     const incomingCapturedAt = new Date(snapshot.capturedAt)
 
-    const existing = await tx.returnSnapshot.findUnique({
-      where: { examStudentId: newExamStudentId },
-    })
+    // id が一致すれば同じ行。無ければ一意キー（受験者）で引く
+    const existing =
+      (await tx.returnSnapshot.findUnique({ where: { id: snapshot.id } })) ??
+      (await tx.returnSnapshot.findUnique({
+        where: { examStudentId: newExamStudentId },
+      }))
 
     if (existing) {
       // 置き換えるかどうかは取り込みの規則。比べるのは記録の時刻（capturedAt）
       if (
         policy.shouldReplaceExisting(incomingCapturedAt, existing.capturedAt)
       ) {
+        const keyTaken =
+          existing.examStudentId !== newExamStudentId &&
+          (await tx.returnSnapshot.findUnique({
+            where: { examStudentId: newExamStudentId },
+          })) !== null
         await tx.returnSnapshot.update({
           where: { id: existing.id },
           data: {
+            ...(keyTaken ? {} : { examStudentId: newExamStudentId }),
             scoresJson: snapshot.scoresJson,
             totalScore: snapshot.totalScore
               ? parseFloat(snapshot.totalScore)
@@ -465,14 +483,6 @@ export async function processReturnSnapshots(
       } else {
         counts.skipped.scores++
       }
-      continue
-    }
-
-    const existingById = await tx.returnSnapshot.findUnique({
-      where: { id: snapshot.id },
-    })
-    if (existingById) {
-      counts.unchanged.scores++
       continue
     }
 
@@ -509,8 +519,10 @@ export async function processReturnSnapshots(
 /**
  * CropRegionAssignment（設問ごとの採点担当）を処理
  *
- * 担当者は `username` で移行先DBを引く（ユーザーはアーカイブを越えない）。
- * 解決できない担当は取り込まない。idはアーカイブから持ち回らず取り込み先で振り直す。
+ * 旧形式（凍結）のアーカイブはこの行の id も担当者の id も持たず、`username` だけを持つ。
+ * 担当者は、アーカイブの利用者のうち同じ `username` の人が採点者として結ばれていればその
+ * 利用者（`idMappings.user`）、いなければ取り込み先の利用者を `username` で引く。
+ * 解決できない担当は取り込まない。行は id が無いので一意キー (設問, 担当者) で引き、
  * 既に同じ割当があれば何もしない（担当は有無だけの情報でLWWの対象が無い）。
  */
 export async function processCropRegionAssignments(
@@ -533,6 +545,13 @@ export async function processCropRegionAssignments(
   const userIdByUsername = new Map(
     resolvedUsers.map((user) => [user.username, user.id])
   )
+  // アーカイブの利用者として結ばれた人を先に使う（id で決まった対応）
+  for (const archiveUser of data.usersData.users) {
+    const mappedUserId = idMappings.user[archiveUser.id]
+    if (mappedUserId) {
+      userIdByUsername.set(archiveUser.username, mappedUserId)
+    }
+  }
 
   const unresolvedUsernames = new Set<string>()
   for (const assignment of archivedAssignments) {

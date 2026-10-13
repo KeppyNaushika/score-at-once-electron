@@ -63,7 +63,7 @@ async function seedExistingMembership() {
       id: membershipId,
       studentId,
       classroomId,
-      startDate: new Date("2026-04-01T00:00:00.000Z"),
+      startDate: new Date(EXISTING_START_DATE),
       attendanceNumber: 1,
       updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     },
@@ -98,6 +98,9 @@ const integrationConfig: StudentArchiveIdIntegrationConfig = {
   classroom: { strategy: "by_name", decisions: [] },
 }
 
+/** 既存の所属の開始日。id が違っても、同じ生徒・学級・開始日の所属は同じものとみなす */
+const EXISTING_START_DATE = "2026-04-01T00:00:00.000Z"
+
 describe("生徒アーカイブの取り込み: 所属の件数", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
@@ -118,11 +121,12 @@ describe("生徒アーカイブの取り込み: 所属の件数", () => {
     const classesData = createArchiveClassesData(
       [{ id: existing.classroomId, name: "1年A組", classroomCode: "1A" }],
       [
-        // 既存と同じ生徒×学級（別 id）。アーカイブの方が古いので書き換えない
+        // 既存と同じ生徒×学級×開始日（別 id）。アーカイブの方が古いので書き換えない
         {
           studentId: existing.studentId,
           classroomId: existing.classroomId,
           attendanceNumber: 1,
+          startDate: EXISTING_START_DATE,
         },
         // 新しい生徒の所属は作る
         {
@@ -156,6 +160,43 @@ describe("生徒アーカイブの取り込み: 所属の件数", () => {
     expect(await prisma.studentClassroomMembership.count()).toBe(2)
   })
 
+  it("同じ生徒・学級でも開始日の違う所属（転出して戻った）は別の所属として作る", async () => {
+    const existing = await seedExistingMembership()
+
+    const studentsData = createArchiveStudentsData([
+      { id: existing.studentId, studentNumber: "S001" },
+    ])
+    const classesData = createArchiveClassesData(
+      [{ id: existing.classroomId, name: "1年A組", classroomCode: "1A" }],
+      [
+        {
+          studentId: existing.studentId,
+          classroomId: existing.classroomId,
+          attendanceNumber: 9,
+          startDate: "2026-10-01T00:00:00.000Z",
+        },
+      ]
+    )
+    const archive = createStudentArchive(studentsData, classesData)
+
+    const preMatchResult = await performStudentPreMatching(archive)
+    const { summary } = await executeStudentImport(
+      archive,
+      preMatchResult,
+      integrationConfig,
+      "merge"
+    )
+
+    expect(summary.created.memberships).toBe(1)
+    expect(summary.updated.memberships).toBe(0)
+    const existingMembership =
+      await prisma.studentClassroomMembership.findUniqueOrThrow({
+        where: { id: existing.membershipId },
+      })
+    expect(existingMembership.attendanceNumber).toBe(1)
+    expect(await prisma.studentClassroomMembership.count()).toBe(2)
+  })
+
   it("既存の所属を新しい値で書き換えた行は更新に数える", async () => {
     const existing = await seedExistingMembership()
 
@@ -169,6 +210,7 @@ describe("生徒アーカイブの取り込み: 所属の件数", () => {
           studentId: existing.studentId,
           classroomId: existing.classroomId,
           attendanceNumber: 5,
+          startDate: EXISTING_START_DATE,
         },
       ]
     )

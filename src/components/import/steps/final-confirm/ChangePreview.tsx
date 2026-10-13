@@ -2,11 +2,14 @@
 
 import { ListTree, School, Users } from "lucide-react"
 
+import {
+  existingRowsById,
+  resolveIdIntegrationRows,
+} from "@/components/import/idIntegrationRows"
 import { Card, CardContent } from "@/components/ui/card"
 import type {
   CategoryIdIntegrationConfig,
   FileOverviewData,
-  MatchedItem,
   PreMatchingResult,
 } from "@/types/examArchive.types"
 import type { ImportAction } from "@/types/importAction.types"
@@ -99,46 +102,60 @@ function detectFieldChanges(
   return changes
 }
 
-/** アーカイブの行が既存の行より後に書かれているか（統合するときの判定） */
-function isArchiveNewer(match: MatchedItem): boolean {
-  const importUpdatedAt = match.importData.updatedAt
-  const existingUpdatedAt = match.existingData?.updatedAt
-  if (typeof importUpdatedAt !== "string") return false
-  if (typeof existingUpdatedAt !== "string") return true
-  return new Date(importUpdatedAt) > new Date(existingUpdatedAt)
+/** 時刻の値（Date または ISO 文字列）をミリ秒にする。読めなければ null */
+function timeOf(moment: unknown): number | null {
+  const parsed =
+    moment instanceof Date
+      ? moment
+      : typeof moment === "string"
+        ? new Date(moment)
+        : null
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : null
 }
 
-/** 同じ実体だと決まった（＝既存の行に書き込む）組み合わせを集める */
+/** アーカイブの行が既存の行より後に書かれているか（統合するときの判定） */
+function isArchiveNewer(linked: LinkedRow): boolean {
+  const importUpdatedAt = timeOf(linked.importData.updatedAt)
+  const existingUpdatedAt = timeOf(linked.existingData?.updatedAt)
+  if (importUpdatedAt === null) return false
+  if (existingUpdatedAt === null) return true
+  return importUpdatedAt > existingUpdatedAt
+}
+
+/** 同じ実体だと決まった（＝既存の行に書き込む）組み合わせ */
+interface LinkedRow {
+  importId: string
+  displayLabel: string
+  importData: Record<string, unknown>
+  existingData: Record<string, unknown> | undefined
+}
+
+/** 同じ実体だと決まった組み合わせを集める（取り込み時と同じ決まり） */
 function collectLinkedItems(
   preMatch: PreMatchingResult,
   config: CategoryIdIntegrationConfig
-): MatchedItem[] {
-  const linked: MatchedItem[] = [...preMatch.byId]
-
-  const addIfLinked = (match: MatchedItem, strategyLinks: boolean) => {
-    if (linked.some((linkedItem) => linkedItem.importId === match.importId)) {
-      return
-    }
-    const decision = config.decisions.find(
-      (candidate) => candidate.importId === match.importId
-    )
-    if (decision) {
-      if (decision.decisionType === "same_person") linked.push(match)
-      return
-    }
-    if (strategyLinks) linked.push(match)
-  }
-
-  for (const match of preMatch.byStudentNumber ?? []) {
-    addIfLinked(
-      match,
-      config.strategy === "by_student_number" || config.strategy === "by_name"
-    )
-  }
-  for (const match of preMatch.byName ?? []) {
-    addIfLinked(match, config.strategy === "by_name")
-  }
-  return linked
+): LinkedRow[] {
+  const existingRows = existingRowsById(preMatch)
+  return [
+    ...preMatch.byId.map((match) => ({
+      importId: match.importId,
+      displayLabel: match.displayLabel,
+      importData: match.importData,
+      existingData: match.existingData,
+    })),
+    ...resolveIdIntegrationRows(preMatch, config).flatMap((row) =>
+      row.decision.decisionType === "same_person" && row.decision.existingId
+        ? [
+            {
+              importId: row.importId,
+              displayLabel: row.displayLabel,
+              importData: row.importData,
+              existingData: existingRows.get(row.decision.existingId),
+            },
+          ]
+        : []
+    ),
+  ]
 }
 
 /** 実際に書き換わる行だけを返す */

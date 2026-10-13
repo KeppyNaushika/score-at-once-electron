@@ -16,7 +16,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { classroomSearchKeywords, studentOption } from "@/lib/searchKeywords"
+import {
+  classroomSearchKeywords,
+  studentOptions,
+  withDuplicateLabelDetails,
+} from "@/lib/searchKeywords"
 
 interface MembershipSaveData {
   studentId: string
@@ -91,20 +95,26 @@ export default function StudentClassroomMembershipModal({
   const [notes, setNotes] = useState(membershipToEdit?.notes ?? "")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-  const studentOptions = useMemo(
+  const availableStudentOptions = useMemo(
     () =>
-      availableStudents.map((student) => studentOption(student.id, student)),
+      studentOptions(
+        availableStudents.map((student) => ({ value: student.id, student }))
+      ),
     [availableStudents]
   )
-  const classroomOptions = useMemo(
+  const availableClassroomOptions = useMemo(
     () =>
-      availableClassrooms.map((classroom) => ({
-        value: classroom.id,
-        label: classroom.classroomCode
-          ? `${classroom.name} (${classroom.classroomCode})`
-          : classroom.name,
-        keywords: classroomSearchKeywords(classroom),
-      })),
+      withDuplicateLabelDetails(
+        availableClassrooms.map((classroom) => ({
+          value: classroom.id,
+          label: classroom.classroomCode
+            ? `${classroom.name} (${classroom.classroomCode})`
+            : classroom.name,
+          keywords: classroomSearchKeywords(classroom),
+          createdAt: classroom.createdAt,
+        })),
+        (option) => `作成 ${option.createdAt.toLocaleDateString("ja-JP")}`
+      ),
     [availableClassrooms]
   )
 
@@ -160,7 +170,7 @@ export default function StudentClassroomMembershipModal({
             <div className="col-span-3 space-y-2">
               <Combobox
                 id="student"
-                options={studentOptions}
+                options={availableStudentOptions}
                 value={studentId}
                 onValueChange={setStudentId}
                 disabled={!!initialStudentId}
@@ -183,7 +193,7 @@ export default function StudentClassroomMembershipModal({
             <div className="col-span-3">
               <Combobox
                 id="class"
-                options={classroomOptions}
+                options={availableClassroomOptions}
                 value={classroomId}
                 onValueChange={setClassroomId}
                 disabled={!!initialClassroomId}

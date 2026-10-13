@@ -377,7 +377,8 @@ describe("coursework-archive 取り込み", () => {
   it("previewCourseworkImport が UUID一致と名前候補を返す", async () => {
     const archive = await readFixture()
     await seedCourseworkSections(archive)
-    // 同名で別 UUID の資料は名前候補に入り、別名の資料は入らない
+    // 同名で別 UUID の資料は名前候補に入り、別名の資料は入らない。
+    // id が一致した資料は名前候補に重ねて出さない（同じ資料で、選ぶものではない）
     const sameNameCoursework = await prisma.coursework.create({
       data: { name: archive.courseworks[0].name },
     })
@@ -390,6 +391,6 @@ describe("coursework-archive 取り込み", () => {
       preview.matches[0].nameCandidates
         .map((coursework) => coursework.id)
         .sort()
-    ).toEqual([archive.courseworks[0].id, sameNameCoursework.id].sort())
+    ).toEqual([sameNameCoursework.id])
   })
 })

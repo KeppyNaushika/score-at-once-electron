@@ -5,10 +5,12 @@
  * **「既存の利用者に結ぶ」か「新しく作る」の2つだけ**で、「取り込まない」は無い ——
  * 採点行は採点者を親に持つので、結ばずに置くと行が親を失う。
  *
- * **既存の利用者の列は書き換えない。** 生徒や学級と違い、利用者はこの試験の持ち物では
- * なく、アーカイブは「この人が採点した」と言っているだけである。氏名や役割まで
- * アーカイブの値へ倒すと、取り込みが人のアカウント設定を書き換えることになる。
- * ここで要るのは、採点行の親として在ることだけ。
+ * - **id が一致すれば同じ利用者**。事前照合の結果ではなく、実行の時点で id を引いて決め、
+ *   人の判断は当てない
+ * - 同じ利用者だと決まった行には、生徒・学級と同じく取り込みの規則（importValuePolicy）で
+ *   利用者名・氏名・役割を書く。**パスコードはアーカイブに無く、書かない**
+ * - 1人の既存の利用者に結ぶアーカイブの採点者は1人だけ（2人の採点が1人の行に混ざる）。
+ *   既に他の採点者が取った利用者には結ばず、新しく作って警告に残す
  */
 
 import type {
@@ -18,6 +20,7 @@ import type {
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import type { ImportValuePolicy } from "../importValuePolicy"
+import { replacementUpdatedAt } from "../importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "../types"
 
 /** アーカイブ側の利用者1行 */
@@ -45,22 +48,61 @@ export async function processUserIdIntegration(
   const archiveUserById = new Map(
     data.usersData.users.map((archiveUser) => [archiveUser.id, archiveUser])
   )
+  /** 既存の利用者 → それに結んだアーカイブの採点者 */
+  const claimedBy = new Map<string, string>()
 
-  // id が一致した採点者はそのまま（同じPCで作ったデータ）
-  for (const match of userPreMatch.byId) {
-    idMappings.user[match.importId] = match.existingId
+  /**
+   * 同じ利用者だと決まった既存の行へ、利用者名・氏名・役割を規則に従って書く。
+   * User の列は id / username / passcode / name / role / passcodeType / createdAt / updatedAt。
+   * id と createdAt は動かさない。passcode・passcodeType はアーカイブに無いので書かない
+   */
+  const linkUser = async (
+    archiveUser: ArchiveUser,
+    existingId: string
+  ): Promise<void> => {
+    idMappings.user[archiveUser.id] = existingId
+    claimedBy.set(existingId, archiveUser.id)
+    const existing = await tx.user.findUnique({ where: { id: existingId } })
+    if (!existing) return
+    const updatedAt = replacementUpdatedAt(
+      policy,
+      archiveUser.updatedAt,
+      existing.updatedAt
+    )
+    if (!updatedAt) return
+    await tx.user.update({
+      where: { id: existingId },
+      data: {
+        username: archiveUser.username,
+        name: archiveUser.name,
+        role: archiveUser.role,
+        updatedAt,
+      },
+    })
+    counts.updated.users++
   }
 
-  /** 新しい利用者として作る。既に同じ id が居るなら、それを使う（冪等） */
-  const createUser = async (archiveUser: ArchiveUser): Promise<void> => {
-    const existingById = await tx.user.findUnique({
-      where: { id: archiveUser.id },
-    })
-    if (existingById) {
-      idMappings.user[archiveUser.id] = existingById.id
-      return
+  // 採点者のうち、取り込み先に同じ id の利用者が居るものは同じ利用者（実行の時点で引く）
+  const graderIds = [
+    ...userPreMatch.byId,
+    ...(userPreMatch.byName ?? []),
+    ...userPreMatch.noMatch,
+  ].map((item) => item.importId)
+  for (const graderId of graderIds) {
+    if (idMappings.user[graderId]) continue
+    if (!(await tx.user.findUnique({ where: { id: graderId } }))) continue
+    const archiveUser = archiveUserById.get(graderId)
+    if (archiveUser) {
+      await linkUser(archiveUser, graderId)
+    } else {
+      // 古いアーカイブは採点者の行を持たないことがある。id が一致すれば同じ利用者
+      idMappings.user[graderId] = graderId
+      claimedBy.set(graderId, graderId)
     }
+  }
 
+  /** 新しい利用者として作る（取り込み先にその id が無いことは確かめてある） */
+  const createUser = async (archiveUser: ArchiveUser): Promise<void> => {
     // 利用者名に unique は無いので、重複回避の連番は付けない（同じ名前が並ぶのが正常）。
     // パスコードは持ち回らないので、この利用者はログイン手段を持たない状態で作られる。
     // 採点行の持ち主として在ることが目的で、あとから設定画面で足せる
@@ -86,16 +128,23 @@ export async function processUserIdIntegration(
     defaultExistingId: string | undefined
   ): Promise<void> => {
     const archiveUser = archiveUserById.get(importId)
-    if (!archiveUser) return
+    if (!archiveUser || idMappings.user[importId]) return
 
     if (decision?.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId
-      if (existingId) {
-        idMappings.user[importId] = existingId
+      const claimant = existingId ? claimedBy.get(existingId) : undefined
+      if (
+        existingId &&
+        (claimant === undefined || claimant === importId) &&
+        (await tx.user.findUnique({ where: { id: existingId } }))
+      ) {
+        await linkUser(archiveUser, existingId)
         return
       }
       warnings.push(
-        `採点者「${archiveUser.name}（${archiveUser.username}）」の結び付け先が見つからないため、新しく作りました。`
+        existingId && claimant !== undefined && claimant !== importId
+          ? `採点者「${archiveUser.name}（${archiveUser.username}）」の結び付け先は、取り込む別の採点者が既に使っているため、新しく作りました。`
+          : `採点者「${archiveUser.name}（${archiveUser.username}）」の結び付け先が見つからないため、新しく作りました。`
       )
     }
 
@@ -105,6 +154,7 @@ export async function processUserIdIntegration(
 
   // 利用者名が一致したもの
   for (const match of userPreMatch.byName ?? []) {
+    if (idMappings.user[match.importId]) continue
     const decision = config.decisions.find(
       (candidate) => candidate.importId === match.importId
     )
@@ -126,8 +176,9 @@ export async function processUserIdIntegration(
     )
   }
 
-  // どれにも当たらないもの（新しく作るしかない）
-  for (const item of userPreMatch.noMatch) {
+  // どれにも当たらないもの（新しく作るか、人が選んだ利用者に結ぶ）。
+  // 事前照合で id が一致したのに、実行までに取り込み先から消えた採点者もここで作る
+  for (const item of [...userPreMatch.noMatch, ...userPreMatch.byId]) {
     if (idMappings.user[item.importId]) continue
     const decision = config.decisions.find(
       (candidate) => candidate.importId === item.importId

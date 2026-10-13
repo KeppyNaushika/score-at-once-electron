@@ -2,9 +2,12 @@
  * 最終確認ステップのサマリー計算（取り込み実行前の見込み）
  */
 
+import {
+  existingRowsById,
+  resolveIdIntegrationRows,
+} from "@/components/import/idIntegrationRows"
 import type {
   CategoryIdIntegrationConfig,
-  MatchedItem,
   PreMatchingResult,
   ScoringConflict,
   ScoringConflictData,
@@ -18,7 +21,7 @@ import type { CategorySummary } from "./types"
 // =============================================================================
 
 /**
- * 生徒/学級/小計グループのサマリーを計算
+ * 生徒/学級/小計グループのサマリーを計算（取り込み時と同じ決まりで、行ごとの扱いを数える）
  */
 export function calculateCategorySummary(
   preMatch: PreMatchingResult,
@@ -31,103 +34,36 @@ export function calculateCategorySummary(
   let updated = 0
   let kept = 0
 
+  const existingRows = existingRowsById(preMatch)
   /**
    * 同じ実体だと決まった行を「書き換わる」「そのまま」へ数える。
    * どちらになるかは取り込みの方針だけで決まる（項目ごとの選択は無い）。
    */
-  const countLinked = (match: MatchedItem) => {
-    if (takesArchiveRow(match, action)) {
+  const countLinked = (
+    importData: Record<string, unknown>,
+    existingData: Record<string, unknown> | undefined
+  ) => {
+    if (takesArchiveRow(importData, existingData, action)) {
       updated++
     } else {
       kept++
     }
   }
 
-  const countUpdateDecision = (importId: string) => {
-    const match = [
-      ...preMatch.byId,
-      ...(preMatch.byStudentNumber ?? []),
-      ...(preMatch.byName ?? []),
-    ].find((candidate) => candidate.importId === importId)
-    if (match) countLinked(match)
-  }
-
-  // ID一致
+  // ID一致（必ず同じもの）
   for (const match of preMatch.byId) {
-    countLinked(match)
+    countLinked(match.importData, match.existingData)
   }
 
-  const getDecision = (importId: string) => {
-    return config.decisions.find((decision) => decision.importId === importId)
-  }
-
-  /**
-   * 学籍番号一致・名前一致の1件を数える。2つの段で違うのは「どの方針ならその段の一致を
-   * 既定で同じ実体とみなすか」だけなので、それを引数で受け取る。
-   */
-  const countMatchDecision = (
-    match: MatchedItem,
-    strategyAcceptsMatch: boolean
-  ) => {
-    const decision = getDecision(match.importId)
-
-    if (strategyAcceptsMatch) {
-      if (!decision || decision.decisionType === "same_person") {
-        countUpdateDecision(match.importId)
-        if (decision?.idChoice === "use_import_id") {
-          idChangeToImport++
-        }
-      } else if (decision.decisionType === "create_new") {
-        newCount++
-      } else if (decision.decisionType === "skip") {
-        skipped++
-      }
-    } else if (config.strategy === "all_new") {
-      if (!decision || decision.decisionType === "create_new") {
-        newCount++
-      } else if (decision.decisionType === "skip") {
-        skipped++
-      }
-    } else {
-      if (decision?.decisionType === "same_person") {
-        countUpdateDecision(match.importId)
-        if (decision.idChoice === "use_import_id") {
-          idChangeToImport++
-        }
-      } else if (decision?.decisionType === "skip") {
-        skipped++
-      } else {
-        newCount++
-      }
-    }
-  }
-
-  // 学籍番号一致
-  if (preMatch.byStudentNumber) {
-    for (const match of preMatch.byStudentNumber) {
-      countMatchDecision(
-        match,
-        config.strategy === "by_student_number" || config.strategy === "by_name"
+  for (const row of resolveIdIntegrationRows(preMatch, config)) {
+    const { decision } = row
+    if (decision.decisionType === "same_person") {
+      countLinked(
+        row.importData,
+        decision.existingId ? existingRows.get(decision.existingId) : undefined
       )
-    }
-  }
-
-  // 名前一致
-  if (preMatch.byName) {
-    for (const match of preMatch.byName) {
-      const alreadyProcessed = preMatch.byStudentNumber?.some(
-        (studentNumberMatch) => studentNumberMatch.importId === match.importId
-      )
-      if (alreadyProcessed) continue
-
-      countMatchDecision(match, config.strategy === "by_name")
-    }
-  }
-
-  // 一致なし
-  for (const item of preMatch.noMatch) {
-    const decision = getDecision(item.importId)
-    if (decision?.decisionType === "skip") {
+      if (decision.idChoice === "use_import_id") idChangeToImport++
+    } else if (decision.decisionType === "skip") {
       skipped++
     } else {
       newCount++
@@ -197,14 +133,29 @@ export function calculateScoringSummary(
  *
  * main の importValuePolicy と同じ規則。別で追加するときは既存に触らない。
  */
-function takesArchiveRow(match: MatchedItem, action: ImportAction): boolean {
+function takesArchiveRow(
+  importData: Record<string, unknown>,
+  existingData: Record<string, unknown> | undefined,
+  action: ImportAction
+): boolean {
   if (action === "overwrite") return true
   if (action === "separate") return false
-  const importUpdatedAt = match.importData.updatedAt
-  const existingUpdatedAt = match.existingData?.updatedAt
-  if (typeof importUpdatedAt !== "string") return false
-  if (typeof existingUpdatedAt !== "string") return true
-  return new Date(importUpdatedAt) > new Date(existingUpdatedAt)
+  const importUpdatedAt = timeOf(importData.updatedAt)
+  const existingUpdatedAt = timeOf(existingData?.updatedAt)
+  if (importUpdatedAt === null) return false
+  if (existingUpdatedAt === null) return true
+  return importUpdatedAt > existingUpdatedAt
+}
+
+/** 時刻の値（Date または ISO 文字列）をミリ秒にする。読めなければ null */
+function timeOf(moment: unknown): number | null {
+  const parsed =
+    moment instanceof Date
+      ? moment
+      : typeof moment === "string"
+        ? new Date(moment)
+        : null
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : null
 }
 
 /**

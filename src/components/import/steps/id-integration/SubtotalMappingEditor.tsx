@@ -38,29 +38,60 @@ export function SubtotalMappingEditor({
     [wizard.state.idIntegrationConfig.subtotalMappings]
   )
 
-  // 既存SubtotalのIDマップ（名前→ID）
-  const existingIdByName = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const existingSub of existingSubtotals) {
-      map.set(existingSub.name, existingSub.id)
-    }
-    return map
-  }, [existingSubtotals])
-
-  // 各インポート項目の解決済みの値（表示用）
+  // 各インポート項目の解決済みの値（表示用）。取り込み時（importSubtotals.ts）と同じ決まりで、
+  // id が一致する既存項目 → 同じ名前の既存項目（いちばん古いもの、他で使っていないもの）→ 新規
   const resolvedValues = useMemo(() => {
     const values: Record<string, string> = {}
+    // id で取られる既存項目は、名前で寄せる候補にしない
+    const importSubtotalIds = new Set(
+      importSubtotals.map((importSub) => importSub.id)
+    )
+    const usedIds = new Set(
+      importSubtotals.flatMap((importSub) => {
+        const mapped = currentMappings[importSub.id]
+        return mapped && mapped !== NEW_MARKER ? [mapped] : []
+      })
+    )
     for (const importSub of importSubtotals) {
-      if (currentMappings[importSub.id]) {
-        values[importSub.id] = currentMappings[importSub.id]
-      } else {
-        // デフォルト: 名前一致する既存項目のID、またはNEW
-        const existingId = existingIdByName.get(importSub.name)
-        values[importSub.id] = existingId ?? NEW_MARKER
+      const mapped = currentMappings[importSub.id]
+      if (mapped) {
+        values[importSub.id] = mapped
+        continue
       }
+      const sameId = existingSubtotals.find(
+        (existingSub) => existingSub.id === importSub.id
+      )
+      const sameName = existingSubtotals
+        .filter(
+          (existingSub) =>
+            existingSub.name === importSub.name &&
+            !usedIds.has(existingSub.id) &&
+            !importSubtotalIds.has(existingSub.id)
+        )
+        .toSorted(
+          (left, right) =>
+            Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
+            (left.id < right.id ? -1 : 1)
+        )[0]
+      const existingId = (sameId ?? sameName)?.id
+      if (existingId) usedIds.add(existingId)
+      values[importSub.id] = existingId ?? NEW_MARKER
     }
     return values
-  }, [importSubtotals, currentMappings, existingIdByName])
+  }, [importSubtotals, existingSubtotals, currentMappings])
+
+  // 同じ名前の項目が並ぶときは、並び順（何番目か）を添えて見分ける
+  const existingNameCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const existingSub of existingSubtotals) {
+      counts.set(existingSub.name, (counts.get(existingSub.name) ?? 0) + 1)
+    }
+    return counts
+  }, [existingSubtotals])
+  const existingLabelOf = (existingSub: SubtotalInfo): string =>
+    (existingNameCounts.get(existingSub.name) ?? 0) > 1
+      ? `${existingSub.name}（${existingSubtotals.indexOf(existingSub) + 1}番目）`
+      : existingSub.name
 
   // 既に選択済みの既存IDを追跡（重複防止）
   const usedExistingIds = useMemo(() => {
@@ -82,8 +113,7 @@ export function SubtotalMappingEditor({
         {importSubtotals.map((importSub) => {
           const currentValue = resolvedValues[importSub.id]
           const isAutoMatch =
-            !currentMappings[importSub.id] &&
-            existingIdByName.has(importSub.name)
+            !currentMappings[importSub.id] && currentValue !== NEW_MARKER
 
           return (
             <div key={importSub.id} className="flex items-center gap-2">
@@ -111,15 +141,16 @@ export function SubtotalMappingEditor({
                       const isUsedByOther =
                         usedExistingIds.has(existingSub.id) &&
                         currentValue !== existingSub.id
-                      const isNameMatch = existingSub.name === importSub.name
+                      const isAutoTarget =
+                        isAutoMatch && currentValue === existingSub.id
                       return (
                         <SelectItem
                           key={existingSub.id}
                           value={existingSub.id}
                           disabled={isUsedByOther}
                         >
-                          {existingSub.name}
-                          {isNameMatch && " (自動一致)"}
+                          {existingLabelOf(existingSub)}
+                          {isAutoTarget && " (自動一致)"}
                           {isUsedByOther && " (使用済み)"}
                         </SelectItem>
                       )
