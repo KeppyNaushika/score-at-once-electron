@@ -35,13 +35,3 @@ export function toAppImageUrl(relativePath: string): string {
     : APP_IMAGE_URL_PREFIX
   return `${prefix}${relativePath}`
 }
-
-/**
- * `toAppImageUrl` で作った URL から相対パスを取り出す（`appimg://` も受け付ける）
- */
-export function fromAppImageUrl(appImageUrl: string): string {
-  if (appImageUrl.startsWith(WEB_APP_IMAGE_URL_PREFIX)) {
-    return appImageUrl.slice(WEB_APP_IMAGE_URL_PREFIX.length)
-  }
-  return appImageUrl.replace(/^appimg:\/\/\/?/, "")
-}

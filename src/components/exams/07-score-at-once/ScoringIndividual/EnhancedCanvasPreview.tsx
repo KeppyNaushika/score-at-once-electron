@@ -12,10 +12,12 @@ import {
   renderSvgToCanvas,
 } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
-import type { TextBox } from "@/lib/textbox-canvas/types"
+import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 interface EnhancedCanvasPreviewProps {
-  textBox: TextBox
+  text: string
+  textSize: number
+  anchorDirection: AnchorDirection
   backgroundImageUrl?: string
   showBackground?: boolean
 }
@@ -26,7 +28,9 @@ interface EnhancedCanvasPreviewProps {
  * - 答案画像を背景に表示可能
  */
 export function EnhancedCanvasPreview({
-  textBox,
+  text,
+  textSize,
+  anchorDirection,
   backgroundImageUrl,
   showBackground = false,
 }: EnhancedCanvasPreviewProps) {
@@ -38,7 +42,7 @@ export function EnhancedCanvasPreview({
   } | null>(null)
 
   useEffect(() => {
-    if (textBox.text && canvasRef.current) {
+    if (text && canvasRef.current) {
       const renderEnhancedPreview = async () => {
         try {
           setRenderingStatus("描画準備中...")
@@ -47,15 +51,12 @@ export function EnhancedCanvasPreview({
           const ctx = canvas.getContext("2d")!
 
           // テキストサイズに基づいてCanvas推定サイズを計算
-          const lines = textBox.text.split("\n")
+          const lines = text.split("\n")
           const maxLineLength = Math.max(...lines.map((line) => line.length))
-          const estimatedWidth = Math.max(
-            300,
-            maxLineLength * textBox.textSize * 0.8
-          )
+          const estimatedWidth = Math.max(300, maxLineLength * textSize * 0.8)
           const estimatedHeight = Math.max(
             120,
-            lines.length * textBox.textSize * 1.5 + 60
+            lines.length * textSize * 1.5 + 60
           )
 
           // Canvasサイズを動的に設定
@@ -90,12 +91,12 @@ export function EnhancedCanvasPreview({
 
           // SVG生成（テキスト全体に対応するサイズ）
           const svgElement = await convertTextToSvg(
-            textBox.text,
+            text,
             estimatedWidth - 40, // マージン考慮
             estimatedHeight - 40,
             "left",
             "top",
-            textBox.textSize
+            textSize
           )
 
           if (svgElement) {
@@ -111,7 +112,7 @@ export function EnhancedCanvasPreview({
               ctx,
               anchorX,
               anchorY,
-              textBox.anchorDirection
+              anchorDirection
             )
 
             setActualSize({
@@ -133,13 +134,7 @@ export function EnhancedCanvasPreview({
 
       renderEnhancedPreview()
     }
-  }, [
-    textBox.text,
-    textBox.anchorDirection,
-    textBox.textSize,
-    backgroundImageUrl,
-    showBackground,
-  ])
+  }, [text, anchorDirection, textSize, backgroundImageUrl, showBackground])
 
   return (
     <div className="rounded border border-blue-300 bg-white p-3">
@@ -170,8 +165,7 @@ export function EnhancedCanvasPreview({
       <div className="mt-2 flex justify-between text-xs text-gray-500">
         <span>ステータス: {renderingStatus}</span>
         <span>
-          テキスト: {textBox.text.length}文字 /{" "}
-          {textBox.text.split("\n").length}行
+          テキスト: {text.length}文字 / {text.split("\n").length}行
         </span>
       </div>
     </div>

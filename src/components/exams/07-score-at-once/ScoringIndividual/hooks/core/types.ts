@@ -34,7 +34,7 @@ export interface CropRegionWithStatus {
 export interface UseImageCanvasProps {
   currentScoringData: ScoringData | null
   currentCropRegion?: QuestionAnswerRegionRow | null
-  studentAnswerImages?: StudentAnswerImageWithExamStudents[]
+  studentAnswerImages: StudentAnswerImageWithExamStudents[]
   zoom: number
   position: { x: number; y: number }
   drawingElements: DrawingAnnotation[]
@@ -47,7 +47,6 @@ export interface UseImageCanvasProps {
   selectedElementIds: string[]
   isDrawingSelection: boolean
   selectionRectangle: SelectionRectangle | null
-  showMultiplePages?: boolean
   pageSpacing?: number
   // ドラッグ中の軽量化用
   isDraggingElement?: boolean

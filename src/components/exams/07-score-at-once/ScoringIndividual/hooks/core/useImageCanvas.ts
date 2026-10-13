@@ -30,7 +30,6 @@ export function useImageCanvas({
   selectedElementIds,
   isDrawingSelection,
   selectionRectangle,
-  showMultiplePages,
   pageSpacing,
   isDraggingElement,
   allAnnotations = [],
@@ -56,7 +55,6 @@ export function useImageCanvas({
     useImageLoader({
       currentScoringData,
       studentAnswerImages,
-      showMultiplePages,
       imageRef,
     })
 

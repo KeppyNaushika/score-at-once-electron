@@ -15,8 +15,6 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getModifierKeyLabels } from "@/lib/platformUtils"
-// テキストボックスCanvas機能をインポート
-import type { TextBox } from "@/lib/textbox-canvas/types"
 import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 import { AnchorAlignControls } from "./AnchorAlignControls"
@@ -34,10 +32,6 @@ interface RichTextEditorModalProps {
   onSubmit: () => void
   onCancel: () => void
   title?: string
-  // 座標情報（個別採点画面の0-1座標系）
-  position?: { x: number; y: number } // 0.0-1.0
-  canvasWidth?: number
-  canvasHeight?: number
   // 答案画像背景表示用
   backgroundImageUrl?: string
   // フォントサイズとアンカー方向
@@ -57,9 +51,6 @@ export function RichTextEditorModal({
   onSubmit,
   onCancel,
   title = "テキスト編集",
-  position = { x: 0.5, y: 0.5 },
-  canvasWidth = 800,
-  canvasHeight = 600,
   backgroundImageUrl,
   // 文字サイズとアンカー方向は親が保持する制御プロパティ。ローカルに複製しない
   fontSize = 5,
@@ -89,18 +80,6 @@ export function RichTextEditorModal({
   const [showBackground, setShowBackground] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  // プレビュー用のTextBoxオブジェクトを作成
-  const previewTextBox: TextBox = {
-    id: "preview",
-    x: position.x * canvasWidth, // 相対座標を絶対座標に変換
-    y: position.y * canvasHeight,
-    text: value,
-    isSelected: true,
-    anchorDirection: anchorDirection,
-    textSize: fontSize,
-    coordinateSystem: "absolute",
-  }
 
   // テキスト装飾の挿入
   const insertFormatting = useCallback(
@@ -316,7 +295,9 @@ export function RichTextEditorModal({
                 )}
               </div>
               <EnhancedCanvasPreview
-                textBox={previewTextBox}
+                text={value}
+                textSize={fontSize}
+                anchorDirection={anchorDirection}
                 backgroundImageUrl={backgroundImageUrl}
                 showBackground={showBackground}
               />

@@ -52,8 +52,7 @@ export interface AnswerIndividualViewProps {
   currentUserId: string
 
   // Individual表示固有設定
-  studentAnswerImages?: StudentAnswerImageWithExamStudents[] // 全答案データ
-  showMultiplePages?: boolean // 複数画像の縦並び表示設定
+  studentAnswerImages: StudentAnswerImageWithExamStudents[] // 全答案データ
   pageSpacing?: number // ページ間の余白（ピクセル）
 
   // アノテーション変更通知（キャンバス→ブラウザパネル連携用）

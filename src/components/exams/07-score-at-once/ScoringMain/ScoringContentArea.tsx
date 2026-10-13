@@ -49,7 +49,7 @@ interface ScoringContentAreaProps {
   autoScroll: boolean
   showStudentNames: boolean
   expandMargin?: number
-  studentAnswerImages?: StudentAnswerImageWithExamStudents[]
+  studentAnswerImages: StudentAnswerImageWithExamStudents[]
   currentExamStudentId?: string
   currentUserId: string
   onAnnotationChanged?: () => void

@@ -49,8 +49,6 @@ interface UseTextboxIntegrationReturn {
   currentTextColor: string
   /** テキスト色を更新 */
   setCurrentTextColor: (color: string) => void
-  /** 現在のモーダル位置（0-1座標系） */
-  currentPosition: { x: number; y: number }
   /** 現在のフォントサイズ */
   currentFontSize: number
   /** フォントサイズを更新 */
@@ -214,7 +212,6 @@ export function useTextboxIntegration({
     setCurrentTextValue,
     currentTextColor,
     setCurrentTextColor,
-    currentPosition,
     currentFontSize,
     setCurrentFontSize,
     currentAnchorDirection,
