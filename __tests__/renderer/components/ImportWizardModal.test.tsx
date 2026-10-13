@@ -14,7 +14,10 @@ import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import { useImportWizard } from "@/hooks/import/useImportWizard"
 
-import { createMockWizard } from "../helpers/mockWizard"
+import {
+  createMockImportOutcome,
+  createMockWizard,
+} from "../helpers/mockWizard"
 
 // useImportWizard をモック
 vi.mock("@/hooks/import/useImportWizard", () => ({
@@ -113,6 +116,45 @@ describe("ImportWizardModal", () => {
     await user.click(screen.getByRole("button", { name: /キャンセル/ }))
 
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("IM-9: 実行の段では、終わった後も「戻る」を押せない（戻って実行し直すと二重に取り込む）", () => {
+    mockWizard = createMockWizard(
+      { currentStep: "execute" },
+      createMockImportOutcome()
+    )
+    mockUseImportWizard.mockReturnValue(mockWizard)
+
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
+
+    expect(screen.getByRole("button", { name: /戻る/ })).toBeDisabled()
+  })
+
+  it("IM-10: 取り込めた後のフッターは「閉じる」で、押すと閉じるだけ（試験へは移らない）", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onComplete = vi.fn()
+    mockWizard = createMockWizard(
+      { currentStep: "execute" },
+      createMockImportOutcome()
+    )
+    mockUseImportWizard.mockReturnValue(mockWizard)
+
+    render(
+      <ImportWizardModal
+        isOpen={true}
+        onClose={onClose}
+        onComplete={onComplete}
+      />
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "キャンセル" })
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "閉じる" }))
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(onComplete).not.toHaveBeenCalled()
   })
 
   it("IM-8: 処理中は Esc でも閉じない（onClose を呼ばない）", async () => {

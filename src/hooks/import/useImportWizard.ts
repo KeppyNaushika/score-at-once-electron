@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
@@ -22,6 +22,20 @@ import type {
 import type { ImportAction } from "@/types/importAction.types"
 
 import { initialState, STEP_ORDER } from "./constants"
+
+/** 試験の取り込み（`importExamArchiveMutation`）の結果 */
+type ExamImportResult = Awaited<
+  ReturnType<
+    NonNullable<ReturnType<typeof importExamArchiveMutation>["mutationFn"]>
+  >
+>
+
+/**
+ * 実行の段の結果。失敗はここに持ち、ウィザード全体のエラー（`state.error`。上部の帯）には
+ * 載せない（帯にも実行の段にも同じ文言が出て、帯の ✕ で消すと理由も消えていた）
+ */
+type ExamImportOutcome =
+  { kind: "ok"; result: ExamImportResult } | { kind: "failed"; error: string }
 
 /** .score を読み、「内容確認」に要るもの（manifest と事前照合）を揃える */
 const loadExamArchive = async (archivePath: string) => {
@@ -73,6 +87,12 @@ export function useImportWizard(startState: ImportWizardState = initialState) {
   const currentUser = useCurrentUser()
   const { mutateAsync: runImport } = useMutation(importExamArchiveMutation())
   const [state, setState] = useState<ImportWizardState>(startState)
+  const [importOutcome, setImportOutcome] = useState<ExamImportOutcome | null>(
+    null
+  )
+  // 取り込みは1つのウィザードで1回だけ。実行の段を作り直しても（StrictMode の再実行でも）
+  // 同じアーカイブを二度取り込まない
+  const hasExecutedRef = useRef(false)
 
   // アーカイブ解析 → 事前照合 → file_overview遷移（共通処理）
   const analyzeAndPreMatch = useCallback(async (archivePath: string) => {
@@ -399,53 +419,68 @@ export function useImportWizard(startState: ImportWizardState = initialState) {
     })
   }, [state.currentStep, detectAndAdvanceToFinalConfirm])
 
-  // ステップを戻る
+  // ステップを戻る（実行の段からは戻らない。戻って「実行」を押すと二重に取り込む）
   const goBack = useCallback(() => {
     setState((prev) => {
       const currentIndex = STEP_ORDER.indexOf(prev.currentStep)
-      if (currentIndex <= 0) return prev
+      if (currentIndex <= 0 || prev.currentStep === "execute") return prev
       return { ...prev, currentStep: STEP_ORDER[currentIndex - 1] }
     })
   }, [])
 
-  // インポート実行
-  const executeImport = useCallback(async () => {
-    // archivePath と fileOverviewData は loadExamArchive が必ず揃えて入れる（片方だけの状態は無い）
-    if (!state.archivePath || !state.fileOverviewData) return null
+  // インポート実行。結果（成功・失敗）は importOutcome に持ち、返り値でも返す
+  const executeImport =
+    useCallback(async (): Promise<ExamImportOutcome | null> => {
+      if (hasExecutedRef.current) return null
+      hasExecutedRef.current = true
 
-    setState((prev) => ({ ...prev, isProcessing: true, error: null }))
+      const settle = (outcome: ExamImportOutcome) => {
+        setImportOutcome(outcome)
+        return outcome
+      }
 
-    try {
-      // ID統合インポートを実行
-      const result = await runImport({
-        archivePath: state.archivePath,
-        preMatchResult: state.fileOverviewData,
-        integrationConfig: state.idIntegrationConfig,
-        currentUserId: currentUser.id,
-      })
+      // archivePath と fileOverviewData は loadExamArchive が必ず揃えて入れる（片方だけの状態は無い）。
+      // 欠けていたら実行中のまま待たせず失敗にする
+      if (!state.archivePath || !state.fileOverviewData) {
+        return settle({
+          kind: "failed",
+          error:
+            "取り込むファイルが読み込まれていません。閉じてから、もう一度ファイルを選んでください。",
+        })
+      }
 
-      setState((prev) => ({ ...prev, isProcessing: false }))
-
-      return result
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        isProcessing: false,
-        error: error instanceof Error ? error.message : "エラーが発生しました",
-      }))
-      return null
-    }
-  }, [
-    state.archivePath,
-    state.fileOverviewData,
-    state.idIntegrationConfig,
-    currentUser.id,
-    runImport,
-  ])
+      setState((prev) => ({ ...prev, isProcessing: true, error: null }))
+      try {
+        // ID統合インポートを実行
+        const result = await runImport({
+          archivePath: state.archivePath,
+          preMatchResult: state.fileOverviewData,
+          integrationConfig: state.idIntegrationConfig,
+          currentUserId: currentUser.id,
+        })
+        return settle({ kind: "ok", result })
+      } catch (error) {
+        return settle({
+          kind: "failed",
+          error:
+            error instanceof Error ? error.message : "エラーが発生しました",
+        })
+      } finally {
+        setState((prev) => ({ ...prev, isProcessing: false }))
+      }
+    }, [
+      state.archivePath,
+      state.fileOverviewData,
+      state.idIntegrationConfig,
+      currentUser.id,
+      runImport,
+    ])
 
   // リセット
   const reset = useCallback(() => {
     setState(initialState)
+    setImportOutcome(null)
+    hasExecutedRef.current = false
   }, [])
 
   // エラーをクリア
@@ -455,6 +490,7 @@ export function useImportWizard(startState: ImportWizardState = initialState) {
 
   return {
     state,
+    importOutcome,
     selectFile,
     performPreMatching,
     setImportAction,

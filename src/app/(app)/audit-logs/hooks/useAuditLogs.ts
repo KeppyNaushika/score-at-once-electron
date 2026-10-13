@@ -58,10 +58,22 @@ export function useAuditLogs(
 ): UseAuditLogsResult {
   const [filter, setFilterState] = useState<AuditFilterState>(initialFilter)
   /**
+   * main が数え終えた総件数。**ページの窓へ渡す詰め直しの基準**。
+   *
+   * 件数はページを取得して初めて分かるが、取得するページはページの窓から決まるので、
+   * 同じ描画の中では窓へ渡せない。数え終えた値をここへ写し、次の描画で窓へ渡す。
+   * 数える前（最初の読み込み中）は `undefined` で、窓は詰め直さない（0件と取り違えて
+   * 先頭へ戻さない）。
+   */
+  const [settledTotal, setSettledTotal] = useState<number | undefined>(
+    undefined
+  )
+  /**
    * ページの窓（先頭の行と件数）は一覧と共通。見出し行は数えない（`reservedHeight: 0`）。
    *
-   * `firstRowIndex < total` である限り `1 ≤ ページ番号 ≤ 総ページ数` は自動的に
-   * 満たされるので、詰め直す処理も要らない。
+   * 2ページ目以降を見ている間に件数が減る（同期で削除が届く、保持期間を過ぎた行が
+   * 消える）と先頭の行が総件数を超えるので、窓が最後のページへ詰め直す。詰め直すと
+   * ページ番号が変わってクエリキーが変わり、範囲内のページを取り直す。
    */
   const {
     setFirstRowIndex,
@@ -71,7 +83,11 @@ export function useAuditLogs(
     setPageSizeChoice,
     setPageNumber,
     viewportRef,
-  } = usePageWindow({ rowHeight: AUDIT_LOG_ROW_HEIGHT, reservedHeight: 0 })
+  } = usePageWindow({
+    rowHeight: AUDIT_LOG_ROW_HEIGHT,
+    reservedHeight: 0,
+    totalRows: settledTotal,
+  })
 
   // 画面の状態（欄の並び）を main へ渡す条件にする。欄の文言（label）は条件に
   // 入らないので、同じ条件なら同じクエリキーになる
@@ -81,6 +97,7 @@ export function useAuditLogs(
   const {
     data,
     isPending: loading,
+    isPlaceholderData,
     error,
   } = useQuery(auditLogListQuery(queryFilter, { pageNumber, pageSize }))
 
@@ -93,6 +110,13 @@ export function useAuditLogs(
     },
     [setFirstRowIndex]
   )
+
+  // 写すのはいまのキーで数えた件数だけ。取り直しの間に出している直前のページ
+  // （`keepPreviousData`）の件数は別のキーのものなので写さない
+  const countedTotal = isPlaceholderData ? undefined : data?.total
+  if (countedTotal !== undefined && countedTotal !== settledTotal) {
+    setSettledTotal(countedTotal)
+  }
 
   const total = data?.total ?? 0
 

@@ -1,29 +1,18 @@
 "use client"
 
-import { ArrowRight, TriangleAlert } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { ArrowRight } from "lucide-react"
+import { useEffect } from "react"
 
 import {
+  ImportCountsCard,
   ImportExecutingView,
   ImportFailedView,
   ImportSucceededHeading,
+  ImportWarningsCard,
 } from "@/components/import/ImportExecuteStatus"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ArchiveDataCounts } from "@/types/examArchive.types"
-
-/** idIntegrationImport の戻り値の型 */
-interface IdIntegrationImportResult {
-  examId: string
-  summary: {
-    created: ArchiveDataCounts
-    updated: ArchiveDataCounts
-    skipped: ArchiveDataCounts
-    unchanged: ArchiveDataCounts
-  }
-  warnings: string[]
-}
+import { tableLabel } from "@/lib/shared/tableLabels"
 
 interface ExecuteStepProps {
   wizard: UseImportWizardReturn
@@ -31,126 +20,67 @@ interface ExecuteStepProps {
   onClose: () => void
 }
 
+/**
+ * 実行の段。開いたら取り込みを始める（二度目を走らせないのはウィザードの側が受け持つ）。
+ *
+ * 結果（成功・失敗）はウィザードの `importOutcome` で出し分ける。ウィザード全体のエラー
+ * （上部の帯）は見ない — 帯の ✕ で消しても、この段の表示は変わらない。
+ */
 export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
-  const { executeImport, state } = wizard
-  const [result, setResult] = useState<IdIntegrationImportResult | null>(null)
-  const [isExecuting, setIsExecuting] = useState(false)
-  const hasStarted = useRef(false)
+  const { executeImport, importOutcome } = wizard
 
-  // 自動実行
   useEffect(() => {
-    if (hasStarted.current) return
-    hasStarted.current = true
-
-    const execute = async () => {
-      setIsExecuting(true)
-      const importResult = await executeImport()
-      setIsExecuting(false)
-      if (importResult) {
-        setResult(importResult)
-      }
-    }
-
-    execute()
+    void executeImport()
   }, [executeImport])
 
-  const handleComplete = () => {
-    if (result && onComplete) {
-      onComplete(result.examId)
-    }
-    onClose()
-  }
-
-  // 実行中
-  if (isExecuting) {
+  // 実行中（始める前の一瞬も含む）
+  if (importOutcome === null) {
     return <ImportExecutingView />
   }
 
-  // 完了（成功）。失敗は例外で上がるので result は成功時のみ入る
-  if (result) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center py-8">
-        <ImportSucceededHeading description="試験が正常に取り込まれました。" />
-
-        {/* 結果サマリー */}
-        {result.summary && (
-          <Card className="mb-6 w-full max-w-md border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
-            <CardContent className="p-5">
-              <h4 className="mb-4 text-sm font-medium text-green-800 dark:text-green-200">
-                取り込み結果
-              </h4>
-              <div className="grid grid-cols-4 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.summary.created.scores}
-                  </div>
-                  <div className="text-xs text-green-600/80 dark:text-green-400/80">
-                    新規追加
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {result.summary.updated.scores}
-                  </div>
-                  <div className="text-xs text-purple-600/80 dark:text-purple-400/80">
-                    上書き
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">
-                    {result.summary.unchanged.scores}
-                  </div>
-                  <div className="text-xs text-gray-500/80 dark:text-gray-400/80">
-                    変更なし
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
-                    {result.summary.skipped.scores}
-                  </div>
-                  <div className="text-xs text-gray-400/80 dark:text-gray-500/80">
-                    スキップ
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 警告表示 */}
-        {result.warnings && result.warnings.length > 0 && (
-          <Card className="mb-6 w-full max-w-md border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-amber-800 dark:text-amber-200">
-                    注意事項
-                  </h4>
-                  <ul className="space-y-1">
-                    {result.warnings.map((warning, index) => (
-                      <li
-                        key={index}
-                        className="text-sm text-amber-700 dark:text-amber-300"
-                      >
-                        {warning}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Button onClick={handleComplete} size="lg" className="gap-2 px-8">
-          試験を開く
-          <ArrowRight className="h-5 w-5" />
-        </Button>
-      </div>
-    )
+  if (importOutcome.kind === "failed") {
+    return <ImportFailedView error={importOutcome.error} onClose={onClose} />
   }
 
-  // 完了（失敗）
-  return <ImportFailedView error={state.error} onClose={onClose} />
+  const { examId, summary, warnings } = importOutcome.result
+
+  const handleOpenExam = () => {
+    onComplete?.(examId)
+    onClose()
+  }
+
+  // main が数えている種類だけを出す（画像は数えていないので出さない）
+  const countsRows = [
+    { label: tableLabel("Student"), countsKey: "students" },
+    { label: tableLabel("Classroom"), countsKey: "classrooms" },
+    { label: tableLabel("User"), countsKey: "users" },
+    { label: tableLabel("SubtotalGroup"), countsKey: "subtotalGroups" },
+    { label: tableLabel("ExamPage"), countsKey: "pages" },
+    { label: tableLabel("CropRegion"), countsKey: "regions" },
+    { label: tableLabel("QuestionScore"), countsKey: "scores" },
+    { label: tableLabel("DrawingAnnotation"), countsKey: "annotations" },
+  ] as const
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center py-8">
+      <ImportSucceededHeading description="試験が正常に取り込まれました。" />
+
+      <ImportCountsCard
+        rows={countsRows.map((countsRow) => ({
+          label: countsRow.label,
+          created: summary.created[countsRow.countsKey],
+          updated: summary.updated[countsRow.countsKey],
+          unchanged: summary.unchanged[countsRow.countsKey],
+          skipped: summary.skipped[countsRow.countsKey],
+        }))}
+      />
+
+      <ImportWarningsCard warnings={warnings} />
+
+      <Button onClick={handleOpenExam} size="lg" className="gap-2 px-8">
+        試験を開く
+        <ArrowRight className="h-5 w-5" />
+      </Button>
+    </div>
+  )
 }

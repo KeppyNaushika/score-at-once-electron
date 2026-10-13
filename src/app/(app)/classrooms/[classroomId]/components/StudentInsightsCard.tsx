@@ -18,24 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type {
-  ClassroomStudentExamResult,
-  StudentExamResult,
-} from "@/electron-src/lib/prisma/student"
+import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
 import { useTableSort } from "@/hooks/useTableSort"
 
-// ── 型定義 ──
+import { computeStudentInsights, type StudentInsight } from "./studentInsights"
 
-interface StudentInsight {
-  studentId: string
-  studentName: string
-  studentNumber: string
-  attendanceNumber: number | null
-  avgRate: number | null
-  slope: number | null
-  trend: "up" | "down" | "stable" | "insufficient"
-  examCount: number
-}
+// ── 型定義 ──
 
 interface InsightSortable {
   id: string
@@ -49,27 +37,6 @@ interface InsightSortable {
 
 // ── ヘルパー ──
 
-function calcSlope(values: number[]): number | null {
-  const pointCount = values.length
-  if (pointCount < 2) return null
-
-  let sumX = 0
-  let sumY = 0
-  let sumXY = 0
-  let sumX2 = 0
-
-  for (let i = 0; i < pointCount; i++) {
-    sumX += i
-    sumY += values[i]
-    sumXY += i * values[i]
-    sumX2 += i * i
-  }
-
-  const denom = pointCount * sumX2 - sumX * sumX
-  if (denom === 0) return 0
-  return (pointCount * sumXY - sumX * sumY) / denom
-}
-
 function formatSlope(slope: number | null): string {
   if (slope === null) return "—"
   const sign = slope > 0 ? "+" : ""
@@ -80,8 +47,6 @@ function formatRate(rate: number | null): string {
   if (rate === null) return "—"
   return `${rate.toFixed(1)}%`
 }
-
-const SLOPE_THRESHOLD = 1.5
 
 const INSIGHT_COLUMNS: ColumnHeadDefinition<keyof InsightSortable>[] = [
   { label: "番号", sortKey: "attendanceNumber", className: "w-16" },
@@ -126,80 +91,15 @@ export function StudentInsightsCard({
   }
 
   // フィルタ + 分析
-  const insights = useMemo<StudentInsight[]>(() => {
-    const fromTime = dateFrom ? new Date(dateFrom).getTime() : null
-    const toTime = dateTo ? new Date(dateTo).getTime() : null
-
-    const filterExams = (exams: StudentExamResult[]) =>
-      exams.filter((examResult) => {
-        if (!examResult.referenceDate || examResult.maxScore === 0) return false
-        if (examResult.status !== "complete" && examResult.status !== "partial")
-          return false
-        if (
-          selectedTags.size > 0 &&
-          !examResult.tags.some((tag) => selectedTags.has(tag))
-        )
-          return false
-        const time = new Date(examResult.referenceDate).getTime()
-        if (fromTime && time < fromTime) return false
-        if (toTime && time > toTime) return false
-        return true
-      })
-
-    return studentResults.map((studentResult) => {
-      const filtered = filterExams(studentResult.examResults).sort(
-        (examA, examB) =>
-          new Date(examA.referenceDate!).getTime() -
-          new Date(examB.referenceDate!).getTime()
-      )
-
-      const rates = filtered.map(
-        (examResult) => (examResult.totalScore / examResult.maxScore) * 100
-      )
-
-      if (rates.length === 0) {
-        return {
-          studentId: studentResult.studentId,
-          studentName: studentResult.studentName,
-          studentNumber: studentResult.studentNumber,
-          attendanceNumber: studentResult.attendanceNumber,
-          avgRate: null,
-          slope: null,
-          trend: "insufficient" as const,
-          examCount: 0,
-        }
-      }
-
-      const avgRate =
-        Math.round(
-          (rates.reduce((sum, rate) => sum + rate, 0) / rates.length) * 10
-        ) / 10
-      const rawSlope = calcSlope(rates)
-      const slope = rawSlope !== null ? Math.round(rawSlope * 10) / 10 : null
-
-      let trend: "up" | "down" | "stable" | "insufficient"
-      if (slope === null || rates.length < 2) {
-        trend = "insufficient"
-      } else if (slope >= SLOPE_THRESHOLD) {
-        trend = "up"
-      } else if (slope <= -SLOPE_THRESHOLD) {
-        trend = "down"
-      } else {
-        trend = "stable"
-      }
-
-      return {
-        studentId: studentResult.studentId,
-        studentName: studentResult.studentName,
-        studentNumber: studentResult.studentNumber,
-        attendanceNumber: studentResult.attendanceNumber,
-        avgRate,
-        slope,
-        trend,
-        examCount: rates.length,
-      }
-    })
-  }, [studentResults, selectedTags, dateFrom, dateTo])
+  const insights = useMemo(
+    () =>
+      computeStudentInsights(studentResults, {
+        selectedTags,
+        fromTime: dateFrom ? new Date(dateFrom).getTime() : null,
+        toTime: dateTo ? new Date(dateTo).getTime() : null,
+      }),
+    [studentResults, selectedTags, dateFrom, dateTo]
+  )
 
   // ソート用データ
   const sortableData = useMemo<InsightSortable[]>(

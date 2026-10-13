@@ -109,19 +109,37 @@ export async function processDrawingAnnotations(
   }
 }
 
+/** 学級所属を処理した件数（作った・書き換えた・既存のまま・取り込まなかった） */
+interface MembershipImportCounts {
+  created: number
+  updated: number
+  unchanged: number
+  skipped: number
+}
+
 /**
  * 学級所属データを処理
+ *
+ * 件数は実際に書いた結果で数える。既存の所属に当たった行は対応表に入るが作成には数えない
+ * （対応表の大きさで数えると、作らなかった所属まで「作成」になる）。
  *
  * @param memberships - 所属データ配列
  * @param idMappings - IDマッピング（student, classroom, membership を使用）
  * @param tx - Prismaトランザクション
+ * @returns 作った・書き換えた・既存のまま・取り込まなかった（生徒か学級を取り込まなかった）件数
  */
 export async function processMemberships(
   memberships: ArchiveClassesData["memberships"],
   idMappings: Pick<IdMappings, "student" | "classroom" | "membership">,
   policy: ImportValuePolicy,
   tx: PrismaTransaction
-): Promise<void> {
+): Promise<MembershipImportCounts> {
+  const membershipCounts: MembershipImportCounts = {
+    created: 0,
+    updated: 0,
+    unchanged: 0,
+    skipped: 0,
+  }
   for (const membership of memberships) {
     const newStudentId = idMappings.student[membership.studentId]
     const newClassroomId = idMappings.classroom[membership.classroomId]
@@ -155,6 +173,9 @@ export async function processMemberships(
               updatedAt,
             },
           })
+          membershipCounts.updated++
+        } else {
+          membershipCounts.unchanged++
         }
       } else {
         await tx.studentClassroomMembership.create({
@@ -170,7 +191,11 @@ export async function processMemberships(
           },
         })
         idMappings.membership[membership.id] = membership.id
+        membershipCounts.created++
       }
+    } else {
+      membershipCounts.skipped++
     }
   }
+  return membershipCounts
 }

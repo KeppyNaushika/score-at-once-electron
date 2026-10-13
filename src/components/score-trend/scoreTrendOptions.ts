@@ -1,6 +1,11 @@
 import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
-import { type SubtotalOption, TOTAL_SUBTOTAL_ID } from "./types"
+import { isScoredExam, scoreRatePercent } from "./scoreRate"
+import {
+  type SubtotalOption,
+  TOTAL_SUBTOTAL_ID,
+  type TrendSeries,
+} from "./types"
 
 /** 系列の色。追加した順に回して使う */
 export const SERIES_COLORS = [
@@ -98,8 +103,29 @@ export function isSeriesExam(
   seriesTags: Set<string>
 ): boolean {
   return (
-    (examResult.status === "complete" || examResult.status === "partial") &&
+    isScoredExam(examResult) &&
     (seriesTags.size === 0 ||
       examResult.tags.some((tag) => seriesTags.has(tag)))
   )
+}
+
+/**
+ * 系列に載る試験の得点率の平均（整数%）と試験数。満点0の試験は 0% として数える。
+ * 試験が無ければ平均は 0
+ */
+export function seriesAverageRate(
+  examResults: StudentExamResult[],
+  series: Pick<TrendSeries, "tags" | "subtotalId">
+): { avgRate: number; examCount: number } {
+  const rates = examResults.flatMap((examResult) => {
+    if (!isSeriesExam(examResult, series.tags)) return []
+    const seriesScore = seriesScoreOf(examResult, series.subtotalId)
+    if (!seriesScore) return []
+    return [scoreRatePercent(seriesScore.score, seriesScore.maxScore)]
+  })
+  const avgRate =
+    rates.length > 0
+      ? Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length)
+      : 0
+  return { avgRate, examCount: rates.length }
 }

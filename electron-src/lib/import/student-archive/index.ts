@@ -133,12 +133,16 @@ export async function executeStudentImport(
         )
 
         // 3. 学級所属の処理
-        await processMemberships(
+        const membershipCounts = await processMemberships(
           data.classesData.memberships,
           idMappings,
           policy,
           tx
         )
+        counts.created.memberships = membershipCounts.created
+        counts.updated.memberships = membershipCounts.updated
+        counts.unchanged.memberships = membershipCounts.unchanged
+        counts.skipped.memberships = membershipCounts.skipped
 
         // 4. ID変更処理
         if (idChangeTargets.length > 0) {
@@ -157,10 +161,6 @@ export async function executeStudentImport(
     counts.skipped.classrooms = archiveCounts.skipped.classrooms
     counts.unchanged.students = archiveCounts.unchanged.students
     counts.unchanged.classrooms = archiveCounts.unchanged.classrooms
-
-    // memberships のカウントはprocessMembershipでは集計されないため
-    // idMappings.membership のサイズで推定
-    counts.created.memberships = Object.keys(idMappings.membership).length
 
     const importedStudents = counts.created.students + counts.updated.students
     await recordAuditLog({

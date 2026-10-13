@@ -603,6 +603,19 @@ describe("useImportWizard", () => {
       expect(result.current.state.currentStep).toBe("file_overview")
     })
 
+    it("IW-51b: goBackで実行の段からは戻れない（戻って実行し直すと二重に取り込む）", () => {
+      const { result } = renderHook(
+        () => useImportWizard({ ...initialState, currentStep: "execute" }),
+        { wrapper: createQueryWrapper() }
+      )
+
+      act(() => {
+        result.current.goBack()
+      })
+
+      expect(result.current.state.currentStep).toBe("execute")
+    })
+
     it("IW-51: goBackでfile_selectからは戻れない", () => {
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
@@ -692,24 +705,45 @@ describe("useImportWizard", () => {
         importResult = await result.current.executeImport()
       })
 
-      expect(importResult).not.toBeNull()
-      expect((importResult as { examId: string }).examId).toBe(
-        "imported-exam-id"
-      )
+      expect(importResult).toEqual({
+        kind: "ok",
+        result: expect.objectContaining({ examId: "imported-exam-id" }),
+      })
+      // 結果は実行の段の状態（importOutcome）にも残る
+      expect(result.current.importOutcome?.kind).toBe("ok")
     })
 
-    it("IW-77: archivePath未設定時にnullが返る", async () => {
+    it("IW-77: archivePath未設定時は取り込まずに失敗として理由を残す（実行中のまま止まらない）", async () => {
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
       })
 
-      let importResult: unknown
       await act(async () => {
-        importResult = await result.current.executeImport()
+        await result.current.executeImport()
       })
 
-      expect(importResult).toBeNull()
       expect(mockArchive.idIntegrationImport).not.toHaveBeenCalled()
+      expect(result.current.importOutcome).toEqual({
+        kind: "failed",
+        error: expect.stringContaining("読み込まれていません"),
+      })
+      expect(result.current.state.isProcessing).toBe(false)
+    })
+
+    it("IW-77b: 2回目の実行では取り込まない（二重取り込みを防ぐ）", async () => {
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
+      await setupForExecute({ result })
+
+      await act(async () => {
+        await result.current.executeImport()
+      })
+      await act(async () => {
+        await result.current.executeImport()
+      })
+
+      expect(mockArchive.idIntegrationImport).toHaveBeenCalledOnce()
     })
 
     it("IW-79: 実行中にisProcessingがtrueになる", async () => {
@@ -745,7 +779,7 @@ describe("useImportWizard", () => {
       expect(result.current.state.isProcessing).toBe(false)
     })
 
-    it("IW-80: idIntegrationImport失敗時にerrorが設定される", async () => {
+    it("IW-80: idIntegrationImport失敗時は実行の段の結果に理由が載る（ウィザードのエラーの帯には載せない）", async () => {
       mockArchive.idIntegrationImport.mockRejectedValue(
         new Error("インポート処理に失敗しました")
       )
@@ -758,13 +792,15 @@ describe("useImportWizard", () => {
         await result.current.selectFile()
       })
 
-      let importResult: unknown
       await act(async () => {
-        importResult = await result.current.executeImport()
+        await result.current.executeImport()
       })
 
-      expect(importResult).toBeNull()
-      expect(result.current.state.error).toBe("インポート処理に失敗しました")
+      expect(result.current.importOutcome).toEqual({
+        kind: "failed",
+        error: "インポート処理に失敗しました",
+      })
+      expect(result.current.state.error).toBeNull()
     })
 
     it("IW-82: idIntegrationImportに取り込みの方針と紐づけ設定が渡される", async () => {

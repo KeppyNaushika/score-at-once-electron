@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import {
   analyzeStudentArchive,
@@ -15,7 +15,10 @@ import type {
   IdIntegrationDecision,
 } from "@/types/examArchive.types"
 import type { ImportAction } from "@/types/importAction.types"
-import type { StudentImportWizardState } from "@/types/studentArchive.types"
+import type {
+  StudentArchiveImportResult,
+  StudentImportWizardState,
+} from "@/types/studentArchive.types"
 import { INITIAL_STUDENT_IMPORT_WIZARD_STATE } from "@/types/studentArchive.types"
 
 export const STUDENT_IMPORT_STEP_ORDER = [
@@ -25,6 +28,14 @@ export const STUDENT_IMPORT_STEP_ORDER = [
   "final_confirm",
   "execute",
 ] as const
+
+/**
+ * 実行の段の結果。失敗はここに持ち、ウィザード全体のエラー（`state.error`。上部の帯）には
+ * 載せない（帯の ✕ で消すと結果も消え、実行中の表示に戻って止まっていた）
+ */
+type StudentImportOutcome =
+  | { kind: "ok"; result: StudentArchiveImportResult }
+  | { kind: "failed"; error: string }
 
 /** .students を読み、「内容確認」に要るもの（manifest と事前照合）を揃える */
 const loadStudentArchive = async (archivePath: string) => {
@@ -58,6 +69,11 @@ export function useStudentImportWizard(
 ) {
   const { mutateAsync: runImport } = useMutation(importStudentArchiveMutation())
   const [state, setState] = useState<StudentImportWizardState>(startState)
+  const [importOutcome, setImportOutcome] =
+    useState<StudentImportOutcome | null>(null)
+  // 取り込みは1つのウィザードで1回だけ。実行の段を作り直しても（StrictMode の再実行でも）
+  // 同じアーカイブを二度取り込まない
+  const hasExecutedRef = useRef(false)
 
   // ファイル選択
   const selectFile = useCallback(async () => {
@@ -199,13 +215,13 @@ export function useStudentImportWizard(
     })
   }, [])
 
-  // 前のステップへ
+  // 前のステップへ（実行の段からは戻らない。戻って「実行」を押すと二重に取り込む）
   const goBack = useCallback(() => {
     setState((prev) => {
       const currentIndex = STUDENT_IMPORT_STEP_ORDER.indexOf(
         prev.currentStep as (typeof STUDENT_IMPORT_STEP_ORDER)[number]
       )
-      if (currentIndex > 0) {
+      if (currentIndex > 0 && prev.currentStep !== "execute") {
         return {
           ...prev,
           currentStep: STUDENT_IMPORT_STEP_ORDER[currentIndex - 1],
@@ -216,44 +232,57 @@ export function useStudentImportWizard(
     })
   }, [])
 
-  // インポート実行
-  const executeImport = useCallback(async () => {
-    if (!state.archivePath || !state.fileOverviewData) return
+  // インポート実行。結果（成功・失敗）は importOutcome に持ち、返り値でも返す
+  const executeImport =
+    useCallback(async (): Promise<StudentImportOutcome | null> => {
+      if (hasExecutedRef.current) return null
+      hasExecutedRef.current = true
 
-    setState((prev) => ({ ...prev, isProcessing: true, error: null }))
+      const settle = (outcome: StudentImportOutcome) => {
+        setImportOutcome(outcome)
+        return outcome
+      }
 
-    try {
-      const result = await runImport({
-        archivePath: state.archivePath,
-        preMatchResult: state.fileOverviewData,
-        integrationConfig: state.idIntegrationConfig,
-        action: state.action,
-      })
+      // 「内容確認」に進めた時点で両方そろっている。欠けていたら実行中のまま待たせず失敗にする
+      if (!state.archivePath || !state.fileOverviewData) {
+        return settle({
+          kind: "failed",
+          error:
+            "取り込むファイルが読み込まれていません。閉じてから、もう一度ファイルを選んでください。",
+        })
+      }
 
-      return result
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "取り込みに失敗しました"
-      setState((prev) => ({
-        ...prev,
-        isProcessing: false,
-        error: errorMessage,
-      }))
-      return null
-    } finally {
-      setState((prev) => ({ ...prev, isProcessing: false }))
-    }
-  }, [
-    state.archivePath,
-    state.fileOverviewData,
-    state.idIntegrationConfig,
-    state.action,
-    runImport,
-  ])
+      setState((prev) => ({ ...prev, isProcessing: true, error: null }))
+      try {
+        const result = await runImport({
+          archivePath: state.archivePath,
+          preMatchResult: state.fileOverviewData,
+          integrationConfig: state.idIntegrationConfig,
+          action: state.action,
+        })
+        return settle({ kind: "ok", result })
+      } catch (error) {
+        return settle({
+          kind: "failed",
+          error:
+            error instanceof Error ? error.message : "取り込みに失敗しました",
+        })
+      } finally {
+        setState((prev) => ({ ...prev, isProcessing: false }))
+      }
+    }, [
+      state.archivePath,
+      state.fileOverviewData,
+      state.idIntegrationConfig,
+      state.action,
+      runImport,
+    ])
 
   // リセット
   const reset = useCallback(() => {
     setState(INITIAL_STUDENT_IMPORT_WIZARD_STATE)
+    setImportOutcome(null)
+    hasExecutedRef.current = false
   }, [])
 
   // エラーをクリア
@@ -263,6 +292,7 @@ export function useStudentImportWizard(
 
   return {
     state,
+    importOutcome,
     selectFile,
     updateIdIntegrationConfig,
     updateIdIntegrationDecision,

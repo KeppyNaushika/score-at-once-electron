@@ -64,6 +64,8 @@ export function ImportWizardModal({
     }
   }, [isOpen, reset])
 
+  // 取り込めた後の「閉じる」も、実行の段の「閉じる」と同じく閉じるだけ（試験へは移らない。
+  // 移るのは「試験を開く」）。一覧は取り込みの書き込みが取り直す
   const handleClose = () => {
     if (!state.isProcessing) {
       onClose()
@@ -150,6 +152,7 @@ export function ImportWizardModal({
                   variant="ghost"
                   size="sm"
                   onClick={wizard.clearError}
+                  aria-label="エラーを閉じる"
                   className="-mt-2 -mr-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <X className="h-4 w-4" />
@@ -190,7 +193,9 @@ export function ImportWizardModal({
               variant="ghost"
               onClick={wizard.goBack}
               disabled={
-                state.currentStep === "file_select" || state.isProcessing
+                state.currentStep === "file_select" ||
+                state.currentStep === "execute" ||
+                state.isProcessing
               }
               className="gap-2"
             >
@@ -202,7 +207,7 @@ export function ImportWizardModal({
               onClick={handleClose}
               disabled={state.isProcessing}
             >
-              キャンセル
+              {wizard.importOutcome?.kind === "ok" ? "閉じる" : "キャンセル"}
             </Button>
           </div>
         </DialogContent>

@@ -1,144 +1,74 @@
 "use client"
 
-import { CircleAlert, CircleCheck } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect } from "react"
 
+import {
+  ImportCountsCard,
+  ImportExecutingView,
+  ImportFailedView,
+  ImportSucceededHeading,
+  ImportWarningsCard,
+} from "@/components/import/ImportExecuteStatus"
 import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
-import type { StudentArchiveImportResult } from "@/types/studentArchive.types"
+import { tableLabel } from "@/lib/shared/tableLabels"
 
 interface ExecuteStepProps {
   wizard: StudentImportWizard
-  onComplete?: () => void
+  /** 閉じる（取り込めていれば、フッターの「閉じる」と同じく完了の知らせも出す） */
   onClose: () => void
 }
 
-export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
-  const hasStarted = useRef(false)
-  const [result, setResult] = useState<StudentArchiveImportResult | null>(null)
+/**
+ * 実行の段。開いたら取り込みを始める（二度目を走らせないのはウィザードの側が受け持つ）。
+ *
+ * 結果（成功・失敗）はウィザードの `importOutcome` で出し分ける。ウィザード全体のエラー
+ * （上部の帯）は見ない — 帯の ✕ で消しても、この段の表示は変わらない。
+ */
+export function ExecuteStep({ wizard, onClose }: ExecuteStepProps) {
+  const { executeImport, importOutcome } = wizard
 
   useEffect(() => {
-    if (hasStarted.current) return
-    hasStarted.current = true
+    void executeImport()
+  }, [executeImport])
 
-    const run = async () => {
-      const importResult = await wizard.executeImport()
-      if (importResult) {
-        setResult(importResult)
-      }
-    }
-
-    run()
-  }, [wizard])
-
-  // 失敗（理由はウィザードが持つ）
-  if (wizard.state.error) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-6 py-16">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-          <CircleAlert className="h-8 w-8 text-red-600" />
-        </div>
-        <div className="text-center">
-          <h3 className="text-lg font-semibold">取り込みに失敗しました</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {wizard.state.error}
-          </p>
-        </div>
-      </div>
-    )
+  // 実行中（始める前の一瞬も含む）
+  if (importOutcome === null) {
+    return <ImportExecutingView />
   }
 
-  // 実行中
-  if (!result) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-6 py-16">
-        <Spinner className="size-12 text-primary" />
-        <div className="text-center">
-          <h3 className="text-lg font-semibold">取り込み中...</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            データを処理しています。しばらくお待ちください。
-          </p>
-        </div>
-      </div>
-    )
+  if (importOutcome.kind === "failed") {
+    return <ImportFailedView error={importOutcome.error} onClose={onClose} />
   }
 
-  const { summary, warnings } = result
+  const { summary, warnings } = importOutcome.result
 
-  const handleComplete = () => {
-    onComplete?.()
-    onClose()
-  }
+  const countsRows = [
+    { label: tableLabel("Student"), countsKey: "students" },
+    { label: tableLabel("Classroom"), countsKey: "classrooms" },
+    {
+      label: tableLabel("StudentClassroomMembership"),
+      countsKey: "memberships",
+    },
+  ] as const
 
   return (
-    <div className="flex flex-col items-center justify-center gap-6 py-12">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-        <CircleCheck className="h-8 w-8 text-green-600" />
-      </div>
+    <div className="flex h-full flex-col items-center justify-center py-8">
+      <ImportSucceededHeading description="生徒データが正常に取り込まれました。" />
 
-      <div className="text-center">
-        <h3 className="text-lg font-semibold">取り込みが完了しました</h3>
-      </div>
+      <ImportCountsCard
+        rows={countsRows.map((countsRow) => ({
+          label: countsRow.label,
+          created: summary.created[countsRow.countsKey],
+          updated: summary.updated[countsRow.countsKey],
+          unchanged: summary.unchanged[countsRow.countsKey],
+          skipped: summary.skipped[countsRow.countsKey],
+        }))}
+      />
 
-      <div className="mx-auto grid w-full max-w-md gap-3">
-        <div className="rounded-lg border border-border/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">生徒</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {summary.created.students > 0 && (
-              <span>新規: {summary.created.students}名</span>
-            )}
-            {summary.updated.students > 0 && (
-              <span>更新: {summary.updated.students}名</span>
-            )}
-            {summary.unchanged.students > 0 && (
-              <span>変更なし: {summary.unchanged.students}名</span>
-            )}
-            {summary.skipped.students > 0 && (
-              <span>スキップ: {summary.skipped.students}名</span>
-            )}
-          </div>
-        </div>
+      <ImportWarningsCard warnings={warnings} />
 
-        <div className="rounded-lg border border-border/50 p-4">
-          <h4 className="mb-2 text-sm font-medium">学級</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {summary.created.classrooms > 0 && (
-              <span>新規: {summary.created.classrooms}件</span>
-            )}
-            {summary.updated.classrooms > 0 && (
-              <span>更新: {summary.updated.classrooms}件</span>
-            )}
-            {summary.unchanged.classrooms > 0 && (
-              <span>変更なし: {summary.unchanged.classrooms}件</span>
-            )}
-            {summary.skipped.classrooms > 0 && (
-              <span>スキップ: {summary.skipped.classrooms}件</span>
-            )}
-          </div>
-        </div>
-
-        {summary.created.memberships > 0 && (
-          <div className="text-center text-sm text-muted-foreground">
-            在籍: {summary.created.memberships}件処理
-          </div>
-        )}
-      </div>
-
-      {warnings.length > 0 && (
-        <div className="w-full max-w-md rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
-          <h4 className="mb-2 text-sm font-medium text-amber-700 dark:text-amber-300">
-            注意事項
-          </h4>
-          <ul className="list-inside list-disc space-y-1 text-sm text-amber-600 dark:text-amber-400">
-            {warnings.map((warning, i) => (
-              <li key={i}>{warning}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <Button onClick={handleComplete} size="lg">
+      <Button onClick={onClose} size="lg" className="px-8">
         閉じる
       </Button>
     </div>
