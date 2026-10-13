@@ -23,7 +23,7 @@ import {
   userPreferenceQuery,
 } from "@/queries/settings"
 
-export function ScreenControlTab() {
+export function ScreenControlSection() {
   // プロジェクターモード
   // 現在のプロジェクターモード（main が持つ状態。localStorage 側とは出所が違う）
   const queryClient = useQueryClient()

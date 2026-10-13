@@ -55,7 +55,7 @@ const SELECTION_BORDER_PRESETS = [
   "#F59E0B", // アンバー
 ]
 
-export function DisplaySettingsTab() {
+export function DisplaySettingsSection() {
   const userId = useCurrentUser().id
 
   // 選択枠色・クリック採点設定は採点画面と同じフックを使う。ここで読み書きすると

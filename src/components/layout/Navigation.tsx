@@ -9,6 +9,7 @@ import {
   FilePen,
   FileStack,
   FolderInput,
+  FolderSync,
   Info,
   Layers,
   ListTree,
@@ -27,6 +28,7 @@ import {
 import { usePathname } from "next/navigation"
 import { Fragment } from "react"
 
+import { BetaBadge } from "@/components/common/BetaBadge"
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import { GuardedLink } from "@/components/common/GuardedLink"
 import { Button } from "@/components/ui/button"
@@ -57,16 +59,26 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
   /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI採点。設計 §10-1） */
   isExperimental?: boolean
+  /** まだ仕様が固まっていない機能。名前の横に「beta」の印を置く（同期設定） */
+  isBeta?: boolean
   /**
    * web 版では出さない（デスクトップ版でだけ動く機能）。AI採点は API キーを暗号化して
-   * 保存できず、事業者への通信もブラウザからは通らない（docs/web-version-plan.md の判断待ち）
+   * 保存できず、事業者への通信もブラウザからは通らない（docs/web-version-plan.md の判断待ち）。
+   * 同期設定は、web 版が1人用で共有はデスクトップ版の役目だから
    */
   isDesktopOnly?: boolean
 }
 
-/** 読み上げ・ツールチップの名前（実験的機能なら「（実験的）」を添える） */
+/** 読み上げ・ツールチップの名前（実験的・beta の機能ならそれを添える） */
 function navItemAccessibleName(navItem: NavItem): string {
-  return navItem.isExperimental ? `${navItem.label}（実験的）` : navItem.label
+  if (navItem.isExperimental) return `${navItem.label}（実験的）`
+  if (navItem.isBeta) return `${navItem.label}（beta）`
+  return navItem.label
+}
+
+/** 名前の横に印を置くか（印の分だけ名前の右を空ける） */
+function hasNavItemBadge(navItem: NavItem): boolean {
+  return navItem.isExperimental === true || navItem.isBeta === true
 }
 
 const navGroups: NavItem[][] = [
@@ -90,6 +102,13 @@ const navGroups: NavItem[][] = [
   ],
   [
     { href: "/settings", label: "設定", icon: Settings },
+    {
+      href: "/sync",
+      label: "同期設定",
+      icon: FolderSync,
+      isBeta: true,
+      isDesktopOnly: true,
+    },
     {
       href: "/ai-grading",
       label: "AI採点",
@@ -147,7 +166,11 @@ export default function Navigation() {
                 {group
                   .filter((navItem) => !(isWebRuntime && navItem.isDesktopOnly))
                   .map((navItem) => {
-                    const isActive = pathname === navItem.href
+                    // 設定は項目ごとのページ（/settings/<項目>）を持つので、その中でも光らせる
+                    const isActive =
+                      pathname === navItem.href ||
+                      (navItem.href === "/settings" &&
+                        pathname.startsWith("/settings/"))
                     return (
                       <SidebarMenuItem key={navItem.label}>
                         <SidebarMenuButton
@@ -155,14 +178,14 @@ export default function Navigation() {
                           isActive={isActive}
                           tooltip={navItemAccessibleName(navItem)}
                           className={
-                            navItem.isExperimental ? "pr-16" : undefined
+                            hasNavItemBadge(navItem) ? "pr-16" : undefined
                           }
                         >
                           <GuardedLink
                             href={navItem.href}
                             onClick={closeMobileSidebar}
                             aria-label={
-                              navItem.isExperimental
+                              hasNavItemBadge(navItem)
                                 ? navItemAccessibleName(navItem)
                                 : undefined
                             }
@@ -178,6 +201,11 @@ export default function Navigation() {
                               tone={isActive ? "default" : "muted"}
                               className="px-1.5 py-0 text-[10px]"
                             />
+                          </SidebarMenuBadge>
+                        )}
+                        {navItem.isBeta && (
+                          <SidebarMenuBadge className="top-1.5">
+                            <BetaBadge className="px-1.5 py-0 text-[10px]" />
                           </SidebarMenuBadge>
                         )}
                       </SidebarMenuItem>

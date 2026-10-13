@@ -129,7 +129,7 @@ export function AiGradingConsentDialog({
               参考：{providerTerms.providerName}{" "}
               の規約（既定のブラウザで開きます）
             </p>
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               {providerTerms.links.map((termsLink) => (
                 <li key={termsLink.key}>
                   <Button
@@ -146,7 +146,7 @@ export function AiGradingConsentDialog({
                     <ExternalLink className="h-3.5 w-3.5" />
                     {termsLink.label}
                   </Button>
-                  <span className="ml-2 font-mono text-xs break-all text-muted-foreground">
+                  <span className="block pl-5.5 font-mono text-xs break-all text-muted-foreground">
                     {termsLink.url}
                   </span>
                 </li>

@@ -1447,24 +1447,31 @@ test.describe.serial("第4章: 成績算出・その他", () => {
   })
 
   test("4-6 設定", async () => {
-    await nav(page, "/settings")
+    await nav(page, "/settings/keyboard")
     await ss(page, "ch4-grades/18-settings-keyboard.png")
 
-    const settingsTabs: [string, string][] = [
-      ["画面制御", "ch4-grades/19-settings-screen.png"],
-      ["表示設定", "ch4-grades/20-settings-display.png"],
-      ["年度", "ch4-grades/21-settings-fiscal-year.png"],
-      ["ユーザー管理", "ch4-grades/22-settings-user.png"],
-      ["同期設定", "ch4-grades/23-settings-sync.png"],
+    // 設定は項目ごとのページ（/settings/<項目>）
+    const settingsSections: [string, string][] = [
+      ["/settings/screen", "ch4-grades/19-settings-screen.png"],
+      ["/settings/display", "ch4-grades/20-settings-display.png"],
+      ["/settings/fiscal-year", "ch4-grades/21-settings-fiscal-year.png"],
+      ["/settings/users", "ch4-grades/22-settings-user.png"],
     ]
-    for (const [tabName, relativePath] of settingsTabs) {
+    for (const [settingsPath, relativePath] of settingsSections) {
       await captureOptional(relativePath, async () => {
-        await clickWhenReady(page.getByRole("tab", { name: tabName }))
+        await nav(page, settingsPath)
         await page.waitForTimeout(600)
-        if (tabName === "同期設定") await showExampleStoragePaths(page)
         await ss(page, relativePath)
       })
     }
+
+    // 同期設定は設定から独立した画面（サイドバーの項目）
+    await captureOptional("ch4-grades/23-settings-sync.png", async () => {
+      await nav(page, "/sync")
+      await page.waitForTimeout(600)
+      await showExampleStoragePaths(page)
+      await ss(page, "ch4-grades/23-settings-sync.png")
+    })
   })
 
   test("4-7 操作履歴", async () => {

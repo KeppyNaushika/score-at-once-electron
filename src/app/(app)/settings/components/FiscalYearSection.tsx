@@ -39,7 +39,7 @@ function daysOf(month: number): number[] {
  * **利用者ごとではなく、DB を共有する全員で1つ**（`AppPreference`）。人によって
  * 違う値を持つと、同じ「今年度」で絞ったのに見えるものが人ごとに変わる。
  */
-export function FiscalYearTab() {
+export function FiscalYearSection() {
   const { data: storedText } = useQuery(
     appPreferenceQuery(FISCAL_YEAR_START_KEY)
   )

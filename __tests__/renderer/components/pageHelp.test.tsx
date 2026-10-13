@@ -62,8 +62,8 @@ describe("ページごとの「使い方」", () => {
     expect(hasHelpButton()).toBe(true)
   })
 
-  it("設定画面にも出る（同期の使い方を辿れる唯一の入口）", () => {
-    renderHelpAt("/settings")
+  it("同期設定の画面にも出る（同期の使い方を辿れる唯一の入口）", () => {
+    renderHelpAt("/sync")
 
     expect(hasHelpButton()).toBe(true)
   })
@@ -81,31 +81,21 @@ describe("ページごとの「使い方」", () => {
   })
 })
 
-describe("設定画面の「使い方」はデスクトップ版と web 版で中身が変わる", () => {
-  /** 設定画面で「使い方」を開く */
-  function openSettingsHelp(): void {
-    renderHelpAt("/settings")
-    fireEvent.click(screen.getByRole("button", { name: "使い方" }))
-  }
+describe("設定画面の「使い方」は web 版にだけある", () => {
+  it("デスクトップ版の設定は見て分かる設定の並びなので出さない（同期の手引きは同期設定の画面へ移った）", () => {
+    renderHelpAt("/settings/keyboard")
 
-  it("デスクトップ版では同期の手引きを出す", () => {
-    openSettingsHelp()
-
-    expect(
-      screen.getByText("共有フォルダを通して、複数のPCで採点を分担する")
-    ).toBeInTheDocument()
+    expect(hasHelpButton()).toBe(false)
   })
 
-  it("web 版では同期の手引きの代わりに、データの置き場所の手引きを出す（web 版に同期は無い）", () => {
+  it("web 版では、どの項目でもデータの置き場所の手引きを出す", () => {
     globalThis.scoreAtOnceWeb = true
 
-    openSettingsHelp()
+    renderHelpAt("/settings/browser-storage")
+    fireEvent.click(screen.getByRole("button", { name: "使い方" }))
 
     expect(
       screen.getByText("web 版のデータは、このブラウザの中にあります")
     ).toBeInTheDocument()
-    expect(
-      screen.queryByText("共有フォルダを通して、複数のPCで採点を分担する")
-    ).not.toBeInTheDocument()
   })
 })

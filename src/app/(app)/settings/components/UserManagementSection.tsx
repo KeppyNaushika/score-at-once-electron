@@ -17,19 +17,19 @@ const PASSCODE_TYPE_LABELS: Record<string, string> = {
   alphanumeric: "英数字",
 }
 
-interface UserManagementTabProps {
+interface UserManagementSectionProps {
   users: PublicUser[]
   onEditUser: (user: PublicUser) => void
   onEditPasscode: (user: PublicUser) => void
   onDeleteUser: (user: PublicUser) => void
 }
 
-export function UserManagementTab({
+export function UserManagementSection({
   users,
   onEditUser,
   onEditPasscode,
   onDeleteUser,
-}: UserManagementTabProps) {
+}: UserManagementSectionProps) {
   const currentUser = useCurrentUser()
 
   return (

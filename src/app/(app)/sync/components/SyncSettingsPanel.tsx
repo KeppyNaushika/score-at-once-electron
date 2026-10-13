@@ -4,8 +4,7 @@ import { CircleAlert, CircleCheck, RefreshCw, RotateCw } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { useSyncSettings } from "@/app/(app)/settings/hooks/useSyncSettings"
-import { BetaBadge } from "@/components/common/BetaBadge"
+import { useSyncSettings } from "@/app/(app)/sync/hooks/useSyncSettings"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +62,7 @@ function StateIndicator({ state }: { state: string }) {
   }
 }
 
-export function SyncSettingsTab() {
+export function SyncSettingsPanel() {
   const {
     config,
     running,
@@ -154,15 +153,9 @@ export function SyncSettingsTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          同期設定
-          <BetaBadge />
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          ローカルモードと共有モードを切り替えます。共有モードでは、共有フォルダを介して複数のPCのデータを同期します。
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        ローカルモードと共有モードを切り替えます。共有モードでは、共有フォルダを介して複数のPCのデータを同期します。
+      </p>
 
       <SyncNotes />
 

@@ -65,8 +65,7 @@ async function stubFolderDialog(app: LaunchedApp, folder: string) {
 }
 
 async function openSyncSettings(page: Page) {
-  await page.goto(`${E2E_BASE_URL}/settings`, { waitUntil: "domcontentloaded" })
-  await page.getByRole("tab", { name: /同期設定/ }).click()
+  await page.goto(`${E2E_BASE_URL}/sync`, { waitUntil: "domcontentloaded" })
   await expect(page.getByText("起動するデータ")).toBeVisible({
     timeout: 15_000,
   })

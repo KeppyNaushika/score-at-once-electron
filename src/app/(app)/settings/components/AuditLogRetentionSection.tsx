@@ -39,7 +39,7 @@ import {
  * 違うと、短い方の端末が消した行が同期で全端末から消え、どこまで残るかが定まらない。
  * 短くするときは、消えた履歴が戻らないことを確かめてから保存する。
  */
-export function AuditLogRetentionTab() {
+export function AuditLogRetentionSection() {
   const { data: storedText } = useQuery(
     appPreferenceQuery(AUDIT_LOG_RETENTION_DAYS_KEY)
   )
