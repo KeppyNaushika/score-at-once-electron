@@ -103,6 +103,10 @@ const respondWithImage = async (
   }
 }
 
+// 新しい版は待たせずに受け持つ。キャッシュを持たず、返すのは OPFS の画像だけなので、
+// 古い版の画面を新しい版の Service Worker が受け持っても食い違うものが無い（画面と Worker の
+// 版の食い違いは入口が見る。`web/webBuild.ts`）。新しい版は、再読み込みのときの `register` が
+// HTTP のキャッシュを通さずに取りに行く
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting())
 })

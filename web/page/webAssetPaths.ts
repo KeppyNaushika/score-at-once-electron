@@ -15,6 +15,12 @@ export const WORKER_DIR_PATH = "/__web/worker"
 export const WORKER_SCRIPT_PATH = `${WORKER_DIR_PATH}/worker.js`
 
 /**
+ * 配っている版の知らせ（`{ "buildId": … }`）。開いている間に新しい版が配られたかを、
+ * 画面がこれを読んで確かめる（`web/webBuild.ts`）
+ */
+export const WEB_BUILD_INFO_PATH = "/__web/build.json"
+
+/**
  * 画像を OPFS から返す Service Worker。`/` 全体を受け持つには置き場がオリジンの直下で
  * なければならない（`Service-Worker-Allowed` ヘッダーを要らなくするため）
  */

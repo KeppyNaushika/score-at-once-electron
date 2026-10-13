@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
+import { savedFileLocationText } from "@/lib/outputResultText"
 
 interface ExportProgressModalProps {
   isOpen: boolean
@@ -51,6 +53,8 @@ export default function ExportProgressModal({
   canvasRenderingComplete = false,
 }: ExportProgressModalProps) {
   const [isClosing, setIsClosing] = useState(false)
+  // web 版の保存先はブラウザのダウンロード。仮想パスでなくファイル名を見せる
+  const isWeb = useIsWebRuntime()
 
   // 現在のフェーズを計算
   const currentPhase = useMemo((): ExportPhase => {
@@ -360,7 +364,8 @@ export default function ExportProgressModal({
                 <p className="font-medium">PDF出力が完了しました</p>
                 {outputPath && (
                   <p className="mt-1 text-sm break-all text-muted-foreground">
-                    保存先: {outputPath}
+                    {isWeb ? "ダウンロードしたファイル" : "保存先"}:{" "}
+                    {savedFileLocationText(outputPath, isWeb)}
                   </p>
                 )}
               </div>

@@ -307,6 +307,43 @@ describe("web 版の画像処理の窓口（wasm-vips）", () => {
     )
   })
 
+  it("ページ大の画像の回転も、順に読む読み込みのまま一致する", async () => {
+    // 小さな画像は1枚のタイルに収まり、行の順を崩す回転でも読み直しが起きない。
+    // 答案・PDF のページの大きさでは、メモリへ写さずに回すと読めずに失敗する
+    const pageInput = await sharp({
+      create: {
+        width: 1190,
+        height: 1684,
+        channels: 3,
+        background: { r: 250, g: 250, b: 250 },
+      },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: {
+              width: 300,
+              height: 200,
+              channels: 3,
+              background: { r: 20, g: 40, b: 200 },
+            },
+          })
+            .png()
+            .toBuffer(),
+          left: 100,
+          top: 150,
+        },
+      ])
+      .png()
+      .toBuffer()
+    for (const degrees of [90, 180, 270, 1.5]) {
+      expect(
+        await webImageOps.rotateToPng(pageInput, degrees),
+        `${degrees}°`
+      ).toEqual(await desktopImageOps.rotateToPng(pageInput, degrees))
+    }
+  })
+
   it("画像でないバイト列は、どちらも例外になる", async () => {
     const notImage = Buffer.from("これは画像ではない")
     await expect(desktopImageOps.readImageHeader(notImage)).rejects.toThrow()

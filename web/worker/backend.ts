@@ -26,6 +26,7 @@
 import "./workerGlobals"
 
 import type { PageToWorkerMessage, WorkerToPageMessage } from "../ipcProtocol"
+import { WEB_BUILD_ID } from "../webBuild"
 import { createIpcEvent, findIpcHandler } from "./electronShim"
 import { settlePageRequest } from "./pageRequests"
 import { stageFile } from "./stagedFiles"
@@ -184,7 +185,7 @@ boot().then(
   () => {
     dispatch = handleMessage
     pendingMessages.splice(0).forEach(handleMessage)
-    postToPage({ kind: "ready" })
+    postToPage({ kind: "ready", buildId: WEB_BUILD_ID })
   },
   (error: unknown) => {
     console.error("[web] Worker の起動に失敗した:", error)

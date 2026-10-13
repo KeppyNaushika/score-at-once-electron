@@ -1,0 +1,16 @@
+// e2e（__tests__/playwrightElectron.config.ts）の開発用サーバー（置き場 `.next-e2e`）だけが使う tsconfig。
+// 本番の型検査が `.next-e2e` に残った古い型を拾わないよう、tsconfig.json から分けている。
+// 対応は next.config.ts の DEV_TSCONFIG_BY_DIST_DIR。`extends` を外すと Next が書き換え始める
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.js",
+    "**/*.tsx",
+    "./tailwind.config.js",
+    "src/types/**/*.d.ts",
+    ".next-e2e/types/**/*.ts",
+    ".next-e2e/dev/types/**/*.ts"
+  ]
+}

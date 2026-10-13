@@ -332,11 +332,18 @@ export function buildStatsItems(
   options: IndividualReportOptions
 ): { label: string; value: string }[] {
   const items: { label: string; value: string }[] = []
+  // 未採点の生徒は得点が null。偏差値・順位は computeFilteredStats が 0 を返すが、
+  // 「0.0」「0 / 30」と書くと実際の値に見えるので、設問の表（「- / 10」）と同じく「-」にする
+  const studentScore = report.scoringData.totalScore
+  const isUnscored = studentScore === null
+  const formatDeviation = (deviation: number) =>
+    isUnscored ? "-" : deviation.toFixed(1)
+  const formatRank = (rank: number) => (isUnscored ? "-" : String(rank))
 
   if (options.showScore) {
     items.push({
       label: "得点",
-      value: `${report.scoringData.totalScore} / ${report.scoringData.totalMaxScore}`,
+      value: `${studentScore ?? "-"} / ${report.scoringData.totalMaxScore}`,
     })
   }
 
@@ -364,14 +371,14 @@ export function buildStatsItems(
     for (const classroom of filteredStats.classrooms) {
       items.push({
         label: classroomLabel(classroom.className, "偏差値"),
-        value: classroom.deviation.toFixed(1),
+        value: formatDeviation(classroom.deviation),
       })
     }
   }
   if (options.statistics.deviation.overall) {
     items.push({
       label: "偏差値",
-      value: filteredStats.personal.deviation.toFixed(1),
+      value: formatDeviation(filteredStats.personal.deviation),
     })
   }
 
@@ -379,14 +386,14 @@ export function buildStatsItems(
     for (const classroom of filteredStats.classrooms) {
       items.push({
         label: classroomLabel(classroom.className, "順位"),
-        value: `${classroom.rank} / ${classroom.total}`,
+        value: `${formatRank(classroom.rank)} / ${classroom.total}`,
       })
     }
   }
   if (options.statistics.rank.overall) {
     items.push({
       label: "全体順位",
-      value: `${filteredStats.personal.overallRank} / ${filteredStats.overall.total}`,
+      value: `${formatRank(filteredStats.personal.overallRank)} / ${filteredStats.overall.total}`,
     })
   }
 

@@ -20,6 +20,9 @@ const SUPPORTED_FILE_TYPES = {
  */
 const SUPPORTED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg"] as const
 
+/** ファイル選択の `accept` に渡す、模範解答として受け付ける拡張子 */
+export const MASTER_ANSWER_FILE_ACCEPT = SUPPORTED_EXTENSIONS.join(",")
+
 /**
  * 模範解答として有効なファイルかどうかを検証する
  *

@@ -7,6 +7,8 @@ import { toast } from "sonner"
 
 import { generatePrintHtml } from "@/components/exams/09-export/components/individual-report/generatePrintHtml"
 import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
+import { savedFileLocationText } from "@/lib/outputResultText"
+import { isWebRuntime } from "@/lib/webRuntime"
 import {
   exportGradingDataExcelMutation,
   exportRDataMutation,
@@ -62,7 +64,7 @@ export function useDataFileExports({
 
       if (result.canceled) return false
       toast.success("採点データExcelを出力しました", {
-        description: result.outputPath,
+        description: savedFileLocationText(result.outputPath, isWebRuntime()),
       })
       return true
     } catch {
@@ -83,7 +85,9 @@ export function useDataFileExports({
         format,
       })
       if (!result.canceled) {
-        toast.success(`分析用データを出力しました: ${result.outputPath}`)
+        toast.success(
+          `分析用データを出力しました: ${savedFileLocationText(result.outputPath, isWebRuntime())}`
+        )
       }
     } catch {
       // 失敗の通知は MutationCache の後始末が出す

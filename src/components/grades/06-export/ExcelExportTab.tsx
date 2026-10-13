@@ -7,6 +7,8 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { savedFileLocationText } from "@/lib/outputResultText"
+import { isWebRuntime } from "@/lib/webRuntime"
 import { exportGradeExcelMutation } from "@/queries/grade"
 import type { GradeComparisonRow } from "@/queries/gradeStructure"
 import type { GradeCalculationResult } from "@/types/grade.types"
@@ -47,7 +49,9 @@ export function ExcelExportTab({
       {
         onSuccess: (result) => {
           if (!result.canceled) {
-            toast.success(`Excelを出力しました: ${result.outputPath}`)
+            toast.success(
+              `Excelを出力しました: ${savedFileLocationText(result.outputPath, isWebRuntime())}`
+            )
           }
         },
       }

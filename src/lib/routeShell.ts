@@ -7,10 +7,12 @@
  * ルートは殻だけを作り（`generateStaticParams`）、殻以外は描かない（`dynamicParams = false`）。
  * 中身のデータは画面が URL の id で取りに行くので、殻1枚でどの id も描ける。
  *
- * 書き換えるのは次の3か所で、どれも `toRouteShellPath` を使う。
- * - デスクトップ版: main の配信（`electron-src/rendererStaticServer.ts`）
+ * 書き換えるのは次の3か所。
+ * - デスクトップ版: main の配信（`electron-src/rendererStaticServer.ts`。`toRouteShellPath`）
  * - 開発用サーバー: `next.config.ts` の `rewrites`
- * - web 版: 配信側
+ * - web 版: 手元の配信（`scripts/web/serveWeb.mjs`）は `toRouteShellPath`、本番（Cloudflare
+ *   Pages）は `routeShellRewriteRules` から書き出す `_redirects`（`scripts/web/webRedirects.mjs`）。
+ *   両者が同じ結果になることは `__tests__/web/webRedirects.test.ts` が縛る
  *
  * 画面は param を `useParams` ではなく URL から読む（`useRouteParams`）ので、殻の値では
  * なく実際の id で動く。
@@ -70,4 +72,39 @@ export function toRouteShellPath(pathname: string): string {
   if (!isRouteSection(section)) return pathname
   if (param.startsWith(NEXT_SEGMENT_FILE_PREFIX)) return pathname
   return ["", section, ROUTE_SHELL_PARAM, ...rest].join("/")
+}
+
+/**
+ * 配信側の書き換えの規則（パターンの形）。`toRouteShellPath` と同じ書き換えを、パスの
+ * パターンの並びとして書いたもので、web 版の本番の配信（Cloudflare Pages の `_redirects`）が使う。
+ *
+ * パターンの読み方（Cloudflare Pages の `_redirects` と同じ）: `:name` は `/` を含まない1文字
+ * 以上、`*` は何でも（空も含む）。上から順に見て、最初に当たった規則で書き換える。どれにも
+ * 当たらなければそのまま。
+ *
+ * 段ごとに3つ:
+ * 1. Next の画面移動用のファイル（`/exams/__next.…`）はそのまま（id と取り違えない）
+ * 2. `/exams/<id>` → `/exams/__`
+ * 3. `/exams/<id>/<rest>` → `/exams/__/<rest>`
+ */
+export interface RouteShellRewriteRule {
+  source: string
+  destination: string
+}
+
+export function routeShellRewriteRules(): RouteShellRewriteRule[] {
+  return Object.entries(ROUTE_PARAM_NAMES).flatMap(([section, paramName]) => [
+    {
+      source: `/${section}/${NEXT_SEGMENT_FILE_PREFIX}*`,
+      destination: `/${section}/${NEXT_SEGMENT_FILE_PREFIX}:splat`,
+    },
+    {
+      source: `/${section}/:${paramName}`,
+      destination: `/${section}/${ROUTE_SHELL_PARAM}`,
+    },
+    {
+      source: `/${section}/:${paramName}/*`,
+      destination: `/${section}/${ROUTE_SHELL_PARAM}/:splat`,
+    },
+  ])
 }

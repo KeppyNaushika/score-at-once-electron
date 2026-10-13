@@ -6,10 +6,12 @@
  * - computeFilteredSubtotalStats: 小計別統計の受験状態フィルタ
  * - groupSubtotalData: subtotalScore.score が null の場合のグループ集計
  * - formatStudentAffiliation: 学級名に学年が含まれるときに学年を二重に書かない
+ * - buildStatsItems: 未採点（totalScore が null）の生徒の得点・偏差値・順位を「-」で書く
  */
 import { describe, expect, it } from "vitest"
 
 import {
+  buildStatsItems,
   computeFilteredStats,
   computeFilteredSubtotalStats,
   groupSubtotalData,
@@ -19,9 +21,11 @@ import type {
   ScoringData,
   SubtotalScore,
 } from "@/electron-src/lib/shared/types"
-import type {
-  RawTotalScoreEntry,
-  ReportPopulation,
+import {
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+  type IndividualReportData,
+  type RawTotalScoreEntry,
+  type ReportPopulation,
 } from "@/types/individualReport.types"
 
 // ================== ヘルパー ==================
@@ -434,5 +438,85 @@ describe("formatStudentAffiliation", () => {
     expect(formatStudentAffiliation(null, "A組", null)).toBe("A組")
     expect(formatStudentAffiliation("3", null, 5)).toBe("3年 5番")
     expect(formatStudentAffiliation(null, null, null)).toBe("")
+  })
+})
+
+// ================== buildStatsItems ==================
+
+describe("buildStatsItems", () => {
+  const allStatuses = { participating: true, expected: true, absent: true }
+
+  function createReport(totalScore: number | null): IndividualReportData {
+    return {
+      studentInfo: {
+        id: "s1",
+        fullName: "テスト太郎",
+        studentNumber: "001",
+        grade: "1",
+        className: "A",
+        attendanceNumber: 1,
+      },
+      examInfo: { examName: "期末", referenceDate: null, tags: [] },
+      scoringData: createScoringData(totalScore),
+      learningAdvice: { reviewQuestions: [] },
+    }
+  }
+
+  /** 偏差値・順位を学級・全体とも出す */
+  const allStatisticsOptions = {
+    ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+    showScore: true,
+    statistics: {
+      ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS.statistics,
+      deviation: { classroom: true, overall: true },
+      rank: { classroom: true, overall: true },
+    },
+  }
+
+  function buildItemsFor(totalScore: number | null) {
+    const population = createPopulation({
+      rawTotalScores: [
+        { studentId: "s1", totalScore, status: "participating" },
+        { studentId: "s2", totalScore: 80, status: "participating" },
+        { studentId: "s3", totalScore: 60, status: "participating" },
+      ],
+    })
+    const report = createReport(totalScore)
+    const filteredStats = computeFilteredStats(
+      population,
+      report.scoringData,
+      allStatuses
+    )
+    return new Map(
+      buildStatsItems(report, filteredStats, allStatisticsOptions).map(
+        (statsItem) => [statsItem.label, statsItem.value]
+      )
+    )
+  }
+
+  it("未採点の生徒の得点は「null / 100」ではなく「- / 100」", () => {
+    const valueByLabel = buildItemsFor(null)
+
+    expect(valueByLabel.get("得点")).toBe("- / 100")
+  })
+
+  it("未採点の生徒の偏差値・順位は 0 でなく「-」で書く（母集団の人数は残す）", () => {
+    const valueByLabel = buildItemsFor(null)
+
+    expect(valueByLabel.get("偏差値")).toBe("-")
+    expect(valueByLabel.get("学級偏差値")).toBe("-")
+    expect(valueByLabel.get("学級順位")).toBe("- / 3")
+    expect(valueByLabel.get("全体順位")).toBe("- / 3")
+    for (const value of valueByLabel.values()) {
+      expect(value).not.toContain("null")
+    }
+  })
+
+  it("採点済みの生徒は得点・偏差値・順位を数で書く（0点も数）", () => {
+    const valueByLabel = buildItemsFor(0)
+
+    expect(valueByLabel.get("得点")).toBe("0 / 100")
+    expect(valueByLabel.get("全体順位")).toBe("3 / 3")
+    expect(valueByLabel.get("偏差値")).not.toBe("-")
   })
 })

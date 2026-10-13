@@ -1,0 +1,118 @@
+name: Web Deploy
+
+# web 版（docs/web-version-plan.md）を書き出し、Cloudflare Pages へ配る。
+#
+# - 書き出し（build）は読むだけの権限で動き、秘密を持たない
+# - 書き出したものは点検（scripts/web/checkWebDist.mjs）を通ってから artifact で渡す
+# - 配る（deploy）のは environment「web-production」の中だけで、Cloudflare の秘密はそこにだけ置く。
+#   秘密がまだ無い間は、配る段を飛ばす（失敗させない）
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+# 配る順を入れ替えない（後から来たものが先に配られて古い版に戻るのを防ぐ）
+concurrency:
+  group: web-deploy
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NEXT_TELEMETRY_DISABLED: "1"
+  CHECKPOINT_DISABLE: "1"
+
+jobs:
+  build:
+    name: Build web-dist
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # 依存のインストールのスクリプトは走らせない。web 版の書き出しに要るものは下で明示的に作る。
+      # 飛ばすもの: Electron 向けのネイティブの作り直し（ensure-sqlite-abi・better-sqlite3・bcrypt）は
+      # web 版では使わない（Worker では sqlite-wasm・bcryptjs に差し替える）。esbuild は
+      # 各 OS 向けの本体を optional の依存から取るので、インストールのスクリプトが無くても動く。
+      # Prisma 7 の generate はエンジンの実行ファイルを要らない（スキーマの読み取りは wasm）
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma clients
+        run: npx prisma generate
+
+      - name: Copy MathJax / PDF.js assets
+        run: node scripts/setup-mathjax-fonts.js
+
+      - name: Build renderer
+        run: npx next build
+
+      - name: Build web-dist
+        run: npm run web:build
+
+      - name: Check web-dist
+        run: node scripts/web/checkWebDist.mjs web-dist
+
+      - name: Upload web-dist
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: web-dist
+          path: web-dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-latest
+    # 秘密はこの environment にだけ置く。承認者を付けると、配る前に人が確かめられる
+    environment: web-production
+    permissions: {}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Check deploy settings
+        id: settings
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$CLOUDFLARE_PAGES_PROJECT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare の設定（secrets の CLOUDFLARE_API_TOKEN・CLOUDFLARE_ACCOUNT_ID、vars の CLOUDFLARE_PAGES_PROJECT）が揃っていないので、配る段を飛ばします"
+          fi
+
+      - name: Download web-dist
+        if: steps.settings.outputs.ready == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: web-dist
+          path: web-dist
+
+      - name: Setup Node.js
+        if: steps.settings.outputs.ready == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Deploy
+        if: steps.settings.outputs.ready == 'true'
+        run: >-
+          npx --yes wrangler@4.141.0 pages deploy web-dist
+          --project-name="$CLOUDFLARE_PAGES_PROJECT"
+          --branch=main
+          --commit-hash="$GITHUB_SHA"
