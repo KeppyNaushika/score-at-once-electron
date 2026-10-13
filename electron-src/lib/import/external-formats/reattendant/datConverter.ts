@@ -12,7 +12,7 @@
  *     .Completion[i].PointArea       → type: QUESTION_ANSWER, label: "QuizName(i+1)"
  *   TotalScoreArea (abc_xml)         → type: TOTAL_SCORE, label: "合計"
  *   LargeQuestionScoreArea (abc_xml) → type: SUBTOTAL_SCORE, label: "小計N"
- *   AngleScoreArea (abc_xml)         → type: SUBTOTAL_SCORE, label: "観点"
+ *   AngleScoreArea (abc_xml)         → type: SUBTOTAL_SCORE, label: angle_name
  *   座標正規化:
  *     abcData JS座標 / (フル画像幅 × image_scale)
  *     abc_xml座標 / フル画像サイズ（PageSize）
@@ -83,25 +83,32 @@ export async function convertDatToScore(
 
     // 9. questions.json, angles.json, question_angles.json 読み込み
     const { questions, angles, questionAngles } = readDatSubtotalSource(entries)
+    const subjectAngles = selectSubjectAngles(angles, workbook.subject_id)
 
     // 10〜11. CropRegions 生成（設問 + 出席番号/氏名 + スコア印字エリア）
-    const { cropRegions, quizNameToCropIds, largeQuestionToCropId } =
-      buildCropRegions(
-        abcData.PageBlock,
-        abcXml,
-        pageUuidMap,
-        pageImageSizes,
-        contents.image_scale || 0.5,
-        now
-      )
+    const {
+      cropRegions,
+      quizNameToCropIds,
+      largeQuestionToCropId,
+      angleScoreAreas,
+    } = buildCropRegions(
+      abcData.PageBlock,
+      abcXml,
+      subjectAngles,
+      pageUuidMap,
+      pageImageSizes,
+      contents.image_scale || 0.5,
+      now
+    )
 
     // 12. SubtotalGroup / Subtotal / CropSubtotal 生成
     const subtotalData = generateSubtotalData(
       questions,
-      angles,
+      subjectAngles,
       questionAngles,
       quizNameToCropIds,
       largeQuestionToCropId,
+      angleScoreAreas,
       examId,
       now
     )
@@ -337,6 +344,20 @@ function readDatSubtotalSource(entries: AdmZip.IZipEntry[]): {
 }
 
 /**
+ * 試験の教科（subject_id）の、削除されていない観点を angle_sort_no 順に並べる
+ *
+ * angles.json には他教科の観点も入りうる。絞らないと設問の無い空の小計として並ぶ
+ */
+function selectSubjectAngles(
+  angles: DatAngle[],
+  subjectId: number
+): DatAngle[] {
+  return angles
+    .filter((angle) => angle.subject_id === subjectId && !angle.delete_flg)
+    .sort((angleA, angleB) => angleA.angle_sort_no - angleB.angle_sort_no)
+}
+
+/**
  * CropRegions 生成
  *
  * PageBlock から設問・出席番号・氏名を、abc_xml からスコア印字エリアを作る。
@@ -345,6 +366,7 @@ function readDatSubtotalSource(entries: AdmZip.IZipEntry[]): {
 function buildCropRegions(
   pageBlocks: DatPageBlock[],
   abcXml: string | null,
+  subjectAngles: DatAngle[],
   pageUuidMap: Map<number, string>,
   pageImageSizes: Map<number, { w: number; h: number }>,
   imageScale: number,
@@ -353,6 +375,7 @@ function buildCropRegions(
   cropRegions: ConvertedCropRegion[]
   quizNameToCropIds: Map<string, string[]>
   largeQuestionToCropId: Map<string, string>
+  angleScoreAreas: AngleScoreArea[]
 } {
   // 設問 + 出席番号/氏名
   const { regions: questionRegions, quizNameToCropIds } =
@@ -367,18 +390,32 @@ function buildCropRegions(
 
   // abc_xml からスコア印字エリアを抽出してCropRegionsに追加
   let largeQuestionToCropId = new Map<string, string>()
+  let angleScoreAreas: AngleScoreArea[] = []
   if (abcXml) {
     const scoreAreaResult = extractScoreAreasFromAbcXml(
       abcXml,
+      subjectAngles,
       pageUuidMap,
       pageImageSizes,
       now
     )
     cropRegions.push(...scoreAreaResult.regions)
     largeQuestionToCropId = scoreAreaResult.largeQuestionToCropId
+    angleScoreAreas = scoreAreaResult.angleScoreAreas
   }
 
-  return { cropRegions, quizNameToCropIds, largeQuestionToCropId }
+  return {
+    cropRegions,
+    quizNameToCropIds,
+    largeQuestionToCropId,
+    angleScoreAreas,
+  }
+}
+
+/** 観点の得点欄（AngleScoreArea）の CropRegion と、それが指す観点 */
+interface AngleScoreArea {
+  angleId: number
+  cropRegionId: string
 }
 
 /** extractScoreAreasFromAbcXml の結果 */
@@ -386,6 +423,8 @@ interface ScoreAreasResult {
   regions: ConvertedCropRegion[]
   /** LargeQuestionNumber → CropRegion ID（大問小計の紐付け用） */
   largeQuestionToCropId: Map<string, string>
+  /** 観点の得点欄のうち、指す観点が決まったもの（観点の小計の紐付け用） */
+  angleScoreAreas: AngleScoreArea[]
 }
 
 /**
@@ -394,18 +433,20 @@ interface ScoreAreasResult {
  * abc_xmlの<PointInfoBlock>/<AreaInfo>に以下が含まれる:
  * - TotalScoreArea: 合計点印字位置（フルスケール座標）
  * - LargeQuestionScoreArea: 大問小計印字位置（LargeQuestionNumber付き）
- * - AngleScoreArea: 観点別得点印字位置
+ * - AngleScoreArea: 観点別得点印字位置（AngleId 付き。angles.json の id）
  *
  * 座標はフルスケール（PageSize基準）。正規化: 座標 / フル画像サイズ
  */
 function extractScoreAreasFromAbcXml(
   abcXml: string,
+  subjectAngles: DatAngle[],
   pageUuidMap: Map<number, string>,
   pageImageSizes: Map<number, { w: number; h: number }>,
   now: string
 ): ScoreAreasResult {
   const regions: ConvertedCropRegion[] = []
   const largeQuestionToCropId = new Map<string, string>()
+  const angleScoreAreas: AngleScoreArea[] = []
 
   // 簡易XMLパース（DOMParser不要、正規表現で自己完結型要素を抽出）
   // TotalScoreArea, LargeQuestionScoreArea, AngleScoreArea は全て自己閉じタグ
@@ -457,7 +498,12 @@ function extractScoreAreasFromAbcXml(
     if (attrs.Visible === "false") continue
     const page = parseInt(attrs.Page || "1", 10)
     angleIndex++
-    const label = angleIndex === 1 ? "観点" : `観点${angleIndex}`
+    const angle = resolveAngleOfScoreArea(attrs, subjectAngles)
+    const label = angle
+      ? angle.angle_name
+      : angleIndex === 1
+        ? "観点"
+        : `観点${angleIndex}`
     const region = createScoreRegion(
       attrs,
       page,
@@ -467,10 +513,33 @@ function extractScoreAreasFromAbcXml(
       pageImageSizes,
       now
     )
-    if (region) regions.push(region)
+    if (region) {
+      regions.push(region)
+      if (angle) {
+        angleScoreAreas.push({ angleId: angle.id, cropRegionId: region.id })
+      }
+    }
   }
 
-  return { regions, largeQuestionToCropId }
+  return { regions, largeQuestionToCropId, angleScoreAreas }
+}
+
+/**
+ * 観点の得点欄（AngleScoreArea）が指す観点
+ *
+ * AngleId 属性があればその観点。古い版の .dat には AngleId が無く、そのときは
+ * 試験の観点が1つだけなら欄はその観点のもの。観点が複数で AngleId が無ければ
+ * 1つの欄に複数の観点が並ぶ版もあり、どの観点の欄か決められないので null
+ */
+function resolveAngleOfScoreArea(
+  attrs: Record<string, string>,
+  subjectAngles: DatAngle[]
+): DatAngle | null {
+  if (attrs.AngleId !== undefined) {
+    const angleId = parseInt(attrs.AngleId, 10)
+    return subjectAngles.find((angle) => angle.id === angleId) ?? null
+  }
+  return subjectAngles.length === 1 ? subjectAngles[0] : null
 }
 
 /**
@@ -684,15 +753,17 @@ function convertPageBlocksToCropRegions(
  * 1. 「大問」: QuizName のプレフィックス（"1-1"→"1"）でグループ化
  *    - QUESTION_ASSIGNMENT: 各設問CropRegion → 対応する大問Subtotal
  *    - SUBTOTAL_DEFINITION: 小計N CropRegion → 大問N Subtotal
- * 2. 「観点」: angles.json の観点名（知識・技能, 思考・判断・表現）
+ * 2. 「観点」: 試験の教科の観点（知識・技能, 思考・判断・表現）
  *    - QUESTION_ASSIGNMENT: 各設問CropRegion → question_angles経由で対応する観点Subtotal（1対多）
+ *    - SUBTOTAL_DEFINITION: 観点の得点欄 CropRegion → AngleId の観点Subtotal
  */
 function generateSubtotalData(
   questions: DatQuestion[],
-  angles: DatAngle[],
+  subjectAngles: DatAngle[],
   questionAngles: DatQuestionAngle[],
   quizNameToCropIds: Map<string, string[]>,
   largeQuestionToCropId: Map<string, string>,
+  angleScoreAreas: AngleScoreArea[],
   examId: string,
   now: string
 ): ConvertedSubtotalData {
@@ -759,11 +830,7 @@ function generateSubtotalData(
   // 2. 「観点」SubtotalGroup
   // ========================================
 
-  const activeAngles = angles
-    .filter((angle) => !angle.delete_flg)
-    .sort((angleA, angleB) => angleA.angle_sort_no - angleB.angle_sort_no)
-
-  if (activeAngles.length > 0 && questionAngles.length > 0) {
+  if (subjectAngles.length > 0 && questionAngles.length > 0) {
     // QUESTION_ASSIGNMENT: 各設問CropRegion → 観点Subtotal（設問1つに観点が複数ならそのすべて）
     // QuizName → question_id → angle_id[] → Subtotal
     const angleAssignments = Array.from(quizNameToCropIds).flatMap(
@@ -780,15 +847,15 @@ function generateSubtotalData(
       subtotalData,
       {
         groupName: "観点",
-        subtotals: activeAngles.map((angle) => ({
+        subtotals: subjectAngles.map((angle) => ({
           key: angle.id,
           name: angle.angle_name,
         })),
         questionAssignments: angleAssignments,
-        // 観点の印字欄（AngleScoreArea）はどの観点か分からないので紐付けない。
-        // LargeQuestionScoreArea の LargeQuestionNumber にあたる、観点を指す属性が
-        // 確かめられておらず、並び順（angle_sort_no と欄の出現順）の対応も裏付けが無い
-        definitionAssignments: [],
+        // SUBTOTAL_DEFINITION: 観点の得点欄 CropRegion → 観点Subtotal
+        definitionAssignments: angleScoreAreas.map(
+          ({ angleId, cropRegionId }) => ({ key: angleId, cropRegionId })
+        ),
       },
       examId,
       now
