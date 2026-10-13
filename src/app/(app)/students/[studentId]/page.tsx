@@ -1,7 +1,7 @@
 "use client"
 
 import type { StudentClassroomMembership } from "@prisma/client"
-import { ChartColumn, SquarePen, Trash, Users } from "lucide-react"
+import { ChartColumn, SquarePen, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -23,11 +23,11 @@ import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
+import { toolbarDeleteAction } from "@/components/common/ToolbarDeleteAction"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
-import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouteParams } from "@/hooks/useRouteParams"
@@ -115,32 +115,7 @@ export default function StudentDetailPage() {
       label: "編集",
       onClick: handleEditStudentClick,
     }),
-    {
-      id: "delete",
-      priority: 10,
-      node: (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setIsDeleteModalOpen(true)}
-        >
-          <Trash className="mr-2 h-4 w-4" />
-          削除
-        </Button>
-      ),
-      collapsedNode: (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setIsDeleteModalOpen(true)}
-        >
-          <Trash className="mr-2 h-4 w-4" />
-          削除
-        </Button>
-      ),
-    },
+    toolbarDeleteAction({ onClick: () => setIsDeleteModalOpen(true) }),
   ]
 
   return (

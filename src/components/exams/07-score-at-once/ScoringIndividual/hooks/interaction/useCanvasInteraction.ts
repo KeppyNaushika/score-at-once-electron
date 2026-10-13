@@ -23,7 +23,7 @@ import { useRectangleSelection } from "./useRectangleSelection"
 import { useResizeDrag } from "./useResizeDrag"
 
 /** キャンバスインタラクションフックのプロパティ */
-interface UseCanvasInteractionProps {
+export interface UseCanvasInteractionProps {
   /** キャンバス参照 */
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** 現在のツール */

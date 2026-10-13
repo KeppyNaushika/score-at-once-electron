@@ -3,12 +3,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { ArrowRight } from "lucide-react"
 
+import { FocusSection } from "@/components/help/common/DocComponents"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { parsePreference } from "@/lib/userPreferences"
 import { userPreferenceQuery } from "@/queries/settings"
 
-import { FocusSection } from "./HeadingFocus"
 import { Scene } from "./Scene"
 import { withHelp07Variables } from "./utils"
 

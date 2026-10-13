@@ -1,6 +1,5 @@
 "use client"
 
-import { ChevronDown, ChevronRight } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { Combobox } from "@/components/common/Combobox"
@@ -18,6 +17,8 @@ import type {
   SubtotalInfo,
 } from "@/types/examArchive.types"
 
+import { IdChoiceSelect } from "./IdChoiceSelect"
+import { ItemRowHeader } from "./ItemRowHeader"
 import { SubtotalMappingEditor } from "./SubtotalMappingEditor"
 import { SubtotalPreview } from "./SubtotalPreview"
 import type {
@@ -165,8 +166,7 @@ export function NoMatchItemRow({
     }
   }
 
-  const handleIdChoiceChange = (value: string) => {
-    const newIdChoice = value as IdChoice
+  const handleIdChoiceChange = (newIdChoice: IdChoice) => {
     updateSelection({ idChoice: newIdChoice })
     if (selectedExistingId) {
       onDecisionChange("same_person", selectedExistingId, newIdChoice)
@@ -175,28 +175,13 @@ export function NoMatchItemRow({
 
   return (
     <div className="rounded-lg border p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <span className="font-medium">{item.displayLabel}</span>
-          {hasSubtotalPreview && (
-            <button
-              type="button"
-              className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => setShowPreview((v) => !v)}
-            >
-              {showPreview ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-              小計項目
-            </button>
-          )}
-        </div>
-        <span className="text-xs text-muted-foreground">
-          このPCに同じデータなし
-        </span>
-      </div>
+      <ItemRowHeader
+        displayLabel={item.displayLabel}
+        matchSummary="このPCに同じデータなし"
+        hasSubtotalPreview={hasSubtotalPreview}
+        showPreview={showPreview}
+        onTogglePreview={() => setShowPreview((shown) => !shown)}
+      />
 
       {/* 小計項目プレビュー */}
       {hasSubtotalPreview && showPreview && (
@@ -257,19 +242,10 @@ export function NoMatchItemRow({
                 <p className="text-xs text-muted-foreground">
                   どちらに合わせる？
                 </p>
-                <Select value={idChoice} onValueChange={handleIdChoiceChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="use_existing_id">
-                      このPCのIDを使う
-                    </SelectItem>
-                    <SelectItem value="use_import_id">
-                      ファイルのIDを使う
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <IdChoiceSelect
+                  idChoice={idChoice}
+                  onIdChoiceChange={handleIdChoiceChange}
+                />
               </>
             )}
           </div>

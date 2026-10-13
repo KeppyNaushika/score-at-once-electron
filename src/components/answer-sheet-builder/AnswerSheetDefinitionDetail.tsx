@@ -1,11 +1,10 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { EllipsisVertical, FileArchive } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
+import { EntityOverviewActionsMenu } from "@/components/common/entity-overview/EntityOverviewActionsMenu"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
@@ -14,13 +13,6 @@ import {
   EntityOverviewPage,
   toDateInputValue,
 } from "@/components/common/EntityOverviewPage"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { getAnswerSheetCompletion } from "@/lib/answerSheetStatus"
 import {
@@ -181,26 +173,12 @@ export function AnswerSheetDefinitionDetail({
         actions={
           // 2. 書き出しの段が出すのは用紙そのもの（印刷用の PDF）で、こちらは実体を
           // 丸ごと持ち出すアーカイブなので、段ではなく概要に置く。並びは試験・成績算出・
-          // 資料の概要と同じドロップダウン（削除は一覧の行の側にある）
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" aria-label="その他の操作">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => setShowUnifiedExportDialog(true)}
-              >
-                <FileArchive />
-                .sao 書き出し
-              </DropdownMenuItem>
-              <AuditLogMenuItem
-                scopeId={definitionId}
-                scopeLabel={definition.name}
-              />
-            </DropdownMenuContent>
-          </DropdownMenu>
+          // 資料の概要と同じドロップダウン（削除は一覧の行の側にあるので、削除の項目は渡さない）
+          <EntityOverviewActionsMenu
+            onExportArchive={() => setShowUnifiedExportDialog(true)}
+            auditScopeId={definitionId}
+            auditScopeLabel={definition.name}
+          />
         }
       />
 

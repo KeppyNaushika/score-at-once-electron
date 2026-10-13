@@ -2,9 +2,12 @@
 
 import { useCallback, useRef } from "react"
 
-import { KeyCap } from "@/components/help/common/DocComponents"
+import {
+  KeyCap,
+  useHeadingActive,
+} from "@/components/help/common/DocComponents"
 
-import { DemoSection, useHeadingActive } from "./HeadingFocus"
+import { DemoSection } from "./DemoSection"
 import { Scene } from "./Scene"
 import { ScoringGridDemo } from "./ScoringGridDemo"
 import type { DemoCell, DemoStatus, GuideKeys, NavKeys } from "./types"

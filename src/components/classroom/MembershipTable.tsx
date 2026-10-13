@@ -3,13 +3,16 @@
 import { Calendar, SquarePen, Trash, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import {
+  MembershipPeriodCells,
+  MembershipPhaseBadge,
+} from "@/components/classroom/MembershipRowParts"
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 import {
   type ColumnHeadDefinition,
   SortableColumnHeads,
 } from "@/components/common/SortableColumnHeads"
 import { TooltipButton } from "@/components/common/TooltipButton"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -250,45 +253,10 @@ export default function ClassroomMembershipTable({
                         <div className="flex items-center gap-2">
                           {membership.student.lastName}{" "}
                           {membership.student.firstName}
-                          {phase === "current" && (
-                            <Badge
-                              variant="default"
-                              className="rounded-full px-2 py-0.5 text-xs font-normal"
-                            >
-                              在籍中
-                            </Badge>
-                          )}
-                          {phase === "upcoming" && (
-                            <Badge
-                              variant="outline"
-                              className="rounded-full border-dashed px-2 py-0.5 text-xs font-normal"
-                            >
-                              在籍予定
-                            </Badge>
-                          )}
-                          {phase === "past" && (
-                            <Badge
-                              variant="secondary"
-                              className="rounded-full px-2 py-0.5 text-xs font-normal"
-                            >
-                              過去在籍
-                            </Badge>
-                          )}
+                          <MembershipPhaseBadge phase={phase} />
                         </div>
                       </TableCell>
-                      <TableCell className="tabular-nums">
-                        {membership.startDate.toLocaleDateString("ja-JP")}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {membership.endDate
-                          ? membership.endDate.toLocaleDateString("ja-JP")
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate text-sm">
-                        {membership.notes || (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
+                      <MembershipPeriodCells membership={membership} />
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
                           <TooltipButton

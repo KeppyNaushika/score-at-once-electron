@@ -1,6 +1,5 @@
 "use client"
 
-import { ChevronDown, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -11,8 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { IdChoice } from "@/types/examArchive.types"
-import { isIdChoice } from "@/types/examArchive.types"
 
+import { IdChoiceSelect } from "./IdChoiceSelect"
+import { ItemRowHeader } from "./ItemRowHeader"
 import { SubtotalMappingEditor } from "./SubtotalMappingEditor"
 import { SubtotalPreview } from "./SubtotalPreview"
 import type { DecisionType, MatchedItemRowProps } from "./types"
@@ -50,35 +50,19 @@ export function MatchedItemRow({
     onDecisionChange(value, value === "same_person" ? idChoice : undefined)
   }
 
-  const handleIdChoiceChange = (value: string) => {
-    if (!isIdChoice(value)) return
-    onDecisionChange(decision, value)
+  const handleIdChoiceChange = (newIdChoice: IdChoice) => {
+    onDecisionChange(decision, newIdChoice)
   }
 
   return (
     <div className="rounded-lg border p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <span className="font-medium">{item.displayLabel}</span>
-          {hasSubtotalPreview && (
-            <button
-              type="button"
-              className="ml-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => setShowPreview((v) => !v)}
-            >
-              {showPreview ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-              小計項目
-            </button>
-          )}
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {item.matchReason}
-        </span>
-      </div>
+      <ItemRowHeader
+        displayLabel={item.displayLabel}
+        matchSummary={item.matchReason}
+        hasSubtotalPreview={!!hasSubtotalPreview}
+        showPreview={showPreview}
+        onTogglePreview={() => setShowPreview((shown) => !shown)}
+      />
 
       {/* 小計項目プレビュー */}
       {hasSubtotalPreview && showPreview && (
@@ -106,19 +90,10 @@ export function MatchedItemRow({
             <p className="mb-1 text-xs text-muted-foreground">
               {labels.idChoiceLabel}
             </p>
-            <Select value={idChoice} onValueChange={handleIdChoiceChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="use_existing_id">
-                  このPCのIDを使う
-                </SelectItem>
-                <SelectItem value="use_import_id">
-                  ファイルのIDを使う
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <IdChoiceSelect
+              idChoice={idChoice}
+              onIdChoiceChange={handleIdChoiceChange}
+            />
           </div>
         )}
 

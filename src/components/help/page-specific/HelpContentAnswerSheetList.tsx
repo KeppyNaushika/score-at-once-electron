@@ -1,21 +1,15 @@
 "use client"
 
-import {
-  FilePen,
-  FolderInput,
-  Lightbulb,
-  MousePointerClick,
-  Search,
-  UserRoundCog,
-} from "lucide-react"
+import { FilePen, FolderInput, Search, UserRoundCog } from "lucide-react"
 
 import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
+import { HelpSection } from "@/components/help/common/HelpComponents"
 import {
-  Badge,
-  HelpSection,
-  StepItem,
-  TipItem,
-} from "@/components/help/common/HelpComponents"
+  ListActionBadges,
+  ListHelpHeader,
+  ListHelpTip,
+  ListReadingSteps,
+} from "@/components/help/common/ListPageHelp"
 
 /**
  * 解答用紙作成（トップページ）の使い方。
@@ -26,44 +20,20 @@ import {
 export function HelpContentAnswerSheetList() {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <FilePen className="h-6 w-6 text-blue-600" />
-          解答用紙作成
-        </h2>
-        <p className="text-muted-foreground">
-          印刷して配る解答用紙を作ります。作った用紙は書き出して他のPCへ渡せます。
-        </p>
-      </div>
-
-      <HelpSection
-        icon={<MousePointerClick className="h-5 w-5 text-green-600" />}
-        title="一覧の読み方・押し方"
+      <ListHelpHeader
+        icon={<FilePen className="h-6 w-6 text-blue-600" />}
+        title="解答用紙作成"
       >
-        <div className="space-y-3">
-          <StepItem
-            number={1}
-            title="行のどこを押しても概要が開く"
-            description="解答用紙の概要ページへ移動します。チェックボックスと行末の「…」だけは別の役目です"
-            isImportant
-          />
-          <StepItem
-            number={2}
-            title="名前の下は用紙の要約"
-            description="用紙サイズ・向き・設問数・合計配点・担当が並びます"
-          />
-          <StepItem
-            number={3}
-            title="「次のステップ」を押すと続きから"
-            description="設問がまだ無ければ作成へ、あれば書き出しへ進みます"
-          />
-          <StepItem
-            number={4}
-            title="見出しを押すと並べ替え"
-            description="名前・使用日・更新日時で並べ替えられます。並び順は次に開いたときも覚えています"
-          />
-        </div>
-      </HelpSection>
+        印刷して配る解答用紙を作ります。作った用紙は書き出して他のPCへ渡せます。
+      </ListHelpHeader>
+
+      <ListReadingSteps
+        overviewDescription="解答用紙の概要ページへ移動します。チェックボックスと行末の「…」だけは別の役目です"
+        summaryTitle="名前の下は用紙の要約"
+        summaryDescription="用紙サイズ・向き・設問数・合計配点・担当が並びます"
+        nextStepDescription="設問がまだ無ければ作成へ、あれば書き出しへ進みます"
+        sortDescription="名前・使用日・更新日時で並べ替えられます。並び順は次に開いたときも覚えています"
+      />
 
       <div className="my-4 border-t border-gray-200" />
 
@@ -88,11 +58,9 @@ export function HelpContentAnswerSheetList() {
           title="作る・取り込む"
         >
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">新規作成</Badge>
-              <Badge variant="outline">取り込み</Badge>
-              <Badge variant="outline">.sao 書き出し</Badge>
-            </div>
+            <ListActionBadges
+              labels={["新規作成", "取り込み", ".sao 書き出し"]}
+            />
             <p className="text-sm text-muted-foreground">
               別のPCで作った解答用紙は「取り込み」から取り込めます
               <ArchiveImportFormatsNote legacyFormats=".asb" />
@@ -112,12 +80,9 @@ export function HelpContentAnswerSheetList() {
         </p>
       </HelpSection>
 
-      <TipItem type="info">
-        <span className="flex items-start gap-2">
-          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
-          窓が狭いとボタンは右端の「…」へ畳まれます。畳まれても中身は同じで、検索欄だけは最後まで残ります。
-        </span>
-      </TipItem>
+      <ListHelpTip>
+        窓が狭いとボタンは右端の「…」へ畳まれます。畳まれても中身は同じで、検索欄だけは最後まで残ります。
+      </ListHelpTip>
     </div>
   )
 }

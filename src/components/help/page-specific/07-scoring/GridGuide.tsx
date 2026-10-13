@@ -1,6 +1,5 @@
-import { KeyCap } from "@/components/help/common/DocComponents"
+import { FocusSection, KeyCap } from "@/components/help/common/DocComponents"
 
-import { FocusSection } from "./HeadingFocus"
 import { Scene } from "./Scene"
 import { ScoringDemos } from "./ScoringDemos"
 import { Troubleshoot } from "./Troubleshoot"

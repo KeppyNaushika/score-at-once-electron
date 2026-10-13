@@ -72,3 +72,40 @@ export function createEmptyCounts(): ArchiveDataCounts {
     answerSheetImages: 0,
   }
 }
+
+/** 作成・更新・スキップ・変更なしの4区分すべてを空にしたカウントを作成 */
+export function createEmptyImportCounts(): ImportCounts {
+  return {
+    created: createEmptyCounts(),
+    updated: createEmptyCounts(),
+    skipped: createEmptyCounts(),
+    unchanged: createEmptyCounts(),
+  }
+}
+
+/** 全エンティティの対応表を空にした IdMappings を作成 */
+export function createEmptyIdMappings(): IdMappings {
+  return {
+    student: {},
+    classroom: {},
+    subtotalGroup: {},
+    subtotal: {},
+    exam: {},
+    examPage: {},
+    cropRegion: {},
+    studentAnswerImage: {},
+    examStudent: {},
+    userExam: {},
+    cropSubtotal: {},
+    questionScore: {},
+    drawingAnnotation: {},
+    membership: {},
+    cropRegionOmrConfig: {},
+    cropRegionOmrChoiceOption: {},
+    compoundAnswer: {},
+    compoundAnswerMember: {},
+    compoundAnswerScore: {},
+    scoreDecision: {},
+    user: {},
+  }
+}

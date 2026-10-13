@@ -1,39 +1,19 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import type { ExamPage } from "@prisma/client"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
-import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
+import type { UseDragDropParams } from "@/components/exams/06-student-answers/student-answer-table/types"
 import {
   applyCellMoveOrSwap,
   decodeCellDroppableId,
   diffFilesAgainstBaseline,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
-import type {
-  AnswerImageIdentity,
-  PlacementStrategy,
-} from "@/components/exams/06-student-answers/types"
-import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
+import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 
-interface UseDragDropHandlersParams<TItem extends AnswerImageIdentity> {
-  files: TItem[]
-  onFilesChange: (files: TItem[]) => void
-  getEnabledFiles: () => TItem[]
-  getDisabledFiles: () => TItem[]
-  students?: StudentAnswerDatasetExamStudent[]
-  examPages?: ExamPage[]
-  mode?: "upload" | "view"
-  fileOrder?: PlacementStrategy
-  onReloadData?: () => void
-  onUpdatePendingChanges?: (
-    changedFiles: Array<{
-      fileId: string
-      fromState: FileState
-      toState: FileState
-    }>
-  ) => void
-  existingAnswers?: AnswerImageIdentity[]
+interface UseDragDropHandlersParams<
+  TItem extends AnswerImageIdentity,
+> extends UseDragDropParams<TItem> {
   setActiveFile: (file: TItem | null) => void
 }
 

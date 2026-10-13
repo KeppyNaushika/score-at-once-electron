@@ -13,7 +13,10 @@ import type {
   LineStyle,
 } from "@/types/drawingAnnotation.types"
 
-import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
+import {
+  useCanvasInteraction,
+  type UseCanvasInteractionProps,
+} from "./interaction/useCanvasInteraction"
 import { useHandTool } from "./interaction/useHandTool"
 import { useKeyboard } from "./interaction/useKeyboard"
 import { useWheelZoom } from "./navigation/useWheelZoom"
@@ -21,7 +24,26 @@ import { useCoordinates } from "./utils/useCoordinates"
 import { useEditModeUtils } from "./utils/useEditMode"
 import { useHitTestUtils } from "./utils/useHitTest"
 
-interface UseAnswerDisplayEventsProps {
+interface UseAnswerDisplayEventsProps extends Pick<
+  UseCanvasInteractionProps,
+  | "setSelectedElementIds"
+  | "toggleSelection"
+  | "clearSelection"
+  | "setIsDrawingSelection"
+  | "setSelectionRectangle"
+  | "selectElementsInRectangle"
+  | "setIsDraggingElement"
+  | "setIsDrawing"
+  | "setCurrentDrawing"
+  | "setDragElementOffset"
+  | "setLineEditMode"
+  | "setRectangleEditMode"
+  | "setDrawingElements"
+  | "addDrawingElement"
+  | "updateDrawingElement"
+  | "updateDrawingElements"
+  | "removeDrawingElement"
+> {
   // Canvas and container refs
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   containerRef: React.RefObject<HTMLDivElement | null>
@@ -73,51 +95,14 @@ interface UseAnswerDisplayEventsProps {
     Map<string, { x: number; y: number; width: number; height: number }>
   >
 
-  // Drawing actions
-  setSelectedElementIds: (ids: string[]) => void
+  // Drawing actions（キャンバス操作へそのまま渡すものは UseCanvasInteractionProps から取る）
   addToSelection: (id: string) => void
   removeFromSelection: (id: string) => void
-  toggleSelection: (id: string) => void
-  clearSelection: () => void
-  setIsDrawingSelection: (drawing: boolean) => void
-  setSelectionRectangle: (
-    rect:
-      | SelectionRectangle
-      | null
-      | ((prev: SelectionRectangle | null) => SelectionRectangle | null)
-  ) => void
-  selectElementsInRectangle: (rect: SelectionRectangle) => void
-  setIsDraggingElement: (dragging: boolean) => void
-  setIsDrawing: (drawing: boolean) => void
-  setCurrentDrawing: (
-    drawing:
-      | Partial<DrawingAnnotation>
-      | null
-      | ((
-          prev: Partial<DrawingAnnotation> | null
-        ) => Partial<DrawingAnnotation> | null)
-  ) => void
-  setDragElementOffset: (offset: { x: number; y: number }) => void
-  setLineEditMode: (mode: LineEditMode) => void
-  setRectangleEditMode: (mode: RectangleEditMode) => void
   setIsShiftPressed: (pressed: boolean) => void
   setIsCtrlPressed: (pressed: boolean) => void
   setIsDraggingHandle: (dragging: boolean) => void
   setCurrentHandle: (handle: string | null) => void
   setHoveredElementId: (id: string | null) => void
-  setDrawingElements: (
-    elements:
-      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
-  ) => void
-  addDrawingElement: (element: DrawingAnnotation) => void
-  updateDrawingElement: (
-    id: string,
-    updates: Partial<DrawingAnnotation>
-  ) => void
-  updateDrawingElements: (
-    updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
-  ) => void
-  removeDrawingElement: (id: string) => void
 
   // テキスト再編集
   onTextElementReClick?: (element: DrawingAnnotation) => void

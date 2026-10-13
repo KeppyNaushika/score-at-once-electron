@@ -331,45 +331,16 @@ export function computeGridRowRightEdges<T>(
   areaWidth: number,
   baseRowHeight: number
 ): { yTop: number; yBottom: number; rightX: number }[] {
-  const ySet = new Set<number>()
-  const absCells: { y: number; yEnd: number; rightX: number }[] = []
-  for (const gridCell of gridCells) {
-    const cellY = areaStartY + gridCell.y * baseRowHeight
-    const cellYEnd = cellY + gridCell.height * baseRowHeight
-    const cellRightX = areaX + (gridCell.x + gridCell.width) * areaWidth
-    ySet.add(cellY)
-    ySet.add(cellYEnd)
-    absCells.push({ y: cellY, yEnd: cellYEnd, rightX: cellRightX })
-  }
-
-  const sortedYs = Array.from(ySet).sort((yA, yB) => yA - yB)
-  const result: { yTop: number; yBottom: number; rightX: number }[] = []
-
-  for (let i = 0; i < sortedYs.length - 1; i++) {
-    const yTop = sortedYs[i]
-    const yBottom = sortedYs[i + 1]
-    const midY = (yTop + yBottom) / 2
-
-    let maxRightX = 0
-    for (const cell of absCells) {
-      if (cell.y <= midY + 1e-9 && cell.yEnd >= midY - 1e-9) {
-        maxRightX = Math.max(maxRightX, cell.rightX)
+  return mergeAbsoluteRightEdges(
+    gridCells.map((gridCell) => {
+      const cellY = areaStartY + gridCell.y * baseRowHeight
+      return {
+        yTop: cellY,
+        yBottom: cellY + gridCell.height * baseRowHeight,
+        rightX: areaX + (gridCell.x + gridCell.width) * areaWidth,
       }
-    }
-
-    if (maxRightX > 0) {
-      if (
-        result.length > 0 &&
-        Math.abs(result[result.length - 1].rightX - maxRightX) < 0.01
-      ) {
-        result[result.length - 1].yBottom = yBottom
-      } else {
-        result.push({ yTop, yBottom, rightX: maxRightX })
-      }
-    }
-  }
-
-  return result
+    })
+  )
 }
 
 /** グリッドセルからY区間ごとの左端X座標を計算（ステップ外枠描画用） */

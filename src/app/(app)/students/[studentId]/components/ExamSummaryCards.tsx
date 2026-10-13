@@ -3,7 +3,7 @@
 import { ChartColumn, FileCheck, TrendingUp } from "lucide-react"
 import { useMemo } from "react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SummaryStatCard } from "@/components/common/SummaryStatCard"
 import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
 interface ExamSummaryCardsProps {
@@ -35,72 +35,26 @@ export function ExamSummaryCards({ results }: ExamSummaryCardsProps) {
 
   return (
     <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <FileCheck className="h-4 w-4" />
-            受験回数
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tabular-nums">
-            {stats.examCount}
-            <span className="ml-1 text-lg font-normal text-muted-foreground">
-              回
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <ChartColumn className="h-4 w-4" />
-            平均得点率
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tabular-nums">
-            {stats.avgRate != null ? (
-              <>
-                {stats.avgRate}
-                <span className="ml-1 text-lg font-normal text-muted-foreground">
-                  %
-                </span>
-              </>
-            ) : (
-              <span className="text-lg font-normal text-muted-foreground">
-                —
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <TrendingUp className="h-4 w-4" />
-            最高得点率
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-green-600 tabular-nums">
-            {stats.maxRate != null ? (
-              <>
-                {stats.maxRate}
-                <span className="ml-1 text-lg font-normal text-green-600/70">
-                  %
-                </span>
-              </>
-            ) : (
-              <span className="text-lg font-normal text-muted-foreground">
-                —
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <SummaryStatCard
+        icon={FileCheck}
+        title="受験回数"
+        value={stats.examCount}
+        unit="回"
+      />
+      <SummaryStatCard
+        icon={ChartColumn}
+        title="平均得点率"
+        value={stats.avgRate}
+        unit="%"
+      />
+      <SummaryStatCard
+        icon={TrendingUp}
+        title="最高得点率"
+        value={stats.maxRate}
+        unit="%"
+        valueClassName="text-green-600"
+        unitClassName="text-green-600/70"
+      />
     </div>
   )
 }

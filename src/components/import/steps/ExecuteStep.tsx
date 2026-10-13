@@ -1,12 +1,15 @@
 "use client"
 
-import { ArrowRight, CircleCheck, CircleX, TriangleAlert } from "lucide-react"
+import { ArrowRight, TriangleAlert } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
+import {
+  ImportExecutingView,
+  ImportFailedView,
+  ImportSucceededHeading,
+} from "@/components/import/ImportExecuteStatus"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Spinner } from "@/components/ui/spinner"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { ArchiveDataCounts } from "@/types/examArchive.types"
 
@@ -60,35 +63,14 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
   // 実行中
   if (isExecuting) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center py-16">
-        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Spinner className="size-10 text-primary" />
-        </div>
-        <h3 className="mb-2 text-xl font-semibold">取り込み中...</h3>
-        <p className="mb-8 text-muted-foreground">
-          データを取り込んでいます。しばらくお待ちください。
-        </p>
-        <div className="w-full max-w-sm">
-          <Progress value={undefined} className="h-2" />
-        </div>
-      </div>
-    )
+    return <ImportExecutingView />
   }
 
   // 完了（成功）。失敗は例外で上がるので result は成功時のみ入る
   if (result) {
     return (
       <div className="flex h-full flex-col items-center justify-center py-8">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-900/30">
-            <CircleCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
-          </div>
-          <h3 className="mb-2 text-xl font-semibold">取り込みが完了しました</h3>
-          <p className="text-muted-foreground">
-            試験が正常に取り込まれました。
-          </p>
-        </div>
+        <ImportSucceededHeading description="試験が正常に取り込まれました。" />
 
         {/* 結果サマリー */}
         {result.summary && (
@@ -170,21 +152,5 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   }
 
   // 完了（失敗）
-  return (
-    <div className="flex h-full flex-col items-center justify-center py-8">
-      <div className="mb-8 text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10">
-          <CircleX className="h-10 w-10 text-destructive" />
-        </div>
-        <h3 className="mb-2 text-xl font-semibold">取り込みに失敗しました</h3>
-        <p className="max-w-md text-destructive">
-          {state.error ?? "詳細は不明です"}
-        </p>
-      </div>
-
-      <Button onClick={onClose} variant="outline" size="lg">
-        閉じる
-      </Button>
-    </div>
-  )
+  return <ImportFailedView error={state.error} onClose={onClose} />
 }

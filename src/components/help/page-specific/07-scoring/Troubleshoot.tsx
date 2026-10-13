@@ -1,6 +1,9 @@
-import { Callout, KeyCap } from "@/components/help/common/DocComponents"
+import {
+  Callout,
+  FocusSection,
+  KeyCap,
+} from "@/components/help/common/DocComponents"
 
-import { FocusSection } from "./HeadingFocus"
 import { Scene } from "./Scene"
 
 /** 困ったとき（一覧表示・個別表示で共通） */
