@@ -29,7 +29,7 @@ export default function AnswerSheetBuilderDefinitionLayout({
   })
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full flex-col">
       <WorkflowTabHeader
         listHref="/answer-sheet-builder"
         entityName={definitionName || "解答用紙"}

@@ -1,5 +1,6 @@
 "use client"
 
+import { PanelLeftOpen } from "lucide-react"
 import { usePathname } from "next/navigation"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
@@ -15,8 +16,13 @@ import {
   type SidebarSectionConfig,
   useSidebarBehavior,
 } from "@/components/layout/sidebarBehavior"
+import { Button } from "@/components/ui/button"
+import {
+  SidebarInset,
+  SidebarProvider,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/AuthContext"
-import { cn } from "@/lib/utils"
 
 /**
  * 設定をサイドバーの開閉へ押し出す。描くものは無い。
@@ -29,11 +35,11 @@ import { cn } from "@/lib/utils"
 function SidebarBehaviorApplier({
   userId,
   section,
-  setIsSidebarMinimized,
+  setIsSidebarOpen,
 }: {
   userId: string
   section: SidebarSectionConfig
-  setIsSidebarMinimized: (isMinimized: boolean) => void
+  setIsSidebarOpen: (isOpen: boolean) => void
 }) {
   const { behavior } = useSidebarBehavior(userId, section)
   const appliedRef = useRef<{
@@ -58,53 +64,69 @@ function SidebarBehaviorApplier({
     // 押し出せたときに「押し出した」と記録する（途中で取り消されたら記録も残さない）
     const frame = requestAnimationFrame(() => {
       appliedRef.current = { sectionKey, behavior }
-      setIsSidebarMinimized(behavior === "collapse")
+      setIsSidebarOpen(behavior !== "collapse")
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [behavior, section, setIsSidebarMinimized])
+  }, [behavior, section, setIsSidebarOpen])
 
   return null
 }
 
+/**
+ * 狭い窓ではサイドバーが引き出しになって消えるので、本文の上に開くボタンだけの帯を置く。
+ * 広い窓では出さない（開閉はサイドバーの中のボタンで行う）
+ */
+function MobileSidebarBar() {
+  const { isMobile, setOpenMobile } = useSidebar()
+  if (!isMobile) return null
+
+  return (
+    <div className="sticky top-0 z-30 flex h-12 items-center border-b bg-background px-2">
+      <Button variant="ghost" size="icon" onClick={() => setOpenMobile(true)}>
+        <PanelLeftOpen />
+        <span className="sr-only">サイドバーを開く</span>
+      </Button>
+    </div>
+  )
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
+  // 開閉は利用者の設定（SidebarBehaviorApplier）と手の操作の両方が書くので、ここで持って
+  // Sidebar へ渡す。狭い窓での引き出しの開閉は Sidebar が自分で持つ
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const pathname = usePathname()
   const section = useMemo(() => findSidebarSection(pathname), [pathname])
   const { user } = useAuth()
 
-  const toggleSidebar = () => {
-    setIsSidebarMinimized((prev) => !prev)
-  }
-
   return (
-    <div className="flex h-screen">
+    // 窓の高さに固定し、本文（SidebarInset）の中だけを流す。shadcn の既定は窓全体を
+    // 流す形（min-h-svh）だが、各画面は本文が窓の高さに収まる前提で組んである
+    <SidebarProvider
+      open={isSidebarOpen}
+      onOpenChange={setIsSidebarOpen}
+      className="h-svh"
+    >
       {user !== null && section !== null && (
         <SidebarBehaviorApplier
           userId={user.id}
           section={section}
-          setIsSidebarMinimized={setIsSidebarMinimized}
+          setIsSidebarOpen={setIsSidebarOpen}
         />
       )}
-      <Navigation
-        isSidebarMinimized={isSidebarMinimized}
-        toggleSidebar={toggleSidebar}
-        setIsSidebarMinimized={setIsSidebarMinimized}
-      />
-      <main
-        className={cn(
-          "flex-1 overflow-auto pt-0 transition-[padding-left] duration-300 ease-in-out",
-          isSidebarMinimized ? "pl-16" : "pl-64"
-        )}
-      >
-        {children}
-      </main>
+      <Navigation />
+      <SidebarInset className="min-w-0 overflow-auto">
+        <MobileSidebarBar />
+        {/* 各画面は h-full で本文の高さいっぱいに組んであるので、狭い窓の帯を除いた残りの
+            高さをここで決める。中身は以前の main と同じく block の中に並ぶ */}
+        <div className="min-h-0 flex-1">{children}</div>
+      </SidebarInset>
       <ToastProvider />
       {/* 同期で見え方が変わったことは起きた瞬間に伝える。窓が開いている間ずっと聞く */}
       <SyncFoldNotifier />
       <SyncParentDeletedNotifier />
       <SyncWarningNotifier />
       <BrowserStorageNotifier />
-    </div>
+    </SidebarProvider>
   )
 }
