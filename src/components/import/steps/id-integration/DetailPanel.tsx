@@ -1,13 +1,16 @@
 "use client"
 
-import { useMemo } from "react"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import type { IdChoice } from "@/types/examArchive.types"
 
-import { MatchedItemRow } from "./MatchedItemRow"
-import { NoMatchItemRow } from "./NoMatchItemRow"
-import type { DecisionType, DetailPanelProps, EntityType } from "./types"
+import {
+  existingRowsById,
+  type IdIntegrationRow,
+  resolveIdIntegrationRows,
+} from "../../idIntegrationRows"
+import { IntegrationItemRow } from "./IntegrationItemRow"
+import type { DetailPanelProps, EntityType } from "./types"
 
 /** エンティティごとのタイトル */
 const PANEL_TITLES: Record<EntityType, string> = {
@@ -18,55 +21,81 @@ const PANEL_TITLES: Record<EntityType, string> = {
 
 /**
  * 詳細パネル（紐づけ確認UI）- 共通コンポーネント
+ *
+ * id で一致しなかった行を1行ずつ出す（学籍番号一致と氏名一致の両方に当たった生徒も1行）。
+ * 行ごとの扱いは `resolveIdIntegrationRows` が決めたもの（取り込み時と同じ決まり）。
  */
 export function DetailPanel({
   wizard,
   entityType,
-  byName,
-  noMatch,
   showIndividualMessage,
-  onBatchIdChoice,
-  allExistingItems,
-  onBatchNoMatchDecision,
+  subtotalWizard,
 }: DetailPanelProps) {
-  const { updateIdIntegrationDecision } = wizard
+  const {
+    state,
+    updateIdIntegrationDecision,
+    batchUpdateIdIntegrationDecisions,
+  } = wizard
+  const preMatch = state.fileOverviewData?.[entityType]
+  const config = state.idIntegrationConfig[entityType]
+  if (!preMatch || !config) return null
 
-  // 既にマッチ済みの既存IDを収集（重複紐づけ防止）
-  const alreadyMatchedExistingIds = useMemo(() => {
-    if (entityType !== "subtotalGroup") return undefined
-    const ids = new Set<string>()
-    // byId items（自動マッチ、常にリンク済み）
-    const overview = wizard.state.fileOverviewData?.subtotalGroup
-    if (overview?.byId) {
-      for (const item of overview.byId) ids.add(item.existingId)
+  const rows = resolveIdIntegrationRows(preMatch, config)
+  if (rows.length === 0) return null
+
+  const existingRows = existingRowsById(preMatch)
+  // 既存の行 → それを紐づけ先にしているアーカイブの行（1つの既存の行に結ぶのは1行だけ）
+  const claimedExistingIds = new Map<string, string>()
+  for (const row of rows) {
+    const { existingId } = row.decision
+    if (
+      row.decision.decisionType === "same_person" &&
+      existingId &&
+      !claimedExistingIds.has(existingId)
+    ) {
+      claimedExistingIds.set(existingId, row.importId)
     }
-    const config = wizard.state.idIntegrationConfig.subtotalGroup
-    const decisionByImportId = new Map(
-      config.decisions.map((decision) => [decision.importId, decision])
+  }
+
+  const matchedRows = rows.filter((row) => row.candidates.length > 0)
+  const unmatchedRows = rows.filter((row) => row.candidates.length === 0)
+  const requiresChoice = (row: IdIntegrationRow) =>
+    entityType === "subtotalGroup" &&
+    row.candidates.length === 0 &&
+    row.isDefault &&
+    config.strategy !== "all_new"
+
+  /** 照合で当たった行を、まだ他で使われていない候補へ「同じもの」にする */
+  const linkAllMatched = (idChoice: IdChoice) => {
+    const claimed = new Set<string>()
+    const items = matchedRows.flatMap((row) => {
+      const preferred =
+        row.decision.decisionType === "same_person"
+          ? row.decision.existingId
+          : undefined
+      const existingId = [
+        preferred,
+        ...row.candidates.map((candidate) => candidate.existingId),
+      ].find((candidateId) => candidateId && !claimed.has(candidateId))
+      if (!existingId) return []
+      claimed.add(existingId)
+      return [{ importId: row.importId, existingId }]
+    })
+    batchUpdateIdIntegrationDecisions(
+      entityType,
+      items,
+      "same_person",
+      idChoice
     )
-    // byName items: 決定未設定（デフォルトsame_person）またはsame_personの場合のみ
-    for (const item of byName) {
-      const decision = decisionByImportId.get(item.importId)
-      if (!decision || decision.decisionType === "same_person") {
-        ids.add(item.existingId)
-      }
-    }
-    // 全same_person決定（noMatchの手動紐づけ含む）
-    for (const decision of config.decisions) {
-      if (decision.decisionType === "same_person" && decision.existingId) {
-        ids.add(decision.existingId)
-      }
-    }
-    return ids
-  }, [
-    entityType,
-    wizard.state.fileOverviewData,
-    wizard.state.idIntegrationConfig,
-    byName,
-  ])
+  }
 
-  if (byName.length === 0 && noMatch.length === 0) {
-    return null
+  const decideAllUnmatched = (decisionType: "create_new" | "skip") => {
+    for (const row of unmatchedRows) {
+      updateIdIntegrationDecision(entityType, row.importId, {
+        importId: row.importId,
+        decisionType,
+      })
+    }
   }
 
   return (
@@ -81,93 +110,77 @@ export function DetailPanel({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {/* 一括設定ボタン */}
-          {byName.length > 0 && onBatchIdChoice && (
-            <div className="mb-4 flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
-              <span className="text-sm font-medium">一括設定:</span>
+          {matchedRows.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
+              <span className="text-sm font-medium">一致したものを一括で:</span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onBatchIdChoice("use_existing_id")}
+                onClick={() => linkAllMatched("use_existing_id")}
               >
-                すべてこのPCのIDを使う
+                同じものとして、このPCのIDを使う
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onBatchIdChoice("use_import_id")}
+                onClick={() => linkAllMatched("use_import_id")}
               >
-                すべてファイルのIDを使う
+                同じものとして、ファイルのIDを使う
               </Button>
             </div>
           )}
 
-          {/* マッチしたアイテム */}
-          {byName.map((item) => {
-            const currentConfig = wizard.state.idIntegrationConfig[entityType]
-            const itemDecision = currentConfig.decisions.find(
-              (decision) => decision.importId === item.importId
-            )
-            return (
-              <MatchedItemRow
-                key={item.importId}
-                item={item}
-                entityType={entityType}
-                currentDecision={
-                  itemDecision?.decisionType as DecisionType | undefined
-                }
-                currentIdChoice={itemDecision?.idChoice}
-                onDecisionChange={(decision, idChoice) =>
-                  updateIdIntegrationDecision(entityType, item.importId, {
-                    importId: item.importId,
-                    decisionType: decision,
-                    existingId: item.existingId,
-                    idChoice,
-                  })
-                }
-                wizard={entityType === "subtotalGroup" ? wizard : undefined}
-              />
-            )
-          })}
+          {matchedRows.map((row) => (
+            <IntegrationItemRow
+              key={row.importId}
+              row={row}
+              entityType={entityType}
+              requiresChoice={requiresChoice(row)}
+              allExistingItems={preMatch.allExistingItems}
+              existingRowsById={existingRows}
+              claimedExistingIds={claimedExistingIds}
+              onDecisionChange={(decision) =>
+                updateIdIntegrationDecision(entityType, row.importId, decision)
+              }
+              wizard={subtotalWizard}
+            />
+          ))}
 
-          {/* noMatchアイテムの一括設定ボタン */}
-          {noMatch.length > 0 && onBatchNoMatchDecision && (
-            <div className="mb-1 flex items-center gap-2 rounded-lg border bg-muted/30 p-3">
-              <span className="text-sm font-medium">未照合の一括設定:</span>
+          {unmatchedRows.length > 0 && (
+            <div className="mb-1 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
+              <span className="text-sm font-medium">
+                一致しなかったものを一括で:
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onBatchNoMatchDecision("create_new")}
+                onClick={() => decideAllUnmatched("create_new")}
               >
                 すべて新規作成
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onBatchNoMatchDecision("skip")}
+                onClick={() => decideAllUnmatched("skip")}
               >
                 すべて取り込まない
               </Button>
             </div>
           )}
 
-          {/* マッチしなかったアイテム */}
-          {noMatch.map((item) => (
-            <NoMatchItemRow
-              key={item.importId}
-              item={item}
+          {unmatchedRows.map((row) => (
+            <IntegrationItemRow
+              key={row.importId}
+              row={row}
               entityType={entityType}
-              allExistingItems={allExistingItems}
-              wizard={entityType === "subtotalGroup" ? wizard : undefined}
-              alreadyMatchedExistingIds={alreadyMatchedExistingIds}
-              onDecisionChange={(decision, existingId, idChoice) =>
-                updateIdIntegrationDecision(entityType, item.importId, {
-                  importId: item.importId,
-                  decisionType: decision,
-                  existingId,
-                  idChoice,
-                })
+              requiresChoice={requiresChoice(row)}
+              allExistingItems={preMatch.allExistingItems}
+              existingRowsById={existingRows}
+              claimedExistingIds={claimedExistingIds}
+              onDecisionChange={(decision) =>
+                updateIdIntegrationDecision(entityType, row.importId, decision)
               }
+              wizard={subtotalWizard}
             />
           ))}
         </div>

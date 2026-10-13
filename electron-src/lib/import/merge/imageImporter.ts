@@ -105,23 +105,23 @@ async function createStudentAnswerImageRecords(
       idMappings.examStudent[studentAnswerImage.examStudentId]
     if (!newExamPageId || !newExamStudentId) continue
 
-    // 既存のStudentAnswerImageレコードをチェック
-    const existing = await tx.studentAnswerImage.findFirst({
-      where: {
-        examPageId: newExamPageId,
-        examStudentId: newExamStudentId,
-      },
-    })
-
     // answer-sheets/ より下の形は展開時に確かめてある（archiveValueValidator.ts）
     const archiveRelativePath =
       answerSheetRelativePathOf(studentAnswerImage.imagePath) ?? ""
     const newImagePath = `exams/${newExamId}/answer-sheets/${archiveRelativePath}`
 
+    // id が一致すれば同じ行。無ければ (ページ, 受験者) で引く
+    const pageKey = {
+      examPageId: newExamPageId,
+      examStudentId: newExamStudentId,
+    }
+    const existingById = await tx.studentAnswerImage.findUnique({
+      where: { id: studentAnswerImage.id },
+    })
     const existingImage =
-      existing ??
+      existingById ??
       (await tx.studentAnswerImage.findUnique({
-        where: { id: studentAnswerImage.id },
+        where: { examPageId_examStudentId: pageKey },
       }))
 
     if (existingImage) {
@@ -131,9 +131,21 @@ async function createStudentAnswerImageRecords(
         existingImage.updatedAt
       )
       if (updatedAt) {
+        // 親（ページ・受験者）を変えると別の行と一意キーが重なるなら、親は変えない
+        const movesPage =
+          existingById !== null &&
+          (existingById.examPageId !== newExamPageId ||
+            existingById.examStudentId !== newExamStudentId) &&
+          (await tx.studentAnswerImage.findUnique({
+            where: { examPageId_examStudentId: pageKey },
+          })) === null
         await tx.studentAnswerImage.update({
           where: { id: existingImage.id },
-          data: { imagePath: newImagePath, updatedAt },
+          data: {
+            ...(movesPage ? pageKey : {}),
+            imagePath: newImagePath,
+            updatedAt,
+          },
         })
       }
       continue
@@ -179,32 +191,56 @@ async function createLegacyImageRecords(
       })
       if (!examStudent) continue
 
-      // 既存のStudentAnswerImageレコードをチェック
-      const existingAnswer = await tx.studentAnswerImage.findFirst({
-        where: {
-          examPageId: newExamPageId,
-          examStudentId: examStudent.id,
-        },
-      })
-      if (existingAnswer) continue
-
       const relativePath = answerSheetRelativePathOf(pageImage.imagePath) ?? ""
       const newImagePath = `exams/${newExamId}/answer-sheets/${relativePath}`
+      const pageKey = {
+        examPageId: newExamPageId,
+        examStudentId: examStudent.id,
+      }
 
+      // id が一致すれば同じ行。無ければ (ページ, 受験者) で引く
       const existingById = await tx.studentAnswerImage.findUnique({
         where: { id: pageImage.id },
       })
-      if (!existingById) {
-        await tx.studentAnswerImage.create({
-          data: {
-            id: pageImage.id,
-            examPageId: newExamPageId,
-            examStudentId: examStudent.id,
-            imagePath: newImagePath,
-            ...policy.createdTimestamps(pageImage),
-          },
-        })
+      const existingAnswer =
+        existingById ??
+        (await tx.studentAnswerImage.findUnique({
+          where: { examPageId_examStudentId: pageKey },
+        }))
+      if (existingAnswer) {
+        const updatedAt = replacementUpdatedAt(
+          policy,
+          pageImage.updatedAt,
+          existingAnswer.updatedAt
+        )
+        if (updatedAt) {
+          const movesPage =
+            existingById !== null &&
+            (existingById.examPageId !== newExamPageId ||
+              existingById.examStudentId !== examStudent.id) &&
+            (await tx.studentAnswerImage.findUnique({
+              where: { examPageId_examStudentId: pageKey },
+            })) === null
+          await tx.studentAnswerImage.update({
+            where: { id: existingAnswer.id },
+            data: {
+              ...(movesPage ? pageKey : {}),
+              imagePath: newImagePath,
+              updatedAt,
+            },
+          })
+        }
+        continue
       }
+
+      await tx.studentAnswerImage.create({
+        data: {
+          id: pageImage.id,
+          ...pageKey,
+          imagePath: newImagePath,
+          ...policy.createdTimestamps(pageImage),
+        },
+      })
     }
   }
 }

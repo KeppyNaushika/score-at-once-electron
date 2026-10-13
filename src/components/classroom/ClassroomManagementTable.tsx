@@ -254,6 +254,28 @@ export default function ClassroomManagementTable() {
     )
   }
 
+  // 名前・コード・学年が同じ学級（id で区別する別の行。年度をまたいだ同名学級など）。
+  // 見分ける添え書きを行に出す
+  const duplicateClassroomIds = useMemo(() => {
+    const classroomIdsByKey = new Map<string, string[]>()
+    for (const classroomItem of classrooms) {
+      const key = JSON.stringify([
+        classroomItem.name,
+        classroomItem.classroomCode,
+        classroomItem.grade,
+      ])
+      classroomIdsByKey.set(key, [
+        ...(classroomIdsByKey.get(key) ?? []),
+        classroomItem.id,
+      ])
+    }
+    return new Set(
+      [...classroomIdsByKey.values()].flatMap((classroomIds) =>
+        classroomIds.length > 1 ? classroomIds : []
+      )
+    )
+  }, [classrooms])
+
   return (
     <div className="flex h-full min-w-full flex-col">
       <PageHeader
@@ -268,6 +290,9 @@ export default function ClassroomManagementTable() {
           <ClassroomManagementRow
             key={classroomItem.id}
             classroom={classroomItem}
+            hasSameLookingClassroom={duplicateClassroomIds.has(
+              classroomItem.id
+            )}
             memberCount={memberCount}
             isSelected={selectedClassroomIds.has(classroomItem.id)}
             onOpen={() => router.push(`/classrooms/${classroomItem.id}`)}

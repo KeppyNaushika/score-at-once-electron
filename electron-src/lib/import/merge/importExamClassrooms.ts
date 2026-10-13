@@ -36,11 +36,14 @@ export async function processExamClassrooms(
       order: examClassroom.order,
     }
 
+    // id が一致すれば同じ行。無ければ一意キー (試験, 学級) で引く
+    const pairKey = {
+      examId_classroomId: { examId: newExamId, classroomId: newClassroomId },
+    }
     const existing =
-      (await tx.examClassroom.findFirst({
-        where: { examId: newExamId, classroomId: newClassroomId },
-      })) ??
-      (await tx.examClassroom.findUnique({ where: { id: examClassroom.id } }))
+      (await tx.examClassroom.findUnique({
+        where: { id: examClassroom.id },
+      })) ?? (await tx.examClassroom.findUnique({ where: pairKey }))
 
     if (existing) {
       const updatedAt = replacementUpdatedAt(
@@ -49,9 +52,20 @@ export async function processExamClassrooms(
         existing.updatedAt
       )
       if (updatedAt) {
+        // 親（試験・学級）を変えると別の行と一意キーが重なるなら、親は変えない
+        const keyTaken =
+          (existing.examId !== newExamId ||
+            existing.classroomId !== newClassroomId) &&
+          (await tx.examClassroom.findUnique({ where: pairKey })) !== null
         await tx.examClassroom.update({
           where: { id: existing.id },
-          data: { ...values, updatedAt },
+          data: {
+            ...(keyTaken
+              ? {}
+              : { examId: newExamId, classroomId: newClassroomId }),
+            ...values,
+            updatedAt,
+          },
         })
         orderWrittenCount++
       }

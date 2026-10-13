@@ -22,6 +22,7 @@ import type {
   CollectedCourseworkData,
   CourseworkImportDecisions,
 } from "./courseworkArchive.types"
+import type { ImportAction } from "./importAction.types"
 
 export interface GradeArchiveManifest {
   version: string
@@ -387,9 +388,17 @@ export interface GradeArchiveData extends GradeSections, GradeExternalSections {
 
 /** インポート実行時のオプション */
 export interface GradeArchiveImportOptions {
+  /**
+   * 取り込みの方針（上書きする / 統合する / 別で追加する）。省略時は統合。
+   * id が一致した行の値をどうするかは、この1つで決まる（merge/importValuePolicy）
+   */
+  action?: ImportAction
   /** 試験参照のマッピング（examName → 既存examId） */
   examMapping?: Record<string, string>
-  /** 資料ごとの取り込み判断（archiveCourseworkId → 決定）。未指定の資料はuuid一致なら流用、無ければ新規 */
+  /**
+   * 資料ごとの取り込み判断（archiveCourseworkId → 決定）。id が取り込み先に在る資料は判断を見ずに
+   * 同じ資料として取り込む。未指定で id が無ければ新規
+   */
   courseworkDecisions?: CourseworkImportDecisions
 }
 

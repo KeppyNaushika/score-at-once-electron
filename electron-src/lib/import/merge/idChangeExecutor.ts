@@ -1,345 +1,37 @@
 /**
  * ID変更処理
  *
- * 「書き出したPCに合わせる」を選んだ場合、既存IDを.scoreのIDに変更する。
- * 旧レコードを削除して新IDで作り直す方式のため、対象（Student/Classroom/SubtotalGroup）に
- * onDelete:Cascade で紐づく子テーブルは、旧レコード削除の前に必ず新IDへ移し替える
- * 必要がある。移し替え漏れがあると旧レコード削除時にサイレントにカスケード削除される。
+ * 照合で「同じもの・ファイルの id に合わせる」を選んだとき、取り込みを取り込み先の id で
+ * 終えてから、取り込み先の行の id をファイルの id へ変える（Stage 2）。
  *
- * 【規約 / convention-as-code】
- * 対象への onDelete:Cascade 子テーブルを schema.prisma に追加したら、必ず対応する
- * CascadeMover を下記レジストリ（STUDENT/CLASSROOM/SUBTOTAL_GROUP_CASCADE_MOVERS）へ
- * 追加すること。レジストリと schema のカスケード子が一致しているかは
- * __tests__/import-export/unit/cascadeCoverage.test.ts が schema.prisma を解析して
- * 自動検証する（追加忘れはテストが赤くなって検出される）。
- *
- * Student.studentNumber / Classroom.name は temp-value方式を通す: 既存レコードの当該
- * フィールドを一時値に変更してから新レコードを作成し、旧を削除する。
- * この2列の UNIQUE は 2026-08-22 に外した（20260822140000_drop_human_name_uniques）ので
- * **もう制約のための迂回ではない**。それでも一時値を挟むのは、旧と新が同じ値で並ぶ
- * 時間帯を作らないため（この間に読んだ側からは同じ生徒・学級が2つに見える）。
+ * 付け替えは統合アーカイブ（.sao）と同じ `renameTargetRow` で行う: 行は `UPDATE … SET id`、
+ * それを参照する子の外部キー・JSON に埋め込んだ id・監査ログも UPDATE で付け替える。
+ * **削除して作り直さない**（旧方式は delete + 再作成で、移し替え漏れの子をカスケードで失った）。
+ * 付け替えの途中は親子が一時的にずれるので、外部キーの検査はコミットまで遅らせる。
  */
 
+import { renameTargetRow } from "../unified-archive/archiveIdRenamer"
+import { prismaArchiveTarget } from "../unified-archive/archiveRowImporter"
 import type { IdChangeTarget, IdMappings, PrismaTransaction } from "./types"
 
-/**
- * カスケード子テーブルを旧ID→新IDへ移し替える1単位。
- *
- * `model` はスキーマ上のモデル名（PascalCase）。cascadeCoverage テストが
- * schema.prisma のカスケード子集合と突合するためのキーとして使う。
- */
-interface CascadeMover {
-  model: string
-  move: (
-    tx: PrismaTransaction,
-    fromId: string,
-    toId: string
-  ) => Promise<unknown>
+/** 付け替える表と、警告に出す呼び名 */
+const RENAMED_TABLES: Record<
+  IdChangeTarget["category"],
+  { table: string; label: string }
+> = {
+  student: { table: "Student", label: "生徒" },
+  classroom: { table: "Classroom", label: "学級" },
+  subtotalGroup: { table: "SubtotalGroup", label: "小計点グループ" },
 }
 
-/**
- * Student に onDelete:Cascade で紐づく子テーブル全件。
- * schema.prisma の Student へのカスケードFKと一致していること（テストで強制）。
- */
-export const STUDENT_CASCADE_MOVERS: CascadeMover[] = [
-  {
-    model: "StudentClassroomMembership",
-    move: (tx, from, to) =>
-      tx.studentClassroomMembership.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    model: "ExamStudent",
-    move: (tx, from, to) =>
-      tx.examStudent.updateMany({
-        where: { studentId: from },
-        data: { studentId: to },
-      }),
-  },
-  {
-    // 答案・採点・確定・複合回答・返却版は ExamStudent の子であり、
-    // ExamStudent.id は変わらないので移し替えは要らない（上の ExamStudent で追従する）。
-    //
-    // UNIQUE([gradeId, studentId]) があるため移行先の重複を回避しつつ更新する。
-    // 上書き・確定値・除外設定は GradeStudent の onDelete:Cascade 子なので、重複行を
-    // そのまま delete すると道連れになる。移行先に同じ評価項目の行が無いものは先に
-    // 付け替え、衝突するものだけを（移行先の値を残して）捨てる。
-    model: "GradeStudent",
-    move: async (tx, from, to) => {
-      const rows = await tx.gradeStudent.findMany({
-        where: { studentId: from },
-      })
-      for (const gradeStudent of rows) {
-        const duplicate = await tx.gradeStudent.findFirst({
-          where: { gradeId: gradeStudent.gradeId, studentId: to },
-        })
-        if (!duplicate) {
-          await tx.gradeStudent.update({
-            where: { id: gradeStudent.id },
-            data: { studentId: to },
-          })
-          continue
-        }
-
-        await moveGradeCells(tx, gradeStudent.id, duplicate.id)
-        await tx.gradeStudent.delete({ where: { id: gradeStudent.id } })
-      }
-    },
-  },
-  {
-    // UNIQUE([courseworkId, studentId]) があるため移行先の重複を回避しつつ更新する。
-    //
-    // 点数（CourseworkScore）は CourseworkStudent の onDelete:Cascade 子なので、
-    // 重複行をそのまま delete すると点数が道連れになる。移行先に同じ評価項目の点数が
-    // 無いものは先に付け替え、衝突するものだけを（移行先の値を残して）捨てる。
-    model: "CourseworkStudent",
-    move: async (tx, from, to) => {
-      const rows = await tx.courseworkStudent.findMany({
-        where: { studentId: from },
-      })
-      for (const courseworkStudent of rows) {
-        const duplicate = await tx.courseworkStudent.findFirst({
-          where: {
-            courseworkId: courseworkStudent.courseworkId,
-            studentId: to,
-          },
-        })
-        if (!duplicate) {
-          await tx.courseworkStudent.update({
-            where: { id: courseworkStudent.id },
-            data: { studentId: to },
-          })
-          continue
-        }
-
-        const scores = await tx.courseworkScore.findMany({
-          where: { courseworkStudentId: courseworkStudent.id },
-        })
-        for (const courseworkScore of scores) {
-          const conflicting = await tx.courseworkScore.findFirst({
-            where: {
-              courseworkItemId: courseworkScore.courseworkItemId,
-              courseworkStudentId: duplicate.id,
-            },
-          })
-          if (conflicting) continue // 移行先の点数を残す（衝突分は下の delete で cascade 削除）
-          await tx.courseworkScore.update({
-            where: { id: courseworkScore.id },
-            data: { courseworkStudentId: duplicate.id },
-          })
-        }
-
-        await tx.courseworkStudent.delete({
-          where: { id: courseworkStudent.id },
-        })
-      }
-    },
-  },
-]
-
-/**
- * 成績のセル3種を、統合される対象者から移行先の対象者へ移し替える。
- * 移行先に同じ評価項目の行が既にあるものは移さない（移行先の値を残す＝旧来の挙動）。
- * 移さなかった行は呼び出し側の GradeStudent 削除で cascade により消える。
- */
-async function moveGradeCells(
-  tx: PrismaTransaction,
-  fromGradeStudentId: string,
-  toGradeStudentId: string
-): Promise<void> {
-  const overrides = await tx.gradeOverride.findMany({
-    where: { gradeStudentId: fromGradeStudentId },
-  })
-  for (const override of overrides) {
-    const conflicting = await tx.gradeOverride.findFirst({
-      where: {
-        gradeStudentId: toGradeStudentId,
-        gradeItemId: override.gradeItemId,
-      },
-    })
-    if (conflicting) continue
-    await tx.gradeOverride.update({
-      where: { id: override.id },
-      data: { gradeStudentId: toGradeStudentId },
-    })
-  }
-
-  const frozenScores = await tx.gradeFrozenScore.findMany({
-    where: { gradeStudentId: fromGradeStudentId },
-  })
-  for (const frozenScore of frozenScores) {
-    const conflicting = await tx.gradeFrozenScore.findFirst({
-      where: {
-        gradeStudentId: toGradeStudentId,
-        gradeItemId: frozenScore.gradeItemId,
-      },
-    })
-    if (conflicting) continue
-    await tx.gradeFrozenScore.update({
-      where: { id: frozenScore.id },
-      data: { gradeStudentId: toGradeStudentId },
-    })
-  }
-
-  const itemExclusions = await tx.gradeItemExclusion.findMany({
-    where: { gradeStudentId: fromGradeStudentId },
-  })
-  for (const itemExclusion of itemExclusions) {
-    const conflicting = await tx.gradeItemExclusion.findFirst({
-      where: {
-        gradeStudentId: toGradeStudentId,
-        gradeItemId: itemExclusion.gradeItemId,
-      },
-    })
-    if (conflicting) continue
-    await tx.gradeItemExclusion.update({
-      where: { id: itemExclusion.id },
-      data: { gradeStudentId: toGradeStudentId },
-    })
-  }
-}
-
-/**
- * Classroom に onDelete:Cascade で紐づく子テーブル全件。
- */
-export const CLASSROOM_CASCADE_MOVERS: CascadeMover[] = [
-  {
-    model: "StudentClassroomMembership",
-    move: (tx, from, to) =>
-      tx.studentClassroomMembership.updateMany({
-        where: { classroomId: from },
-        data: { classroomId: to },
-      }),
-  },
-  {
-    model: "ExamClassroom",
-    move: (tx, from, to) =>
-      tx.examClassroom.updateMany({
-        where: { classroomId: from },
-        data: { classroomId: to },
-      }),
-  },
-  {
-    model: "GradeClassroom",
-    move: (tx, from, to) =>
-      tx.gradeClassroom.updateMany({
-        where: { classroomId: from },
-        data: { classroomId: to },
-      }),
-  },
-  {
-    model: "CourseworkClassroom",
-    move: (tx, from, to) =>
-      tx.courseworkClassroom.updateMany({
-        where: { classroomId: from },
-        data: { classroomId: to },
-      }),
-  },
-]
-
-/**
- * SubtotalGroup に onDelete:Cascade で紐づく子テーブル全件。
- */
-export const SUBTOTAL_GROUP_CASCADE_MOVERS: CascadeMover[] = [
-  {
-    // id は uuidv4 で行の内容を反映しないので、付け替えても id は据え置く。
-    //
-    // UNIQUE([examId, subtotalGroupId]) の衝突は起きない。changeSubtotalGroupId が
-    // 移行先グループを必ず新規 create するので、その試験が移行先へのリンクを
-    // 既に持つことはありえない（兄弟の GradeStudent / CourseworkStudent は
-    // 移行先の生徒が実在しうるので重複潰しを持つ。ここは事情が違う）。
-    model: "ExamSubtotalGroup",
-    move: (tx, from, to) =>
-      tx.examSubtotalGroup.updateMany({
-        where: { subtotalGroupId: from },
-        data: { subtotalGroupId: to },
-      }),
-  },
-  {
-    model: "Subtotal",
-    move: (tx, from, to) =>
-      tx.subtotal.updateMany({
-        where: { subtotalGroupId: from },
-        data: { subtotalGroupId: to },
-      }),
-  },
-  {
-    model: "TagSubtotalGroup",
-    move: (tx, from, to) =>
-      tx.tagSubtotalGroup.updateMany({
-        where: { subtotalGroupId: from },
-        data: { subtotalGroupId: to },
-      }),
-  },
-]
-
-/**
- * カスケード子テーブルを全件移し替える（旧ID削除前に必ず呼ぶ）。
- */
-async function moveCascadeChildren(
-  movers: CascadeMover[],
-  tx: PrismaTransaction,
-  fromId: string,
-  toId: string
-): Promise<void> {
-  for (const mover of movers) {
-    await mover.move(tx, fromId, toId)
-  }
-}
-
-/**
- * 監査ログが旧IDを指している箇所を新IDへ付け替える。
- *
- * 監査ログは対象へ FK を張らない（削除後も残すため）ので、カスケードでは追随しない。
- * 付け替えないと、生徒の絞り込みや作業領域（scopeId）での絞り込みから、ID 変更より前の
- * ログだけが静かに抜け落ちる（docs/audit-log-redesign.md「既存の問題」1）。
- * id は uuid で表をまたいで重ならないので、どの列も値の一致だけで付け替えてよい。
- *
- * `AuditLog` は updatedAt を動かさない（生 SQL で書く）。一覧は updatedAt で並べ、
- * 「最後に操作した時刻」として表示するので、Prisma の updateMany（@updatedAt を打ち直す）
- * を使うと、付け替えた過去のログが全部「たった今」の位置へ浮き上がる。同期は時刻が
- * 同じでも書き込み順で新しい版として伝わる。
- */
-async function retargetAuditLogs(
-  tx: PrismaTransaction,
-  fromId: string,
-  toId: string
-): Promise<void> {
-  await tx.$executeRaw`UPDATE "AuditLog" SET "entityId" = ${toId} WHERE "entityId" = ${fromId}`
-  await tx.$executeRaw`UPDATE "AuditLog" SET "scopeId" = ${toId} WHERE "scopeId" = ${fromId}`
-  await tx.auditLogTarget.updateMany({
-    where: { targetId: fromId },
-    data: { targetId: toId },
-  })
-}
-
-/**
- * idMappings 内で existingId を指す全エントリを newId に張り替える。
- */
-function remapMappingValues(
-  mapping: Record<string, string>,
-  existingId: string,
-  newId: string
-): void {
-  for (const [importId, mappedId] of Object.entries(mapping)) {
-    if (mappedId === existingId) {
-      mapping[importId] = newId
-    }
-  }
-}
+const quote = (identifier: string): string =>
+  `"${identifier.replaceAll('"', '""')}"`
 
 /**
  * ID変更処理を実行
  *
- * Stage 1トランザクション内から呼び出される。
- * エラーが発生した場合はthrowしてトランザクション全体をロールバックする。
- *
- * @param targets - ID変更対象のリスト
- * @param idMappings - IDマッピング
- * @param warnings - 警告メッセージ
- * @param tx - Prismaトランザクション
+ * Stage 1 と同じトランザクションの末尾で呼ぶ。付け替え先の id が既に使われている・
+ * 付け替える行が無いときは付け替えず、警告に残す（取り込みは取り込み先の id のまま成立している）。
  */
 export async function executeIdChanges(
   targets: IdChangeTarget[],
@@ -347,163 +39,38 @@ export async function executeIdChanges(
   warnings: string[],
   tx: PrismaTransaction
 ): Promise<void> {
-  for (const target of targets) {
-    if (target.category === "student") {
-      await changeStudentId(tx, target, idMappings, warnings)
-    } else if (target.category === "classroom") {
-      await changeClassroomId(tx, target, idMappings, warnings)
-    } else if (target.category === "subtotalGroup") {
-      await changeSubtotalGroupId(tx, target, idMappings, warnings)
+  if (targets.length === 0) return
+  const target = prismaArchiveTarget(tx)
+  await target.execute("PRAGMA defer_foreign_keys = ON", [])
+
+  for (const idChangeTarget of targets) {
+    const { table, label } = RENAMED_TABLES[idChangeTarget.category]
+    const { existingId, newId } = idChangeTarget
+    if (existingId === newId) continue
+
+    const presentRows = await target.query<{ id: string }>(
+      `SELECT id FROM ${quote(table)} WHERE id IN (?, ?)`,
+      [existingId, newId]
+    )
+    const presentIds = new Set(presentRows.map((presentRow) => presentRow.id))
+    if (!presentIds.has(existingId)) {
+      warnings.push(
+        `${label}（${existingId}）が見つからないため、ファイルの id（${newId}）に合わせられませんでした`
+      )
+      continue
+    }
+    if (presentIds.has(newId)) {
+      warnings.push(
+        `ファイルの id（${newId}）が既にこのPCの別の${label}で使われているため、${label}（${existingId}）はこのPCの id のままにしました`
+      )
+      continue
+    }
+
+    await renameTargetRow(target, table, existingId, newId, warnings)
+
+    const mapping = idMappings[idChangeTarget.category]
+    for (const [importId, mappedId] of Object.entries(mapping)) {
+      if (mappedId === existingId) mapping[importId] = newId
     }
   }
-}
-
-/**
- * 生徒IDの変更（temp-value方式 + カスケード子の移し替え）
- * 移し替え対象は STUDENT_CASCADE_MOVERS を参照（schema と一致をテストで強制）。
- */
-async function changeStudentId(
-  tx: PrismaTransaction,
-  target: IdChangeTarget,
-  idMappings: IdMappings,
-  _warnings: string[]
-): Promise<void> {
-  const existingStudent = await tx.student.findUnique({
-    where: { id: target.existingId },
-  })
-
-  if (!existingStudent) return
-
-  // 1. 旧と新が同じ学籍番号で並ぶ時間帯を作らないよう、旧を一時値へ退避
-  await tx.student.update({
-    where: { id: target.existingId },
-    data: { studentNumber: `__TEMP_${target.existingId}` },
-  })
-
-  // 2. 新しいIDで元のstudentNumberを使ってレコード作成
-  await tx.student.create({
-    data: {
-      id: target.newId,
-      studentNumber: existingStudent.studentNumber,
-      lastName: existingStudent.lastName,
-      firstName: existingStudent.firstName,
-      lastNameKana: existingStudent.lastNameKana,
-      firstNameKana: existingStudent.firstNameKana,
-      enrollmentYear: existingStudent.enrollmentYear,
-      createdAt: existingStudent.createdAt,
-      updatedAt: existingStudent.updatedAt,
-    },
-  })
-
-  // 3. カスケード子を全件移し替え（旧生徒削除前に必須）
-  await moveCascadeChildren(
-    STUDENT_CASCADE_MOVERS,
-    tx,
-    target.existingId,
-    target.newId
-  )
-
-  // 4. 監査ログを新IDへ付け替え（FK が無いのでカスケードでは追随しない）
-  await retargetAuditLogs(tx, target.existingId, target.newId)
-
-  // 5. 古いレコードを削除
-  await tx.student.delete({ where: { id: target.existingId } })
-
-  // 6. マッピングを更新
-  remapMappingValues(idMappings.student, target.existingId, target.newId)
-}
-
-/**
- * 学級IDの変更（temp-value方式 + カスケード子の移し替え）
- * 移し替え対象は CLASSROOM_CASCADE_MOVERS を参照（schema と一致をテストで強制）。
- */
-async function changeClassroomId(
-  tx: PrismaTransaction,
-  target: IdChangeTarget,
-  idMappings: IdMappings,
-  _warnings: string[]
-): Promise<void> {
-  const existingClassroom = await tx.classroom.findUnique({
-    where: { id: target.existingId },
-  })
-
-  if (!existingClassroom) return
-
-  // 1. 旧と新が同じ学級名で並ぶ時間帯を作らないよう、旧を一時値へ退避
-  await tx.classroom.update({
-    where: { id: target.existingId },
-    data: { name: `__TEMP_${target.existingId}` },
-  })
-
-  // 2. 新しいIDで元のnameを使ってレコード作成
-  await tx.classroom.create({
-    data: {
-      id: target.newId,
-      name: existingClassroom.name,
-      classroomCode: existingClassroom.classroomCode,
-      grade: existingClassroom.grade,
-      description: existingClassroom.description,
-      // ID の付け替えは同じ学級を作り直すだけなので、表示/非表示も持ち越す
-      isVisible: existingClassroom.isVisible,
-      createdAt: existingClassroom.createdAt,
-      updatedAt: existingClassroom.updatedAt,
-    },
-  })
-
-  // 3. カスケード子を全件移し替え（旧学級削除前に必須）
-  await moveCascadeChildren(
-    CLASSROOM_CASCADE_MOVERS,
-    tx,
-    target.existingId,
-    target.newId
-  )
-
-  // 4. 監査ログを新IDへ付け替え（FK が無いのでカスケードでは追随しない）
-  await retargetAuditLogs(tx, target.existingId, target.newId)
-
-  // 5. 古いレコードを削除
-  await tx.classroom.delete({ where: { id: target.existingId } })
-
-  // 6. マッピングを更新
-  remapMappingValues(idMappings.classroom, target.existingId, target.newId)
-}
-
-/**
- * 小計グループIDの変更（カスケード子の移し替え）
- * 移し替え対象は SUBTOTAL_GROUP_CASCADE_MOVERS を参照（schema と一致をテストで強制）。
- */
-async function changeSubtotalGroupId(
-  tx: PrismaTransaction,
-  target: IdChangeTarget,
-  idMappings: IdMappings,
-  _warnings: string[]
-): Promise<void> {
-  const existingGroup = await tx.subtotalGroup.findUnique({
-    where: { id: target.existingId },
-  })
-
-  if (!existingGroup) return
-
-  await tx.subtotalGroup.create({
-    data: {
-      id: target.newId,
-      name: existingGroup.name,
-      createdAt: existingGroup.createdAt,
-      updatedAt: existingGroup.updatedAt,
-    },
-  })
-
-  // カスケード子を全件移し替え（旧グループ削除前に必須）
-  await moveCascadeChildren(
-    SUBTOTAL_GROUP_CASCADE_MOVERS,
-    tx,
-    target.existingId,
-    target.newId
-  )
-
-  await retargetAuditLogs(tx, target.existingId, target.newId)
-
-  await tx.subtotalGroup.delete({ where: { id: target.existingId } })
-
-  remapMappingValues(idMappings.subtotalGroup, target.existingId, target.newId)
 }

@@ -41,8 +41,14 @@ interface SubtotalGroupSelectorProps {
   activeSubtotalGroups: SubtotalGroupWithSubtotals[]
 }
 
+type AvailableSubtotalGroup = Awaited<
+  ReturnType<
+    NonNullable<ReturnType<typeof availableSubtotalGroupsQuery>["queryFn"]>
+  >
+>[number]
+
 /** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_GROUPS: SubtotalGroupWithSubtotals[] = []
+const EMPTY_GROUPS: AvailableSubtotalGroup[] = []
 
 export function SubtotalGroupSelector({
   examId,
@@ -74,7 +80,13 @@ export function SubtotalGroupSelector({
 
   // 検索フィルタリング
   const filteredGroups = availableGroups.filter((group) =>
-    matchesSearchTerm(searchTerm, [group.name])
+    matchesSearchTerm(searchTerm, [
+      group.name,
+      ...group.subtotals.map((subtotal) => subtotal.name),
+      ...group.examSubtotalGroups.map(
+        (examSubtotalGroup) => examSubtotalGroup.exam.examName
+      ),
+    ])
   )
 
   return (
@@ -197,7 +209,7 @@ export function SubtotalGroupSelector({
             <div className="relative">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="グループ名、説明で検索..."
+                placeholder="グループ名・項目名・試験名で検索..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -238,14 +250,23 @@ export function SubtotalGroupSelector({
                             {group.subtotals.length}項目
                           </Badge>
                         </div>
+                        {/* 同じ名前のグループを見分ける材料（項目の構成・使っている試験・作成日） */}
                         <div className="mt-1 text-xs text-muted-foreground">
                           項目:{" "}
                           {group.subtotals
-                            .slice(0, 3)
                             .map((subtotal) => subtotal.name)
                             .join(", ")}
-                          {group.subtotals.length > 3 &&
-                            ` 他${group.subtotals.length - 3}項目`}
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          {group.examSubtotalGroups.length > 0
+                            ? `使用中: ${group.examSubtotalGroups
+                                .map(
+                                  (examSubtotalGroup) =>
+                                    examSubtotalGroup.exam.examName
+                                )
+                                .join(", ")}`
+                            : "どの試験でも使っていません"}
+                          ・作成 {group.createdAt.toLocaleDateString("ja-JP")}
                         </div>
                       </div>
                       <Button

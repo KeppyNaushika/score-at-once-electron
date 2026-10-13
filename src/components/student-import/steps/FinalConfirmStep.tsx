@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import { useMemo } from "react"
 
+import { resolveIdIntegrationRows } from "@/components/import/idIntegrationRows"
 import { Button } from "@/components/ui/button"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
 
@@ -25,57 +26,23 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     const { student, classroom: classroomResult } = state.fileOverviewData
     const config = state.idIntegrationConfig
 
-    // 生徒サマリー
-    const studentAutoMatched = student.byId.length
-    const studentSecondaryMatched =
-      (student.byStudentNumber?.length ?? 0) + (student.byName?.length ?? 0)
-    const studentNoMatch = student.noMatch.length
-
-    let studentMerge = studentAutoMatched
-    let studentNew: number
-    let studentSkip = 0
-
-    if (config.student.strategy === "all_new") {
-      studentNew = studentSecondaryMatched + studentNoMatch
-    } else {
-      studentMerge += studentSecondaryMatched
-      studentNew = studentNoMatch
+    // 取り込み時と同じ決まりで、行ごとの扱いを数える（id 一致は必ず同じもの）
+    const countDecisions = (
+      preMatch: typeof student,
+      categoryConfig: typeof config.student
+    ) => {
+      const rows = resolveIdIntegrationRows(preMatch, categoryConfig)
+      const countOf = (decisionType: string) =>
+        rows.filter((row) => row.decision.decisionType === decisionType).length
+      return {
+        merge: preMatch.byId.length + countOf("same_person"),
+        new: countOf("create_new"),
+        skip: countOf("skip"),
+      }
     }
-
-    // 個別決定をカウント
-    for (const decision of config.student.decisions) {
-      if (decision.decisionType === "create_new") studentNew++
-      else if (decision.decisionType === "skip") studentSkip++
-    }
-
-    // 学級サマリー
-    const classroomAutoMatched = classroomResult.byId.length
-    const classroomSecondaryMatched = classroomResult.byName?.length ?? 0
-    const classroomNoMatch = classroomResult.noMatch.length
-
-    let classroomMerge = classroomAutoMatched
-    let classroomNew: number
-    let classroomSkip = 0
-
-    if (config.classroom.strategy === "all_new") {
-      classroomNew = classroomSecondaryMatched + classroomNoMatch
-    } else {
-      classroomMerge += classroomSecondaryMatched
-      classroomNew = classroomNoMatch
-    }
-
-    for (const decision of config.classroom.decisions) {
-      if (decision.decisionType === "create_new") classroomNew++
-      else if (decision.decisionType === "skip") classroomSkip++
-    }
-
     return {
-      student: { merge: studentMerge, new: studentNew, skip: studentSkip },
-      classroom: {
-        merge: classroomMerge,
-        new: classroomNew,
-        skip: classroomSkip,
-      },
+      student: countDecisions(student, config.student),
+      classroom: countDecisions(classroomResult, config.classroom),
     }
   }, [state.fileOverviewData, state.idIntegrationConfig])
 

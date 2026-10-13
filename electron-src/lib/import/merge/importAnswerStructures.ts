@@ -6,6 +6,11 @@
  *
  * いずれも親（CropRegion・ExamPage）が新規作成/マッチした場合にのみ扱う。
  *
+ * **id が一致すれば同じ行。** 設定・複合解答はまず id で引き、無ければ一意キー（設定は
+ * 設問）で引く。持ち物の集合（選択肢・メンバー）は親ごと入れ替えるが、入れ替えでも
+ * アーカイブの子の id が取り込み先の別の親の下に在れば、それは同じ行なので、こちらの親へ
+ * 移して値を書く（作り直さない）。
+ *
  * **値の扱いは importValuePolicy に一本化されている**（上書きする／統合する／別で追加する）。
  * 既にある行を置き換えるかどうかも、新しく作る行の時刻も、この規則だけで決まる。
  * かつては「既にあれば触らない」で一律にスキップしていたため、書き出した側で直した
@@ -29,30 +34,67 @@ import type { IdMappings, PrismaTransaction } from "./types"
 export async function processOmrConfigs(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
+  warnings: string[],
   policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
-  const createChoiceOptions = async (
+  /** 設定の選択肢を、アーカイブの選択肢で入れ替える（設定の古い選択肢は消してから呼ぶ） */
+  const writeChoiceOptions = async (
     omrConfigId: string,
     archiveConfigId: string
   ) => {
     for (const choiceOption of data.examData.omrChoiceOptions ?? []) {
       if (choiceOption.omrConfigId !== archiveConfigId) continue
-      await tx.cropRegionOmrChoiceOption.create({
-        data: {
-          id: choiceOption.id,
-          omrConfigId,
-          choiceIndex: choiceOption.choiceIndex,
-          label: choiceOption.label,
-          isCorrect: choiceOption.isCorrect,
-          shape: choiceOption.shape ?? null,
-          normalizedCx: choiceOption.normalizedCx ?? null,
-          normalizedCy: choiceOption.normalizedCy ?? null,
-          normalizedWidth: choiceOption.normalizedWidth ?? null,
-          normalizedHeight: choiceOption.normalizedHeight ?? null,
-          ...policy.createdTimestamps(choiceOption),
-        },
+      const values = {
+        omrConfigId,
+        choiceIndex: choiceOption.choiceIndex,
+        label: choiceOption.label,
+        isCorrect: choiceOption.isCorrect,
+        shape: choiceOption.shape ?? null,
+        normalizedCx: choiceOption.normalizedCx ?? null,
+        normalizedCy: choiceOption.normalizedCy ?? null,
+        normalizedWidth: choiceOption.normalizedWidth ?? null,
+        normalizedHeight: choiceOption.normalizedHeight ?? null,
+      }
+      const existingById = await tx.cropRegionOmrChoiceOption.findUnique({
+        where: { id: choiceOption.id },
       })
+      const slotTaken =
+        (await tx.cropRegionOmrChoiceOption.findUnique({
+          where: {
+            omrConfigId_choiceIndex: {
+              omrConfigId,
+              choiceIndex: choiceOption.choiceIndex,
+            },
+          },
+        })) !== null
+      if (slotTaken) {
+        // アーカイブ自身が同じ番号の選択肢を2つ持っている（制約より前の DB から書き出した）
+        warnings.push(
+          "OMR の選択肢のうち、同じ設定に同じ番号のものが重なっていたため、1つだけ取り込みました"
+        )
+        continue
+      }
+      if (existingById) {
+        // 別の設定の下に在る同じ id の選択肢は同じ行。こちらの設定へ移して値を書く
+        await tx.cropRegionOmrChoiceOption.update({
+          where: { id: existingById.id },
+          data: {
+            ...values,
+            updatedAt: policy.replacedUpdatedAt(
+              new Date(choiceOption.updatedAt)
+            ),
+          },
+        })
+      } else {
+        await tx.cropRegionOmrChoiceOption.create({
+          data: {
+            id: choiceOption.id,
+            ...values,
+            ...policy.createdTimestamps(choiceOption),
+          },
+        })
+      }
       idMappings.cropRegionOmrChoiceOption[choiceOption.id] = choiceOption.id
     }
   }
@@ -71,11 +113,14 @@ export async function processOmrConfigs(
       areaThreshold: omrConfig.areaThreshold,
     }
 
+    // id が一致すれば同じ行。無ければ一意キー（設問）で引く
     const existing =
-      (await tx.cropRegionOmrConfig.findFirst({
-        where: { cropRegionId: newCropRegionId },
+      (await tx.cropRegionOmrConfig.findUnique({
+        where: { id: omrConfig.id },
       })) ??
-      (await tx.cropRegionOmrConfig.findUnique({ where: { id: omrConfig.id } }))
+      (await tx.cropRegionOmrConfig.findUnique({
+        where: { cropRegionId: newCropRegionId },
+      }))
 
     if (existing) {
       idMappings.cropRegionOmrConfig[omrConfig.id] = existing.id
@@ -86,15 +131,25 @@ export async function processOmrConfigs(
       )
       if (!updatedAt) continue
 
+      // 親（設問）を変えると別の設定と重なるなら、親は変えない
+      const regionTaken =
+        existing.cropRegionId !== newCropRegionId &&
+        (await tx.cropRegionOmrConfig.findUnique({
+          where: { cropRegionId: newCropRegionId },
+        })) !== null
       await tx.cropRegionOmrConfig.update({
         where: { id: existing.id },
-        data: { ...values, updatedAt },
+        data: {
+          ...(regionTaken ? {} : { cropRegionId: newCropRegionId }),
+          ...values,
+          updatedAt,
+        },
       })
       // 選択肢は集合なので、設定ごと入れ替える
       await tx.cropRegionOmrChoiceOption.deleteMany({
         where: { omrConfigId: existing.id },
       })
-      await createChoiceOptions(existing.id, omrConfig.id)
+      await writeChoiceOptions(existing.id, omrConfig.id)
       continue
     }
 
@@ -107,7 +162,7 @@ export async function processOmrConfigs(
       },
     })
     idMappings.cropRegionOmrConfig[omrConfig.id] = omrConfig.id
-    await createChoiceOptions(omrConfig.id, omrConfig.id)
+    await writeChoiceOptions(omrConfig.id, omrConfig.id)
   }
 }
 
@@ -120,10 +175,12 @@ export async function processOmrConfigs(
 export async function processCompoundAnswers(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
+  warnings: string[],
   policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
-  const createMembers = async (
+  /** 複合解答のメンバーを、アーカイブのメンバーで入れ替える（古いメンバーは消してから呼ぶ） */
+  const writeMembers = async (
     compoundAnswerId: string,
     archiveCompoundAnswerId: string
   ) => {
@@ -135,17 +192,46 @@ export async function processCompoundAnswers(
       const newCropRegionId =
         idMappings.cropRegion[compoundAnswerMember.cropRegionId]
       if (!newCropRegionId) continue
-      await tx.compoundAnswerMember.create({
-        data: {
-          id: compoundAnswerMember.id,
-          compoundAnswerId,
-          cropRegionId: newCropRegionId,
-          order: compoundAnswerMember.order,
-          roleLabel: compoundAnswerMember.roleLabel,
-          separator: compoundAnswerMember.separator,
-          ...policy.createdTimestamps(compoundAnswerMember),
-        },
+      const values = {
+        compoundAnswerId,
+        cropRegionId: newCropRegionId,
+        order: compoundAnswerMember.order,
+        roleLabel: compoundAnswerMember.roleLabel,
+        separator: compoundAnswerMember.separator,
+      }
+      const existingById = await tx.compoundAnswerMember.findUnique({
+        where: { id: compoundAnswerMember.id },
       })
+      // 1つの設問は1つの複合解答にしか入れない（cropRegionId が unique）
+      const regionMember = await tx.compoundAnswerMember.findUnique({
+        where: { cropRegionId: newCropRegionId },
+      })
+      if (regionMember && regionMember.id !== existingById?.id) {
+        warnings.push(
+          "複合解答のメンバーのうち、このPCで別の複合解答に入っている設問は取り込みませんでした"
+        )
+        continue
+      }
+      if (existingById) {
+        // 別の複合解答の下に在る同じ id のメンバーは同じ行。こちらへ移して値を書く
+        await tx.compoundAnswerMember.update({
+          where: { id: existingById.id },
+          data: {
+            ...values,
+            updatedAt: policy.replacedUpdatedAt(
+              new Date(compoundAnswerMember.updatedAt)
+            ),
+          },
+        })
+      } else {
+        await tx.compoundAnswerMember.create({
+          data: {
+            id: compoundAnswerMember.id,
+            ...values,
+            ...policy.createdTimestamps(compoundAnswerMember),
+          },
+        })
+      }
       idMappings.compoundAnswerMember[compoundAnswerMember.id] =
         compoundAnswerMember.id
     }
@@ -185,7 +271,7 @@ export async function processCompoundAnswers(
       await tx.compoundAnswerMember.deleteMany({
         where: { compoundAnswerId: existing.id },
       })
-      await createMembers(existing.id, compoundAnswer.id)
+      await writeMembers(existing.id, compoundAnswer.id)
       continue
     }
 
@@ -197,6 +283,6 @@ export async function processCompoundAnswers(
       },
     })
     idMappings.compoundAnswer[compoundAnswer.id] = compoundAnswer.id
-    await createMembers(compoundAnswer.id, compoundAnswer.id)
+    await writeMembers(compoundAnswer.id, compoundAnswer.id)
   }
 }

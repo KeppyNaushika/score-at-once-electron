@@ -1608,4 +1608,192 @@ describe("executeIdIntegrationImport", () => {
     expect(annotation!.questionScoreId).toBe(scoreId)
     expect(result.summary.skipped.annotations).toBe(0)
   })
+
+  describe("id が一致すれば同じ行", () => {
+    it("II-30: 事前照合の後に同じ id の試験が入っても、新しく作らず同じ試験として取り込む", async () => {
+      const basic = createBasicTestData()
+      const { data, examId } = basic
+      // 事前照合は「一致なし」のまま、先に同じ試験が入っている
+      await executeIdIntegrationImport(
+        data,
+        buildNoMatchPreMatch(data, examId),
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      const result = await executeIdIntegrationImport(
+        data,
+        buildNoMatchPreMatch(data, examId),
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      expect(result.examId).toBe(examId)
+      expect(await prisma.exam.count({ where: { id: examId } })).toBe(1)
+      expect(await prisma.examPage.count({ where: { examId } })).toBe(1)
+      expect(
+        await prisma.questionScore.count({
+          where: { cropRegionId: basic.regionId },
+        })
+      ).toBe(1)
+    })
+
+    it("II-31: 同じ試験の取り込みで、アーカイブにだけあるページと領域が足される", async () => {
+      const basic = createBasicTestData()
+      const { data, examId } = basic
+      await executeIdIntegrationImport(
+        data,
+        buildNoMatchPreMatch(data, examId),
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      const now = new Date().toISOString()
+      const addedPageId = generateId()
+      const addedRegionId = generateId()
+      data.examData.examPages.push({
+        ...data.examData.examPages[0],
+        id: addedPageId,
+        pageNumber: 2,
+        createdAt: now,
+        updatedAt: now,
+      })
+      data.examData.cropRegions.push({
+        ...data.examData.cropRegions[0],
+        id: addedRegionId,
+        examPageId: addedPageId,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await executeIdIntegrationImport(
+        data,
+        buildIdMatchPreMatch(basic),
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      expect(await prisma.examPage.count({ where: { examId } })).toBe(2)
+      expect(
+        await prisma.cropRegion.findUnique({ where: { id: addedRegionId } })
+      ).toMatchObject({ examPageId: addedPageId })
+    })
+
+    it("II-32: 採点行の id が一致すれば、採点者が変わっていても同じ行を書き換える", async () => {
+      const colleague = await createTestUser()
+      const basic = createBasicTestData()
+      const { data, examId, regionId, scoreId } = basic
+      await executeIdIntegrationImport(
+        data,
+        buildNoMatchPreMatch(data, examId),
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      data.scoresData.questionScores[0] = {
+        ...data.scoresData.questionScores[0],
+        userId: colleague.id,
+        status: "incorrect",
+        partialScore: "0",
+      }
+      await executeIdIntegrationImport(
+        data,
+        createFileOverviewData({
+          ...buildIdMatchPreMatch(basic),
+          user: createUserPreMatchingResult([colleague.id]),
+        }),
+        createIdIntegrationConfig({ exam: "overwrite" }),
+        currentUser.id
+      )
+
+      const scores = await prisma.questionScore.findMany({
+        where: { cropRegionId: regionId },
+      })
+      expect(scores).toHaveLength(1)
+      expect(scores[0]).toMatchObject({
+        id: scoreId,
+        userId: colleague.id,
+        status: "incorrect",
+      })
+    })
+
+    it("II-33: タグは名前より先に id で引き、改名を書く。別のタグと名前が重なるなら名前は変えない", async () => {
+      const { data, examId } = createBasicTestData()
+      const renamedTagId = generateId()
+      const otherTagId = generateId()
+      const old = new Date("2026-01-01T00:00:00.000Z")
+      await prisma.tag.create({
+        data: {
+          id: renamedTagId,
+          name: "数学",
+          createdAt: old,
+          updatedAt: old,
+        },
+      })
+      await prisma.tag.create({
+        data: { id: otherTagId, name: "理科", createdAt: old, updatedAt: old },
+      })
+      const now = new Date().toISOString()
+      data.tagsData = {
+        tags: [
+          // 改名されたタグ（同じ id）
+          { id: renamedTagId, name: "数学I", createdAt: now, updatedAt: now },
+          // 別のタグと同じ名前になる改名
+          { id: otherTagId, name: "数学I", createdAt: now, updatedAt: now },
+        ],
+        tagSubtotalGroups: [],
+        examTags: [],
+      }
+
+      const result = await executeIdIntegrationImport(
+        data,
+        buildNoMatchPreMatch(data, examId),
+        createIdIntegrationConfig(),
+        currentUser.id
+      )
+
+      expect(
+        await prisma.tag.findUniqueOrThrow({ where: { id: renamedTagId } })
+      ).toMatchObject({ name: "数学I" })
+      expect(
+        await prisma.tag.findUniqueOrThrow({ where: { id: otherTagId } })
+      ).toMatchObject({ name: "理科" })
+      expect(result.warnings.some((warning) => warning.includes("理科"))).toBe(
+        true
+      )
+      expect(await prisma.tag.count()).toBe(2)
+    })
+
+    it("II-34: id が一致した採点者は、利用者名・氏名を規則どおり書く（パスコードは書かない）", async () => {
+      const grader = await createTestUser()
+      await prisma.user.update({
+        where: { id: grader.id },
+        data: { passcode: "hashed", passcodeType: "4digit" },
+      })
+      const { data, examId } = createBasicTestData()
+      data.usersData = createArchiveUsersData([
+        { id: grader.id, username: "renamed", name: "改名した先生" },
+      ])
+      data.scoresData.questionScores[0].userId = grader.id
+
+      await executeIdIntegrationImport(
+        data,
+        createFileOverviewData({
+          ...buildNoMatchPreMatch(data, examId),
+          user: createUserPreMatchingResult([grader.id]),
+        }),
+        createIdIntegrationConfig({ exam: "overwrite" }),
+        currentUser.id
+      )
+
+      expect(
+        await prisma.user.findUniqueOrThrow({ where: { id: grader.id } })
+      ).toMatchObject({
+        username: "renamed",
+        name: "改名した先生",
+        passcode: "hashed",
+        passcodeType: "4digit",
+      })
+    })
+  })
 })

@@ -92,6 +92,8 @@ function routeToLabel(pathname: string): RouteLabel {
       return { base: "類型表管理" }
     case "tags":
       return { base: "タグ管理" }
+    case "data-import":
+      return { base: "データ読み込み" }
     case "data-export":
       return { base: "データ書き出し" }
     case "pdf-tools":

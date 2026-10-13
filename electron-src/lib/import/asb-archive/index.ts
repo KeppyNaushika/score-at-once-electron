@@ -1,14 +1,21 @@
 /**
  * ASB定義インポート機能
+ *
+ * **id が一致すれば同じ解答用紙。** 定義と木の各行はアーカイブの id のまま書く
+ * （replaceAsbDefinition は行を id で書き分ける）。同じ id の解答用紙が取り込み先に在れば、
+ * 取り込みの規則（統合＝後に書かれた方）で置き換えるかを決め、置き換えないなら何も書かない。
+ * 名前は付け替えない（同じ名前の解答用紙が並ぶのは正常で、id で区別する）。
  */
 
 import { recordAuditLog } from "../../prisma/auditLog"
+import prisma from "../../prisma/client"
 import { transformAsbToLatest } from "../asb-transformers"
+import { createImportValuePolicy } from "../merge/importValuePolicy"
+import { archiveRowReplacedAt, isUuid } from "../shared/idFirstRow"
 import { cleanupAsbTempDir, extractAsbArchive } from "./archiveExtractor"
 import {
   copyImagesAndUpdatePaths,
   createImportedAsbDefinition,
-  resolveNameConflict,
 } from "./dataCreator"
 import { generateAsbIdMappings, remapDefinitionIds } from "./idRemapper"
 import { validateAsbManifest } from "./manifestValidator"
@@ -51,19 +58,43 @@ export async function importAsbDefinition(
     const transformedTagsData = transformResult.data.tagsData ?? []
     const transformedTags = transformResult.data.asbDefinitionTags ?? []
 
-    // 4. IDリマッピング
-    const mappings = generateAsbIdMappings(transformedDefinition)
-    const remapped = remapDefinitionIds(transformedDefinition, mappings)
+    // 4. id はアーカイブのまま使う。旧形式の変換で合成した id（uuid でない）のときだけ振る
+    const definitionToWrite = isUuid(transformedDefinition.id)
+      ? transformedDefinition
+      : remapDefinitionIds(
+          transformedDefinition,
+          generateAsbIdMappings(transformedDefinition)
+        )
 
-    // 5. 名前重複チェック
-    remapped.name = await resolveNameConflict(remapped.name)
+    // 5. 同じ id の解答用紙が在れば、規則で置き換えるかを決める（統合＝後に書かれた方）
+    const existingDefinition = await prisma.asbDefinition.findUnique({
+      where: { id: definitionToWrite.id },
+    })
+    if (existingDefinition) {
+      const replacedAt = archiveRowReplacedAt(
+        createImportValuePolicy("merge"),
+        definitionToWrite.updatedAt,
+        existingDefinition.updatedAt
+      )
+      if (!replacedAt) {
+        warnings.push(
+          `解答用紙「${existingDefinition.name}」はこのPCの方が新しいため、取り込みませんでした`
+        )
+        return { definitionId: existingDefinition.id, warnings }
+      }
+      warnings.push(
+        `解答用紙「${existingDefinition.name}」はこのPCに既にあるため、取り込んだ内容で置き換えました`
+      )
+    }
 
-    // 6. 画像コピー + パス更新
-    copyImagesAndUpdatePaths(remapped, imagePaths)
+    // 6. 画像コピー + パス更新（既にある解答用紙の画像は、失敗しても消さない）
+    copyImagesAndUpdatePaths(definitionToWrite, imagePaths, {
+      removeImagesOnFailure: !existingDefinition,
+    })
 
     // 7. DB保存（定義本体 → タグ join）。タグ紐付け失敗は警告として返る
     const tagWarnings = await createImportedAsbDefinition(
-      remapped,
+      definitionToWrite,
       userId,
       transformedTagsData,
       transformedTags
@@ -74,13 +105,13 @@ export async function importAsbDefinition(
       action: "answer_sheet.import",
       userId,
       entityType: "AsbDefinition",
-      entityId: remapped.id,
-      scopeId: remapped.id,
-      scopeLabel: remapped.name,
-      target: remapped.name,
+      entityId: definitionToWrite.id,
+      scopeId: definitionToWrite.id,
+      scopeLabel: definitionToWrite.name,
+      target: definitionToWrite.name,
     })
 
-    return { definitionId: remapped.id, warnings }
+    return { definitionId: definitionToWrite.id, warnings }
   } catch (error) {
     console.error("Error importing ASB definition:", error)
     throw error

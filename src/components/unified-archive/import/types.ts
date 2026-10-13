@@ -30,6 +30,10 @@ export type OpenedUnifiedArchive = Extract<OpenResult, { kind: "opened" }>
 export type RejectedUnifiedArchive = Extract<OpenResult, { kind: "rejected" }>
 export type ArchiveMatchCandidate =
   OpenedUnifiedArchive["matchCandidates"][number]
+/** 候補に無くても手で結べる既存の行 */
+export type ArchiveLinkableRow = NonNullable<
+  OpenedUnifiedArchive["linkableRows"][keyof OpenedUnifiedArchive["linkableRows"]]
+>[number]
 
 /** 試し取り込みの結果 */
 export type ArchiveAnalyzeOutcome = Awaited<

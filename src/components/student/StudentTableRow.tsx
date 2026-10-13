@@ -11,6 +11,11 @@ import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentTableRowProps {
   student: StudentWithMemberships
+  /**
+   * 番号・氏名・入学年度が同じ別の生徒が一覧にいる。見分けるため、氏名の下に読みと
+   * 作成日を添える（同じ値の行が並ぶのは正常で、id で区別する）
+   */
+  hasSameLookingStudent: boolean
   isSelected: boolean
   /** 行を押したとき（生徒の詳細を開く） */
   onOpen: () => void
@@ -22,6 +27,7 @@ interface StudentTableRowProps {
 /** 生徒管理の一覧の1行。選択・編集・削除のボタンは行を開く押下に伝えない */
 export function StudentTableRow({
   student,
+  hasSameLookingStudent,
   isSelected,
   onOpen,
   onToggleSelect,
@@ -46,6 +52,12 @@ export function StudentTableRow({
       </TableCell>
       <TableCell className="font-medium">
         {student.lastName} {student.firstName}
+        {hasSameLookingStudent && (
+          <div className="text-xs font-normal text-muted-foreground">
+            {student.lastNameKana} {student.firstNameKana}・作成{" "}
+            {student.createdAt.toLocaleDateString("ja-JP")}
+          </div>
+        )}
       </TableCell>
       <TableCell className="tabular-nums">
         {student.enrollmentYear || (

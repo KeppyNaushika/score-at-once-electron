@@ -35,6 +35,7 @@ import {
   resolveClassrooms,
   resolveStudents,
 } from "../../../electron-src/lib/import/coursework-archive/idRemapper"
+import { createImportValuePolicy } from "../../../electron-src/lib/import/merge/importValuePolicy"
 import { preMatchClassrooms } from "../../../electron-src/lib/import/merge/matchers/classroomMatcher"
 import { preMatchStudents } from "../../../electron-src/lib/import/merge/matchers/studentMatcher"
 
@@ -124,7 +125,7 @@ describe("人が打つ値が重複している DB", () => {
             isVisible: true,
           },
         ],
-        { allowCreate: false }
+        { allowCreate: false, policy: createImportValuePolicy("merge") }
       )
 
       expect([...map.values()]).toEqual([olderId])
@@ -149,7 +150,7 @@ describe("人が打つ値が重複している DB", () => {
             isVisible: true,
           },
         ],
-        { allowCreate: false }
+        { allowCreate: false, policy: createImportValuePolicy("merge") }
       )
 
       expect([...map.values()]).toEqual([onlyId])
@@ -179,7 +180,11 @@ describe("人が打つ値が重複している DB", () => {
             updatedAt: new Date().toISOString(),
           },
         ],
-        { method: "studentNumber", allowCreate: false }
+        {
+          method: "studentNumber",
+          allowCreate: false,
+          policy: createImportValuePolicy("merge"),
+        }
       )
 
       expect([...map.values()]).toEqual([olderId])

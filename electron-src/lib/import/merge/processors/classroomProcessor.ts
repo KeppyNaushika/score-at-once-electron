@@ -89,13 +89,11 @@ export async function processClassroomIdIntegration(
     importRowById: new Map(
       data.classesData.classrooms.map((classroom) => [classroom.id, classroom])
     ),
-    idMatchedItems: classroomPreMatch.byId,
     matchedItemGroups: [
       // 名前一致
       {
         matchedItems: classroomPreMatch.byName,
         sameRowStrategy: "by_name",
-        skipAlreadyMapped: false,
       },
     ],
     noMatchItems: classroomPreMatch.noMatch,
@@ -107,14 +105,9 @@ export async function processClassroomIdIntegration(
     describeRow: (importClassroom) => `学級「${importClassroom.name}」`,
     applyColumns: (importClassroom, existingId) =>
       applyClassroomColumns(importClassroom, existingId, policy, counts, tx),
+    existsById: async (id) =>
+      (await tx.classroom.findUnique({ where: { id } })) !== null,
     createNewRow: async (importClassroom, importId) => {
-      const existingById = await tx.classroom.findUnique({
-        where: { id: importId },
-      })
-      if (existingById) {
-        idMappings.classroom[importId] = importId
-        return
-      }
       await tx.classroom.create({
         data: {
           id: importId,

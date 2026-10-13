@@ -90,9 +90,13 @@ export async function preMatchUsers(
   const existingUsers = await prisma.user.findMany({ omit: PUBLIC_USER_OMIT })
   const existingById = new Map(existingUsers.map((user) => [user.id, user]))
   // 利用者名は unique ではない（2026-08-22 に外した）ので、名前で引くと複数当たりうる。
-  // 候補は humanKeyMatching の決まりで古い順に並び、先頭を候補として見せる
+  // 候補は humanKeyMatching の決まりで古い順に並び、先頭を候補として見せる。
+  // 別のアーカイブの利用者が id で取った既存の利用者は候補にしない
+  const archiveUserIds = new Set(
+    importData.usersData.users.map((archiveUser) => archiveUser.id)
+  )
   const existingByUsername = groupByHumanKey(
-    existingUsers,
+    existingUsers.filter((user) => !archiveUserIds.has(user.id)),
     (user) => user.username
   )
 
@@ -106,6 +110,7 @@ export async function preMatchUsers(
         existingId: idMatch.id,
         importData: archiveGrader,
         existingData: idMatch,
+        candidates: [{ existingId: idMatch.id, existingData: idMatch }],
         displayLabel,
         matchReason: "同じPCで作成されたデータ",
       })
@@ -121,6 +126,10 @@ export async function preMatchUsers(
         existingId: usernameMatch.id,
         importData: archiveGrader,
         existingData: usernameMatch,
+        candidates: usernameCandidates.map((candidate) => ({
+          existingId: candidate.id,
+          existingData: candidate,
+        })),
         displayLabel,
         matchReason: describeCandidateCount(
           "ユーザー名が一致",

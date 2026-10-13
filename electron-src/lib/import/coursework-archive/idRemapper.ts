@@ -1,10 +1,15 @@
 /**
  * 試験外成績資料アーカイブの外部参照（生徒・学級・タグ）ID 解決
  *
- * exam-archive と同じ「UUID 一次 + 名前マッチング（付加）」モデル:
- *   生徒  = UUID → 学籍番号 → 氏名
- *   学級  = UUID → 学級名
- *   タグ  = UUID → タグ名（無ければ upsert で作成）
+ * exam-archive と同じ「id 一次 + 名前マッチング（付加）」モデル:
+ *   生徒  = id → 学籍番号 → 氏名
+ *   学級  = id → 学級名
+ *   タグ  = id → タグ名（Tag.name は unique）
+ *
+ * **id が一致すれば同じ行**で、取り込みの規則（importValuePolicy）に従って値を書く。
+ * 番号・名前で結ぶのは id で一致しなかった行だけで、そのときも値を書く。名前で結ぶ候補からは、
+ * アーカイブの別の行が id で取った既存の行を除く（改番・改名した行と、その旧い値を持つ別の
+ * 行を1つに結ばない）。
  *
  * allowCreate=true（単体インポート）では未一致をアーカイブの値のまま新規作成する。
  * allowCreate=false（grade-archive 内包）では既存 lookup のみ、未一致はスキップ。
@@ -25,17 +30,11 @@ import {
   describeStudent,
   groupByHumanKey,
 } from "../humanKeyMatching"
+import type { ImportValuePolicy } from "../merge/importValuePolicy"
+import { archiveRowReplacedAt, isUuid } from "../shared/idFirstRow"
 
 /** アーカイブ内 UUID → 実 DB ID のマッピング */
 type IdMap = Map<string, string>
-
-/**
- * uuid の形をしているか。旧アーカイブの変換で合成した id
- * （`legacy-student:S001` など）を主キーとして DB へ書き込まないための判定。
- */
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const isUuid = (value: string): boolean => UUID_PATTERN.test(value)
 
 /**
  * 生徒を解決する。返り値は archiveStudentId → 実 studentId のマップ。
@@ -49,7 +48,11 @@ const isUuid = (value: string): boolean => UUID_PATTERN.test(value)
 export async function resolveStudents(
   tx: Prisma.TransactionClient,
   students: ArchiveCwStudent[],
-  options: { method: CourseworkMatchingMethod; allowCreate: boolean }
+  options: {
+    method: CourseworkMatchingMethod
+    allowCreate: boolean
+    policy: ImportValuePolicy
+  }
 ): Promise<{ map: IdMap; createdIds: Set<string>; warnings: string[] }> {
   const map: IdMap = new Map()
   const createdIds = new Set<string>()
@@ -61,21 +64,61 @@ export async function resolveStudents(
   // 学籍番号も氏名も unique ではないので、どちらで引いても複数当たりうる。
   // どれを採るかは humanKeyMatching の決まり（いちばん古い行）に従い、
   // 2件以上あったことは warning で伝える（取り違えは静かに起きると気づけない）。
+  // 別のアーカイブの生徒が id で取った既存の生徒は候補にしない
+  const archiveStudentIds = new Set(students.map((student) => student.id))
+  const claimable = existing.filter(
+    (existingStudent) => !archiveStudentIds.has(existingStudent.id)
+  )
   const byNumber = groupByHumanKey(
-    existing,
+    claimable,
     (existingStudent) => existingStudent.studentNumber
   )
   const byName = groupByHumanKey(
-    existing,
+    claimable,
     (existingStudent) =>
       `${existingStudent.lastName}|${existingStudent.firstName}`
   )
+  /** この取り込みで結んだ既存の生徒（1つの既存の生徒に結ぶのは1人だけ） */
+  const claimedIds = new Set<string>()
+
+  /** 同じ生徒だと決まった既存の行へ、規則に従って値を書く */
+  const linkStudent = async (
+    student: ArchiveCwStudent,
+    existingStudent: (typeof existing)[number]
+  ): Promise<void> => {
+    map.set(student.id, existingStudent.id)
+    claimedIds.add(existingStudent.id)
+    const updatedAt = archiveRowReplacedAt(
+      options.policy,
+      student.updatedAt,
+      existingStudent.updatedAt
+    )
+    if (!updatedAt) return
+    // 旧 .grade（v1.12.0 以前）は氏名を持たない。無い値で既存の氏名を消さない
+    const hasName = Boolean(student.lastName || student.firstName)
+    await tx.student.update({
+      where: { id: existingStudent.id },
+      data: {
+        studentNumber: student.studentNumber,
+        ...(hasName
+          ? {
+              lastName: student.lastName,
+              firstName: student.firstName,
+              lastNameKana: student.lastNameKana,
+              firstNameKana: student.firstNameKana,
+              enrollmentYear: student.enrollmentYear,
+            }
+          : {}),
+        updatedAt,
+      },
+    })
+  }
 
   for (const student of students) {
-    // 1. UUID 一次照合
+    // 1. id 一次照合（id が一致すれば同じ生徒）
     const uuidMatch = byId.get(student.id)
     if (uuidMatch) {
-      map.set(student.id, uuidMatch.id)
+      await linkStudent(student, uuidMatch)
       continue
     }
     // 2. 二次照合（候補は古い順に並んでいる。先頭が採用される行）
@@ -88,15 +131,18 @@ export async function resolveStudents(
       candidates = byName.get(`${student.lastName}|${student.firstName}`) ?? []
       matchedKeyLabel = `氏名「${student.lastName}${student.firstName}」`
     }
-    const matched = candidates[0]
+    const unclaimed = candidates.filter(
+      (candidate) => !claimedIds.has(candidate.id)
+    )
+    const matched = unclaimed[0]
     if (matched) {
       const ambiguity = describeAmbiguity(
         matchedKeyLabel,
-        candidates.length,
+        unclaimed.length,
         describeStudent(matched)
       )
       if (ambiguity) warnings.push(ambiguity)
-      map.set(student.id, matched.id)
+      await linkStudent(student, matched)
       continue
     }
     // 3. 新規作成 or スキップ
@@ -128,6 +174,7 @@ export async function resolveStudents(
         lastNameKana: student.lastNameKana,
         firstNameKana: student.firstNameKana,
         enrollmentYear: student.enrollmentYear,
+        ...options.policy.createdTimestamps(student),
       },
     })
     map.set(student.id, created.id)
@@ -141,7 +188,7 @@ export async function resolveStudents(
 export async function resolveClassrooms(
   tx: Prisma.TransactionClient,
   classes: ArchiveCwClass[],
-  options: { allowCreate: boolean }
+  options: { allowCreate: boolean; policy: ImportValuePolicy }
 ): Promise<{ map: IdMap; warnings: string[] }> {
   const map: IdMap = new Map()
   const warnings: string[] = []
@@ -152,19 +199,55 @@ export async function resolveClassrooms(
       existingClassroom,
     ])
   )
-  // 学級名は unique ではないので、名前で引くと複数当たりうる（生徒と同じ扱い）
+  // 学級名は unique ではないので、名前で引くと複数当たりうる（生徒と同じ扱い）。
+  // 別のアーカイブの学級が id で取った既存の学級は候補にしない
+  const archiveClassroomIds = new Set(classes.map((classroom) => classroom.id))
   const byName = groupByHumanKey(
-    existing,
+    existing.filter(
+      (existingClassroom) => !archiveClassroomIds.has(existingClassroom.id)
+    ),
     (existingClassroom) => existingClassroom.name
   )
+  const claimedIds = new Set<string>()
+
+  /**
+   * 同じ学級だと決まった既存の行へ値を書く。旧形式の学級は時刻を持たないので、
+   * 統合では書かず、上書きのときだけ書く（archiveRowReplacedAt）
+   */
+  const linkClassroom = async (
+    classroom: ArchiveCwClass,
+    existingClassroom: (typeof existing)[number]
+  ): Promise<void> => {
+    map.set(classroom.id, existingClassroom.id)
+    claimedIds.add(existingClassroom.id)
+    const updatedAt = archiveRowReplacedAt(
+      options.policy,
+      null,
+      existingClassroom.updatedAt
+    )
+    if (!updatedAt) return
+    await tx.classroom.update({
+      where: { id: existingClassroom.id },
+      data: {
+        name: classroom.name,
+        classroomCode: classroom.classroomCode,
+        grade: classroom.grade,
+        description: classroom.description,
+        isVisible: classroom.isVisible,
+        updatedAt,
+      },
+    })
+  }
 
   for (const classroom of classes) {
     const uuidMatch = byId.get(classroom.id)
     if (uuidMatch) {
-      map.set(classroom.id, uuidMatch.id)
+      await linkClassroom(classroom, uuidMatch)
       continue
     }
-    const nameCandidates = byName.get(classroom.name) ?? []
+    const nameCandidates = (byName.get(classroom.name) ?? []).filter(
+      (candidate) => !claimedIds.has(candidate.id)
+    )
     const nameMatch = nameCandidates[0]
     if (nameMatch) {
       const ambiguity = describeAmbiguity(
@@ -173,7 +256,7 @@ export async function resolveClassrooms(
         describeClassroom(nameMatch)
       )
       if (ambiguity) warnings.push(ambiguity)
-      map.set(classroom.id, nameMatch.id)
+      await linkClassroom(classroom, nameMatch)
       continue
     }
     if (!options.allowCreate) {
@@ -200,40 +283,78 @@ export async function resolveClassrooms(
 }
 
 /**
- * タグを解決する。UUID → タグ名で照合し、無ければ作成（name は unique）。
+ * タグを解決する。id → タグ名で照合し、無ければアーカイブの id で作る（name は unique）。
  * 返り値は archiveTagId → 実 tagId のマップ。
+ *
+ * 旧形式のタグは時刻を持たないので、既存のタグの値は上書きのときだけ書く。名前を書くと
+ * 別のタグと重なるなら、名前は変えない。
  */
 export async function resolveTags(
   tx: Prisma.TransactionClient,
-  tags: ArchiveCwTag[]
+  tags: ArchiveCwTag[],
+  policy: ImportValuePolicy
 ): Promise<IdMap> {
   const map: IdMap = new Map()
+  const linkTag = async (
+    archiveTag: ArchiveCwTag,
+    existingTag: { id: string; name: string; updatedAt: Date }
+  ): Promise<void> => {
+    map.set(archiveTag.id, existingTag.id)
+    const updatedAt = archiveRowReplacedAt(policy, null, existingTag.updatedAt)
+    if (!updatedAt) return
+    const nameTaken =
+      existingTag.name !== archiveTag.name &&
+      (await tx.tag.findUnique({ where: { name: archiveTag.name } })) !== null
+    await tx.tag.update({
+      where: { id: existingTag.id },
+      data: {
+        ...(nameTaken ? {} : { name: archiveTag.name }),
+        order: archiveTag.order,
+        color: archiveTag.color,
+        updatedAt,
+      },
+    })
+  }
+
+  // id で一致したタグを先に書く（改名で手放した名前を、同じ名前の別のタグが使えるように）
+  const unmatchedTags: ArchiveCwTag[] = []
   for (const archiveTag of tags) {
-    const byId = await tx.tag.findUnique({ where: { id: archiveTag.id } })
+    const byId = isUuid(archiveTag.id)
+      ? await tx.tag.findUnique({ where: { id: archiveTag.id } })
+      : null
     if (byId) {
-      map.set(archiveTag.id, byId.id)
+      await linkTag(archiveTag, byId)
+    } else {
+      unmatchedTags.push(archiveTag)
+    }
+  }
+  for (const archiveTag of unmatchedTags) {
+    const byName = await tx.tag.findUnique({ where: { name: archiveTag.name } })
+    if (byName) {
+      await linkTag(archiveTag, byName)
       continue
     }
-    const tag = await tx.tag.upsert({
-      where: { name: archiveTag.name },
-      create: {
+    const created = await tx.tag.create({
+      data: {
+        ...(isUuid(archiveTag.id) ? { id: archiveTag.id } : {}),
         name: archiveTag.name,
         order: archiveTag.order,
         color: archiveTag.color,
       },
-      update: {},
     })
-    map.set(archiveTag.id, tag.id)
+    map.set(archiveTag.id, created.id)
   }
   return map
 }
 
 /**
- * 新規作成された生徒の名簿（membership）を復元する。
- * 既存 membership がある (studentId, classroomId) はスキップ（冪等）。
- * lookup-only（allowCreate=false）では呼ばない想定。
+ * 学級所属を復元する。
  *
- * **既存生徒には適用しない。** 取り込み先で別学級へ異動済みの生徒に旧学級の在籍行を
+ * **id が一致すれば同じ所属**で、旧形式の所属は時刻を持たないので上書きのときだけ値を書く。
+ * id で一致しない所属は、新規作成された生徒のものだけを作る（同じ生徒・学級・開始日の所属が
+ * 既にあればそれに寄せる）。lookup-only（allowCreate=false）では呼ばない想定。
+ *
+ * **既存生徒には新しい所属を足さない。** 取り込み先で別学級へ異動済みの生徒に旧学級の在籍行を
  * 足してしまうと、成績だけでなく試験の学級別集計・受験日スナップショット・学級からの
  * 一括追加の母集団まで、取り込みと無関係なところが変わる。
  */
@@ -242,25 +363,47 @@ export async function restoreMemberships(
   memberships: ArchiveCwMembership[],
   studentMap: IdMap,
   classroomMap: IdMap,
-  createdStudentIds: Set<string>
+  createdStudentIds: Set<string>,
+  policy: ImportValuePolicy
 ): Promise<void> {
   for (const membership of memberships) {
     const studentId = studentMap.get(membership.studentId)
     const classroomId = classroomMap.get(membership.classroomId)
     if (!studentId || !classroomId) continue
+    const values = {
+      studentId,
+      classroomId,
+      startDate: new Date(membership.startDate),
+      endDate: membership.endDate ? new Date(membership.endDate) : null,
+      attendanceNumber: membership.attendanceNumber,
+      notes: membership.notes,
+    }
+
+    const byId = isUuid(membership.id)
+      ? await tx.studentClassroomMembership.findUnique({
+          where: { id: membership.id },
+        })
+      : null
+    if (byId) {
+      const updatedAt = archiveRowReplacedAt(policy, null, byId.updatedAt)
+      if (updatedAt) {
+        await tx.studentClassroomMembership.update({
+          where: { id: byId.id },
+          data: { ...values, updatedAt },
+        })
+      }
+      continue
+    }
+
     if (!createdStudentIds.has(studentId)) continue
-    const exists = await tx.studentClassroomMembership.findFirst({
-      where: { studentId, classroomId },
+    const sameMembership = await tx.studentClassroomMembership.findFirst({
+      where: { studentId, classroomId, startDate: values.startDate },
     })
-    if (exists) continue
+    if (sameMembership) continue
     await tx.studentClassroomMembership.create({
       data: {
-        studentId,
-        classroomId,
-        startDate: new Date(membership.startDate),
-        endDate: membership.endDate ? new Date(membership.endDate) : null,
-        attendanceNumber: membership.attendanceNumber,
-        notes: membership.notes,
+        ...(isUuid(membership.id) ? { id: membership.id } : {}),
+        ...values,
       },
     })
   }

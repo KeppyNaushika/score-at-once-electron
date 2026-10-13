@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup } from "@/components/ui/radio-group"
 import type { StudentMatchingStrategy } from "@/types/examArchive.types"
 
+import { resolveIdIntegrationRows } from "../../idIntegrationRows"
 import { DetailPanel } from "./DetailPanel"
 import { StrategyOption } from "./StrategyOption"
 import type { StudentIntegrationPanelProps } from "./types"
@@ -24,8 +25,11 @@ export function StudentIntegrationPanel({
 
   const byStudentNumberCount = overview.byStudentNumber?.length ?? 0
   const byNameCount = overview.byName?.length ?? 0
-  const noMatchCount = overview.noMatch.length
-  const needsDecisionCount = byStudentNumberCount + byNameCount + noMatchCount
+  // 学籍番号一致と氏名一致は重なるので、行で数える
+  const needsDecisionCount = resolveIdIntegrationRows(
+    overview,
+    state.idIntegrationConfig.student
+  ).length
 
   if (needsDecisionCount === 0) {
     return (
@@ -37,18 +41,6 @@ export function StudentIntegrationPanel({
         </CardContent>
       </Card>
     )
-  }
-
-  // 表示するアイテムを決定
-  const getDisplayItems = () => {
-    if (strategy === "by_student_number") {
-      return overview.byStudentNumber ?? []
-    }
-    if (strategy === "by_name") {
-      return overview.byName ?? []
-    }
-    // individual: 両方を結合
-    return [...(overview.byStudentNumber ?? []), ...(overview.byName ?? [])]
   }
 
   return (
@@ -107,21 +99,7 @@ export function StudentIntegrationPanel({
         <DetailPanel
           wizard={wizard}
           entityType="student"
-          byName={getDisplayItems()}
-          noMatch={overview.noMatch}
           showIndividualMessage={strategy === "individual"}
-          onBatchIdChoice={(idChoice) => {
-            const items = getDisplayItems().map((item) => ({
-              importId: item.importId,
-              existingId: item.existingId,
-            }))
-            wizard.batchUpdateIdIntegrationDecisions(
-              "student",
-              items,
-              "same_person",
-              idChoice
-            )
-          }}
         />
       )}
     </div>

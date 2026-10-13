@@ -11,6 +11,13 @@
  * - 当たらない行も候補なしで返す（画面で「新規 / 取り込まない」を選べるように）
  * - 行は加工せずに返す（利用者の passcode / passcodeType だけは除く。§5.1）。
  *   「学籍番号が一致」のような文言は renderer が `matchedBy` から作る
+ * - 同じ番号・同じ名前の行を見分ける材料として、行に関連の行を添える（Prisma の include と
+ *   同じ形）: 生徒は所属（`memberships[].classroom`）、学級は所属の行（人数）、小計グループは
+ *   小計（`subtotals`）と使っている試験（`examSubtotalGroups[].exam`）。アーカイブ側も同じ
+ * - 候補からは、アーカイブの別の行が id で取った既存の行を除く（改番・改名した行と、その旧い値を
+ *   持つ別の行を1つに結ばない）
+ * - 候補に当たらなくても人が既存の行へ手で結べるよう、結べる既存の行を表ごとに返す
+ *   （`findArchiveLinkableRows`）
  */
 
 import { openDatabaseFile } from "../../export/unified-archive/archiveDatabaseImage"
@@ -149,6 +156,108 @@ const createdAtOf = (columnValue: unknown): Date => {
   return parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date(0)
 }
 
+/** SQL を流して行を返す（取り込み先は非同期、archive.db は同期なので包む） */
+type MatchRowQuery = (sql: string) => Promise<Record<string, unknown>[]>
+
+/** 行の1列を文字列で引く（文字列でなければ空） */
+const textOf = (row: Record<string, unknown>, column: string): string => {
+  const columnValue = row[column]
+  return typeof columnValue === "string" ? columnValue : ""
+}
+
+/** 行を親の id ごとに束ねる */
+const groupByParent = (
+  rows: readonly Record<string, unknown>[],
+  parentColumn: string
+): Map<string, Record<string, unknown>[]> => {
+  const grouped = new Map<string, Record<string, unknown>[]>()
+  for (const row of rows) {
+    const parentId = textOf(row, parentColumn)
+    grouped.set(parentId, [...(grouped.get(parentId) ?? []), row])
+  }
+  return grouped
+}
+
+/**
+ * 照合の表の行に、見分ける材料になる関連の行を添える（Prisma の include と同じ形）。
+ * 関連の表が無い（古いアーカイブ）ときは空で添える
+ */
+const withDistinguishingRelations = async (
+  table: ArchiveMatchTable,
+  rows: readonly Record<string, unknown>[],
+  query: MatchRowQuery
+): Promise<Record<string, unknown>[]> => {
+  switch (table) {
+    case "Student": {
+      const memberships = groupByParent(
+        await query(
+          `SELECT m."studentId" AS "studentId", m."endDate" AS "endDate", c."name" AS "classroomName"
+           FROM "StudentClassroomMembership" m JOIN "Classroom" c ON c."id" = m."classroomId"`
+        ),
+        "studentId"
+      )
+      return rows.map((row) => ({
+        ...row,
+        memberships: (memberships.get(textOf(row, "id")) ?? []).map(
+          (membership) => ({
+            endDate: membership.endDate ?? null,
+            classroom: { name: textOf(membership, "classroomName") },
+          })
+        ),
+      }))
+    }
+    case "Classroom": {
+      const memberships = groupByParent(
+        await query(
+          `SELECT "id", "classroomId" FROM "StudentClassroomMembership"`
+        ),
+        "classroomId"
+      )
+      return rows.map((row) => ({
+        ...row,
+        memberships: memberships.get(textOf(row, "id")) ?? [],
+      }))
+    }
+    case "SubtotalGroup": {
+      const subtotals = groupByParent(
+        await query(
+          `SELECT "subtotalGroupId", "name" FROM "Subtotal" ORDER BY "order"`
+        ),
+        "subtotalGroupId"
+      )
+      const examSubtotalGroups = groupByParent(
+        await query(
+          `SELECT g."subtotalGroupId" AS "subtotalGroupId", e."examName" AS "examName"
+           FROM "ExamSubtotalGroup" g JOIN "Exam" e ON e."id" = g."examId"`
+        ),
+        "subtotalGroupId"
+      )
+      return rows.map((row) => ({
+        ...row,
+        subtotals: subtotals.get(textOf(row, "id")) ?? [],
+        examSubtotalGroups: (
+          examSubtotalGroups.get(textOf(row, "id")) ?? []
+        ).map((examSubtotalGroup) => ({
+          exam: { examName: textOf(examSubtotalGroup, "examName") },
+        })),
+      }))
+    }
+    default:
+      return [...rows]
+  }
+}
+
+/** 関連の表が無ければ空を返す query にする（古いアーカイブは表を持たないことがある） */
+const tolerantQuery =
+  (query: MatchRowQuery): MatchRowQuery =>
+  async (sql) => {
+    try {
+      return await query(sql)
+    } catch {
+      return []
+    }
+  }
+
 /** archive.db から照合する表の行を読む（表が無ければ空） */
 const readArchiveMatchRows = async (
   databasePath: string
@@ -167,11 +276,17 @@ const readArchiveMatchRows = async (
       if (!tableExists) continue
       rowsByTable.set(
         table,
-        archiveDatabase
-          .prepare<[], Record<string, unknown>>(
-            `SELECT * FROM ${quote(table)} ORDER BY id`
+        await withDistinguishingRelations(
+          table,
+          archiveDatabase
+            .prepare<[], Record<string, unknown>>(
+              `SELECT * FROM ${quote(table)} ORDER BY id`
+            )
+            .all(),
+          tolerantQuery(async (sql) =>
+            archiveDatabase.prepare<[], Record<string, unknown>>(sql).all()
           )
-          .all()
+        )
       )
     }
     return rowsByTable
@@ -184,9 +299,13 @@ const readExistingMatchRows = async (
   target: ArchiveTargetConnection,
   table: ArchiveMatchTable
 ): Promise<ExistingMatchRow[]> => {
-  const existingRows = await target.query<unknown>(
-    `SELECT * FROM ${quote(table)}`,
-    []
+  const rawRows = (
+    await target.query<unknown>(`SELECT * FROM ${quote(table)}`, [])
+  ).filter(isRecord)
+  const existingRows = await withDistinguishingRelations(
+    table,
+    rawRows,
+    async (sql) => (await target.query<unknown>(sql, [])).filter(isRecord)
   )
   return existingRows.flatMap((existingRow): ExistingMatchRow[] =>
     isRecord(existingRow) && typeof existingRow.id === "string"
@@ -201,13 +320,38 @@ const readExistingMatchRows = async (
   )
 }
 
+/**
+ * 結べる既存の行（アーカイブの別の行が id で取った既存の行を除く）と、取り込み先にある id
+ */
+const readClaimableRows = async (
+  target: ArchiveTargetConnection,
+  table: ArchiveMatchTable,
+  archiveRows: readonly Record<string, unknown>[]
+): Promise<{ claimable: ExistingMatchRow[]; existingIds: Set<string> }> => {
+  const existingRows = await readExistingMatchRows(target, table)
+  const archiveIds = new Set(
+    archiveRows.flatMap((archiveRow) =>
+      typeof archiveRow.id === "string" ? [archiveRow.id] : []
+    )
+  )
+  return {
+    claimable: existingRows.filter(
+      (existingRow) => !archiveIds.has(existingRow.id)
+    ),
+    existingIds: new Set(existingRows.map((existingRow) => existingRow.id)),
+  }
+}
+
 const findTableCandidates = async (
   target: ArchiveTargetConnection,
   table: ArchiveMatchTable,
   archiveRows: readonly Record<string, unknown>[]
 ): Promise<ArchiveMatchCandidate[]> => {
-  const existingRows = await readExistingMatchRows(target, table)
-  const existingIds = new Set(existingRows.map((existingRow) => existingRow.id))
+  const { claimable: existingRows, existingIds } = await readClaimableRows(
+    target,
+    table,
+    archiveRows
+  )
   const matchKeys = ARCHIVE_MATCH_KEYS[table]
   // 鍵の値が空の既存の行は "" にまとまる。鍵の値は JSON の配列なので "" で引かれることはない
   const existingByKey = new Map(
@@ -267,6 +411,45 @@ export async function findArchiveMatchCandidates(
     )
   }
   return matchCandidates
+}
+
+/** 手で結べる既存の行1つ */
+interface ArchiveLinkableRow {
+  readonly existingId: string
+  readonly existingRow: MatchRowValues
+}
+
+/**
+ * 照合の画面で、候補に当たらなくても人が手で結べる既存の行（表ごと）。
+ * id で一致しなかったアーカイブの行がある表だけを返す。アーカイブの別の行が id で取った
+ * 既存の行は含まない
+ */
+export async function findArchiveLinkableRows(
+  target: ArchiveTargetConnection,
+  archive: OpenedUnifiedArchive
+): Promise<Partial<Record<ArchiveMatchTable, ArchiveLinkableRow[]>>> {
+  const archiveRowsByTable = await readArchiveMatchRows(archive.databasePath)
+  const linkableRows: Partial<Record<ArchiveMatchTable, ArchiveLinkableRow[]>> =
+    {}
+  for (const table of ARCHIVE_MATCH_TABLES) {
+    const archiveRows = archiveRowsByTable.get(table) ?? []
+    if (archiveRows.length === 0) continue
+    const { claimable, existingIds } = await readClaimableRows(
+      target,
+      table,
+      archiveRows
+    )
+    const needsMatch = archiveRows.some(
+      (archiveRow) =>
+        typeof archiveRow.id === "string" && !existingIds.has(archiveRow.id)
+    )
+    if (!needsMatch) continue
+    linkableRows[table] = claimable.map((existingRow) => ({
+      existingId: existingRow.id,
+      existingRow: existingRow.values,
+    }))
+  }
+  return linkableRows
 }
 
 /**

@@ -56,11 +56,18 @@ export function createMockManifest(
 // ---------------------------------------------------------------------------
 
 function createMockMatchedItem(overrides?: Partial<MatchedItem>): MatchedItem {
+  const existingId = overrides?.existingId ?? "existing-student-1"
+  const existingData = overrides?.existingData ?? {
+    lastName: "山田",
+    firstName: "太郎",
+    studentNumber: "001",
+  }
   return {
     importId: "import-student-1",
-    existingId: "existing-student-1",
+    existingId,
     importData: { lastName: "山田", firstName: "太郎", studentNumber: "001" },
-    existingData: { lastName: "山田", firstName: "太郎", studentNumber: "001" },
+    existingData,
+    candidates: [{ existingId, existingData }],
     displayLabel: "山田太郎（001）",
     matchReason: "IDが一致",
     ...overrides,

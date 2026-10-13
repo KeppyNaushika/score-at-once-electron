@@ -16,26 +16,11 @@ import {
   getAsbImagesDirectory,
   getRelativePathFromSharedFiles,
 } from "../../dataManager"
-import { listAsbDefinitions } from "../../prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../prisma/asbDefinitionReplace"
 import prisma from "../../prisma/client"
+import { resolveTags } from "../coursework-archive/idRemapper"
+import { createImportValuePolicy } from "../merge/importValuePolicy"
 import { isAsbImagePath } from "../unified-archive/archiveValueGuards"
-
-/**
- * 名前の重複を解決するサフィックスを付与
- */
-export async function resolveNameConflict(name: string): Promise<string> {
-  const existing = await listAsbDefinitions()
-  const existingNames = new Set(existing.map((definition) => definition.name))
-
-  if (!existingNames.has(name)) return name
-
-  let suffix = 2
-  while (existingNames.has(`${name} (${suffix})`)) {
-    suffix++
-  }
-  return `${name} (${suffix})`
-}
 
 /**
  * 画像ファイルをインポート先にコピーし、定義内のimagePathを更新する。
@@ -46,17 +31,27 @@ export async function resolveNameConflict(name: string): Promise<string> {
  */
 export function copyImagesAndUpdatePaths(
   definition: AnswerSheetDefinition,
-  tempImagePaths: string[]
+  tempImagePaths: string[],
+  options: {
+    /**
+     * 確かめに失敗したとき、定義の画像のフォルダを消すか。まだ無い解答用紙のときだけ
+     * true（写した画像はそのフォルダにだけある）。既にある解答用紙のフォルダには、
+     * 取り込み先の画像が入っている
+     */
+    removeImagesOnFailure: boolean
+  }
 ): void {
   if (tempImagePaths.length > 0) copyImages(definition, tempImagePaths)
   try {
     assertAsbImagePaths(definition)
   } catch (error) {
-    // 写した画像は、振り直した新しい定義の id のフォルダにだけある。DB へ書く前なので消す
-    fs.rmSync(path.dirname(getAsbImagesDirectory(definition.id)), {
-      recursive: true,
-      force: true,
-    })
+    if (options.removeImagesOnFailure) {
+      // DB へ書く前なので、写した画像を消す
+      fs.rmSync(path.dirname(getAsbImagesDirectory(definition.id)), {
+        recursive: true,
+        force: true,
+      })
+    }
     throw error
   }
 }
@@ -129,7 +124,7 @@ function copyImages(
 /**
  * インポートした定義をDBに保存し、タグを復元して紐付ける。
  *
- * タグは UUID一次照合 → タグ名で upsert（name は unique）で解決する。
+ * タグは id 一次照合 → タグ名（name は unique）で解決し、無ければアーカイブの id で作る。
  * replaceAsbDefinition が独自トランザクションを持つためタグ紐付けは別トランザクションになり、
  * 定義本体はこの時点で既にコミット済み。したがってタグ紐付けの失敗は「取り込み失敗」に
  * せず（=握りつぶさず警告として返し）、再インポートで重複定義が生じるのを防ぐ。
@@ -149,27 +144,12 @@ export async function createImportedAsbDefinition(
 
   try {
     await prisma.$transaction(async (tx) => {
-      // アーカイブ内 tagId → 実 tagId のマップを作る
-      const tagIdMap = new Map<string, string>()
-      for (const archiveTag of tagsData) {
-        const existingTag = await tx.tag.findUnique({
-          where: { id: archiveTag.id },
-        })
-        if (existingTag) {
-          tagIdMap.set(archiveTag.id, existingTag.id)
-          continue
-        }
-        const tag = await tx.tag.upsert({
-          where: { name: archiveTag.name },
-          create: {
-            name: archiveTag.name,
-            order: archiveTag.order,
-            color: archiveTag.color,
-          },
-          update: {},
-        })
-        tagIdMap.set(archiveTag.id, tag.id)
-      }
+      // アーカイブ内 tagId → 実 tagId（id 一次 → タグ名。.coursework と同じ決まり）
+      const tagIdMap = await resolveTags(
+        tx,
+        tagsData,
+        createImportValuePolicy("merge")
+      )
 
       // 定義へのタグ参照を復元（冪等: 既存があればスキップ）
       for (const definitionTagRef of asbDefinitionTags) {

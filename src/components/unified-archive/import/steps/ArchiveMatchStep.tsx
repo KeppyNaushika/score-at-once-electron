@@ -54,6 +54,16 @@ export function ArchiveMatchStep({
     tableCandidates.push(matchCandidate)
     candidatesByTable.set(matchCandidate.table, tableCandidates)
   }
+  // 既存の行 → それを紐づけ先にしているアーカイブの行（1つの既存の行に結ぶのは1行だけ）
+  const claimedExistingIds = new Map<string, string>()
+  for (const [rowKey, decision] of Object.entries(matchDecisions)) {
+    if (
+      decision.kind === "same" &&
+      !claimedExistingIds.has(decision.existingId)
+    ) {
+      claimedExistingIds.set(decision.existingId, rowKey)
+    }
+  }
   const firstTableWithRows =
     MATCH_TABS.find((matchTab) => candidatesByTable.has(matchTab.table))
       ?.table ?? "Student"
@@ -135,6 +145,8 @@ export function ArchiveMatchStep({
               <ArchiveMatchRow
                 key={rowKey}
                 matchCandidate={matchCandidate}
+                linkableRows={opened?.linkableRows[matchCandidate.table] ?? []}
+                claimedExistingIds={claimedExistingIds}
                 decision={matchDecisions[rowKey] ?? { kind: "new" }}
                 action={action}
                 onDecisionChange={(decision) =>

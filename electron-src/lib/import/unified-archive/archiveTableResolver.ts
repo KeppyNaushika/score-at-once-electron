@@ -10,12 +10,18 @@
  * 1表の手順:
  * 1. 前の表までで決まった id の写しで、参照の列・ファイルのパス・埋め込みの id を書き換える。
  *    取り込まない行を必須で参照する行は落とす（任意の参照は NULL）
- * 2. 照合の決定を当てる: same+existing → 既存の id に写す／same+archive → 既存の行をアーカイブの
- *    id へ付け替える／skip → 落とす
+ * 2. 照合の決定を当てる: same → 既存の id に写す（archive を選んだときは、全ての表を書き終えた後に
+ *    既存の行をアーカイブの id へ付け替える予約もする）／skip → 落とす。
+ *    **アーカイブの id が取り込み先に在る行は、照合の決定を見ない**（id が一致すれば同じ行）
  * 3. id で取り込み先を引き、在る行は3択で置き換えるか残すか決める
  * 4. 作る行と置き換える行の一意キーで、取り込み先の別の id の行を引く（衝突）
- * 5. 衝突を解く: 上書き・統合は選んだ id（既定は取り込み先の id）に揃えて、id が一致した行として
- *    3択で扱う。別で追加は既存の行に固定し、アーカイブの行は書かない
+ * 5. 衝突を解く: 上書き・統合は取り込み先の id に揃えて、id が一致した行として3択で扱う
+ *    （アーカイブの id を選んだときは、付け替えを予約する）。別で追加は既存の行に固定し、
+ *    アーカイブの行は書かない
+ *
+ * **id の付け替えは、全ての表を取り込み先の id で書き終えてから行う**（`applyPendingRenames`）。
+ * アーカイブの id を選んでも、取り込みそのものは取り込み先の id を選んだときと同じ道を通り、
+ * 最後に id だけを変える。
  *
  * 解けない衝突（1行が複数の既存行とぶつかる・複数のアーカイブ行が同じ既存行に寄る・id が
  * 一致した行の置き換えが別の既存行とぶつかる、など）は理由に集めて返す。呼び出し側が止める。
@@ -68,6 +74,8 @@ export interface ArchiveImportContext {
   readonly newIdByOldId: Map<string, string>
   readonly droppedIds: Map<string, Set<string>>
   readonly renamedIds: UnifiedArchiveRenamedId[]
+  /** 全ての表を書き終えた後に行う付け替え（取り込み先の id → アーカイブの id） */
+  readonly pendingRenames: UnifiedArchiveRenamedId[]
   readonly warnings: string[]
 }
 
@@ -109,14 +117,45 @@ const dropRow = (
   dropped.add(archiveId)
 }
 
-const renameAndRecord = async (
+/**
+ * 既存の行へ寄せたうえで、全ての表を書き終えた後にアーカイブの id へ付け替える予約をする
+ */
+const mapToExistingThenRename = (
   context: ArchiveImportContext,
   table: string,
-  fromId: string,
-  toId: string
-): Promise<void> => {
-  await renameTargetRow(context.target, table, fromId, toId, context.warnings)
-  context.renamedIds.push({ table, fromId, toId })
+  archiveId: string,
+  existingId: string
+): void => {
+  mapToExisting(context, table, archiveId, existingId)
+  context.pendingRenames.push({ table, fromId: existingId, toId: archiveId })
+}
+
+/**
+ * 予約した付け替えを行う。全ての表を取り込み先の id で書き終えてから呼ぶこと。
+ * 付け替えた行を参照する子（このアーカイブから書いた行を含む）の外部キーと埋め込みの id も
+ * 付け替わる（`renameTargetRow`）。写しも付け替え後の id へ直す
+ */
+export async function applyPendingRenames(
+  context: ArchiveImportContext
+): Promise<void> {
+  for (const rename of context.pendingRenames) {
+    await renameTargetRow(
+      context.target,
+      rename.table,
+      rename.fromId,
+      rename.toId,
+      context.warnings
+    )
+    context.renamedIds.push(rename)
+    for (const tableIdMap of Object.values(context.idMap)) {
+      for (const [archiveId, targetId] of Object.entries(tableIdMap)) {
+        if (targetId === rename.fromId) tableIdMap[archiveId] = rename.toId
+      }
+    }
+    for (const [oldId, newId] of context.newIdByOldId) {
+      if (newId === rename.fromId) context.newIdByOldId.set(oldId, rename.toId)
+    }
+  }
 }
 
 const conflictIdChoiceFor = (
@@ -167,11 +206,26 @@ export async function resolveArchiveTable(
   }
 
   // ── 2. 照合の決定を当てる ──────────────────────────────────
+  // 照合の候補を出した後に、同じ id の行が取り込み先に入ってくることがある（同期など）。
+  // id が一致すれば同じ行なので、その行には照合の決定を当てない
+  const decidedRows = remappedRows.filter(
+    (row) => decisions.matches?.[archiveRowKey(table, row.archiveId)]
+  )
+  const idMatchedRows =
+    decidedRows.length > 0
+      ? await fetchTargetRows(
+          target,
+          table,
+          decidedRows.map((row) => row.targetId)
+        )
+      : new Map<string, TargetRow>()
   const candidates: RemappedArchiveRow[] = []
   const matchedToExisting: RemappedArchiveRow[] = []
   const renamesByMatch: { row: RemappedArchiveRow; existingId: string }[] = []
   for (const row of remappedRows) {
-    const decision = decisions.matches?.[archiveRowKey(table, row.archiveId)]
+    const decision = idMatchedRows.has(row.targetId)
+      ? undefined
+      : decisions.matches?.[archiveRowKey(table, row.archiveId)]
     if (!decision || decision.kind === "new") {
       candidates.push(row)
     } else if (decision.kind === "skip") {
@@ -192,16 +246,13 @@ export async function resolveArchiveTable(
       })
     } else {
       renamesByMatch.push({ row, existingId: decision.existingId })
-      candidates.push(row)
+      candidates.push(withTargetId(row, decision.existingId))
     }
   }
   if (matchedToExisting.length > 0 || renamesByMatch.length > 0) {
     const presentRows = await fetchTargetRows(target, table, [
       ...matchedToExisting.map((row) => row.targetId),
-      ...renamesByMatch.flatMap(({ row, existingId }) => [
-        row.targetId,
-        existingId,
-      ]),
+      ...renamesByMatch.map(({ existingId }) => existingId),
     ])
     for (const row of matchedToExisting) {
       if (presentRows.has(row.targetId)) continue
@@ -217,14 +268,6 @@ export async function resolveArchiveTable(
       if (!presentRows.has(existingId)) {
         reasons.push({
           kind: "matchTargetMissing",
-          table,
-          columns: [],
-          archiveIds: [row.archiveId],
-          existingIds: [existingId],
-        })
-      } else if (presentRows.has(row.targetId)) {
-        reasons.push({
-          kind: "idTaken",
           table,
           columns: [],
           archiveIds: [row.archiveId],
@@ -268,7 +311,7 @@ export async function resolveArchiveTable(
     mapToExisting(context, table, row.archiveId, row.targetId)
   }
   for (const { row, existingId } of renamesByMatch) {
-    await renameAndRecord(context, table, existingId, row.targetId)
+    mapToExistingThenRename(context, table, row.archiveId, existingId)
   }
 
   // ── 3. id で引き、在る行は3択で決める ─────────────────────
@@ -360,7 +403,7 @@ export async function resolveArchiveTable(
         )
       : new Map()
   const conflicts: UnifiedArchiveUniqueConflict[] = []
-  const renamesByConflict: { fromId: string; toId: string }[] = []
+  const renamesByConflict: { archiveId: string; existingId: string }[] = []
   for (const { row, existingId, columns: conflictColumns } of conflictingRows) {
     if (!claim(existingId, row.archiveId)) continue
     const existingRow = collidedRows.get(existingId) ?? {}
@@ -391,12 +434,11 @@ export async function resolveArchiveTable(
       recordKeptFiles(kept, row.values, existingRow)
       continue
     }
-    const adopted =
-      resolution === "existing" ? withTargetId(row, existingId) : row
+    const adopted = withTargetId(row, existingId)
     if (resolution === "existing") {
       mapToExisting(context, table, row.archiveId, existingId)
     } else {
-      renamesByConflict.push({ fromId: existingId, toId: row.targetId })
+      renamesByConflict.push({ archiveId: row.archiveId, existingId })
     }
     const plan = planMatchedRow(
       table,
@@ -423,7 +465,7 @@ export async function resolveArchiveTable(
     return { plans: [], skipped, conflicts, keptFilePaths: [], reasons }
 
   for (const rename of renamesByConflict) {
-    await renameAndRecord(context, table, rename.fromId, rename.toId)
+    mapToExistingThenRename(context, table, rename.archiveId, rename.existingId)
   }
   return { plans, skipped, conflicts, keptFilePaths, reasons: [] }
 }

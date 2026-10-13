@@ -426,6 +426,11 @@ describe("統合アーカイブの取り込み", () => {
     // 新しい試験の配下は新しい試験を指し、共通の実体（生徒）は既存のまま
     const newExamId = plan.idMap.Exam?.[fixture.examA.exam.id]
     expect(newExamId).toBeDefined()
+    // 別の試験として作った試験の名前には、一覧で見分けるための番号が付く
+    expect(
+      (await prisma.exam.findUniqueOrThrow({ where: { id: newExamId } }))
+        .examName
+    ).toBe(`${fixture.examA.exam.examName} (2)`)
     const newExamStudents = await prisma.examStudent.findMany({
       where: { examId: newExamId },
     })

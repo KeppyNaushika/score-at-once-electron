@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
 import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
-import { studentOption } from "@/lib/searchKeywords"
+import { studentOptions } from "@/lib/searchKeywords"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   AnnotationTarget,
@@ -110,12 +110,18 @@ export function AnnotationBrowserPanel({
   const examStudentFilterOptions = useMemo(
     () => [
       { value: "all", label: "全生徒" },
-      ...uniqueExamStudents.map((examStudent) =>
-        // 匿名採点のあいだは仮の名前だけを出す（番号・かなで引けると名前が分かる）
-        isAnonymous
-          ? { value: examStudent.id, label: pseudonymOf(examStudent.id) }
-          : studentOption(examStudent.id, examStudent.student)
-      ),
+      // 匿名採点のあいだは仮の名前だけを出す（番号・かなで引けると名前が分かる）
+      ...(isAnonymous
+        ? uniqueExamStudents.map((examStudent) => ({
+            value: examStudent.id,
+            label: pseudonymOf(examStudent.id),
+          }))
+        : studentOptions(
+            uniqueExamStudents.map((examStudent) => ({
+              value: examStudent.id,
+              student: examStudent.student,
+            }))
+          )),
     ],
     [uniqueExamStudents, isAnonymous, pseudonymOf]
   )

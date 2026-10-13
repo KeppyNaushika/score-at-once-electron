@@ -5,6 +5,7 @@
 
 import type { UnifiedArchiveOpenErrorKind } from "@/electron-src/lib/import/unified-archive/archiveOpener"
 import type { UnifiedArchiveUnresolvableKind } from "@/electron-src/lib/import/unified-archive/archiveRowImporter"
+import { rowText } from "@/lib/matchRowText"
 
 /** 開けなかった理由（`unifiedArchive:open` の rejected） */
 export const ARCHIVE_REJECTION_MESSAGES: Record<
@@ -46,94 +47,9 @@ export const ARCHIVE_UNRESOLVABLE_MESSAGES: Record<
   replacementCollides: "置き換えると、このPCの別の行と同じ値になります。",
   duplicateInArchive:
     "紐づけの結果、アーカイブの中の複数の行が同じ値になります（紐づけの選び方を見直してください）。",
-  idTaken:
-    "付け替え先のアーカイブの id が、このPCで既に使われています（「このPCの id」を選んでください）。",
   matchTargetMissing: "紐づけ先に選んだ行が、このPCにありません。",
   renameInSeparate:
     "「別で追加する」では、このPCの行をアーカイブの id に付け替えられません。",
-}
-
-/** 生の行の1列を文字にする（文字でも数でもなければ空） */
-function rowText(
-  row: Readonly<Record<string, unknown>>,
-  column: string
-): string {
-  const columnValue = row[column]
-  if (typeof columnValue === "string") return columnValue
-  if (typeof columnValue === "number" || typeof columnValue === "bigint") {
-    return String(columnValue)
-  }
-  return ""
-}
-
-/** 照合の表（生徒・学級・小計グループ・利用者）の行の呼び名 */
-export function matchRowLabel(
-  table: string,
-  row: Readonly<Record<string, unknown>>
-): string {
-  switch (table) {
-    case "Student": {
-      const fullName = `${rowText(row, "lastName")} ${rowText(row, "firstName")}`
-      const studentNumber = rowText(row, "studentNumber")
-      return studentNumber ? `${fullName} (${studentNumber})` : fullName
-    }
-    case "User": {
-      const name = rowText(row, "name")
-      const username = rowText(row, "username")
-      return name === username || !username ? name : `${name}（${username}）`
-    }
-    default:
-      return rowText(row, "name")
-  }
-}
-
-/** 同じ名前の候補を見分けるための添え書き（生徒の読み、学級のコード・学年など） */
-export function matchRowDetail(
-  table: string,
-  row: Readonly<Record<string, unknown>>
-): string {
-  const parts = (() => {
-    switch (table) {
-      case "Student":
-        return [
-          `${rowText(row, "lastNameKana")} ${rowText(row, "firstNameKana")}`.trim(),
-        ]
-      case "Classroom": {
-        const grade = rowText(row, "grade")
-        return [
-          rowText(row, "classroomCode"),
-          grade ? `${grade}年` : "",
-          rowText(row, "description"),
-        ]
-      }
-      case "SubtotalGroup":
-        return [rowText(row, "description")]
-      default:
-        return []
-    }
-  })()
-  return parts.filter((part) => part !== "").join("・")
-}
-
-/** 照合の候補を選ぶ Combobox の絞り込み語（表示はしないが打てば引っかかる） */
-export function matchRowKeywords(
-  table: string,
-  row: Readonly<Record<string, unknown>>
-): string[] {
-  switch (table) {
-    case "Student":
-      return [
-        rowText(row, "studentNumber"),
-        `${rowText(row, "lastNameKana")} ${rowText(row, "firstNameKana")}`,
-        `${rowText(row, "lastNameKana")}${rowText(row, "firstNameKana")}`,
-      ]
-    case "Classroom":
-      return [rowText(row, "classroomCode"), rowText(row, "description")]
-    case "User":
-      return [rowText(row, "username")]
-    default:
-      return []
-  }
 }
 
 /** 照合で当たった鍵の説明（`matchedBy`） */

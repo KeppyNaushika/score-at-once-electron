@@ -120,6 +120,11 @@ interface MembershipImportCounts {
 /**
  * 学級所属データを処理
  *
+ * **id が一致すれば同じ所属**で、規則どおり値（生徒・学級を含む）を書く。id で無ければ、
+ * 同じ生徒・同じ学級・同じ開始日の所属を同じものとみなす（(生徒, 学級) は unique ではなく、
+ * 転出して戻った生徒は同じ組を期間違いで2行持つので、組だけでは引かない）。そのとき、
+ * アーカイブの別の所属が id で取った行は候補にしない。
+ *
  * 件数は実際に書いた結果で数える。既存の所属に当たった行は対応表に入るが作成には数えない
  * （対応表の大きさで数えると、作らなかった所属まで「作成」になる）。
  *
@@ -140,62 +145,72 @@ export async function processMemberships(
     unchanged: 0,
     skipped: 0,
   }
+  const archiveMembershipIds = new Set(
+    memberships.map((membership) => membership.id)
+  )
   for (const membership of memberships) {
     const newStudentId = idMappings.student[membership.studentId]
     const newClassroomId = idMappings.classroom[membership.classroomId]
+    if (!newStudentId || !newClassroomId) {
+      membershipCounts.skipped++
+      continue
+    }
 
-    if (newStudentId && newClassroomId) {
-      const existing = await tx.studentClassroomMembership.findFirst({
-        where: { studentId: newStudentId, classroomId: newClassroomId },
-      })
+    const startDate = new Date(membership.startDate)
+    const existingMembership =
+      (await tx.studentClassroomMembership.findUnique({
+        where: { id: membership.id },
+      })) ??
+      (await tx.studentClassroomMembership.findFirst({
+        where: {
+          studentId: newStudentId,
+          classroomId: newClassroomId,
+          startDate,
+          id: { notIn: [...archiveMembershipIds] },
+        },
+      }))
 
-      const existingMembership =
-        existing ??
-        (await tx.studentClassroomMembership.findUnique({
-          where: { id: membership.id },
-        }))
-
-      if (existingMembership) {
-        idMappings.membership[membership.id] = existingMembership.id
-        const updatedAt = replacementUpdatedAt(
-          policy,
-          membership.updatedAt,
-          existingMembership.updatedAt
-        )
-        if (updatedAt) {
-          await tx.studentClassroomMembership.update({
-            where: { id: existingMembership.id },
-            data: {
-              startDate: new Date(membership.startDate),
-              endDate: membership.endDate ? new Date(membership.endDate) : null,
-              attendanceNumber: membership.attendanceNumber,
-              notes: membership.notes,
-              updatedAt,
-            },
-          })
-          membershipCounts.updated++
-        } else {
-          membershipCounts.unchanged++
-        }
-      } else {
-        await tx.studentClassroomMembership.create({
+    if (existingMembership) {
+      idMappings.membership[membership.id] = existingMembership.id
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        membership.updatedAt,
+        existingMembership.updatedAt
+      )
+      if (updatedAt) {
+        await tx.studentClassroomMembership.update({
+          where: { id: existingMembership.id },
           data: {
-            id: membership.id,
             studentId: newStudentId,
             classroomId: newClassroomId,
-            startDate: new Date(membership.startDate),
+            startDate,
             endDate: membership.endDate ? new Date(membership.endDate) : null,
             attendanceNumber: membership.attendanceNumber,
             notes: membership.notes,
-            ...policy.createdTimestamps(membership),
+            updatedAt,
           },
         })
-        idMappings.membership[membership.id] = membership.id
-        membershipCounts.created++
+        membershipCounts.updated++
+      } else {
+        membershipCounts.unchanged++
       }
-    } else {
-      membershipCounts.skipped++
+      continue
     }
+
+    await tx.studentClassroomMembership.create({
+      data: {
+        id: membership.id,
+        studentId: newStudentId,
+        classroomId: newClassroomId,
+        startDate,
+        endDate: membership.endDate ? new Date(membership.endDate) : null,
+        attendanceNumber: membership.attendanceNumber,
+        notes: membership.notes,
+        ...policy.createdTimestamps(membership),
+      },
+    })
+    idMappings.membership[membership.id] = membership.id
+    membershipCounts.created++
   }
   return membershipCounts
 }

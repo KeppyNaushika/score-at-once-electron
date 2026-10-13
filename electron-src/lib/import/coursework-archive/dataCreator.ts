@@ -1,8 +1,13 @@
 /**
  * 試験外成績資料アーカイブの DB 反映（核心）
  *
- * - 外部参照（生徒/学級/タグ）は idRemapper で UUID 一次 + 名前マッチング解決。
- * - 資料本体は UUID 一次照合（decision 未指定）/ ユーザー判断（reuse/new）で流用 or 新規。
+ * - 外部参照（生徒/学級/タグ）は idRemapper で id 一次 + 名前マッチング解決。
+ * - **id が一致すれば同じ行。** 資料本体・評価項目・変換表・名簿・学級・タグの結び付き・点数の
+ *   どれも、まずアーカイブの id で取り込み先を引き、在れば同じ行として規則どおり値を書く。
+ *   資料は id が無いときだけ人の判断（既存の資料に取り込む / 新規）を当てる。新しく作る行は
+ *   アーカイブの id で作る（旧形式の合成 id は使わない）。
+ * - 既存の資料に取り込み「アーカイブの id に合わせる」を選んだ資料は、全てを取り込み先の
+ *   id で書き終えてから、資料の id をアーカイブの id へ付け替える（archiveIdRenamer）。
  * - 値の扱いは merge/importValuePolicy に一本化されている（上書きする / 統合する /
  *   別で追加する）。資料本体・評価項目・変換表・名簿・点数のどれも同じ規則で決まる。
  *
@@ -13,7 +18,6 @@
  */
 
 import type { Prisma } from "@prisma/client"
-import * as crypto from "crypto"
 
 import type {
   ArchiveCourseworkItemRow,
@@ -31,6 +35,9 @@ import {
   reorderCourseworkItems,
   reorderCourseworkStudents,
 } from "../merge/reorderAfterImport"
+import { isUuid, writeIdFirstRow } from "../shared/idFirstRow"
+import { renameTargetRow } from "../unified-archive/archiveIdRenamer"
+import { prismaArchiveTarget } from "../unified-archive/archiveRowImporter"
 import {
   resolveClassrooms,
   resolveStudents,
@@ -142,18 +149,23 @@ export async function importCourseworkData(
   const students = await resolveStudents(tx, data.studentsData, {
     method,
     allowCreate,
+    policy,
   })
   warnings.push(...students.warnings)
-  const classes = await resolveClassrooms(tx, data.classesData, { allowCreate })
+  const classes = await resolveClassrooms(tx, data.classesData, {
+    allowCreate,
+    policy,
+  })
   warnings.push(...classes.warnings)
-  const tagMap = await resolveTags(tx, data.tagsData)
+  const tagMap = await resolveTags(tx, data.tagsData, policy)
   if (allowCreate) {
     await restoreMemberships(
       tx,
       data.membershipsData,
       students.map,
       classes.map,
-      students.createdIds
+      students.createdIds,
+      policy
     )
   }
 
@@ -212,14 +224,7 @@ export async function importCourseworkData(
         }
         continue
       }
-      const existing = await tx.courseworkScore.findUnique({
-        where: {
-          courseworkItemId_courseworkStudentId: {
-            courseworkItemId,
-            courseworkStudentId,
-          },
-        },
-      })
+      const cellKey = { courseworkItemId, courseworkStudentId }
       const payload = {
         score: archiveScore.score,
         letterValue: archiveScore.letterValue,
@@ -227,28 +232,30 @@ export async function importCourseworkData(
         adjustmentReason: archiveScore.adjustmentReason,
         comment: archiveScore.comment,
       }
-      if (existing) {
-        const updatedAt = replacementUpdatedAt(
-          policy,
-          archiveScore.updatedAt,
-          existing.updatedAt
-        )
-        if (updatedAt) {
-          await tx.courseworkScore.update({
+      await writeIdFirstRow({
+        archiveId: archiveScore.id,
+        archiveUpdatedAt: archiveScore.updatedAt,
+        policy,
+        findById: (id) => tx.courseworkScore.findUnique({ where: { id } }),
+        findByKey: () =>
+          tx.courseworkScore.findUnique({
+            where: { courseworkItemId_courseworkStudentId: cellKey },
+          }),
+        create: (id) =>
+          tx.courseworkScore.create({
+            data: {
+              ...(id ? { id } : {}),
+              ...cellKey,
+              ...payload,
+              ...policy.createdTimestamps(archiveScore),
+            },
+          }),
+        update: (existing, updatedAt, writeKey) =>
+          tx.courseworkScore.update({
             where: { id: existing.id },
-            data: { ...payload, updatedAt },
-          })
-        }
-      } else {
-        await tx.courseworkScore.create({
-          data: {
-            courseworkItemId,
-            courseworkStudentId,
-            ...payload,
-            ...policy.createdTimestamps(archiveScore),
-          },
-        })
-      }
+            data: { ...(writeKey ? cellKey : {}), ...payload, updatedAt },
+          }),
+      })
     }
     return skipped
   }
@@ -288,98 +295,108 @@ export async function importCourseworkData(
     })
   }
 
-  /** 評価項目を作成（変換表も投入）し実 ID を返す */
-  const createItem = async (
-    courseworkId: string,
-    itemId: string | undefined,
-    item: ArchiveCourseworkItemRow
-  ): Promise<string> => {
-    const letterScales = letterScalesByItem.get(item.id) ?? []
-    const created = await tx.courseworkItem.create({
-      data: {
-        ...(itemId ? { id: itemId } : {}),
-        courseworkId,
-        name: item.name,
-        order: item.order,
-        maxScore: item.maxScore,
-        inputMode: item.inputMode || "numeric",
-        ...(letterScales.length > 0 && {
-          letterScales: {
-            create: letterScales.map((letterScale) => ({
-              label: letterScale.label,
-              score: letterScale.score,
-              order: letterScale.order,
-              ...policy.createdTimestamps(letterScale),
-            })),
-          },
-        }),
-        ...policy.createdTimestamps(item),
-      },
-    })
-    return created.id
-  }
-
   /**
-   * 既にある評価項目の列を規則に従って書き換える。
-   *
-   * CourseworkItem の列は id / courseworkId / name / order / maxScore / inputMode /
-   * createdAt / updatedAt で全部。**変換表（letterScales）はこの項目の持ち物の集合**
-   * なので、行ごとではなく項目ごと入れ替える（行ごとに当てると増減したときに
-   * 古い記号が残り、半分古い表ができる）。
-   *
-   * 並び順（order）を書き換えたかどうかを返す。呼ぶ側が最後の詰め直しの要否を決める。
+   * 評価項目の変換表を、アーカイブの変換表で入れ替える（変換表は項目の持ち物の集合なので、
+   * 行ごとではなく項目ごと入れ替える。行ごとに当てると増減したときに古い記号が残る）。
+   * アーカイブの記号の id が取り込み先の別の項目の下に在れば、それは同じ行なので、
+   * この項目へ移して値を書く
    */
-  const applyItemColumns = async (
+  const replaceLetterScales = async (
     courseworkItemId: string,
-    item: ArchiveCourseworkItemRow
-  ): Promise<boolean> => {
-    const existing = await tx.courseworkItem.findUnique({
-      where: { id: courseworkItemId },
-    })
-    if (!existing) return false
-
-    const updatedAt = replacementUpdatedAt(
-      policy,
-      item.updatedAt,
-      existing.updatedAt
-    )
-    if (!updatedAt) return false
-
-    await tx.courseworkItem.update({
-      where: { id: courseworkItemId },
-      data: {
-        name: item.name,
-        // 並び順は取り込みの最後に詰め直す（列全体の性質なので行ごとには決められない）
-        order: item.order,
-        maxScore: item.maxScore,
-        inputMode: item.inputMode || "numeric",
-        updatedAt,
-      },
-    })
-
-    await tx.courseworkLetterScale.deleteMany({
-      where: { courseworkItemId },
-    })
-    for (const letterScale of letterScalesByItem.get(item.id) ?? []) {
+    archiveItemId: string
+  ): Promise<void> => {
+    await tx.courseworkLetterScale.deleteMany({ where: { courseworkItemId } })
+    for (const letterScale of letterScalesByItem.get(archiveItemId) ?? []) {
+      const values = {
+        courseworkItemId,
+        label: letterScale.label,
+        score: letterScale.score,
+        order: letterScale.order,
+      }
+      const byId = isUuid(letterScale.id)
+        ? await tx.courseworkLetterScale.findUnique({
+            where: { id: letterScale.id },
+          })
+        : null
+      if (byId) {
+        await tx.courseworkLetterScale.update({
+          where: { id: byId.id },
+          data: {
+            ...values,
+            updatedAt: policy.replacedUpdatedAt(
+              new Date(letterScale.updatedAt)
+            ),
+          },
+        })
+        continue
+      }
       await tx.courseworkLetterScale.create({
         data: {
-          courseworkItemId,
-          label: letterScale.label,
-          score: letterScale.score,
-          order: letterScale.order,
+          ...(isUuid(letterScale.id) ? { id: letterScale.id } : {}),
+          ...values,
           ...policy.createdTimestamps(letterScale),
         },
       })
     }
-    return true
+  }
+
+  /**
+   * 評価項目を1つ書き、取り込み先の id を返す。
+   *
+   * CourseworkItem の列は id / courseworkId / name / order / maxScore / inputMode /
+   * createdAt / updatedAt で全部。id が一致すれば同じ項目（親の資料も書く）。
+   * id で無ければ `sameNameItemId`（既存の資料に取り込むとき、名前で当たった項目）へ寄せ、
+   * それも無ければアーカイブの id で作る。
+   */
+  const writeItem = async (
+    courseworkId: string,
+    item: ArchiveCourseworkItemRow,
+    sameNameItemId: string | undefined
+  ): Promise<string> => {
+    const values = {
+      courseworkId,
+      name: item.name,
+      // 並び順は取り込みの最後に詰め直す（列全体の性質なので行ごとには決められない）
+      order: item.order,
+      maxScore: item.maxScore,
+      inputMode: item.inputMode || "numeric",
+    }
+    const written = await writeIdFirstRow({
+      archiveId: item.id,
+      archiveUpdatedAt: item.updatedAt,
+      policy,
+      findById: (id) => tx.courseworkItem.findUnique({ where: { id } }),
+      findByKey: async () =>
+        sameNameItemId
+          ? tx.courseworkItem.findUnique({ where: { id: sameNameItemId } })
+          : null,
+      create: (id) =>
+        tx.courseworkItem.create({
+          data: {
+            ...(id ? { id } : {}),
+            ...values,
+            ...policy.createdTimestamps(item),
+          },
+        }),
+      update: (existing, updatedAt) =>
+        tx.courseworkItem.update({
+          where: { id: existing.id },
+          data: { ...values, updatedAt },
+        }),
+    })
+    if (written.kind !== "kept") {
+      await replaceLetterScales(written.targetId, item.id)
+      courseworkIdsWithItemOrderWritten.add(courseworkId)
+    }
+    return written.targetId
   }
 
   /**
    * 学級・タグ・名簿の join を冪等に張り、点数の書き込み先となる名簿
    * （アーカイブの CourseworkStudent.id → 取り込み先の CourseworkStudent.id）を返す。
    *
-   * 名簿行の id は取り込み先で新しく採番する。結合行そのものに外部から参照される
-   * 意味は無く、旧アーカイブ由来の id は uuid ですらないため。
+   * どの結び付きも id が一致すれば同じ行、無ければ一意キー（資料と学級など）で引き、
+   * それも無ければアーカイブの id で作る（旧形式の合成 id は使わない）。
    */
   const ensureJoins = async (
     courseworkId: string,
@@ -390,32 +407,37 @@ export async function importCourseworkData(
     ) ?? []) {
       const classroomId = classes.map.get(classroomRef.classroomId)
       if (!classroomId) continue
-      const exists = await tx.courseworkClassroom.findUnique({
-        where: { courseworkId_classroomId: { courseworkId, classroomId } },
-      })
-      if (exists) {
-        const updatedAt = replacementUpdatedAt(
-          policy,
-          classroomRef.updatedAt,
-          exists.updatedAt
-        )
-        if (updatedAt) {
-          await tx.courseworkClassroom.update({
-            where: { id: exists.id },
+      const pairKey = { courseworkId, classroomId }
+      const written = await writeIdFirstRow({
+        archiveId: classroomRef.id,
+        archiveUpdatedAt: classroomRef.updatedAt,
+        policy,
+        findById: (id) => tx.courseworkClassroom.findUnique({ where: { id } }),
+        findByKey: () =>
+          tx.courseworkClassroom.findUnique({
+            where: { courseworkId_classroomId: pairKey },
+          }),
+        create: (id) =>
+          tx.courseworkClassroom.create({
+            data: {
+              ...(id ? { id } : {}),
+              ...pairKey,
+              order: classroomRef.order,
+              ...policy.createdTimestamps(classroomRef),
+            },
+          }),
+        update: (existing, updatedAt, writeKey) =>
+          tx.courseworkClassroom.update({
+            where: { id: existing.id },
             // 並び順は取り込みの最後に詰め直す
-            data: { order: classroomRef.order, updatedAt },
-          })
-          courseworkIdsWithClassroomOrderWritten.add(courseworkId)
-        }
-      } else {
-        await tx.courseworkClassroom.create({
-          data: {
-            courseworkId,
-            classroomId,
-            order: classroomRef.order,
-            ...policy.createdTimestamps(classroomRef),
-          },
-        })
+            data: {
+              ...(writeKey ? pairKey : {}),
+              order: classroomRef.order,
+              updatedAt,
+            },
+          }),
+      })
+      if (written.kind !== "kept") {
         courseworkIdsWithClassroomOrderWritten.add(courseworkId)
       }
     }
@@ -423,18 +445,30 @@ export async function importCourseworkData(
     for (const tagRef of tagsByCoursework.get(archiveCourseworkId) ?? []) {
       const tagId = tagMap.get(tagRef.tagId)
       if (!tagId) continue
-      const exists = await tx.courseworkTag.findUnique({
-        where: { courseworkId_tagId: { courseworkId, tagId } },
+      const pairKey = { courseworkId, tagId }
+      await writeIdFirstRow({
+        archiveId: tagRef.id,
+        archiveUpdatedAt: tagRef.updatedAt,
+        policy,
+        findById: (id) => tx.courseworkTag.findUnique({ where: { id } }),
+        findByKey: () =>
+          tx.courseworkTag.findUnique({
+            where: { courseworkId_tagId: pairKey },
+          }),
+        create: (id) =>
+          tx.courseworkTag.create({
+            data: {
+              ...(id ? { id } : {}),
+              ...pairKey,
+              ...policy.createdTimestamps(tagRef),
+            },
+          }),
+        update: (existing, updatedAt, writeKey) =>
+          tx.courseworkTag.update({
+            where: { id: existing.id },
+            data: { ...(writeKey ? pairKey : {}), updatedAt },
+          }),
       })
-      if (!exists) {
-        await tx.courseworkTag.create({
-          data: {
-            courseworkId,
-            tagId,
-            ...policy.createdTimestamps(tagRef),
-          },
-        })
-      }
     }
 
     /** アーカイブの対象者 id → 取り込み先の生徒 id（この後 DB の名簿と突き合わせる） */
@@ -449,32 +483,37 @@ export async function importCourseworkData(
         continue
       }
       archiveStudentIdByCourseworkStudent.set(studentRef.id, studentId)
-      const exists = await tx.courseworkStudent.findUnique({
-        where: { courseworkId_studentId: { courseworkId, studentId } },
-      })
-      if (exists) {
-        const updatedAt = replacementUpdatedAt(
-          policy,
-          studentRef.updatedAt,
-          exists.updatedAt
-        )
-        if (updatedAt) {
-          await tx.courseworkStudent.update({
-            where: { id: exists.id },
+      const pairKey = { courseworkId, studentId }
+      const written = await writeIdFirstRow({
+        archiveId: studentRef.id,
+        archiveUpdatedAt: studentRef.updatedAt,
+        policy,
+        findById: (id) => tx.courseworkStudent.findUnique({ where: { id } }),
+        findByKey: () =>
+          tx.courseworkStudent.findUnique({
+            where: { courseworkId_studentId: pairKey },
+          }),
+        create: (id) =>
+          tx.courseworkStudent.create({
+            data: {
+              ...(id ? { id } : {}),
+              ...pairKey,
+              customOrder: studentRef.customOrder,
+              ...policy.createdTimestamps(studentRef),
+            },
+          }),
+        update: (existing, updatedAt, writeKey) =>
+          tx.courseworkStudent.update({
+            where: { id: existing.id },
             // 並び順は取り込みの最後に詰め直す
-            data: { customOrder: studentRef.customOrder, updatedAt },
-          })
-          courseworkIdsWithStudentOrderWritten.add(courseworkId)
-        }
-      } else {
-        await tx.courseworkStudent.create({
-          data: {
-            courseworkId,
-            studentId,
-            customOrder: studentRef.customOrder,
-            ...policy.createdTimestamps(studentRef),
-          },
-        })
+            data: {
+              ...(writeKey ? pairKey : {}),
+              customOrder: studentRef.customOrder,
+              updatedAt,
+            },
+          }),
+      })
+      if (written.kind !== "kept") {
         courseworkIdsWithStudentOrderWritten.add(courseworkId)
       }
     }
@@ -505,29 +544,35 @@ export async function importCourseworkData(
     return { byArchiveId, unresolvedArchiveIds }
   }
 
-  /** 資料1件の評価項目と点数を取り込む。書き込めなかった点数の件数を返す */
+  /**
+   * 資料1件の評価項目と点数を取り込む。書き込めなかった点数の件数を返す。
+   *
+   * `existingItems` は既存の資料に取り込むときの、その資料の項目。id で一致しなかった項目は
+   * 名前で寄せる（同じ名前が複数あればいちばん古いもの）。アーカイブの別の項目が id で取った
+   * 項目と、この取り込みで既に寄せた項目は候補にしない
+   */
   const importItems = async (
     coursework: ArchiveCourseworkRow,
     courseworkId: string,
     roster: CourseworkRoster,
-    existingItemIdByName: Map<string, string>,
-    preserveUuids: boolean
+    existingItems: { id: string; name: string; createdAt: Date }[]
   ): Promise<SkippedScoreCounts> => {
     const skipped: SkippedScoreCounts = { orphaned: 0, unresolved: 0 }
+    const archiveItemIds = new Set(data.courseworkItems.map((item) => item.id))
+    const claimedItemIds = new Set<string>()
     for (const item of itemsByCoursework.get(coursework.id) ?? []) {
-      let actualItemId = existingItemIdByName.get(item.name)
-      if (actualItemId) {
-        if (await applyItemColumns(actualItemId, item)) {
-          courseworkIdsWithItemOrderWritten.add(courseworkId)
-        }
-      } else {
-        actualItemId = await createItem(
-          courseworkId,
-          preserveUuids ? item.id : crypto.randomUUID(),
-          item
+      const sameNameItem = [...existingItems]
+        .filter(
+          (existingItem) =>
+            existingItem.name === item.name &&
+            !archiveItemIds.has(existingItem.id) &&
+            !claimedItemIds.has(existingItem.id)
         )
-        courseworkIdsWithItemOrderWritten.add(courseworkId)
-      }
+        .sort(
+          (left, right) => left.createdAt.getTime() - right.createdAt.getTime()
+        )[0]
+      const actualItemId = await writeItem(courseworkId, item, sameNameItem?.id)
+      claimedItemIds.add(actualItemId)
       const itemSkipped = await upsertScores(item.id, actualItemId, roster)
       skipped.orphaned += itemSkipped.orphaned
       skipped.unresolved += itemSkipped.unresolved
@@ -536,10 +581,17 @@ export async function importCourseworkData(
     return skipped
   }
 
+  /** 全て書き終えてから、取り込み先の資料の id をアーカイブの id へ付け替える予約 */
+  const pendingRenames: { fromId: string; toId: string }[] = []
+
   // 2. 資料本体
   for (const coursework of data.courseworks) {
-    const decision = decisions[coursework.id]
-    let reuseId: string | null = null
+    // id が一致すれば同じ資料（人の判断は見ない）
+    const idMatch = isUuid(coursework.id)
+      ? await tx.coursework.findUnique({ where: { id: coursework.id } })
+      : null
+    const decision = idMatch ? undefined : decisions[coursework.id]
+    let reuseId: string | null = idMatch?.id ?? null
 
     if (decision?.action === "reuse") {
       const exists = await tx.coursework.findUnique({
@@ -550,45 +602,30 @@ export async function importCourseworkData(
         warnings.push(
           `試験外成績資料「${coursework.name}」: 指定された取り込み先が見つからないため新規作成しました`
         )
+      } else if (decision.adoptId === "archive" && isUuid(coursework.id)) {
+        pendingRenames.push({ fromId: reuseId, toId: coursework.id })
       }
-    } else if (!decision) {
-      const uuidMatch = await tx.coursework.findUnique({
-        where: { id: coursework.id },
-      })
-      reuseId = uuidMatch?.id ?? null
     }
 
     if (reuseId) {
-      // 既存資料へ: 名簿/学級/タグの不足を補い、項目は名前で突合。
+      // 既存資料へ: 名簿/学級/タグの不足を補い、項目は id → 名前で突合。
       // 値を置き換えるかどうかは取り込みの方針が決める
       await applyCourseworkColumns(reuseId, coursework)
       const roster = await ensureJoins(reuseId, coursework.id)
-      const existing = await tx.coursework.findUnique({
-        where: { id: reuseId },
-        include: { items: true },
+      const existingItems = await tx.courseworkItem.findMany({
+        where: { courseworkId: reuseId },
       })
-      const existingItemIdByName = new Map(
-        (existing?.items ?? []).map((item) => [item.name, item.id])
-      )
       warnSkippedScores(
         coursework.name,
-        await importItems(
-          coursework,
-          reuseId,
-          roster,
-          existingItemIdByName,
-          false
-        )
+        await importItems(coursework, reuseId, roster, existingItems)
       )
       continue
     }
 
-    // 新規作成。decision 未指定（uuid 不一致の初回取込）のみ元 uuid を保持して冪等化。
-    const preserveUuids = !decision
-    const newCourseworkId = preserveUuids ? coursework.id : crypto.randomUUID()
+    // 新規作成。アーカイブの id で作る（旧形式の合成 id のときだけ取り込み先で振る）
     const created = await tx.coursework.create({
       data: {
-        id: newCourseworkId,
+        ...(isUuid(coursework.id) ? { id: coursework.id } : {}),
         name: coursework.name,
         description: coursework.description,
         referenceDate: coursework.referenceDate
@@ -601,13 +638,7 @@ export async function importCourseworkData(
     const roster = await ensureJoins(created.id, coursework.id)
     warnSkippedScores(
       coursework.name,
-      await importItems(
-        coursework,
-        created.id,
-        roster,
-        new Map(),
-        preserveUuids
-      )
+      await importItems(coursework, created.id, roster, [])
     )
   }
 
@@ -620,6 +651,28 @@ export async function importCourseworkData(
   }
   for (const courseworkId of courseworkIdsWithClassroomOrderWritten) {
     await reorderCourseworkClassrooms(courseworkId, tx)
+  }
+
+  // 「アーカイブの id に合わせる」を選んだ資料は、ここまで取り込み先の id で書いてある。
+  // 最後に id だけを変える（資料を参照する行の外部キーも付け替わる）
+  if (pendingRenames.length > 0) {
+    const target = prismaArchiveTarget(tx)
+    await target.execute("PRAGMA defer_foreign_keys = ON", [])
+    for (const rename of pendingRenames) {
+      if (await tx.coursework.findUnique({ where: { id: rename.toId } })) {
+        warnings.push(
+          `アーカイブの資料の id（${rename.toId}）が既に使われているため、このPCの id のままにしました`
+        )
+        continue
+      }
+      await renameTargetRow(
+        target,
+        "Coursework",
+        rename.fromId,
+        rename.toId,
+        warnings
+      )
+    }
   }
 
   return { createdCourseworkIds, itemIdMap, warnings }

@@ -27,7 +27,7 @@ import { useScoredAnswerPreview } from "@/components/exams/09-export/hooks/useSc
 import { toStudentExportPlacements } from "@/components/exams/09-export/utils/studentExportPlacements"
 import { Spinner } from "@/components/ui/spinner"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
-import { studentOption } from "@/lib/searchKeywords"
+import { studentOptions } from "@/lib/searchKeywords"
 import { examWorkflowSteps, workflowStepHref } from "@/lib/shared/workflowSteps"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import {
@@ -197,9 +197,14 @@ export default function ExportMainView() {
 
   // プレビュー用の生徒リスト
   const previewStudentList = useMemo(() => {
-    return students
-      .filter((examStudent) => selectedStudents.has(examStudent.id))
-      .map((examStudent) => studentOption(examStudent.id, examStudent.student))
+    return studentOptions(
+      students
+        .filter((examStudent) => selectedStudents.has(examStudent.id))
+        .map((examStudent) => ({
+          value: examStudent.id,
+          student: examStudent.student,
+        }))
+    )
   }, [students, selectedStudents])
 
   // 採点済み答案プレビュー

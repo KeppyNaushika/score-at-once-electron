@@ -14,7 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { dateSearchKeywords } from "@/lib/searchKeywords"
+import {
+  dateSearchKeywords,
+  withDuplicateLabelDetails,
+} from "@/lib/searchKeywords"
 import { GRADE_DATA_SOURCE_TYPE_LABEL } from "@/lib/shared/gradeReferenceMessages"
 import {
   type CourseworkCandidate,
@@ -289,9 +292,19 @@ export function AddDataSourceInline({
                 <SelectValue placeholder="小計点グループ" />
               </SelectTrigger>
               <SelectContent>
-                {subtotalGroups.map((subtotalGroup) => (
-                  <SelectItem key={subtotalGroup.id} value={subtotalGroup.id}>
-                    {subtotalGroup.name}
+                {withDuplicateLabelDetails(
+                  subtotalGroups.map((subtotalGroup) => ({
+                    value: subtotalGroup.id,
+                    label: subtotalGroup.name,
+                    // 同じ名前のグループは項目の構成で見分ける
+                    detail: subtotalGroup.subtotals
+                      .map((subtotal) => subtotal.name)
+                      .join("・"),
+                  })),
+                  (option) => option.detail
+                ).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -305,9 +318,17 @@ export function AddDataSourceInline({
                   <SelectValue placeholder="小計項目" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedSubtotals.map((subtotal) => (
-                    <SelectItem key={subtotal.id} value={subtotal.id}>
-                      {subtotal.name}
+                  {withDuplicateLabelDetails(
+                    selectedSubtotals.map((subtotal, position) => ({
+                      value: subtotal.id,
+                      label: subtotal.name,
+                      // 同じ名前の項目は並び順で見分ける
+                      detail: `${position + 1}番目`,
+                    })),
+                    (option) => option.detail
+                  ).map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

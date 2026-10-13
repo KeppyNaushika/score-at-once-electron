@@ -8,6 +8,10 @@
  * 既にある行を置き換えるかどうかも、新しく作る行の時刻も、この規則だけで決まる。
  * かつては「既にあれば触らない」で一律にスキップしていたため、書き出した側で直した
  * 出力設定が、取り込んでも黙って古いままだった。
+ *
+ * **id が一致すれば同じ行。** どの表もまずアーカイブの id で引き、無ければ一意キー
+ * （試験＋種類など）で引き、それも無ければアーカイブの id で作る。id で当たった行の親（試験）と
+ * 種類は、別の行と一意キーが重なるときだけ変えずに残す。
  */
 
 import { convertOverlayRowToMm } from "../../prisma/answerOverlayLengthConversion"
@@ -53,14 +57,14 @@ export async function processExamExportSettings(
       color: style.color,
       opacity: style.opacity,
     }
-    const existing = await tx.examAnswerOverlayStyle.findUnique({
-      where: {
-        examId_overlayKind: {
-          examId: newExamId,
-          overlayKind: style.overlayKind,
-        },
-      },
+    const key = { examId: newExamId, overlayKind: style.overlayKind }
+    const byKey = await tx.examAnswerOverlayStyle.findUnique({
+      where: { examId_overlayKind: key },
     })
+    const existing =
+      (await tx.examAnswerOverlayStyle.findUnique({
+        where: { id: style.id },
+      })) ?? byKey
     if (existing) {
       const updatedAt = replacementUpdatedAt(
         policy,
@@ -70,13 +74,14 @@ export async function processExamExportSettings(
       if (updatedAt) {
         await tx.examAnswerOverlayStyle.update({
           where: { id: existing.id },
-          data: { ...values, updatedAt },
+          data: { ...(byKey ? {} : key), ...values, updatedAt },
         })
       }
       continue
     }
     await tx.examAnswerOverlayStyle.create({
       data: {
+        id: style.id,
         examId: newExamId,
         overlayKind: style.overlayKind,
         ...values,
@@ -90,11 +95,14 @@ export async function processExamExportSettings(
       showMark: visibility.showMark,
       showScore: visibility.showScore,
     }
-    const existing = await tx.examAnswerOverlayVisibility.findUnique({
-      where: {
-        examId_status: { examId: newExamId, status: visibility.status },
-      },
+    const key = { examId: newExamId, status: visibility.status }
+    const byKey = await tx.examAnswerOverlayVisibility.findUnique({
+      where: { examId_status: key },
     })
+    const existing =
+      (await tx.examAnswerOverlayVisibility.findUnique({
+        where: { id: visibility.id },
+      })) ?? byKey
     if (existing) {
       const updatedAt = replacementUpdatedAt(
         policy,
@@ -104,13 +112,14 @@ export async function processExamExportSettings(
       if (updatedAt) {
         await tx.examAnswerOverlayVisibility.update({
           where: { id: existing.id },
-          data: { ...values, updatedAt },
+          data: { ...(byKey ? {} : key), ...values, updatedAt },
         })
       }
       continue
     }
     await tx.examAnswerOverlayVisibility.create({
       data: {
+        id: visibility.id,
         examId: newExamId,
         status: visibility.status,
         ...values,
@@ -133,9 +142,13 @@ export async function processExamExportSettings(
     void _createdAt
     void _updatedAt
 
-    const existing = await tx.examIndividualReportSettings.findUnique({
+    const byKey = await tx.examIndividualReportSettings.findUnique({
       where: { examId: newExamId },
     })
+    const existing =
+      (await tx.examIndividualReportSettings.findUnique({
+        where: { id: reportSettings.id },
+      })) ?? byKey
     if (existing) {
       const updatedAt = replacementUpdatedAt(
         policy,
@@ -145,12 +158,17 @@ export async function processExamExportSettings(
       if (updatedAt) {
         await tx.examIndividualReportSettings.update({
           where: { id: existing.id },
-          data: { ...values, updatedAt },
+          data: {
+            ...(byKey ? {} : { examId: newExamId }),
+            ...values,
+            updatedAt,
+          },
         })
       }
     } else {
       await tx.examIndividualReportSettings.create({
         data: {
+          id: reportSettings.id,
           examId: newExamId,
           ...values,
           ...policy.createdTimestamps(reportSettings),
@@ -165,14 +183,14 @@ export async function processExamExportSettings(
       columns: section.columns,
       fontSize: section.fontSize,
     }
-    const existing = await tx.examIndividualReportTableSection.findUnique({
-      where: {
-        examId_tableKind: {
-          examId: newExamId,
-          tableKind: section.tableKind,
-        },
-      },
+    const key = { examId: newExamId, tableKind: section.tableKind }
+    const byKey = await tx.examIndividualReportTableSection.findUnique({
+      where: { examId_tableKind: key },
     })
+    const existing =
+      (await tx.examIndividualReportTableSection.findUnique({
+        where: { id: section.id },
+      })) ?? byKey
     if (existing) {
       const updatedAt = replacementUpdatedAt(
         policy,
@@ -182,13 +200,14 @@ export async function processExamExportSettings(
       if (updatedAt) {
         await tx.examIndividualReportTableSection.update({
           where: { id: existing.id },
-          data: { ...values, updatedAt },
+          data: { ...(byKey ? {} : key), ...values, updatedAt },
         })
       }
       continue
     }
     await tx.examIndividualReportTableSection.create({
       data: {
+        id: section.id,
         examId: newExamId,
         tableKind: section.tableKind,
         ...values,
@@ -199,16 +218,18 @@ export async function processExamExportSettings(
 
   for (const visibility of examData.individualReportStatisticVisibilities ??
     []) {
+    const key = {
+      examId: newExamId,
+      statisticKind: visibility.statisticKind,
+      scope: visibility.scope,
+    }
+    const byKey = await tx.examIndividualReportStatisticVisibility.findUnique({
+      where: { examId_statisticKind_scope: key },
+    })
     const existing =
-      await tx.examIndividualReportStatisticVisibility.findUnique({
-        where: {
-          examId_statisticKind_scope: {
-            examId: newExamId,
-            statisticKind: visibility.statisticKind,
-            scope: visibility.scope,
-          },
-        },
-      })
+      (await tx.examIndividualReportStatisticVisibility.findUnique({
+        where: { id: visibility.id },
+      })) ?? byKey
     if (existing) {
       const updatedAt = replacementUpdatedAt(
         policy,
@@ -218,13 +239,14 @@ export async function processExamExportSettings(
       if (updatedAt) {
         await tx.examIndividualReportStatisticVisibility.update({
           where: { id: existing.id },
-          data: { shown: visibility.shown, updatedAt },
+          data: { ...(byKey ? {} : key), shown: visibility.shown, updatedAt },
         })
       }
       continue
     }
     await tx.examIndividualReportStatisticVisibility.create({
       data: {
+        id: visibility.id,
         examId: newExamId,
         statisticKind: visibility.statisticKind,
         scope: visibility.scope,
@@ -248,9 +270,13 @@ export async function processExamExportSettings(
     void _createdAt
     void _updatedAt
 
-    const existing = await tx.examIndividualReportGraphSettings.findUnique({
+    const byKey = await tx.examIndividualReportGraphSettings.findUnique({
       where: { examId: newExamId },
     })
+    const existing =
+      (await tx.examIndividualReportGraphSettings.findUnique({
+        where: { id: graphSettings.id },
+      })) ?? byKey
     if (existing) {
       const updatedAt = replacementUpdatedAt(
         policy,
@@ -260,12 +286,17 @@ export async function processExamExportSettings(
       if (updatedAt) {
         await tx.examIndividualReportGraphSettings.update({
           where: { id: existing.id },
-          data: { ...values, updatedAt },
+          data: {
+            ...(byKey ? {} : { examId: newExamId }),
+            ...values,
+            updatedAt,
+          },
         })
       }
     } else {
       await tx.examIndividualReportGraphSettings.create({
         data: {
+          id: graphSettings.id,
           examId: newExamId,
           ...values,
           ...policy.createdTimestamps(graphSettings),

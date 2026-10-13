@@ -178,20 +178,33 @@ subtotals.json  scores.json  tags.json  master-images/  answer-sheets/
 | `matcher.ts` ／ `matchers/`           | 事前照合（生徒: uuid → 学籍番号 → 氏名、学級: uuid → 名前 → `classroomCode`、小計グループ: uuid → 名前、利用者: uuid → `username`） |
 | `idIntegrationImporter.ts`            | **Stage 1**。単一トランザクションで全部入れる（`executeIdIntegrationImport`）                                                       |
 | `processors/`                         | 生徒・学級・小計点グループの id 統合（新規作成／既存紐づけ／ID 変更予約）                                                           |
-| `idChangeExecutor.ts`                 | **Stage 2**。ID 変更（複製 → FK 更新 → 旧レコード削除）                                                                             |
+| `idChangeExecutor.ts`                 | **Stage 2**。ID 変更。全て書き終えてから、統合版と同じ `archiveIdRenamer` で行と子の外部キーを `UPDATE` で付け替える                |
 | `importExamCore.ts` ほか `import*.ts` | 試験骨格・付随データ・小計・採点層・同期記録の投入                                                                                  |
 | `imageImporter.ts`                    | 画像のコピーと行の作成                                                                                                              |
 | `separateExamRewriter.ts`             | `separate` のとき、試験まわりの id を振り直す                                                                                       |
 | `scoringConflictDetector.ts`          | 採点の食い違いの検出（`examStudentId` + `cropRegionId`）                                                                            |
 | `decisionMergePolicy.ts`              | 確定層（ScoreDecision / CompoundAnswerScore）の解決を LWW に一本化                                                                  |
 
-**Stage 2 の罠:** `idChangeExecutor` の生徒 ID 変更は**delete ＋ 再作成**である。`Student` に
-カスケードの子を足したら、**必ずここへ `updateMany` を足すこと。** 足し忘れると旧形式の
-取り込みで黙って消える（統合版の付け替えは `UPDATE` で、この罠は無い）。
+**id が一致すれば同じ行。** 旧5種のどの取り込みも、どの表も、まずアーカイブの id で取り込み先を
+引き、在れば同じ行として取り込みの規則（`importValuePolicy`）どおり値（親を指す列も含む）を書く。
+id で無ければ一意キー（`(試験, 生徒)` など）で引き、それも無ければアーカイブの id で作る
+（`import/shared/idFirstRow.ts`）。旧形式の変換で合成した id（`legacy-…`）だけは実体の id では
+ないので使わない。学籍番号・名前での照合は、id で一致しなかった行に対する利用者の判断として
+だけ使い、その候補からはアーカイブの別の行が id で取った既存の行を除く。照合の結果は事前照合の
+時点ではなく、取り込みの実行の時点で id を引き直して決める。
 
-**新規作成する行の名前は付け替えない。** 生徒・学級・試験・小計グループ・小計のどれも、既存と
+**ID 統合（「ファイルの id に合わせる」）** は、取り込みを取り込み先の id で全て書き終えてから、
+`idChangeExecutor` が統合版と同じ `archiveIdRenamer` で付け替える（行・子の外部キー・埋め込みの
+id・監査ログを `UPDATE`）。付け替え先の id が既に使われているときは付け替えず、警告に残す。
+`.coursework` / `.grade` の資料の取り込みも同じ（`coursework-archive/dataCreator.ts`）。
+
+**新規作成する行の名前は付け替えない。** 生徒・学級・小計グループ・小計のどれも、既存と
 学籍番号・名前がぶつかってもアーカイブの値のまま別の行として作る（id で区別する。
-`.coursework` / `.grade` も同じ。試験は「別の試験として取り込む」を選んだとき）。
+`.coursework` / `.grade` も同じ）。**例外は「別の試験として取り込む」（別で追加）で作る試験**で、
+同じ名前の試験が既にあれば ` (2)`・` (3)` … を付ける（`import/shared/separateExamName.ts`。
+`.score` と `.sao` の両方）。試験名に unique は無く、制約のためではない。取り込みは元の日時を
+引き継ぐので、同じ試験を別物として取り込むと一覧に同じ見た目の2行が並ぶのを、名前で見分ける
+ための添え字。
 かつては `_1`・` (2)` を足して退避していた（旧 B5 の修正など）が、学籍番号・学級名の UNIQUE
 （2026-08-22）と小計の `(subtotalGroupId, name)` の UNIQUE（2026-08-23）を外したのちに裁定で外した
 （試験名と小計グループ名にはもともと UNIQUE が無い）。
@@ -262,7 +275,7 @@ courseworks.json    内包する試験外成績資料（coursework-archive 形�
    migration は検査の対象から外れる）
 5. **旧5種の読み込み** — 変えた表を旧形式の取り込みが書いているなら、取り込みが今のスキーマで
    動くよう投入の処理を直す。**変換器は足さず、`*_CURRENT_VERSION` も上げない**（凍結）。
-   `Student` にカスケードの子を足したら `idChangeExecutor` の罠（上記）も見る
+   旧5種の投入は id 一次で書く（上記「id が一致すれば同じ行」）
 6. **画面の見せ方** — 表を足したら表名の日本語を `src/lib/shared/tableLabels.ts` に足す
    （規約テスト `tableLabelCoverage` が縛る）。列名の日本語は
    `src/components/unified-archive/archiveColumnLabels.ts`。成績算出が読む表に、値に効かない列

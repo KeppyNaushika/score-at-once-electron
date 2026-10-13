@@ -14,6 +14,11 @@
  *   `PRAGMA defer_foreign_keys = ON` にしておくこと
  * - id を JSON に埋め込んだ列（`archiveEmbeddedIds.ts`）も、取り込み先の行で書き換える
  * - updatedAt は変えない（付け替えは値の変更ではない。同期のトリガーは id の移動を拾う）
+ * - 監査ログ（AuditLog の entityId・scopeId、AuditLogTarget の targetId）も付け替える。
+ *   監査ログは対象へ外部キーを張らない（削除後も残すため）ので、登録表の references には
+ *   現れない。付け替えないと、生徒や作業領域での絞り込みから付け替え前のログだけが抜け落ちる
+ *   （docs/audit-log-redesign.md「既存の問題」1）。id は uuid で表をまたいで重ならないので、
+ *   値の一致だけで付け替えてよい
  *
  * ファイルのパスは書き換えない。パスに id が区切りとして入る表（ExamPage の Exam、
  * AsbImageElement の AsbDefinition）は一意制約を持たず、照合の対象でもないので、付け替えの
@@ -32,6 +37,13 @@ const quote = (identifier: string): string =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
+
+/** 外部キーを張らずに id を持つ監査ログの列（表, 列） */
+const AUDIT_LOG_ID_COLUMNS: readonly { table: string; column: string }[] = [
+  { table: "AuditLog", column: "entityId" },
+  { table: "AuditLog", column: "scopeId" },
+  { table: "AuditLogTarget", column: "targetId" },
+]
 
 /** 表 `table` を指す外部キーの列（表, 列） */
 const referencingColumnsOf = (
@@ -61,6 +73,12 @@ export async function renameTargetRow(
   for (const referencing of referencingColumnsOf(table)) {
     await target.execute(
       `UPDATE ${quote(referencing.table)} SET ${quote(referencing.column)} = ? WHERE ${quote(referencing.column)} = ?`,
+      [toId, fromId]
+    )
+  }
+  for (const auditColumn of AUDIT_LOG_ID_COLUMNS) {
+    await target.execute(
+      `UPDATE ${quote(auditColumn.table)} SET ${quote(auditColumn.column)} = ? WHERE ${quote(auditColumn.column)} = ?`,
       [toId, fromId]
     )
   }

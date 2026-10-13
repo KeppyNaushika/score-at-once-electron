@@ -6,8 +6,6 @@
  * （上書きする／統合する／別で追加する）。項目ごとの選択は持たない。
  */
 
-import * as crypto from "crypto"
-
 import type {
   FileOverviewData,
   IdIntegrationConfig,
@@ -81,13 +79,11 @@ export async function processSubtotalGroupIdIntegration(
     importRowById: new Map(
       data.subtotalsData.subtotalGroups.map((group) => [group.id, group])
     ),
-    idMatchedItems: groupPreMatch.byId,
     matchedItemGroups: [
       // 名前一致
       {
         matchedItems: groupPreMatch.byName,
         sameRowStrategy: "by_name",
-        skipAlreadyMapped: false,
       },
     ],
     noMatchItems: groupPreMatch.noMatch,
@@ -99,21 +95,19 @@ export async function processSubtotalGroupIdIntegration(
     describeRow: (importGroup) => `小計点グループ「${importGroup.name}」`,
     applyColumns: (importGroup, existingId) =>
       applySubtotalGroupColumns(importGroup, existingId, policy, counts, tx),
+    existsById: async (id) =>
+      (await tx.subtotalGroup.findUnique({ where: { id } })) !== null,
     createNewRow: async (importGroup, importId) => {
       // 名前はアーカイブの値のまま作る。同じ名前のグループが並ぶのは正常で、id で区別する
-      // （見分けるのは画面の役目）。id はアーカイブの id を使い、既に使われているときだけ振り直す
-      const existingById = await tx.subtotalGroup.findUnique({
-        where: { id: importId },
-      })
-      const newId = existingById ? crypto.randomUUID() : importId
+      // （見分けるのは画面の役目）
       await tx.subtotalGroup.create({
         data: {
-          id: newId,
+          id: importId,
           name: importGroup.name,
           ...policy.createdTimestamps(importGroup),
         },
       })
-      idMappings.subtotalGroup[importId] = newId
+      idMappings.subtotalGroup[importId] = importId
       counts.created.subtotalGroups++
     },
   })

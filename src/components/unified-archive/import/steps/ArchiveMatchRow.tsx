@@ -12,15 +12,15 @@ import type {
   ArchiveIdChoice,
   ArchiveMatchDecision,
 } from "@/electron-src/lib/import/unified-archive/types"
-import type { ImportAction } from "@/types/importAction.types"
-
 import {
-  matchedByLabel,
   matchRowDetail,
   matchRowKeywords,
   matchRowLabel,
-} from "../archiveImportLabels"
-import type { ArchiveMatchCandidate } from "../types"
+} from "@/lib/matchRowText"
+import type { ImportAction } from "@/types/importAction.types"
+
+import { matchedByLabel } from "../archiveImportLabels"
+import type { ArchiveLinkableRow, ArchiveMatchCandidate } from "../types"
 
 type MatchDecisionKind = ArchiveMatchDecision["kind"]
 
@@ -31,25 +31,49 @@ const isArchiveIdChoice = (value: string): value is ArchiveIdChoice =>
   value === "existing" || value === "archive"
 
 /**
- * 紐づけの1行（試験の取り込みの MatchedItemRow / NoMatchItemRow と同じ見た目）。
+ * 紐づけの1行（試験の取り込みの IntegrationItemRow と同じ見た目）。
  *
- * - 同じもの: 候補が複数なら Combobox で選ぶ。id は取り込み先 / アーカイブのどちらに合わせるか
- *   （別で追加では既存の行に触らないので、アーカイブに合わせるは出さない）
+ * - 同じもの: 紐づけ先を Combobox で選ぶ。照合の候補を先に、候補に無い既存の行も選べる
+ *   （他の行が紐づけ先にしている既存の行は選べない）。選んだ既存の行の見分ける材料も並べる。
+ *   id は取り込み先 / アーカイブのどちらに合わせるか（別で追加では既存の行に触らないので、
+ *   アーカイブに合わせるは出さない）
  * - 新規 / 取り込まない。**利用者には「取り込まない」を出さない**（採点の行が採点者を失う）
  */
 export function ArchiveMatchRow({
   matchCandidate,
+  linkableRows,
+  claimedExistingIds,
   decision,
   action,
   onDecisionChange,
 }: {
   matchCandidate: ArchiveMatchCandidate
+  /** 候補に無くても手で結べる既存の行 */
+  linkableRows: readonly ArchiveLinkableRow[]
+  /** 既存の行の id → それを紐づけ先にしているアーカイブの行のキー */
+  claimedExistingIds: ReadonlyMap<string, string>
   decision: ArchiveMatchDecision
   action: ImportAction
   onDecisionChange: (decision: ArchiveMatchDecision) => void
 }) {
   const { table, archiveRow, candidates, matchedBy } = matchCandidate
-  const firstCandidate = candidates[0]
+  const rowKey = `${table}:${matchCandidate.archiveId}`
+  const isClaimedByOther = (existingId: string): boolean => {
+    const claimant = claimedExistingIds.get(existingId)
+    return claimant !== undefined && claimant !== rowKey
+  }
+  const candidateIds = new Set(
+    candidates.map((candidate) => candidate.existingId)
+  )
+  const selectableRows = [
+    ...candidates,
+    ...linkableRows.filter(
+      (linkableRow) => !candidateIds.has(linkableRow.existingId)
+    ),
+  ]
+  const firstCandidate = selectableRows.find(
+    (selectableRow) => !isClaimedByOther(selectableRow.existingId)
+  )
   const archiveLabel = matchRowLabel(table, archiveRow)
   const archiveDetail = matchRowDetail(table, archiveRow)
   const canSkip = table !== "User"
@@ -74,19 +98,25 @@ export function ArchiveMatchRow({
     }
   }
 
-  const candidateOptions = candidates.map((candidate) => {
-    const detail = matchRowDetail(table, candidate.existingRow)
-    const label = matchRowLabel(table, candidate.existingRow)
+  const describe = (row: Readonly<Record<string, unknown>>): string => {
+    const detail = matchRowDetail(table, row)
+    const label = matchRowLabel(table, row)
+    return detail ? `${label}・${detail}` : label
+  }
+  const candidateOptions = selectableRows.map((selectableRow) => {
+    const claimed = isClaimedByOther(selectableRow.existingId)
+    const label = describe(selectableRow.existingRow)
     return {
-      value: candidate.existingId,
-      label: detail ? `${label} ${detail}` : label,
-      keywords: matchRowKeywords(table, candidate.existingRow),
+      value: selectableRow.existingId,
+      label: claimed ? `${label}（他で紐づけ済み）` : label,
+      keywords: matchRowKeywords(table, selectableRow.existingRow),
+      disabled: claimed,
     }
   })
   const selectedCandidate =
     decision.kind === "same"
-      ? candidates.find(
-          (candidate) => candidate.existingId === decision.existingId
+      ? selectableRows.find(
+          (selectableRow) => selectableRow.existingId === decision.existingId
         )
       : undefined
 
@@ -126,31 +156,25 @@ export function ArchiveMatchRow({
 
         {decision.kind === "same" && (
           <div className="mt-1 ml-4 space-y-2">
-            {candidates.length > 1 ? (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  紐づけ先を選んでください
-                </p>
-                <Combobox
-                  options={candidateOptions}
-                  value={decision.existingId}
-                  onValueChange={(existingId) =>
-                    onDecisionChange({ ...decision, existingId })
-                  }
-                  placeholder="紐づけ先を選択"
-                  searchPlaceholder="名前・番号で検索"
-                  emptyText="該当する候補がありません"
-                  aria-label={`${archiveLabel}の紐づけ先`}
-                  className="w-full"
-                />
-              </>
-            ) : (
-              selectedCandidate && (
-                <p className="text-xs text-muted-foreground">
-                  紐づけ先:{" "}
-                  {matchRowLabel(table, selectedCandidate.existingRow)}
-                </p>
-              )
+            <p className="text-xs text-muted-foreground">
+              紐づけ先（照合で当たったものが先頭です）
+            </p>
+            <Combobox
+              options={candidateOptions}
+              value={decision.existingId}
+              onValueChange={(existingId) =>
+                onDecisionChange({ ...decision, existingId })
+              }
+              placeholder="紐づけ先を選択"
+              searchPlaceholder="名前・番号で検索"
+              emptyText="該当する候補がありません"
+              aria-label={`${archiveLabel}の紐づけ先`}
+              className="w-full"
+            />
+            {selectedCandidate && (
+              <p className="text-xs text-muted-foreground">
+                このPC: {describe(selectedCandidate.existingRow)}
+              </p>
             )}
 
             {canAdoptArchiveId ? (

@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
@@ -130,6 +130,28 @@ export default function StudentTable() {
     toggleSelectAll,
     allSelected: isAllSelected,
   } = useRowSelection(sortedData)
+
+  // 番号・氏名・入学年度が同じ生徒（id で区別する別の行）。見分ける添え書きを行に出す
+  const duplicateStudentIds = useMemo(() => {
+    const studentIdsByKey = new Map<string, string[]>()
+    for (const student of students) {
+      const key = JSON.stringify([
+        student.studentNumber,
+        student.lastName,
+        student.firstName,
+        student.enrollmentYear,
+      ])
+      studentIdsByKey.set(key, [
+        ...(studentIdsByKey.get(key) ?? []),
+        student.id,
+      ])
+    }
+    return new Set(
+      [...studentIdsByKey.values()].flatMap((studentIds) =>
+        studentIds.length > 1 ? studentIds : []
+      )
+    )
+  }, [students])
 
   const isSomeSelected =
     !isAllSelected && sortedData.some((row) => selectedStudentIds.has(row.id))
@@ -302,6 +324,7 @@ export default function StudentTable() {
           <StudentTableRow
             key={student.id}
             student={student}
+            hasSameLookingStudent={duplicateStudentIds.has(student.id)}
             isSelected={selectedStudentIds.has(student.id)}
             onOpen={() => router.push(`/students/${student.id}`)}
             onToggleSelect={() =>
