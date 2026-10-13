@@ -293,7 +293,11 @@ describe("設問一覧の印（AI の判定が未反映）", () => {
     expect(
       selectQuestionsWithUnreflectedAiJudgements(
         [unscoredWithJudgement.run, scoredRun, failedRun],
-        cropRegionsOf([CROP_REGION_ID, otherCropRegionId, "crop-region-failed"]),
+        cropRegionsOf([
+          CROP_REGION_ID,
+          otherCropRegionId,
+          "crop-region-failed",
+        ]),
         questionScoresByCropRegionId,
         CURRENT_USER_ID
       )
@@ -340,7 +344,11 @@ describe("設問一覧の印（AI の判定が未反映）", () => {
           runOn(scoredByOtherUser, otherCropRegionId),
           runOn(revision, "crop-region-revise"),
         ],
-        cropRegionsOf([CROP_REGION_ID, otherCropRegionId, "crop-region-revise"]),
+        cropRegionsOf([
+          CROP_REGION_ID,
+          otherCropRegionId,
+          "crop-region-revise",
+        ]),
         questionScoresByCropRegionId,
         CURRENT_USER_ID
       )

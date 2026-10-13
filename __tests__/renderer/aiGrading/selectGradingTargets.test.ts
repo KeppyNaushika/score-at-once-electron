@@ -139,7 +139,10 @@ describe("selectGradingTargets", () => {
 
   it("設問の id が空なら投げる（全員が未採点に見える失敗を防ぐ）", () => {
     expect(() =>
-      selectGradingTargets(buildInput({ cropRegion: { id: "", scoringMethod: "points" } }), "all")
+      selectGradingTargets(
+        buildInput({ cropRegion: { id: "", scoringMethod: "points" } }),
+        "all"
+      )
     ).toThrow()
   })
 })
