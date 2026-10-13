@@ -408,6 +408,7 @@ export function AiGradingWorkspace({
             onAnswerOrderChange: viewSettings.setAnswerOrder,
             isWhitenessReady,
             totalCount: reviewedAnswers.length,
+            isScaleQuestion: scaleQuestion.isScaleQuestion,
           }}
         />
       </div>

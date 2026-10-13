@@ -24,8 +24,10 @@ import {
 } from "./scoringToolbarButtons"
 
 /** ブラシのボタンの見た目（採点状態のブラシと類型のブラシで揃える） */
+// 選んでいるかは aria-checked で引く。ブラシを包むツールチップの trigger が data-state を
+// 自分の状態（closed など）で上書きするので、data-[state=on] では選んだブラシに印が付かない
 const BRUSH_ITEM_CLASS_NAME =
-  "flex h-12 flex-col gap-1 rounded-md border-2 shadow-xs data-[state=off]:opacity-60 data-[state=off]:hover:opacity-80 data-[state=on]:ring-2 data-[state=on]:ring-blue-500 data-[state=on]:ring-offset-1"
+  "flex h-12 flex-col gap-1 rounded-md border-2 shadow-xs aria-[checked=false]:opacity-60 aria-[checked=false]:hover:opacity-80 aria-checked:ring-2 aria-checked:ring-blue-500 aria-checked:ring-offset-1"
 
 /** 類型方式でない設問の類型（毎回作り直さない） */
 const NO_SCALE_LEVELS: ScaleQuestionState["scaleLevels"] = []

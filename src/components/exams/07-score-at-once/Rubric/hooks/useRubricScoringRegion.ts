@@ -18,7 +18,12 @@ type ScoringRegionSource = Pick<
 
 /**
  * 書き込みの直前に、項目から点を計算する設問を読む（類型方式なら組を読み終えてから）。
- * 画面の `useRubricScoringRegion` は読み込み中に類型が空なので、書き込む計算はこちらを使う
+ * 画面の `useRubricScoringRegion` は読み込み中に類型が空なので、書き込む計算はこちらを使う。
+ *
+ * 類型表はキャッシュがあればそれを使い、読み直さない（`ensureQueryData`）。類型表を変える書き込みは
+ * この問い合わせを無効にするので古い類型では計算しない。読み直すと、項目を当ててから点を書くまでに
+ * IPC の往復ぶんの間ができ、そのあいだに同期の遅れの直し（`useRubricSyncLagRepair`）が同じ点を先に書いて
+ * 「食い違っていた」と知らせてしまう
  */
 export async function fetchRubricScoringRegion(
   queryClient: QueryClient,
@@ -28,7 +33,7 @@ export async function fetchRubricScoringRegion(
   const scaleLevelIds =
     toScoringMethod(cropRegion.scoringMethod) === "scale"
       ? findScaleLevels(
-          await queryClient.fetchQuery(examScoreScalesQuery(examId)),
+          await queryClient.ensureQueryData(examScoreScalesQuery(examId)),
           cropRegion.scoreScaleId
         ).map((scaleLevel) => scaleLevel.id)
       : NO_SCALE_LEVEL_IDS
