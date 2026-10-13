@@ -9,10 +9,12 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { IdChangeTarget } from "../../../electron-src/lib/import/merge/types"
 import {
-  createArchiveStudentsData,
-  createDecision,
   createEmptyIdMappings,
   createEmptyImportCounts,
+} from "../../../electron-src/lib/import/merge/types"
+import {
+  createArchiveStudentsData,
+  createDecision,
   createExtractedArchiveData,
   createFileOverviewData,
   createMatchedItem,

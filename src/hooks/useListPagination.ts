@@ -1,13 +1,10 @@
 "use client"
 
 import type { RefObject } from "react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useState } from "react"
 
-import {
-  AUTO_PAGE_SIZE,
-  FALLBACK_PAGE_SIZE,
-  type PageSizeChoice,
-} from "@/lib/listPagination"
+import { usePageWindow } from "@/hooks/usePageWindow"
+import type { PageSizeChoice } from "@/lib/listPagination"
 
 interface UseListPaginationOptions {
   /**
@@ -53,44 +50,22 @@ interface UseListPaginationResult<Row> {
  * 監査ログ（`useAuditLogs`）と違い、行は既に全部揃っている（main は一覧を丸ごと
  * 返す）。ここでやるのは切り出しだけで、取得は起こらない。
  *
- * **覚えているのはページ番号ではなく先頭の行**（0始まり）なのは監査ログと同じ理由。
- * 「自動」は表示領域の高さから件数を決めるので、窓を広げれば1ページの件数が増えて
- * 総ページ数が減る。ページ番号を覚えていると、10ページ目を見ている最中に総数が
- * 6ページへ縮んで空の一覧に着地する。
+ * ページの窓（先頭の行と件数）は監査ログと共通の `usePageWindow` が持つ。
  */
 export function useListPagination<Row>(
   rows: Row[],
   { rowHeight, reservedHeight, resetKey }: UseListPaginationOptions
 ): UseListPaginationResult<Row> {
-  const [firstRowIndex, setFirstRowIndex] = useState(0)
-  const [pageSizeChoice, setPageSizeChoiceState] =
-    useState<PageSizeChoice>(AUTO_PAGE_SIZE)
-
-  // 「自動」のときだけ使う。高さは表示領域そのものから測る（見積もりで決め打つと、
-  // サイドバーを畳んだ・窓を変えたときに合わなくなる）
-  const viewportRef = useRef<HTMLDivElement>(null)
-  const [viewportHeight, setViewportHeight] = useState(0)
-
-  useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport) return
-    // observe した時点で1度呼ばれるので、初回の高さもここで入る
-    const observer = new ResizeObserver(() =>
-      setViewportHeight(viewport.clientHeight)
-    )
-    observer.observe(viewport)
-    return () => observer.disconnect()
-  }, [])
-
-  const measuredPageSize = Math.floor(
-    (viewportHeight - reservedHeight) / rowHeight
-  )
-  const pageSize =
-    pageSizeChoice === AUTO_PAGE_SIZE
-      ? measuredPageSize > 0
-        ? measuredPageSize
-        : FALLBACK_PAGE_SIZE
-      : pageSizeChoice
+  const {
+    firstRowIndex,
+    setFirstRowIndex,
+    pageNumber,
+    pageSize,
+    pageSizeChoice,
+    setPageSizeChoice,
+    setPageNumber,
+    viewportRef,
+  } = usePageWindow({ rowHeight, reservedHeight })
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize))
 
@@ -109,23 +84,9 @@ export function useListPagination<Row>(
     setFirstRowIndex(lastPageFirstRowIndex)
   }
 
-  // 件数を選び直すのは利用者の操作なので、先頭から見直す（窓の大きさが変わった
-  // ときと違い、いま見ている行に留まる理由がない）
-  const setPageSizeChoice = useCallback((choice: PageSizeChoice) => {
-    setPageSizeChoiceState(choice)
-    setFirstRowIndex(0)
-  }, [])
-
-  const setPageNumber = useCallback(
-    (nextPageNumber: number) => {
-      setFirstRowIndex((nextPageNumber - 1) * pageSize)
-    },
-    [pageSize]
-  )
-
   return {
     pageRows: rows.slice(firstRowIndex, firstRowIndex + pageSize),
-    pageNumber: Math.floor(firstRowIndex / pageSize) + 1,
+    pageNumber,
     pageSize,
     pageSizeChoice,
     setPageSizeChoice,

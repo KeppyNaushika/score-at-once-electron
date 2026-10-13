@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 
-import { effectiveSelection } from "@/components/exams/07-score-at-once/ScoringMain/utils/effectiveSelection"
+import { useVisibleAnswerSelection } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useVisibleAnswerSelection"
 
 import type { DecisionGridItem } from "./useFinalizeData"
 
@@ -14,11 +14,13 @@ export function useDecisionSelection(
   visibleItems: readonly DecisionGridItem[],
   visibleIds: readonly string[]
 ) {
-  const [chosenIds, setChosenIds] = useState<ReadonlySet<string>>(new Set())
-  const selectedIds = useMemo(
-    () => effectiveSelection(chosenIds, visibleIds),
-    [chosenIds, visibleIds]
-  )
+  const {
+    selectedIds,
+    setSelection,
+    handleSelectAnswer,
+    handleSelectAll,
+    getGridAnswerData,
+  } = useVisibleAnswerSelection(visibleItems, visibleIds)
   const selectedItems = useMemo(
     () => visibleItems.filter((item) => selectedIds.has(item.id)),
     [visibleItems, selectedIds]
@@ -26,35 +28,10 @@ export function useDecisionSelection(
   const singleSelectedItem =
     selectedItems.length === 1 ? selectedItems[0] : null
 
-  const setSelection = useCallback((ids: Set<string>) => {
-    setChosenIds(ids)
-  }, [])
-
   /** 選んだ答案を忘れる（設問を移ったとき） */
   const clearSelection = useCallback(() => {
-    setChosenIds(new Set())
-  }, [])
-
-  const handleSelectAnswer = useCallback(
-    (id: string, isSelected: boolean) => {
-      // 見えている選択（何も選んでいなければ先頭の答案）から足し引きする。
-      // 選んだ答案だけから足すと、Ctrl/Cmd+クリックで先頭の答案が選択から落ちる
-      setChosenIds((prev) => {
-        const next = effectiveSelection(prev, visibleIds)
-        if (isSelected) {
-          next.add(id)
-        } else {
-          next.delete(id)
-        }
-        return next
-      })
-    },
-    [visibleIds]
-  )
-
-  const handleSelectAll = useCallback(() => {
-    setChosenIds(new Set(visibleIds))
-  }, [visibleIds])
+    setSelection(new Set())
+  }, [setSelection])
 
   /** 書いた答案のうち最後の答案の次を選ぶ。最後なら選択はそのまま */
   const selectNextAfter = useCallback(
@@ -64,19 +41,10 @@ export function useDecisionSelection(
       )
       const nextId = visibleIds[lastIndex + 1]
       if (nextId) {
-        setChosenIds(new Set([nextId]))
+        setSelection(new Set([nextId]))
       }
     },
-    [visibleIds]
-  )
-
-  const getGridAnswerData = useCallback(
-    () =>
-      visibleItems.map((item) => ({
-        ...item,
-        isSelected: selectedIds.has(item.id),
-      })),
-    [visibleItems, selectedIds]
+    [visibleIds, setSelection]
   )
 
   return {

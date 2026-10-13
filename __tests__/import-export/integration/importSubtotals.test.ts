@@ -7,9 +7,9 @@
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { createEmptyIdMappings } from "../../../electron-src/lib/import/merge/types"
 import {
   createArchiveSubtotalsData,
-  createEmptyIdMappings,
   createExtractedArchiveData,
   generateId,
 } from "../../helpers/testDataFactory"

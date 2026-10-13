@@ -1,20 +1,15 @@
 "use client"
 
-import {
-  FolderInput,
-  Lightbulb,
-  MousePointerClick,
-  PencilSparkles,
-  Search,
-} from "lucide-react"
+import { FolderInput, PencilSparkles, Search } from "lucide-react"
 
 import { ArchiveImportFormatsNote } from "@/components/help/common/ArchiveImportFormatsNote"
+import { HelpSection } from "@/components/help/common/HelpComponents"
 import {
-  Badge,
-  HelpSection,
-  StepItem,
-  TipItem,
-} from "@/components/help/common/HelpComponents"
+  ListActionBadges,
+  ListHelpHeader,
+  ListHelpTip,
+  ListReadingSteps,
+} from "@/components/help/common/ListPageHelp"
 
 /**
  * 試験一覧（トップページ）の使い方。
@@ -26,44 +21,20 @@ import {
 export function HelpContentExamList() {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <PencilSparkles className="h-6 w-6 text-blue-600" />
-          試験
-        </h2>
-        <p className="text-muted-foreground">
-          採点する試験の一覧です。ここから試験を作り、8つの段を順に進めます。
-        </p>
-      </div>
-
-      <HelpSection
-        icon={<MousePointerClick className="h-5 w-5 text-green-600" />}
-        title="一覧の読み方・押し方"
+      <ListHelpHeader
+        icon={<PencilSparkles className="h-6 w-6 text-blue-600" />}
+        title="試験"
       >
-        <div className="space-y-3">
-          <StepItem
-            number={1}
-            title="行のどこを押しても概要が開く"
-            description="試験の概要ページへ移動します。チェックボックスと行末の「…」だけは別の役目です"
-            isImportant
-          />
-          <StepItem
-            number={2}
-            title="名前の下は要約"
-            description="説明と、その試験に付いているタグが出ます"
-          />
-          <StepItem
-            number={3}
-            title="「次のステップ」を押すと続きから"
-            description="いま何をすべき段なのかを試験ごとに判定して出しています。押すとその段へ直行します"
-          />
-          <StepItem
-            number={4}
-            title="見出しを押すと並べ替え"
-            description="名前・試験日・更新日時で並べ替えられます。並び順は次に開いたときも覚えています"
-          />
-        </div>
-      </HelpSection>
+        採点する試験の一覧です。ここから試験を作り、8つの段を順に進めます。
+      </ListHelpHeader>
+
+      <ListReadingSteps
+        overviewDescription="試験の概要ページへ移動します。チェックボックスと行末の「…」だけは別の役目です"
+        summaryTitle="名前の下は要約"
+        summaryDescription="説明と、その試験に付いているタグが出ます"
+        nextStepDescription="いま何をすべき段なのかを試験ごとに判定して出しています。押すとその段へ直行します"
+        sortDescription="名前・試験日・更新日時で並べ替えられます。並び順は次に開いたときも覚えています"
+      />
 
       <div className="my-4 border-t border-gray-200" />
 
@@ -73,13 +44,11 @@ export function HelpContentExamList() {
           title="作る・取り込む"
         >
           <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">新規試験作成</Badge>
-              <Badge variant="outline">取り込み</Badge>
-              <Badge variant="outline">.sao 書き出し</Badge>
-            </div>
+            <ListActionBadges
+              labels={["新規作成", "取り込み", ".sao 書き出し"]}
+            />
             <p className="text-sm text-muted-foreground">
-              「新規試験作成」を押すと、名前を訊かずに試験が1件できて概要ページが開きます。
+              「新規作成」を押すと、名前を訊かずに試験が1件できて概要ページが開きます。
               試験名・試験日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
             </p>
             <p className="text-sm text-muted-foreground">
@@ -106,12 +75,9 @@ export function HelpContentExamList() {
         </HelpSection>
       </div>
 
-      <TipItem type="info">
-        <span className="flex items-start gap-2">
-          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
-          窓が狭いとボタンは右端の「…」へ畳まれます。畳まれても中身は同じで、検索欄だけは最後まで残ります。
-        </span>
-      </TipItem>
+      <ListHelpTip>
+        窓が狭いとボタンは右端の「…」へ畳まれます。畳まれても中身は同じで、検索欄だけは最後まで残ります。
+      </ListHelpTip>
     </div>
   )
 }

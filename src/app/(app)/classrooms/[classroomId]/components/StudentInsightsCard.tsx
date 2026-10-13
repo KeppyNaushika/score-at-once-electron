@@ -4,15 +4,17 @@ import { ArrowDown, ArrowUp, TrendingUpDown } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 
+import {
+  type ColumnHeadDefinition,
+  SortableColumnHeads,
+} from "@/components/common/SortableColumnHeads"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
@@ -80,6 +82,15 @@ function formatRate(rate: number | null): string {
 }
 
 const SLOPE_THRESHOLD = 1.5
+
+const INSIGHT_COLUMNS: ColumnHeadDefinition<keyof InsightSortable>[] = [
+  { label: "番号", sortKey: "attendanceNumber", className: "w-16" },
+  { label: "生徒名", sortKey: "studentName" },
+  { label: "試験数", sortKey: "examCount", className: "w-20 text-right" },
+  { label: "平均", sortKey: "avgRate", className: "w-24 text-right" },
+  { label: "変化率", sortKey: "slope", className: "w-28 text-right" },
+  { label: "傾向", className: "w-20 text-center" },
+]
 
 // ── コンポーネント ──
 
@@ -290,51 +301,12 @@ export function StudentInsightsCard({
             <Table>
               <TableHeader className="bg-card">
                 <TableRow className="hover:bg-transparent">
-                  <SortableTableHead
-                    sortKey="attendanceNumber"
+                  <SortableColumnHeads
+                    columns={INSIGHT_COLUMNS}
                     currentSortKey={sortConfig.key}
                     currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                    className="w-16"
-                  >
-                    番号
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="studentName"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                  >
-                    生徒名
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="examCount"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                    className="w-20 text-right"
-                  >
-                    試験数
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="avgRate"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                    className="w-24 text-right"
-                  >
-                    平均
-                  </SortableTableHead>
-                  <SortableTableHead
-                    sortKey="slope"
-                    currentSortKey={sortConfig.key}
-                    currentDirection={sortConfig.direction}
-                    onSort={(key) => requestSort(key)}
-                    className="w-28 text-right"
-                  >
-                    変化率
-                  </SortableTableHead>
-                  <TableHead className="w-20 text-center">傾向</TableHead>
+                    onSort={requestSort}
+                  />
                 </TableRow>
               </TableHeader>
               <TableBody>

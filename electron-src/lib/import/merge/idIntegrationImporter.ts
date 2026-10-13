@@ -70,7 +70,7 @@ import {
 } from "./reorderAfterImport"
 import { rewriteAsSeparateExam } from "./separateExamRewriter"
 import type { IdChangeTarget, IdMappings, ImportCounts } from "./types"
-import { createEmptyCounts } from "./types"
+import { createEmptyIdMappings, createEmptyImportCounts } from "./types"
 
 /** インポート結果 */
 interface IdIntegrationImportResult {
@@ -131,36 +131,9 @@ export async function executeIdIntegrationImport(
 
   // 旧バージョンアーカイブの変換チェーン警告を結果へ引き継ぐ
   const warnings: string[] = [...data.transformWarnings]
-  const counts: ImportCounts = {
-    created: createEmptyCounts(),
-    updated: createEmptyCounts(),
-    skipped: createEmptyCounts(),
-    unchanged: createEmptyCounts(),
-  }
+  const counts: ImportCounts = createEmptyImportCounts()
 
-  const idMappings: IdMappings = {
-    student: {},
-    classroom: {},
-    subtotalGroup: {},
-    subtotal: {},
-    exam: {},
-    examPage: {},
-    cropRegion: {},
-    studentAnswerImage: {},
-    examStudent: {},
-    userExam: {},
-    cropSubtotal: {},
-    questionScore: {},
-    drawingAnnotation: {},
-    membership: {},
-    cropRegionOmrConfig: {},
-    cropRegionOmrChoiceOption: {},
-    compoundAnswer: {},
-    compoundAnswerMember: {},
-    compoundAnswerScore: {},
-    scoreDecision: {},
-    user: {},
-  }
+  const idMappings: IdMappings = createEmptyIdMappings()
 
   // 重ね描きのスタイルの長さを画素から mm へ直す係数。答案画像を読むので、
   // トランザクションを開く前に決めておく

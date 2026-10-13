@@ -10,11 +10,47 @@
  * 値の競合は従来どおりLWWと競合UIで解決する（issue #918）。
  */
 
-import type { ArchiveClassesData } from "../../../../src/types/examArchive.types"
+import type {
+  ArchiveClassesData,
+  ArchiveScoresData,
+} from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
+
+/**
+ * アーカイブの注釈1件から、作成と更新で共通に書く値を組む。
+ * id・作成時刻・更新時刻は作成と更新で決め方が違うので呼ぶ側で足す。
+ */
+function drawingAnnotationValues(
+  drawingAnnotation: ArchiveScoresData["drawingAnnotations"][number],
+  questionScoreId: string
+) {
+  return {
+    questionScoreId,
+    type: drawingAnnotation.type,
+    x: drawingAnnotation.x,
+    y: drawingAnnotation.y,
+    color: drawingAnnotation.color,
+    strokeWidth: drawingAnnotation.strokeWidth,
+    width: drawingAnnotation.width,
+    height: drawingAnnotation.height,
+    endX: drawingAnnotation.endX,
+    endY: drawingAnnotation.endY,
+    lineStyle: drawingAnnotation.lineStyle,
+    text: drawingAnnotation.text,
+    fontSize: drawingAnnotation.fontSize,
+    textBoxWidth: drawingAnnotation.textBoxWidth,
+    textBoxHeight: drawingAnnotation.textBoxHeight,
+    horizontalAlign: drawingAnnotation.horizontalAlign,
+    verticalAlign: drawingAnnotation.verticalAlign,
+    anchorDirection: drawingAnnotation.anchorDirection,
+    displayX: drawingAnnotation.displayX,
+    displayY: drawingAnnotation.displayY,
+    isFavorite: drawingAnnotation.isFavorite,
+  }
+}
 
 /**
  * 注釈は採点者を持たない。持ち主は親 QuestionScore（生徒×設問×採点者で1行）から決まる。
@@ -49,27 +85,7 @@ export async function processDrawingAnnotations(
           await tx.drawingAnnotation.update({
             where: { id: existingById.id },
             data: {
-              questionScoreId: newScoreId,
-              type: drawingAnnotation.type,
-              x: drawingAnnotation.x,
-              y: drawingAnnotation.y,
-              color: drawingAnnotation.color,
-              strokeWidth: drawingAnnotation.strokeWidth,
-              width: drawingAnnotation.width,
-              height: drawingAnnotation.height,
-              endX: drawingAnnotation.endX,
-              endY: drawingAnnotation.endY,
-              lineStyle: drawingAnnotation.lineStyle,
-              text: drawingAnnotation.text,
-              fontSize: drawingAnnotation.fontSize,
-              textBoxWidth: drawingAnnotation.textBoxWidth,
-              textBoxHeight: drawingAnnotation.textBoxHeight,
-              horizontalAlign: drawingAnnotation.horizontalAlign,
-              verticalAlign: drawingAnnotation.verticalAlign,
-              anchorDirection: drawingAnnotation.anchorDirection,
-              displayX: drawingAnnotation.displayX,
-              displayY: drawingAnnotation.displayY,
-              isFavorite: drawingAnnotation.isFavorite,
+              ...drawingAnnotationValues(drawingAnnotation, newScoreId),
               updatedAt,
             },
           })
@@ -81,27 +97,7 @@ export async function processDrawingAnnotations(
         await tx.drawingAnnotation.create({
           data: {
             id: drawingAnnotation.id,
-            questionScoreId: newScoreId,
-            type: drawingAnnotation.type,
-            x: drawingAnnotation.x,
-            y: drawingAnnotation.y,
-            color: drawingAnnotation.color,
-            strokeWidth: drawingAnnotation.strokeWidth,
-            width: drawingAnnotation.width,
-            height: drawingAnnotation.height,
-            endX: drawingAnnotation.endX,
-            endY: drawingAnnotation.endY,
-            lineStyle: drawingAnnotation.lineStyle,
-            text: drawingAnnotation.text,
-            fontSize: drawingAnnotation.fontSize,
-            textBoxWidth: drawingAnnotation.textBoxWidth,
-            textBoxHeight: drawingAnnotation.textBoxHeight,
-            horizontalAlign: drawingAnnotation.horizontalAlign,
-            verticalAlign: drawingAnnotation.verticalAlign,
-            anchorDirection: drawingAnnotation.anchorDirection,
-            displayX: drawingAnnotation.displayX,
-            displayY: drawingAnnotation.displayY,
-            isFavorite: drawingAnnotation.isFavorite,
+            ...drawingAnnotationValues(drawingAnnotation, newScoreId),
             ...policy.createdTimestamps(drawingAnnotation),
           },
         })

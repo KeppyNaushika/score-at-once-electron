@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
-import { effectiveSelection } from "@/components/exams/07-score-at-once/ScoringMain/utils/effectiveSelection"
+import { useVisibleAnswerSelection } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useVisibleAnswerSelection"
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -42,8 +42,6 @@ export function useAiGridSelection({
   viewSettings: { filterSettings, setFilterSettings },
   pinnedExamStudentIds = null,
 }: UseAiGridSelectionOptions) {
-  const [chosenIds, setChosenIds] = useState<ReadonlySet<string>>(new Set())
-
   const gridItems = useMemo(
     () =>
       reviewedAnswers.map((reviewedAnswer) =>
@@ -70,33 +68,13 @@ export function useAiGridSelection({
     [visibleItems]
   )
 
-  const selectedIds = useMemo(
-    () => effectiveSelection(chosenIds, visibleIds),
-    [chosenIds, visibleIds]
-  )
-
-  const setSelection = useCallback((ids: Set<string>) => {
-    setChosenIds(ids)
-  }, [])
-  const handleSelectAnswer = useCallback(
-    (id: string, isSelected: boolean) => {
-      // 見えている選択（何も選んでいなければ先頭の答案）から足し引きする。
-      // 選んだ答案だけから足すと、Ctrl/Cmd+クリックで先頭の答案が選択から落ちる
-      setChosenIds((prev) => {
-        const next = effectiveSelection(prev, visibleIds)
-        if (isSelected) {
-          next.add(id)
-        } else {
-          next.delete(id)
-        }
-        return next
-      })
-    },
-    [visibleIds]
-  )
-  const handleSelectAll = useCallback(() => {
-    setChosenIds(new Set(visibleIds))
-  }, [visibleIds])
+  const {
+    selectedIds,
+    setSelection,
+    handleSelectAnswer,
+    handleSelectAll,
+    getGridAnswerData,
+  } = useVisibleAnswerSelection(visibleItems, visibleIds)
 
   const toggleFilter = useCallback(
     (source: FilterSource, status: ScoringStatus) => {
@@ -106,14 +84,6 @@ export function useAiGridSelection({
       }))
     },
     [setFilterSettings]
-  )
-  const getGridAnswerData = useCallback(
-    () =>
-      visibleItems.map((gridItem) => ({
-        ...gridItem,
-        isSelected: selectedIds.has(gridItem.id),
-      })),
-    [visibleItems, selectedIds]
   )
   // 設問の移動は採点画面が受け持つので、ここでは一覧の中の移動だけを使う
   const { handleGridNavigation } = useScoringNavigation({

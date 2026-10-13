@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import {
   Bar,
   BarChart,
@@ -41,6 +42,60 @@ function formatMonthLabel(monthKey: string): string {
   return monthKey.replace("-", "/")
 }
 
+type MonthlyChartRow = MonthlyUsage["usage"] & {
+  month: string
+  pricedUsd: MonthlyUsage["pricedUsd"]
+}
+
+interface MonthlyBarChartCardProps {
+  title: ReactNode
+  chartRows: MonthlyChartRow[]
+  /** 縦軸の目盛りの書き方 */
+  formatTick: (tick: number) => string
+  /** ツールチップに出す値の書き方 */
+  formatAmount: (amount: number) => string
+  /** 凡例・棒など、図ごとに違う中身 */
+  children: ReactNode
+}
+
+/** 月を横軸に取る棒グラフのカード（格子・軸・ツールチップの体裁は2つの図で揃える） */
+function MonthlyBarChartCard({
+  title,
+  chartRows,
+  formatTick,
+  formatAmount,
+  children,
+}: MonthlyBarChartCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartRows} barCategoryGap="20%">
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+            <YAxis
+              tick={{ fontSize: 11 }}
+              tickFormatter={formatTick}
+              width={48}
+            />
+            <RechartsTooltip
+              formatter={(amount) =>
+                typeof amount === "number"
+                  ? formatAmount(amount)
+                  : String(amount)
+              }
+            />
+            {children}
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  )
+}
+
 interface AiMonthlyUsageChartsProps {
   monthlyUsages: readonly MonthlyUsage[]
 }
@@ -49,7 +104,7 @@ interface AiMonthlyUsageChartsProps {
 export function AiMonthlyUsageCharts({
   monthlyUsages,
 }: AiMonthlyUsageChartsProps) {
-  const chartRows = monthlyUsages.map((monthlyUsage) => ({
+  const chartRows: MonthlyChartRow[] = monthlyUsages.map((monthlyUsage) => ({
     month: formatMonthLabel(monthlyUsage.monthKey),
     ...monthlyUsage.usage,
     pricedUsd: monthlyUsage.pricedUsd,
@@ -57,83 +112,42 @@ export function AiMonthlyUsageCharts({
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">月ごとのトークン数</CardTitle>
-        </CardHeader>
-        <CardContent className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartRows} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                tickFormatter={(tick: number) =>
-                  compactNumberFormat.format(tick)
-                }
-                width={48}
-              />
-              <RechartsTooltip
-                formatter={(amount) =>
-                  typeof amount === "number"
-                    ? `${amount.toLocaleString()} トークン`
-                    : String(amount)
-                }
-              />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              {TOKEN_SERIES.map((series, seriesIndex) => (
-                <Bar
-                  key={series.key}
-                  dataKey={series.key}
-                  name={series.label}
-                  stackId="tokens"
-                  fill={series.color}
-                  stroke="var(--background)"
-                  strokeWidth={1}
-                  radius={
-                    seriesIndex === TOKEN_SERIES.length - 1
-                      ? [4, 4, 0, 0]
-                      : undefined
-                  }
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">
-            月ごとの金額（概算・単価の分かる分）
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartRows} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                tickFormatter={(tick: number) => `$${tick}`}
-                width={48}
-              />
-              <RechartsTooltip
-                formatter={(amount) =>
-                  typeof amount === "number"
-                    ? `$${amount.toFixed(2)}`
-                    : String(amount)
-                }
-              />
-              <Bar
-                dataKey="pricedUsd"
-                name="金額（米ドル）"
-                fill={COST_COLOR}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <MonthlyBarChartCard
+        title="月ごとのトークン数"
+        chartRows={chartRows}
+        formatTick={(tick) => compactNumberFormat.format(tick)}
+        formatAmount={(amount) => `${amount.toLocaleString()} トークン`}
+      >
+        <Legend wrapperStyle={{ fontSize: 11 }} />
+        {TOKEN_SERIES.map((series, seriesIndex) => (
+          <Bar
+            key={series.key}
+            dataKey={series.key}
+            name={series.label}
+            stackId="tokens"
+            fill={series.color}
+            stroke="var(--background)"
+            strokeWidth={1}
+            radius={
+              seriesIndex === TOKEN_SERIES.length - 1 ? [4, 4, 0, 0] : undefined
+            }
+          />
+        ))}
+      </MonthlyBarChartCard>
+      {/* 金額は系列が1つなので凡例を出さない */}
+      <MonthlyBarChartCard
+        title="月ごとの金額（概算・単価の分かる分）"
+        chartRows={chartRows}
+        formatTick={(tick) => `$${tick}`}
+        formatAmount={(amount) => `$${amount.toFixed(2)}`}
+      >
+        <Bar
+          dataKey="pricedUsd"
+          name="金額（米ドル）"
+          fill={COST_COLOR}
+          radius={[4, 4, 0, 0]}
+        />
+      </MonthlyBarChartCard>
     </div>
   )
 }

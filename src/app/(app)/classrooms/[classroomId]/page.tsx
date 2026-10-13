@@ -8,7 +8,6 @@ import {
   Plus,
   RotateCcwClock,
   SquarePen,
-  Trash,
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -27,6 +26,7 @@ import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
+import { toolbarDeleteAction } from "@/components/common/ToolbarDeleteAction"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import { Badge } from "@/components/ui/badge"
@@ -266,32 +266,9 @@ export default function ClassroomDetailPage() {
       onClick: () =>
         guardedNavigate(auditLogsHrefOfScope(classroomId, classroomData.name)),
     }),
-    {
-      id: "delete",
-      priority: 10,
-      node: (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setIsDeleteClassroomConfirmOpen(true)}
-        >
-          <Trash className="mr-2 h-4 w-4" />
-          削除
-        </Button>
-      ),
-      collapsedNode: (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setIsDeleteClassroomConfirmOpen(true)}
-        >
-          <Trash className="mr-2 h-4 w-4" />
-          削除
-        </Button>
-      ),
-    },
+    toolbarDeleteAction({
+      onClick: () => setIsDeleteClassroomConfirmOpen(true),
+    }),
   ]
 
   return (

@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils"
 const HeadingFocusContext = createContext<string | null>(null)
 
 /** この見出しがフォーカス中かどうか（タイトルで識別） */
-function useHeadingActive(title: string): boolean {
+export function useHeadingActive(title: string): boolean {
   return useContext(HeadingFocusContext) === title
 }
 
@@ -47,6 +47,7 @@ function getScrollParent(el: HTMLElement | null): HTMLElement | null {
  * フォーカス中のセクション背景。本文の流れには載せず、後ろに敷く全幅レイヤー。
  * left:calc(50%-50vw)+w-screen でセクション中央を基準にモーダル全幅へ広げ、
  * スクロール領域の overflow-x-hidden で左右がモーダル幅に切り取られる。
+ * 角丸なしの自然なバンドになり、本文位置はずれない。
  */
 function FocusBackground({ active }: { active: boolean }) {
   return (
@@ -73,8 +74,17 @@ function FocusUnderline({ active }: { active: boolean }) {
 /**
  * ページ全体のラッパー。スクロール位置を監視し、フォーカス中の見出しを配る。
  * 各ヘルプページは <HelpDoc> の中に HelpHero と FocusSection を並べる。
+ *
+ * headingSetKey は、スクロールせずに見出しの並びが入れ替わるページ（07 の
+ * 採点スタイル選択など）が渡す。値が変わるたびに現在地を測り直す。
  */
-export function HelpDoc({ children }: { children: React.ReactNode }) {
+export function HelpDoc({
+  headingSetKey,
+  children,
+}: {
+  headingSetKey?: string | null
+  children: React.ReactNode
+}) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [activeTitle, setActiveTitle] = useState<string | null>(null)
 
@@ -110,12 +120,43 @@ export function HelpDoc({ children }: { children: React.ReactNode }) {
       root.removeEventListener("scroll", update)
       cancelAnimationFrame(raf)
     }
-  }, [])
+  }, [headingSetKey])
 
   return (
     <HeadingFocusContext.Provider value={activeTitle}>
       <div ref={rootRef}>{children}</div>
     </HeadingFocusContext.Provider>
+  )
+}
+
+/**
+ * フォーカス表示つきの節の外枠と見出し。見出しの下の組み方は使う側が決める。
+ * 見出しと本文の間隔は使う側で違う（FocusSection は mb-5、07 のデモは mb-4）
+ */
+export function FocusHeadingSection({
+  title,
+  headingMarginClassName,
+  children,
+}: {
+  title: string
+  headingMarginClassName: "mb-4" | "mb-5"
+  children: React.ReactNode
+}) {
+  const active = useHeadingActive(title)
+  return (
+    <section data-help-heading={title} className="relative isolate py-8">
+      <FocusBackground active={active} />
+      <h2
+        className={cn(
+          "relative border-b border-gray-200 pb-3 text-2xl font-bold text-gray-900 md:text-3xl",
+          headingMarginClassName
+        )}
+      >
+        {title}
+        <FocusUnderline active={active} />
+      </h2>
+      {children}
+    </section>
   )
 }
 
@@ -130,18 +171,12 @@ export function FocusSection({
   title: string
   children: React.ReactNode
 }) {
-  const active = useHeadingActive(title)
   return (
-    <section data-help-heading={title} className="relative isolate py-8">
-      <FocusBackground active={active} />
-      <h2 className="relative mb-5 border-b border-gray-200 pb-3 text-2xl font-bold text-gray-900 md:text-3xl">
-        {title}
-        <FocusUnderline active={active} />
-      </h2>
+    <FocusHeadingSection title={title} headingMarginClassName="mb-5">
       <div className="space-y-4 text-[15px] leading-relaxed text-gray-700">
         {children}
       </div>
-    </section>
+    </FocusHeadingSection>
   )
 }
 

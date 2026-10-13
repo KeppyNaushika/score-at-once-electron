@@ -3,7 +3,7 @@
 import { ChartColumn, TrendingUp, Users } from "lucide-react"
 import { useMemo } from "react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SummaryStatCard } from "@/components/common/SummaryStatCard"
 import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
 
 interface ClassroomSummaryCardsProps {
@@ -53,72 +53,24 @@ export function ClassroomSummaryCards({
 
   return (
     <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Users className="h-4 w-4" />
-            在籍生徒数
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tabular-nums">
-            {stats.studentCount}
-            <span className="ml-1 text-lg font-normal text-muted-foreground">
-              名
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <ChartColumn className="h-4 w-4" />
-            学級平均得点率
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tabular-nums">
-            {stats.avgRate != null ? (
-              <>
-                {stats.avgRate}
-                <span className="ml-1 text-lg font-normal text-muted-foreground">
-                  %
-                </span>
-              </>
-            ) : (
-              <span className="text-lg font-normal text-muted-foreground">
-                —
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <TrendingUp className="h-4 w-4" />
-            標準偏差
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold tabular-nums">
-            {stats.stdDev != null ? (
-              <>
-                {stats.stdDev}
-                <span className="ml-1 text-lg font-normal text-muted-foreground">
-                  pt
-                </span>
-              </>
-            ) : (
-              <span className="text-lg font-normal text-muted-foreground">
-                —
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <SummaryStatCard
+        icon={Users}
+        title="在籍生徒数"
+        value={stats.studentCount}
+        unit="名"
+      />
+      <SummaryStatCard
+        icon={ChartColumn}
+        title="学級平均得点率"
+        value={stats.avgRate}
+        unit="%"
+      />
+      <SummaryStatCard
+        icon={TrendingUp}
+        title="標準偏差"
+        value={stats.stdDev}
+        unit="pt"
+      />
     </div>
   )
 }

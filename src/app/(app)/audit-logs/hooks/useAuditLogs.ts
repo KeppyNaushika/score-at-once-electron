@@ -6,18 +6,13 @@ import {
   type RefObject,
   type SetStateAction,
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react"
 
+import { usePageWindow } from "@/hooks/usePageWindow"
 import type { AuditFilterState } from "@/lib/auditLogFilterQuery"
-import {
-  AUTO_PAGE_SIZE,
-  FALLBACK_PAGE_SIZE,
-  type PageSizeChoice,
-} from "@/lib/listPagination"
+import type { PageSizeChoice } from "@/lib/listPagination"
 import { auditLogListQuery } from "@/queries/auditLog"
 import type { AuditLogRow } from "@/types/auditLog.types"
 
@@ -63,46 +58,20 @@ export function useAuditLogs(
 ): UseAuditLogsResult {
   const [filter, setFilterState] = useState<AuditFilterState>(initialFilter)
   /**
-   * 覚えているのは**ページ番号ではなく先頭の行**（0始まり）。
-   *
-   * 「自動」は表示領域の高さから件数を決めるので、**窓を広げれば1ページの件数が
-   * 増えて総ページ数が減る**。ページ番号を覚えていると、10ページ目を見ている最中に
-   * 総数が6ページへ縮んで**空の一覧に着地する**（ページャは6までしか出さないので、
-   * いま居るページのボタンさえ無い）。先頭の行を覚えていれば、件数が変わっても
-   * 「いま見ている行」は動かず、ページ番号の方が計算し直される。
+   * ページの窓（先頭の行と件数）は一覧と共通。見出し行は数えない（`reservedHeight: 0`）。
    *
    * `firstRowIndex < total` である限り `1 ≤ ページ番号 ≤ 総ページ数` は自動的に
    * 満たされるので、詰め直す処理も要らない。
    */
-  const [firstRowIndex, setFirstRowIndex] = useState(0)
-  const [pageSizeChoice, setPageSizeChoiceState] =
-    useState<PageSizeChoice>(AUTO_PAGE_SIZE)
-
-  // 「自動」のときだけ使う。高さは表示領域そのものから測る（見積もりで
-  // 決め打つと、サイドバーを畳んだ・窓を変えたときに合わなくなる）
-  const viewportRef = useRef<HTMLDivElement>(null)
-  const [viewportHeight, setViewportHeight] = useState(0)
-
-  useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport) return
-    // observe した時点で1度呼ばれるので、初回の高さもここで入る
-    const observer = new ResizeObserver(() =>
-      setViewportHeight(viewport.clientHeight)
-    )
-    observer.observe(viewport)
-    return () => observer.disconnect()
-  }, [])
-
-  const measuredPageSize = Math.floor(viewportHeight / AUDIT_LOG_ROW_HEIGHT)
-  const pageSize =
-    pageSizeChoice === AUTO_PAGE_SIZE
-      ? measuredPageSize > 0
-        ? measuredPageSize
-        : FALLBACK_PAGE_SIZE
-      : pageSizeChoice
-
-  const pageNumber = Math.floor(firstRowIndex / pageSize) + 1
+  const {
+    setFirstRowIndex,
+    pageNumber,
+    pageSize,
+    pageSizeChoice,
+    setPageSizeChoice,
+    setPageNumber,
+    viewportRef,
+  } = usePageWindow({ rowHeight: AUDIT_LOG_ROW_HEIGHT, reservedHeight: 0 })
 
   // 画面の状態（欄の並び）を main へ渡す条件にする。欄の文言（label）は条件に
   // 入らないので、同じ条件なら同じクエリキーになる
@@ -122,21 +91,7 @@ export function useAuditLogs(
       setFilterState(update)
       setFirstRowIndex(0)
     },
-    []
-  )
-
-  // 件数を選び直すのは利用者の操作なので、先頭から見直す（窓の大きさが変わった
-  // ときと違い、いま見ている行に留まる理由がない）
-  const setPageSizeChoice = useCallback((choice: PageSizeChoice) => {
-    setPageSizeChoiceState(choice)
-    setFirstRowIndex(0)
-  }, [])
-
-  const setPageNumber = useCallback(
-    (nextPageNumber: number) => {
-      setFirstRowIndex((nextPageNumber - 1) * pageSize)
-    },
-    [pageSize]
+    [setFirstRowIndex]
   )
 
   const total = data?.total ?? 0

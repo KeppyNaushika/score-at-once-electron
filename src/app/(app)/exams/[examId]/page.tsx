@@ -1,11 +1,11 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { EllipsisVertical, FileArchive, Trash, Users } from "lucide-react"
+import { Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
+import { EntityOverviewActionsMenu } from "@/components/common/entity-overview/EntityOverviewActionsMenu"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
@@ -18,13 +18,6 @@ import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
 import { useExamAccess } from "@/components/exams/shared/useExamAccess"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
@@ -160,33 +153,15 @@ export default function ExamDetailPage() {
               メンバー
             </Button>
             {access.canManageExam && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" aria-label="その他の操作">
-                    <EllipsisVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => setShowUnifiedExportDialog(true)}
-                  >
-                    <FileArchive />
-                    .sao 書き出し
-                  </DropdownMenuItem>
-                  <AuditLogMenuItem
-                    scopeId={examId}
-                    scopeLabel={exam.examName}
-                  />
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setShowDeleteModal(true)}
-                    variant="destructive"
-                  >
-                    <Trash />
-                    試験を削除
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <EntityOverviewActionsMenu
+                onExportArchive={() => setShowUnifiedExportDialog(true)}
+                auditScopeId={examId}
+                auditScopeLabel={exam.examName}
+                deleteAction={{
+                  label: "試験を削除",
+                  onSelect: () => setShowDeleteModal(true),
+                }}
+              />
             )}
           </>
         }

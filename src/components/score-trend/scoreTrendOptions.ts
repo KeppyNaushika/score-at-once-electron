@@ -1,6 +1,6 @@
 import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
-import type { SubtotalOption } from "./types"
+import { type SubtotalOption, TOTAL_SUBTOTAL_ID } from "./types"
 
 /** 系列の色。追加した順に回して使う */
 export const SERIES_COLORS = [
@@ -72,4 +72,34 @@ export function groupSubtotalOptions(
     groups.set(option.groupName, list)
   }
   return Array.from(groups.entries())
+}
+
+/**
+ * 系列が見る得点と満点。合計なら試験の合計、小計ならその小計。
+ * 試験にその小計が無ければ null
+ */
+export function seriesScoreOf(
+  examResult: StudentExamResult,
+  subtotalId: string
+): { score: number; maxScore: number } | null {
+  if (subtotalId === TOTAL_SUBTOTAL_ID) {
+    return { score: examResult.totalScore, maxScore: examResult.maxScore }
+  }
+  const matchedSubtotal = examResult.subtotalScores.find(
+    (subtotalScore) => subtotalScore.subtotalId === subtotalId
+  )
+  if (!matchedSubtotal) return null
+  return { score: matchedSubtotal.score, maxScore: matchedSubtotal.maxScore }
+}
+
+/** 系列に載せる試験か（採点済みか途中まで採点済みで、系列のタグのどれかを持つ。タグ無しの系列は全部） */
+export function isSeriesExam(
+  examResult: StudentExamResult,
+  seriesTags: Set<string>
+): boolean {
+  return (
+    (examResult.status === "complete" || examResult.status === "partial") &&
+    (seriesTags.size === 0 ||
+      examResult.tags.some((tag) => seriesTags.has(tag)))
+  )
 }

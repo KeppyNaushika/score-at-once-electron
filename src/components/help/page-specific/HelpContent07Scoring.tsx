@@ -3,13 +3,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { HelpHero } from "@/components/help/common/DocComponents"
+import { HelpDoc, HelpHero } from "@/components/help/common/DocComponents"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { resolveKeyBindings } from "@/lib/scoringKeybindings"
 import { keyboardShortcutsQuery } from "@/queries/settings"
 
 import { GridGuide } from "./07-scoring/GridGuide"
-import { HeadingFocusContext } from "./07-scoring/HeadingFocus"
 import { IndividualGuide } from "./07-scoring/IndividualGuide"
 import { HELP07_KEYFRAMES } from "./07-scoring/keyframes"
 import { Scene } from "./07-scoring/Scene"
@@ -21,17 +20,6 @@ import type {
   ToolKeys,
 } from "./07-scoring/types"
 import { formatKey } from "./07-scoring/utils"
-
-/** スクロール可能な最寄りの祖先を返す（IntersectionObserver の root 用） */
-function getScrollParent(el: HTMLElement | null): HTMLElement | null {
-  let parent = el?.parentElement ?? null
-  while (parent) {
-    const overflowY = getComputedStyle(parent).overflowY
-    if (overflowY === "auto" || overflowY === "scroll") return parent
-    parent = parent.parentElement
-  }
-  return null
-}
 
 // ============================================================================
 // 本体
@@ -110,48 +98,11 @@ export function HelpContent07Scoring() {
     }
   }, [style])
 
-  // スクロール位置で「いまどの見出しを読んでいるか」を判定し、
-  // その見出しの下線を青く伸ばしてフォーカスを示す（全見出し共通）。
-  const rootRef = useRef<HTMLDivElement>(null)
-  const [activeTitle, setActiveTitle] = useState<string | null>(null)
-  useEffect(() => {
-    const host = rootRef.current
-    const root = getScrollParent(host)
-    if (!host || !root) return
-    let raf = 0
-    const update = () => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => {
-        const headings = Array.from(
-          host.querySelectorAll<HTMLElement>("[data-help-heading]")
-        )
-        if (headings.length === 0) {
-          setActiveTitle(null)
-          return
-        }
-        const rootTop = root.getBoundingClientRect().top
-        const line = root.clientHeight * 0.35
-        let current = headings[0].dataset.helpHeading ?? null
-        for (const heading of headings) {
-          const top = heading.getBoundingClientRect().top - rootTop
-          if (top - 8 <= line) current = heading.dataset.helpHeading ?? current
-          else break
-        }
-        setActiveTitle(current)
-      })
-    }
-    root.addEventListener("scroll", update, { passive: true })
-    update()
-    return () => {
-      root.removeEventListener("scroll", update)
-      cancelAnimationFrame(raf)
-    }
-  }, [style])
-
   return (
-    <HeadingFocusContext.Provider value={activeTitle}>
+    <>
       <style>{HELP07_KEYFRAMES}</style>
-      <div ref={rootRef}>
+      {/* スタイルを選ぶと見出しが入れ替わるので、選ぶたびに現在地を測り直す */}
+      <HelpDoc headingSetKey={style}>
         <Scene>
           <HelpHero
             eyebrow="ステップ 7 / 採点"
@@ -176,7 +127,7 @@ export function HelpContent07Scoring() {
             )}
           </div>
         )}
-      </div>
-    </HeadingFocusContext.Provider>
+      </HelpDoc>
+    </>
   )
 }

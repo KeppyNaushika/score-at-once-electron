@@ -8,11 +8,6 @@ import * as crypto from "crypto"
 
 import type { ExtractedArchiveData } from "../../electron-src/lib/import/exam-archive/archiveExtractor"
 import type {
-  IdMappings,
-  ImportCounts,
-} from "../../electron-src/lib/import/merge/types"
-import { createEmptyCounts } from "../../electron-src/lib/import/merge/types"
-import type {
   ArchiveClassesData,
   ArchiveExamData,
   ArchiveScoresData,
@@ -393,44 +388,5 @@ export function createDecision(
     decisionType: overrides.decisionType ?? "create_new",
     existingId: overrides.existingId,
     idChoice: overrides.idChoice,
-  }
-}
-
-// =============================================================================
-// IDマッピング
-// =============================================================================
-
-export function createEmptyIdMappings(): IdMappings {
-  return {
-    student: {},
-    classroom: {},
-    subtotalGroup: {},
-    subtotal: {},
-    exam: {},
-    examPage: {},
-    cropRegion: {},
-    studentAnswerImage: {},
-    examStudent: {},
-    userExam: {},
-    cropSubtotal: {},
-    questionScore: {},
-    drawingAnnotation: {},
-    membership: {},
-    cropRegionOmrConfig: {},
-    cropRegionOmrChoiceOption: {},
-    compoundAnswer: {},
-    compoundAnswerMember: {},
-    compoundAnswerScore: {},
-    scoreDecision: {},
-    user: {},
-  }
-}
-
-export function createEmptyImportCounts(): ImportCounts {
-  return {
-    created: createEmptyCounts(),
-    updated: createEmptyCounts(),
-    skipped: createEmptyCounts(),
-    unchanged: createEmptyCounts(),
   }
 }

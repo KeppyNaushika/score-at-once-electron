@@ -24,6 +24,7 @@ import {
   processStudentIdIntegration,
 } from "../merge/processors"
 import type { IdChangeTarget, IdMappings } from "../merge/types"
+import { createEmptyIdMappings, createEmptyImportCounts } from "../merge/types"
 import { transformStudentToLatest } from "../student-transformers"
 import type { ExtractedStudentArchiveData } from "./archiveExtractor"
 
@@ -86,37 +87,10 @@ export async function executeStudentImport(
   }
 
   // ArchiveDataCounts互換のカウント（プロセッサーが使用）
-  const archiveCounts = {
-    created: createEmptyArchiveCounts(),
-    updated: createEmptyArchiveCounts(),
-    skipped: createEmptyArchiveCounts(),
-    unchanged: createEmptyArchiveCounts(),
-  }
+  const archiveCounts = createEmptyImportCounts()
 
-  const idMappings: IdMappings = {
-    student: {},
-    classroom: {},
-    subtotalGroup: {},
-    subtotal: {},
-    exam: {},
-    examPage: {},
-    cropRegion: {},
-    studentAnswerImage: {},
-    examStudent: {},
-    userExam: {},
-    cropSubtotal: {},
-    questionScore: {},
-    drawingAnnotation: {},
-    membership: {},
-    cropRegionOmrConfig: {},
-    cropRegionOmrChoiceOption: {},
-    compoundAnswer: {},
-    compoundAnswerMember: {},
-    compoundAnswerScore: {},
-    scoreDecision: {},
-    // 生徒アーカイブに採点は入っていないので、採点者を解決する相手がいない
-    user: {},
-  }
+  // 生徒アーカイブに採点は入っていないので、採点者を解決する相手（user）は空のまま
+  const idMappings: IdMappings = createEmptyIdMappings()
 
   const idChangeTargets: IdChangeTarget[] = []
 
@@ -201,21 +175,6 @@ export async function executeStudentImport(
   } catch (error) {
     console.error("Error executing student import:", error)
     throw error instanceof Error ? error : new Error("取り込みに失敗しました")
-  }
-}
-
-function createEmptyArchiveCounts() {
-  return {
-    students: 0,
-    classrooms: 0,
-    users: 0,
-    pages: 0,
-    regions: 0,
-    scores: 0,
-    annotations: 0,
-    subtotalGroups: 0,
-    masterImages: 0,
-    answerSheetImages: 0,
   }
 }
 

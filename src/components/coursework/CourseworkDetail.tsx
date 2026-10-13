@@ -1,11 +1,10 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { EllipsisVertical, FileArchive, Trash } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
+import { EntityOverviewActionsMenu } from "@/components/common/entity-overview/EntityOverviewActionsMenu"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
@@ -14,14 +13,6 @@ import {
   EntityOverviewPage,
   toDateInputValue,
 } from "@/components/common/EntityOverviewPage"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { getCourseworkCompletion } from "@/lib/courseworkStatus"
 import {
@@ -142,33 +133,15 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
           "05-results": null,
         }}
         actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" aria-label="その他の操作">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => setShowUnifiedExportDialog(true)}
-              >
-                <FileArchive />
-                .sao 書き出し
-              </DropdownMenuItem>
-              <AuditLogMenuItem
-                scopeId={courseworkId}
-                scopeLabel={coursework.name}
-              />
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setIsDeleteModalOpen(true)}
-                variant="destructive"
-              >
-                <Trash />
-                資料を削除
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <EntityOverviewActionsMenu
+            onExportArchive={() => setShowUnifiedExportDialog(true)}
+            auditScopeId={courseworkId}
+            auditScopeLabel={coursework.name}
+            deleteAction={{
+              label: "資料を削除",
+              onSelect: () => setIsDeleteModalOpen(true),
+            }}
+          />
         }
       />
       <UnifiedArchiveExportDialog

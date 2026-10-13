@@ -2,13 +2,17 @@
 
 import { Eye } from "lucide-react"
 
-import { Callout, KeyCap } from "@/components/help/common/DocComponents"
+import {
+  Callout,
+  FocusSection,
+  KeyCap,
+  useHeadingActive,
+} from "@/components/help/common/DocComponents"
 
 import { BehaviorCard } from "./BehaviorCard"
 import { REGION_GREEN } from "./constants"
 import { DisplayModeMini } from "./DisplayModeMini"
 import { DrawToolCard } from "./DrawToolCard"
-import { FocusSection, useHeadingActive } from "./HeadingFocus"
 import { IndividualScoringDemo } from "./IndividualScoringDemo"
 import { Scene } from "./Scene"
 import { Troubleshoot } from "./Troubleshoot"

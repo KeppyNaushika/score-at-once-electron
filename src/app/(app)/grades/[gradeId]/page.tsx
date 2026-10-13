@@ -1,11 +1,10 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { EllipsisVertical, FileArchive, Trash } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
-import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
+import { EntityOverviewActionsMenu } from "@/components/common/entity-overview/EntityOverviewActionsMenu"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
@@ -15,14 +14,6 @@ import {
   toDateInputValue,
 } from "@/components/common/EntityOverviewPage"
 import { DeleteGradeModal } from "@/components/grades/DeleteGradeModal"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useRouteParams } from "@/hooks/useRouteParams"
 import { getGradeCompletion } from "@/lib/gradeStatus"
@@ -139,30 +130,15 @@ export default function GradeDetailPage() {
           "06-export": null,
         }}
         actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" aria-label="その他の操作">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => setShowUnifiedExportDialog(true)}
-              >
-                <FileArchive />
-                .sao 書き出し
-              </DropdownMenuItem>
-              <AuditLogMenuItem scopeId={gradeId} scopeLabel={grade.name} />
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setIsDeleteModalOpen(true)}
-                variant="destructive"
-              >
-                <Trash />
-                成績算出を削除
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <EntityOverviewActionsMenu
+            onExportArchive={() => setShowUnifiedExportDialog(true)}
+            auditScopeId={gradeId}
+            auditScopeLabel={grade.name}
+            deleteAction={{
+              label: "成績算出を削除",
+              onSelect: () => setIsDeleteModalOpen(true),
+            }}
+          />
         }
       />
       <UnifiedArchiveExportDialog

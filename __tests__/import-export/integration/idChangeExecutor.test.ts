@@ -13,10 +13,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { IdChangeTarget } from "../../../electron-src/lib/import/merge/types"
-import {
-  createEmptyIdMappings,
-  generateId,
-} from "../../helpers/testDataFactory"
+import { createEmptyIdMappings } from "../../../electron-src/lib/import/merge/types"
+import { generateId } from "../../helpers/testDataFactory"
 import {
   cleanupTestDatabase,
   disconnectTestPrisma,
