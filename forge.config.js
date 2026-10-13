@@ -21,7 +21,7 @@
  *
  * **画面（`renderer`・`.next`）はここに無い。** 画面は静的書き出し `renderer/` を
  * `extraResource` で `Resources/renderer` に置き、main がそれを配る
- * （`rendererStaticServer.ts`）。`.next` はビルドの途中の置き場で、配布物には入れない。
+ * （`electron-src/rendererProtocol.ts`）。`.next` はビルドの途中の置き場で、配布物には入れない。
  */
 const { FusesPlugin } = require("@electron-forge/plugin-fuses")
 const { FuseV1Options, FuseVersion } = require("@electron/fuses")
@@ -39,10 +39,16 @@ const { FuseV1Options, FuseVersion } = require("@electron/fuses")
  * - GrantFileProtocolExtraPrivileges: `file://` の文書が他のローカルファイルを読める特権。
  *   印刷は一時ファイルを `file://` で開くので、乗っ取られても他のファイルに届かないように
  *   （印刷のウィンドウの閉じ込めは `electron-src/lib/printUtils.ts`）
+ * - EnableEmbeddedAsarIntegrityValidation: `app.asar` の中身を、packager が実行ファイルの
+ *   側（mac は Info.plist の ElectronAsarIntegrity）に記録したハッシュと照らし、違えば
+ *   起動を止める。mac と Windows で効き、Linux では効かない
+ * - OnlyLoadAppFromAsar: `app.asar` の代わりに `app` フォルダなどを読む道を閉じる
+ *   （閉じないと、asar を検査しても隣に置いたフォルダで差し替えられる）
  *
- * asar の改ざん検知（EnableEmbeddedAsarIntegrityValidation・OnlyLoadAppFromAsar）は、
- * asar の外に置くもの（ネイティブモジュール・extraResource）との兼ね合いをパッケージ版の
- * 起動で確かめてから足す
+ * 検査するのは asar の中だけで、外に置くもの（`app.asar.unpacked` の better-sqlite3・
+ * sharp の libvips、extraResource の renderer・public）は対象外。2026-10-13 に mac の
+ * パッケージ版で、この2つを入れたまま起動・DB・sharp・印刷・`.sao` の作業者が動くこと、
+ * asar のヘッダーや main の中身を1バイト変えると起動が止まることを確かめた
  */
 const FUSES_PLUGIN = new FusesPlugin({
   version: FuseVersion.V1,
@@ -50,6 +56,8 @@ const FUSES_PLUGIN = new FusesPlugin({
   [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
   [FuseV1Options.EnableNodeCliInspectArguments]: false,
   [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
+  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+  [FuseV1Options.OnlyLoadAppFromAsar]: true,
 })
 
 const PACKAGED_TOP_LEVEL = new Set([

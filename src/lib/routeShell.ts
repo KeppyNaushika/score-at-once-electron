@@ -8,7 +8,7 @@
  * 中身のデータは画面が URL の id で取りに行くので、殻1枚でどの id も描ける。
  *
  * 書き換えるのは次の3か所。
- * - デスクトップ版: main の配信（`electron-src/rendererStaticServer.ts`。`toRouteShellPath`）
+ * - デスクトップ版: main の配信（`electron-src/rendererProtocol.ts`。`toRouteShellPath`）
  * - 開発用サーバー: `next.config.ts` の `rewrites`
  * - web 版: 手元の配信（`scripts/web/serveWeb.mjs`）は `toRouteShellPath`、本番（Cloudflare
  *   Pages）は `routeShellRewriteRules` から書き出す `_redirects`（`scripts/web/webRedirects.mjs`）。

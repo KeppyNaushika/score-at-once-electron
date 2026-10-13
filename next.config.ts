@@ -9,7 +9,7 @@ import {
 } from "./src/lib/routeShell"
 
 /**
- * 静的書き出しの置き場。デスクトップ版はこれを main が配り（`electron-src/rendererStaticServer.ts`。
+ * 静的書き出しの置き場。デスクトップ版はこれを main が配り（`electron-src/rendererProtocol.ts`。
  * パッケージ版では `Resources/renderer`）、web 版はこれをそのまま配信に載せる。
  *
  * `.next` 以外の名前にしておく。Next は `distDir` が既定の `.next` のときだけ書き出しを

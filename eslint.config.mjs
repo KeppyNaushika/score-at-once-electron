@@ -313,7 +313,6 @@ export default [
     ignores: [
       // デスクトップの入口と、画面の静的書き出しの配信
       "electron-src/index.ts",
-      "electron-src/rendererStaticServer.ts",
       "electron-src/lib/rendererFiles.ts",
       // NAS 同期（web 版は1人で使うので同期を持たない）
       "electron-src/lib/sync/**",

@@ -13,8 +13,11 @@ import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
 import { getPrismaClient } from "./lib/prisma/client"
 import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
 import { stopSync } from "./lib/sync/syncService"
-import { rendererOrigin } from "./rendererPort"
-import { startRendererStaticServer } from "./rendererStaticServer"
+import { rendererOrigin } from "./rendererOrigin"
+import {
+  handleRendererProtocol,
+  RENDERER_SCHEME_PRIVILEGES,
+} from "./rendererProtocol"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
 /** AI採点のバッチ回収を止める口（起動に成功したときだけ入る） */
@@ -57,9 +60,11 @@ if (process.platform === "win32" && app.isPackaged) {
   }
 }
 
-// カスタムプロトコル 'appimg://' を登録（webSecurity有効時にローカルファイルへアクセスするため）
-// 注意: app.whenReady() より前に protocol.registerSchemesAsPrivileged を呼ぶ必要がある
+// カスタムプロトコルを登録する。'appimg://' は webSecurity 有効時にローカルの画像を読むため、
+// 画面のスキーム（パッケージ版の 'app://'）は画面の静的書き出しを返すため。
+// 注意: app.whenReady() より前に、全部を1回の protocol.registerSchemesAsPrivileged で渡す
 protocol.registerSchemesAsPrivileged([
+  RENDERER_SCHEME_PRIVILEGES,
   {
     scheme: "appimg",
     privileges: {
@@ -125,13 +130,8 @@ app.on("ready", async () => {
     // アプリケーションの初期化
     await initializeApp()
 
-    // 画面を配るサーバーの起動（プロダクションのみ）
-    try {
-      await startRendererStaticServer()
-    } catch (error) {
-      console.error("Failed to start renderer server:", error)
-      throw error
-    }
+    // 画面の静的書き出しを返すスキーム（パッケージ版のみ。開発時は next dev）
+    handleRendererProtocol()
 
     // メインウィンドウの作成
     const mainWindow = createMainWindow()
