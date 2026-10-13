@@ -49,7 +49,8 @@ export function StudentImportWizardModal({
   startState,
 }: StudentImportWizardModalProps) {
   const wizard = useStudentImportWizard(startState)
-  const { state, reset } = wizard
+  const { state, reset, importOutcome } = wizard
+  const isImported = importOutcome?.kind === "ok"
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,10 +58,12 @@ export function StudentImportWizardModal({
     }
   }, [isOpen, reset])
 
+  // フッターの「閉じる」・実行の段の「閉じる」・窓の ✕／Esc はどれもここを通る。
+  // 取り込めていれば、どれで閉じても完了を知らせる
   const handleClose = () => {
-    if (!state.isProcessing) {
-      onClose()
-    }
+    if (state.isProcessing) return
+    if (isImported) onComplete?.()
+    onClose()
   }
 
   const currentStepIndex = STUDENT_IMPORT_STEP_ORDER.indexOf(
@@ -139,6 +142,7 @@ export function StudentImportWizardModal({
                 variant="ghost"
                 size="sm"
                 onClick={wizard.clearError}
+                aria-label="エラーを閉じる"
                 className="-mt-2 -mr-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 <X className="h-4 w-4" />
@@ -165,11 +169,7 @@ export function StudentImportWizardModal({
             />
           )}
           {state.currentStep === "execute" && (
-            <ExecuteStep
-              wizard={wizard}
-              onComplete={onComplete}
-              onClose={onClose}
-            />
+            <ExecuteStep wizard={wizard} onClose={handleClose} />
           )}
         </div>
 
@@ -178,7 +178,11 @@ export function StudentImportWizardModal({
           <Button
             variant="ghost"
             onClick={wizard.goBack}
-            disabled={state.currentStep === "file_select" || state.isProcessing}
+            disabled={
+              state.currentStep === "file_select" ||
+              state.currentStep === "execute" ||
+              state.isProcessing
+            }
             className="gap-2"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -189,7 +193,7 @@ export function StudentImportWizardModal({
             onClick={handleClose}
             disabled={state.isProcessing}
           >
-            キャンセル
+            {isImported ? "閉じる" : "キャンセル"}
           </Button>
         </div>
       </DialogContent>

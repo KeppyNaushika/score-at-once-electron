@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { type ReactNode, useMemo } from "react"
 import {
   CartesianGrid,
   ComposedChart,
@@ -15,16 +15,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 
 import { formatDateTick, formatPercentTick } from "./scoreTrendOptions"
-import type { TrendSeries } from "./types"
-
-/** 推移グラフの1点（試験1つ）のうち、生徒・学級で共通の部分 */
-export interface TrendChartPointBase {
-  /** ツールチップに出す短い日付 */
-  date: string
-  /** X 軸の値（試験日の時刻値） */
-  sortKey: number
-  examName: string
-}
+import { trendPlotDomain } from "./trendPoints"
+import type { TrendChartPointBase, TrendSeries } from "./types"
 
 interface TrendChartFrameProps<
   TSeries extends TrendSeries,
@@ -32,16 +24,15 @@ interface TrendChartFrameProps<
 > {
   /** カードの頭（系列の編集） */
   header: ReactNode
+  /** 値のある試験だけの点（試験日順）。点の数で案内とグラフを切り替える */
   data: TPoint[]
-  /** どれかの系列に1点でも値があるか */
-  hasData: boolean
   seriesList: TSeries[]
   /**
    * ツールチップの系列1行のうち、系列名より後ろ（数値）。その点に値が無い系列は
    * null を返し、行ごと出さない
    */
   renderTooltipValue: (series: TSeries, point: TPoint) => ReactNode | null
-  /** 点が1つだけのときの案内 */
+  /** 値のある点が1つだけのときの案内 */
   singlePointMessage: ReactNode
   /** 値のある点が無いときの案内 */
   emptyMessage: ReactNode
@@ -53,6 +44,10 @@ interface TrendChartFrameProps<
  * 得点率の推移グラフの枠（カード・軸・凡例・折れ線・ツールチップの外枠・空のときの案内）。
  * 生徒の詳細と学級の詳細が同じ姿を書き並べていたのを1つにした。点の作り方と
  * ツールチップの数値は画面ごとに違うので呼び手が渡す。
+ *
+ * X 軸は時刻の軸で、試験日の間隔が横の距離に出る。近すぎる点（同じ日・日が近い）は
+ * 点の作り手が描く位置（`plotTime`）を譲り合わせてあるので、点は重ならず、
+ * ツールチップもそれぞれの試験を指す。目盛りは実際の試験日の位置（その日の 0 時）に置く。
  */
 export function TrendChartFrame<
   TSeries extends TrendSeries,
@@ -60,19 +55,24 @@ export function TrendChartFrame<
 >({
   header,
   data,
-  hasData,
   seriesList,
   renderTooltipValue,
   singlePointMessage,
   emptyMessage,
   children,
 }: TrendChartFrameProps<TSeries, TPoint>) {
+  const plotDomain = useMemo(() => trendPlotDomain(data), [data])
+  const dayTicks = useMemo(
+    () => Array.from(new Set(data.map((point) => point.dayTime))),
+    [data]
+  )
+
   return (
     <Card className="mb-8 border-border/50 shadow-sm">
       {header}
 
       <CardContent>
-        {hasData && data.length >= 2 ? (
+        {data.length >= 2 ? (
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart
               data={data}
@@ -80,10 +80,11 @@ export function TrendChartFrame<
             >
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis
-                dataKey="sortKey"
+                dataKey="plotTime"
                 type="number"
                 scale="time"
-                domain={["dataMin", "dataMax"]}
+                domain={plotDomain}
+                ticks={dayTicks}
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
@@ -161,7 +162,7 @@ export function TrendChartFrame<
               {children}
             </ComposedChart>
           </ResponsiveContainer>
-        ) : hasData && data.length === 1 ? (
+        ) : data.length === 1 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             {singlePointMessage}
           </div>

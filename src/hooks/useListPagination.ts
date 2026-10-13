@@ -50,7 +50,8 @@ interface UseListPaginationResult<Row> {
  * 監査ログ（`useAuditLogs`）と違い、行は既に全部揃っている（main は一覧を丸ごと
  * 返す）。ここでやるのは切り出しだけで、取得は起こらない。
  *
- * ページの窓（先頭の行と件数）は監査ログと共通の `usePageWindow` が持つ。
+ * ページの窓（先頭の行と件数）と、行が減ったときの詰め直しは監査ログと共通の
+ * `usePageWindow` が持つ。
  */
 export function useListPagination<Row>(
   rows: Row[],
@@ -65,7 +66,7 @@ export function useListPagination<Row>(
     setPageSizeChoice,
     setPageNumber,
     viewportRef,
-  } = usePageWindow({ rowHeight, reservedHeight })
+  } = usePageWindow({ rowHeight, reservedHeight, totalRows: rows.length })
 
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize))
 
@@ -74,14 +75,6 @@ export function useListPagination<Row>(
   if (seededResetKey !== resetKey) {
     setSeededResetKey(resetKey)
     setFirstRowIndex(0)
-  }
-
-  // 行が減って、いま見ている先頭が最後のページより後ろになったら詰め直す。
-  // `resetKey` を変えずに行が減る経路（別の端末の書き込みが同期で届く、削除した）
-  // があるので、鍵の付け替えだけでは足りない
-  const lastPageFirstRowIndex = (pageCount - 1) * pageSize
-  if (firstRowIndex > lastPageFirstRowIndex) {
-    setFirstRowIndex(lastPageFirstRowIndex)
   }
 
   return {

@@ -19,6 +19,12 @@ interface UsePageWindowOptions {
   rowHeight: number
   /** 行の上に居座るもの（見出し行など）の高さ（px） */
   reservedHeight: number
+  /**
+   * 総件数。**まだ分からないとき（読み込み中）は `undefined`** を渡す。
+   *
+   * 分からない間は詰め直さない。0件と取り違えると、取得を待つたびに先頭へ戻される。
+   */
+  totalRows: number | undefined
 }
 
 interface UsePageWindowResult {
@@ -41,8 +47,8 @@ interface UsePageWindowResult {
  * 一覧の「いま見ている窓」（先頭の行と1ページの件数）を持つ。
  *
  * 行を手元で切り出す一覧（`useListPagination`）と、main にページを要求する監査ログ
- * （`useAuditLogs`）が共に使う。総件数・詰め直し・絞り込みでの巻き戻しは、件数の
- * 出どころが違うので使う側が持つ。
+ * （`useAuditLogs`）が共に使う。件数が減ったときの詰め直しはここが持ち、総件数と
+ * 絞り込みでの巻き戻しは、件数の出どころが違うので使う側が持つ。
  *
  * **覚えているのはページ番号ではなく先頭の行**（0始まり）。「自動」は表示領域の高さ
  * から件数を決めるので、**窓を広げれば1ページの件数が増えて総ページ数が減る**。
@@ -54,6 +60,7 @@ interface UsePageWindowResult {
 export function usePageWindow({
   rowHeight,
   reservedHeight,
+  totalRows,
 }: UsePageWindowOptions): UsePageWindowResult {
   const [firstRowIndex, setFirstRowIndex] = useState(0)
   const [pageSizeChoice, setPageSizeChoiceState] =
@@ -84,6 +91,17 @@ export function usePageWindow({
         ? measuredPageSize
         : FALLBACK_PAGE_SIZE
       : pageSizeChoice
+
+  // 件数が減って、いま見ている先頭が最後のページより後ろになったら詰め直す。
+  // 絞り込みを変えずに件数が減る経路（別の端末の書き込みが同期で届く、削除した、
+  // 監査ログの保持期間が過ぎた）があるので、絞り込みでの巻き戻しだけでは足りない
+  if (totalRows !== undefined) {
+    const pageCount = Math.max(1, Math.ceil(totalRows / pageSize))
+    const lastPageFirstRowIndex = (pageCount - 1) * pageSize
+    if (firstRowIndex > lastPageFirstRowIndex) {
+      setFirstRowIndex(lastPageFirstRowIndex)
+    }
+  }
 
   // 件数を選び直すのは利用者の操作なので、先頭から見直す（窓の大きさが変わった
   // ときと違い、いま見ている行に留まる理由がない）

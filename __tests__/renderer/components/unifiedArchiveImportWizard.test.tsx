@@ -453,6 +453,55 @@ describe("UnifiedArchiveImportWizard", () => {
     ).toHaveTextContent("成績算出の値は変わりません。")
   })
 
+  /** ファイル選択から確認の段まで進め、「取り込む」を押す */
+  async function runImportFromStart(user: ReturnType<typeof userEvent.setup>) {
+    await openArchive(user)
+    await clickNext(user)
+    await screen.findByText("データの紐づけ")
+    await clickNext(user)
+    await screen.findByText("衝突はありません")
+    await clickNext(user)
+    await screen.findByText("取り込む内容の確認")
+    await user.click(screen.getByRole("button", { name: /取り込む/ }))
+  }
+
+  it("UA-I10: 実行の失敗は実行の段の1か所だけに出す（上部のエラーの帯には出さない）", async () => {
+    const user = userEvent.setup()
+    unifiedArchive.import.mockRejectedValue(new Error("書き込みに失敗しました"))
+    const onComplete = vi.fn()
+    renderWizard({ onComplete })
+
+    await runImportFromStart(user)
+
+    expect(
+      await screen.findByText("取り込みに失敗しました")
+    ).toBeInTheDocument()
+    expect(screen.getAllByText("書き込みに失敗しました")).toHaveLength(1)
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /戻る/ })).toBeDisabled()
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
+  it("UA-I11: エラーの帯の ✕ を押しても、実行の段の失敗の表示は変わらない", async () => {
+    const user = userEvent.setup()
+    unifiedArchive.import.mockRejectedValue(new Error("書き込みに失敗しました"))
+    renderWizard()
+
+    await runImportFromStart(user)
+    await screen.findByText("取り込みに失敗しました")
+
+    // 帯の ✕ をすべて押す（実行の失敗は帯に出さないので、今は押すものが無い）
+    for (const dismissButton of screen.queryAllByRole("button", {
+      name: "エラーを閉じる",
+    })) {
+      await user.click(dismissButton)
+    }
+
+    expect(screen.getByText("取り込みに失敗しました")).toBeInTheDocument()
+    expect(screen.getByText("書き込みに失敗しました")).toBeInTheDocument()
+    expect(screen.queryByText("詳細は不明です")).not.toBeInTheDocument()
+  })
+
   it("UA-I7: 取り込まずに閉じたら main の作業を閉じる", async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()

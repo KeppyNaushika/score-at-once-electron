@@ -3,16 +3,9 @@
 import { useCallback, useMemo } from "react"
 import { Area } from "recharts"
 
-import {
-  formatShortDate,
-  isSeriesExam,
-  SERIES_COLORS,
-  seriesScoreOf,
-} from "@/components/score-trend/scoreTrendOptions"
-import {
-  TrendChartFrame,
-  type TrendChartPointBase,
-} from "@/components/score-trend/TrendChartFrame"
+import { SERIES_COLORS } from "@/components/score-trend/scoreTrendOptions"
+import { TrendChartFrame } from "@/components/score-trend/TrendChartFrame"
+import { buildClassroomTrendPoints } from "@/components/score-trend/trendPoints"
 import { TrendSeriesEditor } from "@/components/score-trend/TrendSeriesEditor"
 import {
   TOTAL_SUBTOTAL_ID,
@@ -26,14 +19,6 @@ import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/stude
 /** 学級の系列は平均の上下に標準偏差の帯を重ねられる */
 interface ClassroomTrendSeries extends TrendSeries {
   showStdDev: boolean
-}
-
-/**
- * 学級の推移の1点（試験1つ）。系列ごとに `<系列id>` へ平均得点率、`_std` へ標準偏差、
- * `_band` へ平均±σ（0〜100 に収める）、`_n` へ人数を持つ
- */
-interface ClassroomTrendPoint extends TrendChartPointBase {
-  [seriesKey: string]: number | string | [number, number]
 }
 
 /** 学級の推移は色を6つで回す（生徒の推移より系列が少ない前提の配色） */
@@ -114,83 +99,11 @@ export function ClassroomScoreTrendChart({
     }))
   }
 
-  // チャートデータ生成
-  const { mergedData, hasData } = useMemo(() => {
-    // 全試験を日付でグループ化
-    const datedExamMap = new Map<
-      string,
-      { examId: string; examName: string; date: Date }
-    >()
-    studentResults.forEach((studentResult) =>
-      studentResult.examResults.forEach((examResult) => {
-        if (examResult.referenceDate && !datedExamMap.has(examResult.examId)) {
-          datedExamMap.set(examResult.examId, {
-            examId: examResult.examId,
-            examName: examResult.examName,
-            date: new Date(examResult.referenceDate),
-          })
-        }
-      })
-    )
-
-    const exams = Array.from(datedExamMap.values()).sort(
-      (examA, examB) => examA.date.getTime() - examB.date.getTime()
-    )
-
-    const dataPoints: ClassroomTrendPoint[] = []
-    let anyData = false
-
-    for (const exam of exams) {
-      const point: ClassroomTrendPoint = {
-        date: formatShortDate(exam.date),
-        sortKey: exam.date.getTime(),
-        examName: exam.examName,
-      }
-
-      for (const series of seriesList) {
-        const rates: number[] = []
-
-        for (const studentResult of studentResults) {
-          const result = studentResult.examResults.find(
-            (examResult) =>
-              examResult.examId === exam.examId &&
-              isSeriesExam(examResult, series.tags)
-          )
-          if (!result) continue
-
-          const seriesScore = seriesScoreOf(result, series.subtotalId)
-          if (!seriesScore) continue
-          const { score, maxScore } = seriesScore
-          if (maxScore > 0) {
-            rates.push((score / maxScore) * 100)
-          }
-        }
-
-        if (rates.length > 0) {
-          anyData = true
-          const avg =
-            rates.reduce((accumulator, rate) => accumulator + rate, 0) /
-            rates.length
-          const variance =
-            rates.reduce((sum, rate) => sum + (rate - avg) ** 2, 0) /
-            rates.length
-          const stdDev = Math.sqrt(variance)
-
-          point[series.id] = Math.round(avg * 10) / 10
-          point[`${series.id}_std`] = Math.round(stdDev * 10) / 10
-          point[`${series.id}_band`] = [
-            Math.max(0, Math.round((avg - stdDev) * 10) / 10),
-            Math.min(100, Math.round((avg + stdDev) * 10) / 10),
-          ]
-          point[`${series.id}_n`] = rates.length
-        }
-      }
-
-      dataPoints.push(point)
-    }
-
-    return { mergedData: dataPoints, hasData: anyData }
-  }, [studentResults, seriesList])
+  // チャートデータ生成 — 試験ごとに1点（値のある試験だけ）
+  const trendPoints = useMemo(
+    () => buildClassroomTrendPoints(studentResults, seriesList),
+    [studentResults, seriesList]
+  )
 
   if (studentResults.length === 0) return null
 
@@ -219,8 +132,7 @@ export function ClassroomScoreTrendChart({
           )}
         />
       }
-      data={mergedData}
-      hasData={hasData}
+      data={trendPoints}
       seriesList={seriesList}
       renderTooltipValue={(series, point) => {
         const avg = point[series.id]

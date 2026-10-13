@@ -4,6 +4,7 @@ import { ClipboardList } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 
+import { scoreRatePercent } from "@/components/score-trend/scoreRate"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
@@ -88,10 +89,9 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
     if (result.status === "unscored") {
       return <span className="text-muted-foreground">—</span>
     }
-    const percentage =
-      result.maxScore > 0
-        ? Math.round((result.totalScore / result.maxScore) * 100)
-        : 0
+    const percentage = Math.round(
+      scoreRatePercent(result.totalScore, result.maxScore)
+    )
     return (
       <div className="flex items-center gap-2">
         <span className="font-medium tabular-nums">

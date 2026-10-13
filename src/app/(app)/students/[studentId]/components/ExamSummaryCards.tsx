@@ -4,6 +4,10 @@ import { ChartColumn, FileCheck, TrendingUp } from "lucide-react"
 import { useMemo } from "react"
 
 import { SummaryStatCard } from "@/components/common/SummaryStatCard"
+import {
+  rateMeanAndStdDev,
+  scoredExamRates,
+} from "@/components/score-trend/scoreRate"
 import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 
 interface ExamSummaryCardsProps {
@@ -12,25 +16,17 @@ interface ExamSummaryCardsProps {
 
 export function ExamSummaryCards({ results }: ExamSummaryCardsProps) {
   const stats = useMemo(() => {
-    const scored = results.filter(
-      (examResult) =>
-        examResult.status === "complete" || examResult.status === "partial"
-    )
-    if (scored.length === 0) {
+    // 採点済み（途中を含む）の試験の得点率。満点0の試験は 0% として入れる
+    const rates = scoredExamRates(results)
+    const rateStats = rateMeanAndStdDev(rates)
+    if (!rateStats) {
       return { examCount: results.length, avgRate: null, maxRate: null }
     }
-
-    const rates = scored.map((examResult) =>
-      examResult.maxScore > 0
-        ? (examResult.totalScore / examResult.maxScore) * 100
-        : 0
-    )
-    const avgRate = Math.round(
-      rates.reduce((sum, rate) => sum + rate, 0) / rates.length
-    )
-    const maxRate = Math.round(Math.max(...rates))
-
-    return { examCount: results.length, avgRate, maxRate }
+    return {
+      examCount: results.length,
+      avgRate: Math.round(rateStats.mean),
+      maxRate: Math.round(Math.max(...rates)),
+    }
   }, [results])
 
   return (

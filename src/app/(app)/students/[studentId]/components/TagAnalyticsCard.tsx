@@ -14,6 +14,7 @@ import {
 } from "recharts"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
+import { seriesAverageRate } from "@/components/score-trend/scoreTrendOptions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -235,44 +236,13 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
   // 棒グラフデータ生成
   const chartData = useMemo(() => {
     return seriesList.map((series) => {
-      const scored = results.filter(
-        (examResult) =>
-          (examResult.status === "complete" ||
-            examResult.status === "partial") &&
-          (series.tags.size === 0 ||
-            examResult.tags.some((tag) => series.tags.has(tag)))
-      )
-
-      let totalRate = 0
-      let count = 0
-
-      for (const examResult of scored) {
-        let score: number
-        let maxScore: number
-
-        if (series.subtotalId === "__total__") {
-          score = examResult.totalScore
-          maxScore = examResult.maxScore
-        } else {
-          const matchedSubtotal = examResult.subtotalScores.find(
-            (subtotalScore) => subtotalScore.subtotalId === series.subtotalId
-          )
-          if (!matchedSubtotal) continue
-          score = matchedSubtotal.score
-          maxScore = matchedSubtotal.maxScore
-        }
-
-        if (maxScore > 0) {
-          totalRate += (score / maxScore) * 100
-          count++
-        }
-      }
-
+      // 満点0の試験は 0% として平均に入れる（要約カード・推移と同じ扱い）
+      const { avgRate, examCount } = seriesAverageRate(results, series)
       return {
         id: series.id,
         label: series.label,
-        avgRate: count > 0 ? Math.round(totalRate / count) : 0,
-        examCount: count,
+        avgRate,
+        examCount,
         color: series.color,
       }
     })

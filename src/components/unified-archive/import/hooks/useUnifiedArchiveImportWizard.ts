@@ -26,6 +26,15 @@ import type {
 /** 開いた結果（開けた / 開けなかった） */
 type UnifiedArchiveOpenResult = OpenedUnifiedArchive | RejectedUnifiedArchive
 
+/**
+ * 実行の段の結果（取り込めた / 失敗した）。失敗はここに持ち、ウィザード全体のエラー
+ * （`error`。帯）には載せない — 帯にも実行の段にも同じ文言が出て、帯の ✕ で消すと
+ * 実行の段が「詳細は不明です」になっていた
+ */
+type ArchiveExecuteOutcome =
+  | Extract<ArchiveImportOutcome, { kind: "ok" }>
+  | { kind: "failed"; error: string }
+
 const errorMessageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
@@ -84,7 +93,7 @@ export function useUnifiedArchiveImportWizard({
     outcome: ArchiveAnalyzeOutcome
   } | null>(null)
   const [importOutcome, setImportOutcome] =
-    useState<ArchiveImportOutcome | null>(null)
+    useState<ArchiveExecuteOutcome | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const importArchive = useMutation(importUnifiedArchiveMutation())
@@ -194,7 +203,7 @@ export function useUnifiedArchiveImportWizard({
       setImportOutcome(outcome)
       onComplete?.()
     } catch (importError) {
-      setError(errorMessageOf(importError))
+      setImportOutcome({ kind: "failed", error: errorMessageOf(importError) })
     } finally {
       setIsProcessing(false)
     }
