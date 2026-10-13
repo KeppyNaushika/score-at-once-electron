@@ -24,6 +24,8 @@ env:
   NODE_VERSION: "22"
   # Opt into Node.js 24 for GitHub Actions runtime
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # tsc --noEmit が macOS ランナーで既定のヒープ（約2GB）を使い切って落ちるため広げる（macOS ランナーの搭載は7GB）
+  NODE_OPTIONS: "--max-old-space-size=6144"
 
 jobs:
   build:
