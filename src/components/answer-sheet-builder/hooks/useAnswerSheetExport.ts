@@ -7,12 +7,20 @@
  *
  * **解答用紙と模範解答は必ず両方出す。** 片方だけ出す設定は無い（採点には模範解答が、
  * 配布には解答用紙が要る）。1つのファイルに続けて綴じるか、2つに分けるかだけを選ぶ。
+ *
+ * web 版の PDF は印刷ダイアログで利用者が「PDF に保存」する。ダイアログを閉じても、保存したのか
+ * やめたのかをブラウザは教えないので、「出力しました」と断定しない（`notifyPdfOutputDone`）。
  */
 
 import { useMutation } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
+import {
+  PRINT_DIALOG_CLOSED_DESCRIPTION,
+  PRINT_DIALOG_CLOSED_MESSAGE,
+} from "@/lib/outputResultText"
+import { isWebRuntime } from "@/lib/webRuntime"
 import {
   exportAnswerSheetPngMutation,
   selectAnswerSheetSavePathMutation,
@@ -28,6 +36,20 @@ import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageL
 interface ExportOptions {
   /** 解答用紙と模範解答を別のファイルにするか（false なら1つに続けて綴じる） */
   separateFiles: boolean
+}
+
+/**
+ * PDF を出し終えたことを知らせる。デスクトップ版は書いたファイルがあるので `desktopMessage`
+ * のとおり。web 版は印刷ダイアログを閉じただけなので、保存を確かめるよう添える
+ */
+const notifyPdfOutputDone = (desktopMessage: string) => {
+  if (isWebRuntime()) {
+    toast.info(PRINT_DIALOG_CLOSED_MESSAGE, {
+      description: PRINT_DIALOG_CLOSED_DESCRIPTION,
+    })
+    return
+  }
+  toast.success(desktopMessage)
 }
 
 /** 解答用紙のPDF/PNG出力を提供するフック */
@@ -82,7 +104,7 @@ export function useAnswerSheetExport() {
             pageSize,
             margins,
           })
-          toast.success("PDFを2つ出力しました（解答用紙・模範解答）")
+          notifyPdfOutputDone("PDFを2つ出力しました（解答用紙・模範解答）")
           return
         }
 
@@ -95,7 +117,7 @@ export function useAnswerSheetExport() {
           pageSize,
           margins,
         })
-        toast.success("PDFを出力しました（解答用紙のあとに模範解答）")
+        notifyPdfOutputDone("PDFを出力しました（解答用紙のあとに模範解答）")
       } catch {
         // 失敗の通知は MutationCache が出す
       } finally {

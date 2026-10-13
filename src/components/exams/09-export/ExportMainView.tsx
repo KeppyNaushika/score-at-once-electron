@@ -248,6 +248,7 @@ export default function ExportMainView() {
     embeddedPagesCount,
     totalPagesCount,
     canvasRenderingComplete,
+    savedOutputPath,
   } = useScoredAnswerPdfExport({
     exam,
     selectedStudents,
@@ -460,6 +461,7 @@ export default function ExportMainView() {
             embeddedPagesCount={embeddedPagesCount}
             totalPagesCount={totalPagesCount}
             canvasRenderingComplete={canvasRenderingComplete}
+            outputPath={savedOutputPath ?? undefined}
           />
         )}
 

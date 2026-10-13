@@ -20,6 +20,8 @@ import { builtinModules } from "node:module"
 import * as path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
+import { createWebBuildId } from "./webBuildId.mjs"
+
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../.."
@@ -182,11 +184,13 @@ const createReplacementPlugin = (replacementLog) => ({
 /**
  * Worker を束ねて `outDir` に書く。
  *
- * @param {{ outDir: string, minify?: boolean }} options
+ * @param {{ outDir: string, minify?: boolean, buildId?: string }} options
+ *   `buildId` は版（`web/webBuild.ts`）。画面の入口と同じ値を渡す（`scripts/web/buildWeb.mjs`）。
+ *   省けば新しく決める（Worker だけを書き出して確かめるとき）
  * @returns {Promise<{ replacements: Record<string, string[]>, outputBytes: number }>}
  *   差し替えたモジュールと、それを読んだモジュール（相対パス）・worker.js の大きさ
  */
-export async function buildWorker({ outDir, minify = false }) {
+export async function buildWorker({ outDir, minify = false, buildId }) {
   if (!existsSync(path.join(webPrismaClientDirectory, "client.ts"))) {
     throw new Error(
       "generated/prisma-web が無い。`npx prisma generate` で web 用のクライアントを生成する"
@@ -217,6 +221,7 @@ export async function buildWorker({ outDir, minify = false }) {
       global: "globalThis",
       __APP_VERSION__: JSON.stringify(packageJson.version),
       __APP_NAME__: JSON.stringify(packageJson.name),
+      __WEB_BUILD_ID__: JSON.stringify(buildId ?? (await createWebBuildId())),
     },
     plugins: [createReplacementPlugin(replacementLog)],
   })

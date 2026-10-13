@@ -1,6 +1,9 @@
 import "../../electron-src/preload"
 
+import type { WorkerToPageMessage } from "../ipcProtocol"
 import type { ServiceWorkerRequest } from "../serviceWorker/serviceWorker"
+import { WEB_BUILD_ID } from "../webBuild"
+import { createReloadButton, watchForNewBuild } from "./buildUpdateNotice"
 import { attachWorker, failBoot, openOutbox } from "./electronShim"
 import { SERVICE_WORKER_PATH, WORKER_SCRIPT_PATH } from "./webAssetPaths"
 
@@ -12,6 +15,8 @@ import { SERVICE_WORKER_PATH, WORKER_SCRIPT_PATH } from "./webAssetPaths"
  * 2. web 版で動いていることを画面に知らせる（`src/lib/webRuntime.ts`）
  * 3. DB を1タブで専有するためのロックを取り、取れたら main の処理を動かす Worker を起動する
  * 4. 画像を返す Service Worker がこのタブを受け持ち、Worker の準備が済んだら、溜めた要求を送る
+ *    （Worker の版がこの画面の版と違えば送らずに止め、再読み込みを頼む。`web/webBuild.ts`）
+ * 5. 開いている間に新しい版が配られたら知らせる（`buildUpdateNotice.ts`）
  *
  * 画面（Next）は 1 を待つだけで描き始め、データの要求は 4 まで待たされる。画像の URL は
  * データが届いてから組み立てられるので、Service Worker が受け持つ前に画像を読みに行くことは無い。
@@ -25,8 +30,12 @@ globalThis.scoreAtOnceWeb = true
  */
 const DATABASE_LOCK_NAME = "score-at-once-database"
 
-/** 画面の上に、起動できない理由を出す */
-const showBlockingNotice = (title: string, detail: string) => {
+/** 画面の上に、起動できない理由を出す。`action` は理由の下に置く（再読み込みのボタンなど） */
+const showBlockingNotice = (
+  title: string,
+  detail: string,
+  action?: HTMLElement
+) => {
   const render = () => {
     const notice = document.createElement("div")
     notice.setAttribute("role", "alert")
@@ -41,6 +50,7 @@ const showBlockingNotice = (title: string, detail: string) => {
     paragraph.style.cssText = "margin:0;white-space:pre-wrap;max-width:40em"
     paragraph.textContent = detail
     notice.append(heading, paragraph)
+    if (action) notice.append(action)
     document.body.append(notice)
   }
   if (document.body) {
@@ -96,10 +106,21 @@ const waitForServiceWorkerControl = async () => {
   await controlled
 }
 
-/** Worker を起動し、`ready` まで待つ。起動に失敗したら理由を出す */
+/**
+ * Worker を起動し、`ready` まで待つ。起動に失敗したら理由を出す。返すのは Worker の版
+ * （`ready` に添えられたもの）
+ */
 const startWorker = () =>
-  new Promise<void>((resolve, reject) => {
+  new Promise<string>((resolve, reject) => {
     const worker = new Worker(WORKER_SCRIPT_PATH, { type: "module" })
+    // attachWorker より先に付ける（`ready` を受けて onReady が呼ばれる前に、版を読んでおく）
+    let workerBuildId = ""
+    worker.addEventListener(
+      "message",
+      (event: MessageEvent<WorkerToPageMessage>) => {
+        if (event.data.kind === "ready") workerBuildId = event.data.buildId
+      }
+    )
     worker.addEventListener("error", (event) => {
       reject(
         new Error(
@@ -111,7 +132,7 @@ const startWorker = () =>
     attachWorker(worker, {
       onReady: () => {
         workerReady = true
-        resolve()
+        resolve(workerBuildId)
       },
       onBootFailed: (message) => {
         // 準備が済んだあとに届いた失敗は、待っている側がもういないのでここで出す
@@ -151,8 +172,25 @@ const boot = async () => {
         return
       }
       try {
-        await Promise.all([serviceWorkerControl, startWorker()])
-        openOutbox()
+        const [, workerBuildId] = await Promise.all([
+          serviceWorkerControl,
+          startWorker(),
+        ])
+        if (workerBuildId === WEB_BUILD_ID) {
+          openOutbox()
+          watchForNewBuild()
+        } else {
+          // 画面と Worker を読む間に新しい版が配られた。通信の型が違いうるので使わせない。
+          // まだ何も入力していないので、再読み込みで失うものは無い（それでも押させる）。
+          // Worker は DB を開いたままなので、ロックは下で持ち続ける
+          failBoot("画面と処理の版が食い違いました。")
+          showBlockingNotice(
+            "新しい版が配られました",
+            "開いている途中で新しい版に入れ替わったため、このままでは使えません。" +
+              "再読み込みしてください。データはこのブラウザの中に残っています。",
+            createReloadButton()
+          )
+        }
       } catch (error) {
         failWithNotice(describeError(error))
       }

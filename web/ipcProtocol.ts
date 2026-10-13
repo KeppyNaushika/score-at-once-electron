@@ -66,5 +66,6 @@ export type WorkerToPageMessage =
   | { kind: "openFiles"; requestId: number; request: OpenFilesRequest }
   /** 画面で HTML を印刷する。返事は `htmlPrinted` */
   | { kind: "printHtml"; requestId: number; request: PrintHtmlRequest }
-  | { kind: "ready" }
+  /** 準備が済んだ。`buildId` は Worker の版（`web/webBuild.ts`）で、画面は自分の版と比べる */
+  | { kind: "ready"; buildId: string }
   | { kind: "bootFailed"; message: string }

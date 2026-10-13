@@ -27,6 +27,7 @@ import {
 } from "../lib/dataManager"
 import { encodePng } from "../lib/imageOps"
 import { importAsbDefinition } from "../lib/import/asb-archive"
+import { createMultiFileOutput } from "../lib/multiFileOutput"
 import {
   isSafePathSegment,
   PathOutsideRootError,
@@ -155,7 +156,8 @@ export const answerSheetBuilderHandlers = {
   },
 
   // PNG出力: renderer で描いたページの PNG を、sharp で符号化し直して書く
-  // （2ページ以上なら -1, -2… を付ける）
+  // （2ページ以上なら -1, -2… を付ける。web 版は、ページごとのダウンロードにせず
+  // `<名前>.zip` 1つにまとめる（`multiFileOutput.ts`））
   "asb:export-png": async (args: ASBExportPngArgs) => {
     const outputDir = path.dirname(args.outputPath)
     await fsPromises.mkdir(outputDir, { recursive: true })
@@ -167,13 +169,15 @@ export const answerSheetBuilderHandlers = {
       )
     } else {
       const ext = path.extname(args.outputPath)
-      const base = args.outputPath.slice(0, -ext.length)
+      const baseName = path.basename(args.outputPath, ext)
+      const pagesOutput = createMultiFileOutput(outputDir, `${baseName}.zip`)
       for (const [index, pngPage] of args.pngPages.entries()) {
-        await fsPromises.writeFile(
-          `${base}-${index + 1}${ext}`,
+        await pagesOutput.add(
+          `${baseName}-${index + 1}${ext}`,
           await encodePng(pngPage)
         )
       }
+      await pagesOutput.finish()
     }
 
     return args.outputPath

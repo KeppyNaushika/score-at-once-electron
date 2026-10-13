@@ -9,13 +9,17 @@
  *   `<head>` の先頭に、Next のスクリプトより先に同期で読まれるよう差し込む
  * - CSP の meta: 入口のさらに前に差し込む。HTML ごとのインラインのスクリプトの sha256 を許す
  * - 配信のヘッダー（`_headers`。Cloudflare Pages の形式）
+ * - 動的ルートの書き換え（`_redirects`。Cloudflare Pages の形式）: 規則は `src/lib/routeShell.ts` の
+ *   `routeShellRewriteRules` から作る（`scripts/web/webRedirects.mjs`）
+ * - 版の知らせ（`/__web/build.json`）: 画面の入口と Worker に埋め込んだのと同じ版（`web/webBuild.ts`）
  *
  * CSP などのヘッダーの定義は `scripts/web/webHeaders.mjs` だけが持つ（手元の配信も同じものを読む）。
  * - 画像を OPFS から返す Service Worker（`web/serviceWorker/serviceWorker.ts`）
  * - main の処理を動かす module Worker（`scripts/web/buildWorker.mjs`）
  *
  * 置き場の URL は `web/page/webAssetPaths.ts` だけが決める。動的ルートの URL の書き換えは
- * 配信側の仕事で、規則の出どころは `src/lib/routeShell.ts` だけ（`scripts/web/serveWeb.mjs`）。
+ * 配信側の仕事で、規則の出どころは `src/lib/routeShell.ts` だけ（手元は `scripts/web/serveWeb.mjs`、
+ * 本番は `_redirects`）。
  *
  * 使い方: node scripts/web/buildWeb.mjs [--no-minify]
  * （先に `next build` で `renderer/` を作っておく）
@@ -27,7 +31,9 @@ import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { tsImport } from "tsx/esm/api"
 
+import { createWebBuildId, renderBuildInfoFile } from "./webBuildId.mjs"
 import { addPageHeadElements, renderHeadersFile } from "./webHeaders.mjs"
+import { renderRedirectsFile } from "./webRedirects.mjs"
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -52,9 +58,15 @@ const BUILD_WORKER_MODULE = path.join(repoRoot, "scripts/web/buildWorker.mjs")
 const {
   PAGE_SCRIPT_PATH,
   SERVICE_WORKER_PATH,
+  WEB_BUILD_INFO_PATH,
   WORKER_DIR_PATH,
   WORKER_SCRIPT_PATH,
 } = await tsImport("../../web/page/webAssetPaths.ts", import.meta.url)
+
+const { routeShellRewriteRules } = await tsImport(
+  "../../src/lib/routeShell.ts",
+  import.meta.url
+)
 
 /** 書き出しの URL のパスを、`web-dist/` の中のファイルの場所にする */
 const toDistPath = (urlPath) => path.join(WEB_DIST_DIR, urlPath.slice(1))
@@ -116,6 +128,7 @@ const buildBrowserBundle = async ({
   outfile,
   minify,
   inject = [],
+  buildId,
 }) => {
   const result = await build({
     entryPoints: [entryPoint],
@@ -130,7 +143,10 @@ const buildBrowserBundle = async ({
     metafile: true,
     logLevel: "warning",
     inject,
-    define: { "process.env.NODE_ENV": JSON.stringify("production") },
+    define: {
+      "process.env.NODE_ENV": JSON.stringify("production"),
+      __WEB_BUILD_ID__: JSON.stringify(buildId),
+    },
     tsconfig: path.join(repoRoot, "tsconfig.json"),
     plugins: [browserOnlyPlugin(ELECTRON_SHIM)],
   })
@@ -162,7 +178,7 @@ const injectPageHeadElements = async (htmlPath) => {
   }
 }
 
-const buildWorkerBundle = async (minify) => {
+const buildWorkerBundle = async (minify, buildId) => {
   if (!(await exists(BUILD_WORKER_MODULE))) {
     throw new Error(
       `${relativeToRepo(BUILD_WORKER_MODULE)} がありません。main の処理を動かす Worker を書き出せないので、web 版はまだ動きません（画面・Service Worker は ${relativeToRepo(WEB_DIST_DIR)} に書き出し済み）。`
@@ -174,7 +190,7 @@ const buildWorkerBundle = async (minify) => {
       `${relativeToRepo(BUILD_WORKER_MODULE)} が buildWorker を export していません。`
     )
   }
-  await buildWorker({ outDir: toDistPath(WORKER_DIR_PATH), minify })
+  await buildWorker({ outDir: toDistPath(WORKER_DIR_PATH), minify, buildId })
   if (!(await exists(toDistPath(WORKER_SCRIPT_PATH)))) {
     throw new Error(
       `buildWorker のあとに ${WORKER_SCRIPT_PATH} がありません（web/page/webAssetPaths.ts の名前と揃える）。`
@@ -189,7 +205,14 @@ export async function buildWeb({ minify }) {
     )
   }
   await rm(WEB_DIST_DIR, { recursive: true, force: true })
-  await cp(RENDERER_DIR, WEB_DIST_DIR, { recursive: true })
+  // ソースマップは配らない（Next の書き出しは中身の無い .map を残すことがあり、配る前の点検で止まる）
+  await cp(RENDERER_DIR, WEB_DIST_DIR, {
+    recursive: true,
+    filter: (sourcePath) => !sourcePath.endsWith(".map"),
+  })
+
+  // 画面の入口と Worker に同じ版を埋め込み、配信にも置く（web/webBuild.ts）
+  const buildId = await createWebBuildId()
 
   await buildBrowserBundle({
     bundleName: "入口（preload の束）",
@@ -197,12 +220,14 @@ export async function buildWeb({ minify }) {
     outfile: toDistPath(PAGE_SCRIPT_PATH),
     minify,
     inject: [PRELOAD_PROCESS],
+    buildId,
   })
   await buildBrowserBundle({
     bundleName: "Service Worker",
     entryPoint: SERVICE_WORKER_ENTRY,
     outfile: toDistPath(SERVICE_WORKER_PATH),
     minify,
+    buildId,
   })
 
   const htmlFiles = await listHtmlFiles(WEB_DIST_DIR)
@@ -214,7 +239,15 @@ export async function buildWeb({ minify }) {
   await writeFile(toDistPath("/_headers"), renderHeadersFile())
   console.log("web-dist: 配信のヘッダー（_headers）を書き出しました")
 
-  await buildWorkerBundle(minify)
+  await writeFile(
+    toDistPath("/_redirects"),
+    renderRedirectsFile(routeShellRewriteRules())
+  )
+  console.log("web-dist: 動的ルートの書き換え（_redirects）を書き出しました")
+
+  await buildWorkerBundle(minify, buildId)
+  await writeFile(toDistPath(WEB_BUILD_INFO_PATH), renderBuildInfoFile(buildId))
+  console.log(`web-dist: 版 ${buildId} を書き出しました`)
   console.log("web-dist: Worker を書き出しました")
 }
 

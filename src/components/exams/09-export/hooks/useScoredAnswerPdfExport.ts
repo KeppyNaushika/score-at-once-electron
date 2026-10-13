@@ -79,6 +79,8 @@ export function useScoredAnswerPdfExport({
   const [totalPagesCount, setTotalPagesCount] = useState(0)
   const [canvasRenderingComplete, setCanvasRenderingComplete] = useState(false)
   const savePathResultRef = useRef<{ filePath: string } | null>(null)
+  // 書き終えた保存先（完了の画面に出す。web 版ではダウンロードのファイル名になる）
+  const [savedOutputPath, setSavedOutputPath] = useState<string | null>(null)
   const isExportCancelledRef = useRef(false)
 
   const executeExportScoredAnswers = async () => {
@@ -94,6 +96,7 @@ export function useScoredAnswerPdfExport({
       setTotalPagesCount(0)
       setCanvasRenderingComplete(false)
       savePathResultRef.current = null
+      setSavedOutputPath(null)
       isExportCancelledRef.current = false
 
       const selectedExamStudentIds = Array.from(selectedStudents)
@@ -401,6 +404,7 @@ export function useScoredAnswerPdfExport({
         setCanvasRenderingComplete(false)
 
         setExportProgress(100)
+        setSavedOutputPath(savePathResult.filePath)
         setExportStatus("completed")
         setCurrentStep("完了しました")
         notifyExportCompleted()
@@ -438,5 +442,6 @@ export function useScoredAnswerPdfExport({
     embeddedPagesCount,
     totalPagesCount,
     canvasRenderingComplete,
+    savedOutputPath,
   }
 }

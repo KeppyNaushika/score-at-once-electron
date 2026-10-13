@@ -3,6 +3,9 @@
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
+import { savedFileLocationText } from "@/lib/outputResultText"
+
 /**
  * 書き出せた1件（試験 / 解答用紙）。
  *
@@ -45,6 +48,8 @@ interface ExportResultSummaryProps {
  * 見せ方はここ1箇所に持つ。
  */
 export function ExportResultSummary({ outcome }: ExportResultSummaryProps) {
+  // web 版の保存先はブラウザのダウンロード。仮想パスでなくファイル名を見せる
+  const isWeb = useIsWebRuntime()
   /** 欠けたファイルの一覧を開いている書き出し元 */
   const [expandedSourceIds, setExpandedSourceIds] = useState<
     ReadonlySet<string>
@@ -137,10 +142,12 @@ export function ExportResultSummary({ outcome }: ExportResultSummaryProps) {
 
       {outcome.archives.length > 0 && (
         <section className="space-y-1">
-          <h3 className="font-medium">保存先</h3>
+          <h3 className="font-medium">
+            {isWeb ? "ダウンロードしたファイル" : "保存先"}
+          </h3>
           {outcome.archives.length === 1 ? (
             <p className="break-all text-muted-foreground">
-              {outcome.archives[0].outputPath}
+              {savedFileLocationText(outcome.archives[0].outputPath, isWeb)}
             </p>
           ) : (
             <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
@@ -149,7 +156,7 @@ export function ExportResultSummary({ outcome }: ExportResultSummaryProps) {
                   <span className="font-medium">{archive.sourceName}</span>
                   <span className="text-muted-foreground">
                     {" …… "}
-                    {archive.outputPath}
+                    {savedFileLocationText(archive.outputPath, isWeb)}
                   </span>
                 </li>
               ))}

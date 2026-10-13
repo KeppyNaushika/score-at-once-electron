@@ -3,6 +3,7 @@ import type { ScoringMethod } from "@/types/rubric.types"
 
 import type { DrawingAnnotation } from "../../../src/types/drawingAnnotation.types"
 import { getAbsolutePathFromSharedFiles } from "../dataManager"
+import { PathOutsideRootError } from "../pathContainment"
 import { pathExists } from "../pathExists"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import { getCropRegionsByExamId } from "./cropRegion"
@@ -101,6 +102,26 @@ interface PdfExportData {
 }
 
 /**
+ * 答案画像の DB 上の相対パスを絶対パスにする。データフォルダの外を指すなら null
+ * （警告を出してそのページを飛ばす。読めない画像を飛ばす `readImageAsDataUrl` と同じ扱いで、
+ * 1件の壊れたパスで出力全体を止めない）。それ以外の例外は投げ直す
+ */
+function resolveAnswerImagePath(relativeImagePath: string): string | null {
+  try {
+    return getAbsolutePathFromSharedFiles(relativeImagePath)
+  } catch (resolveError) {
+    if (resolveError instanceof PathOutsideRootError) {
+      console.warn(
+        `データフォルダの外を指す答案画像を飛ばします: ${relativeImagePath}`,
+        resolveError
+      )
+      return null
+    }
+    throw resolveError
+  }
+}
+
+/**
  * PDF出力に必要なデータを取得
  * レンダラー側でCanvas描画を行うためのデータを提供
  */
@@ -157,9 +178,8 @@ export async function getPdfExportData(options: {
     if (studentAnswerList.length === 0) continue
 
     for (const studentAnswer of studentAnswerList) {
-      const imagePath = getAbsolutePathFromSharedFiles(studentAnswer.imagePath)
-
-      if (!imagePath || !(await pathExists(imagePath))) continue
+      const imagePath = resolveAnswerImagePath(studentAnswer.imagePath)
+      if (imagePath === null || !(await pathExists(imagePath))) continue
 
       // このページの採点領域を取得。ページの同定は examPageId で行う
       // （pageNumber は序数。端末をまたいで独立に同じ値が振られるので、値が一致しても

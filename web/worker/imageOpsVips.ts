@@ -473,6 +473,17 @@ function runPipeline(
       )
     }
 
+    // 順に読む（sequential）画像は、行の順を崩す回転・反転の前にメモリへ写す。写さないと
+    // 「out of order read」で失敗する（sharp の StaySequential と同じ扱い）
+    if (
+      autoOrientation.angle !== "d0" ||
+      autoOrientation.flop ||
+      rightAngle !== "d0" ||
+      arbitraryRotation
+    ) {
+      image = scope.keep(image.copyMemory())
+    }
+
     if (autoOrientation.angle !== "d0") {
       image = scope.keep(image.rot(autoOrientation.angle))
     }

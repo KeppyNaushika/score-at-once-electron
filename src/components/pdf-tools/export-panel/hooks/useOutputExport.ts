@@ -3,6 +3,12 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import {
+  fileNameOfPath,
+  PNG_PAGES_ZIP_FILE_NAME,
+  SPLIT_PDF_ZIP_FILE_NAME,
+} from "@/lib/outputResultText"
+import { isWebRuntime } from "@/lib/webRuntime"
+import {
   exportPdfAsPngMutation,
   mergePdfsMutation,
   selectPdfSavePathMutation,
@@ -28,7 +34,10 @@ interface UseOutputExportOptions {
  * 出力の書き出し（PDF 1ファイル・PDF ページ別・PNG ページ別）。
  *
  * 保存先を選ばせてから書き出し、結果をトーストで知らせる。書き出し中の種別を持ち、
- * 処理中かどうかは親へ伝える（onProcessingChange）
+ * 処理中かどうかは親へ伝える（onProcessingChange）。
+ *
+ * web 版の保存先はブラウザのダウンロードで、保存先のパス（仮想パス）は見せない。ページ別の
+ * 書き出しは main が zip 1つにまとめる（`electron-src/lib/multiFileOutput.ts`）
  */
 export function useOutputExport({
   outputSheets,
@@ -66,7 +75,11 @@ export function useOutputExport({
         pages: buildPageInputs(),
         outputPath: pathResult.path,
       })
-      toast.success(`PDFを保存しました: ${outputPath}`)
+      toast.success(
+        isWebRuntime()
+          ? `PDFをダウンロードしました（${fileNameOfPath(outputPath)}）`
+          : `PDFを保存しました: ${outputPath}`
+      )
     } catch (error) {
       toast.error("PDFを出力できませんでした", {
         description: error instanceof Error ? error.message : undefined,
@@ -99,7 +112,9 @@ export function useOutputExport({
         outputDir: pathResult.path,
       })
       toast.success(
-        `${outputPaths.length}個のPDFを保存しました: ${pathResult.path}`
+        isWebRuntime()
+          ? `${outputPaths.length}個のPDFを zip にまとめてダウンロードしました（${SPLIT_PDF_ZIP_FILE_NAME}）`
+          : `${outputPaths.length}個のPDFを保存しました: ${pathResult.path}`
       )
     } catch (error) {
       toast.error("PDFをページ別に出力できませんでした", {
@@ -158,7 +173,11 @@ export function useOutputExport({
         imageBuffers,
         outputDir: pathResult.path,
       })
-      toast.success(`${outputPaths.length}枚のPNGを保存しました`)
+      toast.success(
+        isWebRuntime()
+          ? `${outputPaths.length}枚のPNGを zip にまとめてダウンロードしました（${PNG_PAGES_ZIP_FILE_NAME}）`
+          : `${outputPaths.length}枚のPNGを保存しました`
+      )
     } catch (error) {
       toast.error("PNGを出力できませんでした", {
         description: error instanceof Error ? error.message : undefined,

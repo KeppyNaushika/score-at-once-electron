@@ -3,11 +3,12 @@
  * 出力ページを1ページ1ファイルのPDFとして書き出す
  */
 import * as fsPromises from "fs/promises"
-import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
+import { SPLIT_PDF_ZIP_FILE_NAME } from "@/lib/outputResultText"
 import type { PdfPageInput } from "@/types/pdfTools.types"
 
+import { createMultiFileOutput } from "../multiFileOutput"
 import { appendPageToPdf } from "./pdfMerger"
 import type { SourcePdfCache } from "./sourcePdfPages"
 
@@ -16,6 +17,7 @@ import type { SourcePdfCache } from "./sourcePdfPages"
  *
  * 結合（mergePdfs）と同じページ入力を受け取るので、並び替え・除外・回転・N-up
  * といった出力プレビューの編集内容がそのまま反映される。
+ * web 版は1ファイルずつ書かず、`outputDir` の下の zip 1つにまとめる（`multiFileOutput.ts`）。
  *
  * @param pages 書き出す順のページ入力。1件（元ページ1枚か、N-up の面1つ）が1ファイルになる
  * @param outputDir 出力先ディレクトリ
@@ -31,6 +33,10 @@ export async function splitPdf(
   const baseName = prefix || "page"
   // 元ファイルの読み込みは全ページで共有する
   const pdfCache: SourcePdfCache = new Map()
+  const pageFilesOutput = createMultiFileOutput(
+    outputDir,
+    SPLIT_PDF_ZIP_FILE_NAME
+  )
   const outputPaths: string[] = []
 
   for (const [index, page] of pages.entries()) {
@@ -40,10 +46,14 @@ export async function splitPdf(
     if (!appended) continue
 
     const paddedIndex = String(index + 1).padStart(3, "0")
-    const outputPath = path.join(outputDir, `${baseName}_${paddedIndex}.pdf`)
-    await fsPromises.writeFile(outputPath, await singlePagePdf.save())
-    outputPaths.push(outputPath)
+    outputPaths.push(
+      await pageFilesOutput.add(
+        `${baseName}_${paddedIndex}.pdf`,
+        await singlePagePdf.save()
+      )
+    )
   }
+  await pageFilesOutput.finish()
 
   return outputPaths
 }

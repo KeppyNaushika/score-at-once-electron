@@ -57,18 +57,48 @@ const sharedConfig: NextConfig = {
   reactStrictMode: false, // Strict Modeを無効化してテスト
 }
 
+/**
+ * 既定の `.next` 以外の置き場で開発用サーバーを動かすときに使う tsconfig。置き場ごとに1つ。
+ *
+ * 開発用サーバーは起動のたびに、使う tsconfig の `include` へ置き場の型
+ * （`<置き場>/types/**` など）を書き足す。`tsconfig.json` のままだと e2e・撮影の置き場の型が
+ * 本番の型検査（`npm run typecheck`・`next build`）に入り、置き場に残った古い型
+ * （今は無いルートを指す `validator.ts` 等）で落ちる。ここに挙げた tsconfig は
+ * `tsconfig.json` を `extends` していて、Next は `extends` を持つ tsconfig を書き換えない
+ * （`next/dist/lib/typescript/writeConfigurationDefaults.js`）ので、足した型の行も戻されない
+ */
+const DEV_TSCONFIG_BY_DIST_DIR: Record<string, string> = {
+  ".next-e2e": "tsconfig.e2e.json",
+  ".next-screenshot": "tsconfig.screenshot.json",
+}
+
+/** 開発用サーバーの置き場と tsconfig。置き場が既定でなく tsconfig も無いなら止める */
+function resolveDevBuildPaths(): { distDir: string; tsconfigPath?: string } {
+  const distDir = process.env.NEXT_DIST_DIR
+  if (!distDir || distDir === ".next") return { distDir: ".next" }
+  const tsconfigPath = DEV_TSCONFIG_BY_DIST_DIR[distDir]
+  if (!tsconfigPath) {
+    throw new Error(
+      `NEXT_DIST_DIR=${distDir} に対応する tsconfig が無い。next.config.ts の DEV_TSCONFIG_BY_DIST_DIR に足す（無いと置き場の型が tsconfig.json に書き足され、本番の型検査が拾う）`
+    )
+  }
+  return { distDir, tsconfigPath }
+}
+
 export default function nextConfig(phase: string): NextConfig {
   if (phase === PHASE_DEVELOPMENT_SERVER) {
+    const { distDir, tsconfigPath } = resolveDevBuildPaths()
     return {
       ...sharedConfig,
       rewrites: routeShellRewrites,
       /**
        * ビルド成果物の置き場。既定は `.next`。
        *
-       * e2e は `NEXT_DIST_DIR` を別の名前にして走る。同じ作業ツリーで開発用サーバーが
+       * e2e・撮影は `NEXT_DIST_DIR` を別の名前にして走る。同じ作業ツリーで開発用サーバーが
        * 動いていることがあり、`.next` を共有すると互いのビルドを壊すため。
        */
-      distDir: process.env.NEXT_DIST_DIR || ".next",
+      distDir,
+      ...(tsconfigPath ? { typescript: { tsconfigPath } } : {}),
     }
   }
   // デスクトップ版も web 版も、同じ静的書き出しを配る（`src/lib/routeShell.ts`）

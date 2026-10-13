@@ -23,6 +23,35 @@
  * `extraResource` で `Resources/renderer` に置き、main がそれを配る
  * （`rendererStaticServer.ts`）。`.next` はビルドの途中の置き場で、配布物には入れない。
  */
+const { FusesPlugin } = require("@electron-forge/plugin-fuses")
+const { FuseV1Options, FuseVersion } = require("@electron/fuses")
+
+/**
+ * 配布する実行ファイルに焼き込む fuses（Electron の機能のオン・オフ）。開発やデバッグの
+ * ための入口を、配布物では閉じる。焼き込むので、あとから設定や環境変数では開け直せない。
+ * 開発時の `electron .` と e2e（開発用の electron を起こす）には効かない。
+ *
+ * - RunAsNode: 実行ファイルを `ELECTRON_RUN_AS_NODE` でただの Node として動かす入口。
+ *   署名済みのアプリを別のプログラムの踏み台にさせない（アプリはこの起こし方を使わない。
+ *   `.sao` の書き出しの utilityProcess も頼らない）
+ * - EnableNodeOptionsEnvironmentVariable: `NODE_OPTIONS` で起動時にコードを差し込む入口
+ * - EnableNodeCliInspectArguments: `--inspect` で外からデバッガを付ける入口
+ * - GrantFileProtocolExtraPrivileges: `file://` の文書が他のローカルファイルを読める特権。
+ *   印刷は一時ファイルを `file://` で開くので、乗っ取られても他のファイルに届かないように
+ *   （印刷のウィンドウの閉じ込めは `electron-src/lib/printUtils.ts`）
+ *
+ * asar の改ざん検知（EnableEmbeddedAsarIntegrityValidation・OnlyLoadAppFromAsar）は、
+ * asar の外に置くもの（ネイティブモジュール・extraResource）との兼ね合いをパッケージ版の
+ * 起動で確かめてから足す
+ */
+const FUSES_PLUGIN = new FusesPlugin({
+  version: FuseVersion.V1,
+  [FuseV1Options.RunAsNode]: false,
+  [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+  [FuseV1Options.EnableNodeCliInspectArguments]: false,
+  [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
+})
+
 const PACKAGED_TOP_LEVEL = new Set([
   "package.json",
   "main",
@@ -276,6 +305,7 @@ module.exports = {
       name: "@electron-forge/plugin-auto-unpack-natives",
       config: {},
     },
+    FUSES_PLUGIN,
   ],
   hooks: {
     prePackage: async () => {

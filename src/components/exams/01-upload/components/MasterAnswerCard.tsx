@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, ArrowRight, ImageUp, Trash } from "lucide-react"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
+import { toast } from "sonner"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
 import { TooltipButton } from "@/components/common/TooltipButton"
@@ -27,12 +28,18 @@ import {
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
+import { useIsWebRuntime } from "@/hooks/useIsWebRuntime"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import {
   buildItemDeletionWarning,
   examPageUsages,
 } from "@/lib/shared/gradeReferenceMessages"
 import { examDetailQuery } from "@/queries/exam"
+
+import {
+  isValidMasterImageFile,
+  MASTER_ANSWER_FILE_ACCEPT,
+} from "../utils/fileValidation"
 
 const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
 
@@ -64,6 +71,10 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
   }) => {
     const [confirmingDelete, setConfirmingDelete] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    // web 版の画像処理（wasm-vips）は SVG・HEIF（HEIC・AVIF）を読めない。差し替えでも、
+    // 取り込み（`FileUploadDropzone`）と同じ PDF・PNG・JPEG だけを選ばせる。デスクトップ版は
+    // 今まで通り画像なら何でも選べる
+    const isWeb = useIsWebRuntime()
 
     const canMoveLeft = index > 0
     const canMoveRight = index < totalAnswers - 1
@@ -122,7 +133,16 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
       const file = event.target.files?.[0]
       // 同じファイルを選び直しても change が発火するように値を戻す
       event.target.value = ""
-      if (file) onReplace(file)
+      if (!file) return
+      // accept はファイル選択の絞り込みにすぎず、「すべてのファイル」に切り替えれば選べる
+      if (isWeb && !isValidMasterImageFile(file)) {
+        toast.error(`「${file.name}」は差し替えに使えません`, {
+          description:
+            "PDF・PNG・JPEG を選んでください（web 版では SVG・HEIC などの画像を読めません）",
+        })
+        return
+      }
+      onReplace(file)
     }
 
     return (
@@ -156,7 +176,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,application/pdf"
+          accept={isWeb ? MASTER_ANSWER_FILE_ACCEPT : "image/*,application/pdf"}
           className="hidden"
           onChange={handleFileSelected}
         />

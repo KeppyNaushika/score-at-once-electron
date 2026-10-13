@@ -102,12 +102,12 @@ web で端から端まで通るところまで来ている。
 
 ### 1. 採点の流れで残っている粗（済んだ部分は上の「組み立て方」）
 
-| 粗                                   | 中身                                                                                                                                                                |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **印刷のキャンセルを見分けられない** | `printHtmlToPdf` は印刷ダイアログを閉じた時点で返るので、「PDF に保存」をやめても「出力しました」と出る                                                             |
-| **画像処理の間の待ち**               | wasm-vips は Worker の中で処理の終わりを同期で待つので、大量の取り込みの間は他の要求が待たされる。未実測                                                            |
-| **読めない画像の形式**               | wasm-vips には SVG・PDF・HEIF の読み込み器が無い（答案と模範解答は PNG / JPEG / PDF→PNG なので、いまの流れには当たらない）                                          |
-| **表示の粗**                         | PDF 加工の完了の知らせに `/web-downloads/<uuid>` が出る。フォルダへの書き出しは1ファイルずつのダウンロードになり、Chrome が複数ダウンロードの許可を求めることがある |
+| 粗                                   | 中身                                                                                                                                                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **印刷のキャンセルを見分けられない** | ブラウザは印刷ダイアログの結果を教えない（`afterprint` も保存とキャンセルを区別しない）。web 版は「印刷ダイアログを閉じました（PDF に保存した場合は、保存先を確かめてください）」と断定せずに知らせる（`src/lib/outputResultText.ts`）                                       |
+| **画像処理の間の待ち**               | wasm-vips の呼び出しは同期で、バイト列の入力では Worker のイベントループへ戻らない。答案の取り込みの補正の間は、他の要求が待たされる見込み。未実測。1枚ごとにイベントループへ戻す案は、計測してから決める                                                                    |
+| **読めない画像の形式**               | wasm-vips は SVG・HEIF の追加の wasm を読まず、PDF の読み込み器も無い。模範解答の差し替えは、web 版では PDF・PNG・JPEG に絞った。解答用紙の画像要素の SVG はブラウザが描くので当たらない。BMP は両方の版で読めない                                                           |
+| **表示の粗**                         | 保存先は web 版ではファイル名だけを見せる（`savedFileLocationText`）。ページ別 PDF・PNG と、解答用紙の複数ページの PNG は zip 1つにまとめる（`electron-src/lib/multiFileOutput.ts`）。解答用紙の「別ファイルに分ける」は2回のダウンロード（PDF は2回の印刷ダイアログ）のまま |
 
 ### 2. ブラウザに置いたデータを守る（必須）
 
@@ -171,13 +171,42 @@ XSS の被害が直接になる。しかも、攻撃者が中身を作れる入�
 ### 4. 配信
 
 - **公開の条件:** 3 の点検が済む（重大・高が0件になる）まで公開しない。
-- **Cloudflare Pages:** `_redirects` を `routeShell.ts` から生成する（読み替えの規則を
-  2か所に書かない）。`_headers` で COOP/COEP を付ける。1ファイルの上限 25MiB に、
-  Worker（minify で約 4.5MB）と wasm は収まる。
-- **版の入れ替え:** Service Worker のキャッシュの入れ替えと、開いている間に新しい版が
-  出たときの扱い。
-- **CI:** `prisma generate` → `next build` → `web:build` → デプロイ。web 版の e2e も回す。
-- **ヘッダー:** `_headers` は `web:build` が書き出す（3）。Cloudflare Pages の上で、Worker の CSP の付け直し（`! Content-Security-Policy`）が効くことを確かめる。
+
+**済んだもの:**
+
+- **`_redirects`:** `web:build` が `src/lib/routeShell.ts` の `routeShellRewriteRules` から書き出す
+  （`scripts/web/webRedirects.mjs`。200 の書き換え、段ごとに3行）。手元の配信の `toRouteShellPath` と
+  同じ結果になることを `__tests__/web/webRedirects.test.ts` が縛る。Cloudflare Pages では
+  静的なファイルより規則が先に効くので、Next の `__next.` のファイルもそのまま通す規則を置く。
+- **版の入れ替え:** 書き出しごとに版（package.json の版＋書き出した時刻）を決め、画面の入口と
+  Worker に埋め込み、`/__web/build.json` にも置く（`web/webBuild.ts`）。
+  - 起動時に Worker の版と画面の版が違えば（読み込む間に配り直された）、使わせずに再読み込みを頼む。
+  - 開いている間は、タブが見えるようになったときと15分ごとに `build.json` を読み、違う版なら
+    「新しい版があります。保存していない作業が無いことを確かめて再読み込みしてください」を出す
+    （`web/page/buildUpdateNotice.ts`）。勝手には再読み込みしない。migration は再読み込みの後に走る。
+  - Service Worker はキャッシュを持たないので、入れ替えは再読み込みのときの登録に任せ、
+    待たずに受け持つ（`skipWaiting`）。
+- **CI:** `.github/workflows/web-deploy.yml`（`main` への push と手動だけ）。書き出しは読むだけの
+  権限で `npm ci --ignore-scripts` → `prisma generate` → `next build` → `web:build` →
+  点検（`scripts/web/checkWebDist.mjs`。ソースマップ・DB・`.env`・手元のパス・鍵の形の文字列が
+  あれば失敗）→ artifact。配る段は environment `web-production` の中だけで Cloudflare の秘密を使い、
+  `wrangler pages deploy` を固定の版で走らせる。秘密が揃うまでは配る段を飛ばす。
+
+**残り（Cloudflare・GitHub の側で人がやること）:**
+
+1. Cloudflare Pages のプロジェクトを「直接アップロード」で作る（Git の連携はしない。書き出しは CI が行う）。
+2. カスタムドメインを付ける。
+3. API トークンを作る。権限は「Cloudflare Pages: Edit」だけ、対象はそのアカウントだけ。
+4. GitHub の environment `web-production` を作り、承認者を付ける。そこに secrets
+   `CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID` と vars `CLOUDFLARE_PAGES_PROJECT` を置く。
+   配る枝を `main` に限る。
+5. ゾーンでスクリプトを差し込む機能（Web Analytics の自動差し込み・Rocket Loader・
+   Email Address Obfuscation・Zaraz など）を切る。差し込まれたスクリプトは CSP に止められ、
+   HTML を書き換えられるとインラインのスクリプトのハッシュも合わなくなる。
+6. 配ったあとに確かめる: `_headers`（COOP/COEP・CSP。Worker の CSP の付け直し
+   `! Content-Security-Policy` が効くこと）、`_redirects`（実際の id の URL で画面が開くこと）、
+   版の知らせ（配り直すと開いているタブに出ること）。
+7. web 版の e2e は無い。作ったら CI の書き出しの後に回す。
 
 ### 5. 文書
 
