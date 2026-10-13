@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 設定の「操作履歴」タブ（操作履歴を残す期間）。
+ * 設定の「操作履歴」（操作履歴を残す期間）。
  *
  * ここで固定すること:
  * - 設定が無いあいだは既定の1年を見せる
@@ -16,7 +16,7 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AuditLogRetentionTab } from "@/app/(app)/settings/components/AuditLogRetentionTab"
+import { AuditLogRetentionSection } from "@/app/(app)/settings/components/AuditLogRetentionSection"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
@@ -54,7 +54,7 @@ async function chooseRetention(
   await user.click(within(listbox).getByRole("option", { name: optionName }))
 }
 
-describe("AuditLogRetentionTab", () => {
+describe("AuditLogRetentionSection", () => {
   beforeAll(() => {
     // Radix の Select が jsdom で開くのに要る（jsdom は持たない）
     Element.prototype.hasPointerCapture = () => false
@@ -68,7 +68,7 @@ describe("AuditLogRetentionTab", () => {
 
   it("設定が無いあいだは既定の1年を見せる", async () => {
     installFakeSettingsApi(null)
-    render(<AuditLogRetentionTab />, { wrapper: createQueryWrapper() })
+    render(<AuditLogRetentionSection />, { wrapper: createQueryWrapper() })
     expect(
       await screen.findByRole("combobox", { name: "操作履歴を残す期間" })
     ).toHaveTextContent("1年")
@@ -77,7 +77,7 @@ describe("AuditLogRetentionTab", () => {
   it("長くするときは確かめずに保存する", async () => {
     const user = userEvent.setup()
     const settings = installFakeSettingsApi(null)
-    render(<AuditLogRetentionTab />, { wrapper: createQueryWrapper() })
+    render(<AuditLogRetentionSection />, { wrapper: createQueryWrapper() })
 
     await chooseRetention(user, "2年")
 
@@ -88,7 +88,7 @@ describe("AuditLogRetentionTab", () => {
   it("短くするときは、消えて戻らないことを確かめてから保存する", async () => {
     const user = userEvent.setup()
     const settings = installFakeSettingsApi(null)
-    render(<AuditLogRetentionTab />, { wrapper: createQueryWrapper() })
+    render(<AuditLogRetentionSection />, { wrapper: createQueryWrapper() })
 
     await chooseRetention(user, "90日")
 
@@ -103,7 +103,7 @@ describe("AuditLogRetentionTab", () => {
   it("短くするのをやめれば保存しない", async () => {
     const user = userEvent.setup()
     const settings = installFakeSettingsApi(null)
-    render(<AuditLogRetentionTab />, { wrapper: createQueryWrapper() })
+    render(<AuditLogRetentionSection />, { wrapper: createQueryWrapper() })
 
     await chooseRetention(user, "180日")
     const dialog = await screen.findByRole("alertdialog")

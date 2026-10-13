@@ -19,7 +19,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SyncSettingsTab } from "@/app/(app)/settings/components/SyncSettingsTab"
+import { SyncSettingsPanel } from "@/app/(app)/sync/components/SyncSettingsPanel"
 import type { SharedFolderInspection } from "@/electron-src/lib/sync/sharedFolder"
 import {
   DEFAULT_SYNC_CONFIG,
@@ -32,7 +32,7 @@ const { connectSharedFolder, triggerSync, syncSettings } = vi.hoisted(() => ({
   syncSettings: { current: null as unknown },
 }))
 
-vi.mock("@/app/(app)/settings/hooks/useSyncSettings", () => ({
+vi.mock("@/app/(app)/sync/hooks/useSyncSettings", () => ({
   useSyncSettings: () => syncSettings.current,
 }))
 
@@ -91,10 +91,10 @@ function renderTab(
     ),
     relaunch: vi.fn(async () => undefined),
   }
-  render(<SyncSettingsTab />)
+  render(<SyncSettingsPanel />)
 }
 
-describe("SyncSettingsTab", () => {
+describe("SyncSettingsPanel", () => {
   beforeEach(() => {
     connectSharedFolder.mockClear()
     triggerSync.mockClear()

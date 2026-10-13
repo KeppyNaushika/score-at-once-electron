@@ -12,12 +12,12 @@ import {
 } from "@/lib/browserStorageUsage"
 
 /**
- * web 版で、データを置いているブラウザの保存領域の状態（設定のタブ。web 版でだけ出す）。
+ * web 版で、データを置いているブラウザの保存領域の状態（設定の項目。web 版でだけ出す）。
  *
  * データはこのブラウザの中にだけあり、ホストには無い。ブラウザに消されたら戻せないので、
  * 消さない約束の有無と残りの量を見せ、`.sao` での控えへ導く。
  */
-export function BrowserStorageTab() {
+export function BrowserStorageSection() {
   const { status, isRequesting, requestPersistence } = useBrowserStorageStatus()
 
   if (!status) return null

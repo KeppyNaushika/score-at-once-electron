@@ -18,9 +18,9 @@ import { HelpContentClassrooms } from "@/components/help/page-specific/HelpConte
 import { HelpContentCourseworkList } from "@/components/help/page-specific/HelpContentCourseworkList"
 import { HelpContentExamList } from "@/components/help/page-specific/HelpContentExamList"
 import { HelpContentGradeList } from "@/components/help/page-specific/HelpContentGradeList"
-import { HelpContentSettings } from "@/components/help/page-specific/HelpContentSettings"
 import { HelpContentStudents } from "@/components/help/page-specific/HelpContentStudents"
 import { HelpContentSubtotalGroups } from "@/components/help/page-specific/HelpContentSubtotalGroups"
+import { HelpContentSync } from "@/components/help/page-specific/HelpContentSync"
 import { HelpContentWebVersion } from "@/components/help/page-specific/HelpContentWebVersion"
 import { Button } from "@/components/ui/button"
 import {
@@ -56,13 +56,13 @@ const pageHelpComponents: {
   "answer-sheet-builder": HelpContentAnswerSheetList,
   coursework: HelpContentCourseworkList,
   grades: HelpContentGradeList,
-  // 設定。中身はいまのところ「同期設定」のタブだけ（他のタブは見て分かる設定の並び）
-  settings: HelpContentSettings,
+  // 同期設定（デスクトップ版だけの画面）
+  sync: HelpContentSync,
 }
 
 /**
- * web 版で差し替える手引き。設定の手引きは中身が同期（共有モード）だけで、web 版には
- * 同期設定のタブが無いので、データの置き場所・控え・持ち運びの手引きを出す
+ * web 版で差し替える・足す手引き。設定の画面には、データの置き場所・控え・持ち運びの
+ * 手引きを出す（デスクトップ版の設定は見て分かる設定の並びなので手引きを持たない）
  */
 const webPageHelpComponents: {
   [key: string]: React.ComponentType
@@ -112,10 +112,17 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
     if (pathname.includes("/students") && !pathname.includes("exams")) {
       return "students"
     }
+    // 設定は項目ごとのページ（/settings/<項目>）に分かれる。手引きは設定全体で1つ
+    if (pathname.startsWith("/settings")) {
+      return "settings"
+    }
 
-    return Object.keys(pageHelpComponents).includes(lastSegment)
-      ? lastSegment
-      : undefined
+    const runtimePageIds = Object.keys(
+      isWebRuntime
+        ? { ...pageHelpComponents, ...webPageHelpComponents }
+        : pageHelpComponents
+    )
+    return runtimePageIds.includes(lastSegment) ? lastSegment : undefined
   }
 
   const currentPageId = getCurrentPageId()
@@ -140,6 +147,7 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       coursework: "試験外成績資料",
       grades: "成績算出",
       settings: "設定",
+      sync: "同期設定",
     }
     return sectionTitles[currentPageId] ?? "ヘルプ"
   }

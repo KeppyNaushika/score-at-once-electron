@@ -72,7 +72,7 @@ function findSharedStartupProblem(
   if (!fs.existsSync(replicaPath)) {
     return (
       `共有プロファイル（${profile.sharedFolderPath}）の手元の控えがありません（${replicaPath}）。` +
-      `設定の同期タブで共有フォルダを選び直すと、作り直せます。`
+      `同期設定の画面で共有フォルダを選び直すと、作り直せます。`
     )
   }
   const inspection = inspectSharedFolder(profile.sharedFolderPath)
@@ -90,7 +90,7 @@ function findSharedStartupProblem(
   }
   return (
     `共有フォルダ（${profile.sharedFolderPath}）が、登録したときの共有フォルダではなくなっています。` +
-    `設定の同期タブで、正しい共有フォルダを選び直してください。`
+    `同期設定の画面で、正しい共有フォルダを選び直してください。`
   )
 }
 

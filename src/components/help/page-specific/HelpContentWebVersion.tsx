@@ -10,10 +10,11 @@ import {
 /**
  * web 版の設定画面の使い方ガイド。データがどこにあり、どう守り、どう持ち運ぶかを書く。
  *
- * デスクトップ版の設定の手引き（`HelpContentSettings`）は同期だけを扱い、web 版には同期が
- * 無いので、web 版ではこちらを出す（`usePageHelp` の `webPageHelpComponents`）。
+ * デスクトップ版の設定は手引きを持たない（同期の手引き `HelpContentSync` は同期設定の
+ * 画面のもので、web 版には同期が無い）。web 版の設定にだけこちらを出す
+ * （`usePageHelp` の `webPageHelpComponents`）。
  *
- * **設定の「ブラウザの保存領域」のタブ（`BrowserStorageTab`）とは重ねない。** あちらは
+ * **設定の「ブラウザの保存領域」（`BrowserStorageSection`）とは重ねない。** あちらは
  * いまの状態（保護の有無・使っている量）、こちらは仕組みと、控え・持ち運びの手順を書く。
  *
  * 書いてある挙動は、すべて実装で確かめたもの:
@@ -24,7 +25,7 @@ import {
  * - 複数のファイルを zip 1つにまとめること — `electron-src/lib/multiFileOutput.ts`
  * - PDF を印刷ダイアログで保存すること — `web/page/htmlPrinter.ts`、`src/lib/outputResultText.ts`
  * - web 版で読み込めるのが .sao だけであること — `ArchiveImportFormatsNote.tsx`
- * - デスクトップ版だけの機能 — 設定の同期のタブ・`Navigation.tsx` の `isDesktopOnly`
+ * - デスクトップ版だけの機能 — 同期設定の画面・`Navigation.tsx` の `isDesktopOnly`
  */
 export function HelpContentWebVersion() {
   return (
@@ -55,7 +56,7 @@ export function HelpContentWebVersion() {
           ブラウザは、PCの空き容量が足りなくなると、サイトのデータを知らせずに消すことがあります。一括採点は開いたときに、このデータを消さないようブラウザに頼みます。頼みが通らなかったときは、画面の右下で知らせます。
         </p>
         <p>
-          いまの状態は、設定の「ブラウザの保存領域」のタブで確かめられます。保護されていないときは、そこから「保護を頼む」を押せます。ブラウザは、ブックマークやアプリとしてのインストールなど、このサイトの使われ方を見て保護するかを決めます。
+          いまの状態は、設定の「ブラウザの保存領域」で確かめられます。保護されていないときは、そこから「保護を頼む」を押せます。ブラウザは、ブックマークやアプリとしてのインストールなど、このサイトの使われ方を見て保護するかを決めます。
         </p>
         <Callout type="tip" title="保護されていても、控えは取っておく">
           保護されていても、ブラウザのデータを消す操作やPCの故障からは守れません。採点が一区切りしたら、次の
