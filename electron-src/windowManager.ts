@@ -4,12 +4,12 @@ import * as path from "path"
 
 import { isSourceRepositoryUrl } from "./lib/sourceRepository"
 import menu from "./menu"
-import { rendererOrigin } from "./rendererPort"
+import { isRendererUrl, rendererOrigin } from "./rendererOrigin"
 
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
 
-/** メインウィンドウを作成し、画面のサーバーの準備完了後にURLを読み込んで表示する */
+/** メインウィンドウを作成し、画面のURLを読み込んで表示する（開発時は next dev の起動を待つ） */
 export function createMainWindow(): BrowserWindow {
   // アイコンのパスを設定（プラットフォーム別）
   const getIconPath = () => {
@@ -80,12 +80,14 @@ export function createMainWindow(): BrowserWindow {
     }, 2000)
   }
 
-  // 画面のサーバー（開発時は next dev、パッケージ版は rendererStaticServer）が起動するまで待機してからURLを読み込み
+  // 開発時は next dev が起動するまで待機してからURLを読み込む。パッケージ版の画面は main が
+  // スキームで返す（rendererProtocol.ts）ので、待つ相手が無く、すぐに読み込める
   const loadWhenReady = async () => {
     const maxAttempts = 30 // 30秒間試行
     let attempts = 0
 
     const checkServer = async (): Promise<boolean> => {
+      if (!isDev) return true
       try {
         const { net } = require("electron")
         const request = net.request(url)
@@ -150,15 +152,6 @@ export function createMainWindow(): BrowserWindow {
   return mainWindow
 }
 
-/** URL がアプリの画面（開発時は next dev、パッケージ版は同梱サーバー）のものか */
-function isAppUrl(url: string): boolean {
-  try {
-    return new URL(url).origin === new URL(rendererOrigin).origin
-  } catch {
-    return false
-  }
-}
-
 /**
  * 画面がアプリの外へ出ないようにする。
  * - 新しいウィンドウは開かない。アプリは `window.open` を使っておらず、外部のページは
@@ -181,7 +174,7 @@ function restrictNavigation(mainWindow: BrowserWindow): void {
     return { action: "deny" }
   })
   const blockForeignNavigation = (event: Event, url: string) => {
-    if (isAppUrl(url)) return
+    if (isRendererUrl(url)) return
     event.preventDefault()
     console.warn("アプリの外への遷移を止めました:", url)
   }
