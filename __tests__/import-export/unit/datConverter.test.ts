@@ -74,9 +74,13 @@ const WORK_DIR = `${ROOT}/U@1/1`
  *
  * - 3ページ。模範解答画像は abc_m01.png と abc_m03.png だけ（2ページ目の画像は無い）
  * - 設問 1-1・1-2 は1ページ目、2-1 は3ページ目
- * - 観点は 知識(sort 1)・思考(sort 2)。設問 1-1 は両方の観点に属する
+ * - 観点は 知識(id 10, sort 1)・思考(id 20, sort 2)。設問 1-1 は両方の観点に属する
+ * - angleScoreAreasXml は abc_xml の AreaInfo に足す AngleScoreArea の要素
  */
-function buildDat(options: { questionAnglesFirst: boolean }): Uint8Array {
+function buildDat(options: {
+  questionAnglesFirst: boolean
+  angleScoreAreasXml?: string
+}): Uint8Array {
   // 追加した順に zip の項目が並ぶ
   const datEntries: Record<string, Uint8Array> = {}
   const addFile = (entryName: string, content: Buffer) => {
@@ -128,6 +132,15 @@ function buildDat(options: { questionAnglesFirst: boolean }): Uint8Array {
       angle_sort_no: 1,
       delete_flg: false,
     },
+    // 他教科（subject_id が試験と違う）の観点。観点の小計には並ばない
+    {
+      id: 30,
+      angle_name: "他教科の観点",
+      angle_short_name: "他",
+      subject_id: 18,
+      angle_sort_no: 1,
+      delete_flg: false,
+    },
   ]
   // zip 内の並び順で、question_angles.json が angles.json より先に来る場合を作る
   if (options.questionAnglesFirst) {
@@ -141,7 +154,9 @@ function buildDat(options: { questionAnglesFirst: boolean }): Uint8Array {
   addJson(`${ROOT}/workbook_infoes.json`, [
     {
       abc_xml:
-        '<PointInfoBlock><AreaInfo><LargeQuestionScoreArea Page="3" X="80" Y="110" Width="80" Height="110" LargeQuestionNumber="2" /></AreaInfo></PointInfoBlock>',
+        '<PointInfoBlock><AreaInfo><LargeQuestionScoreArea Page="3" X="80" Y="110" Width="80" Height="110" LargeQuestionNumber="2" />' +
+        (options.angleScoreAreasXml ?? "") +
+        "</AreaInfo></PointInfoBlock>",
     },
   ])
 
@@ -193,7 +208,10 @@ describe("convertDatToScore", () => {
     }
   })
 
-  async function convert(options: { questionAnglesFirst: boolean }) {
+  async function convert(options: {
+    questionAnglesFirst: boolean
+    angleScoreAreasXml?: string
+  }) {
     const datPath = path.join(tempDir, "synthetic.dat")
     fs.writeFileSync(datPath, buildDat(options))
     const { scorePath } = await convertDatToScore(datPath)
@@ -230,6 +248,14 @@ describe("convertDatToScore", () => {
     ).toEqual(["知識", "思考"])
   })
 
+  it("他教科の観点は観点の小計に並べない", async () => {
+    const { subtotalsJson } = await convert({ questionAnglesFirst: false })
+
+    expect(
+      angleSubtotals(subtotalsJson).map((subtotal) => subtotal.name)
+    ).not.toContain("他教科の観点")
+  })
+
   it("1つの設問に観点が複数あれば、すべての観点の小計に割り当てる", async () => {
     const { examJson, subtotalsJson } = await convert({
       questionAnglesFirst: false,
@@ -259,6 +285,64 @@ describe("convertDatToScore", () => {
       .sort()
 
     expect(assignedAngleNames).toEqual(["思考", "知識"].sort())
+  })
+
+  /** 観点の得点欄（SUBTOTAL_DEFINITION）を、欄のラベル → 結ばれた観点の小計の名前 で */
+  function angleScoreAreaBindings(
+    examJson: ConvertedExamJson,
+    subtotalsJson: ConvertedSubtotalsJson
+  ) {
+    const angleSubtotalNameById = new Map(
+      angleSubtotals(subtotalsJson).map((subtotal) => [
+        subtotal.id,
+        subtotal.name,
+      ])
+    )
+    return examJson.cropRegions
+      .filter(
+        (cropRegion) =>
+          cropRegion.type === "SUBTOTAL_SCORE" &&
+          !cropRegion.label.startsWith("小計")
+      )
+      .map((cropRegion) => ({
+        label: cropRegion.label,
+        angleNames: subtotalsJson.cropSubtotals
+          .filter(
+            (cropSubtotal) =>
+              cropSubtotal.cropRegionId === cropRegion.id &&
+              cropSubtotal.assignmentType === "SUBTOTAL_DEFINITION"
+          )
+          .flatMap((cropSubtotal) => {
+            const angleName = angleSubtotalNameById.get(cropSubtotal.subtotalId)
+            return angleName ? [angleName] : []
+          }),
+      }))
+  }
+
+  it("観点の得点欄は AngleId の観点の小計に結び、ラベルを観点名にする", async () => {
+    const { examJson, subtotalsJson } = await convert({
+      questionAnglesFirst: false,
+      angleScoreAreasXml:
+        '<AngleScoreArea Page="1" X="100" Y="20" Width="150" Height="62" Visible="true" AngleId="20" />' +
+        '<AngleScoreArea Page="1" X="300" Y="20" Width="150" Height="62" Visible="true" AngleId="10" />',
+    })
+
+    expect(angleScoreAreaBindings(examJson, subtotalsJson)).toEqual([
+      { label: "思考", angleNames: ["思考"] },
+      { label: "知識", angleNames: ["知識"] },
+    ])
+  })
+
+  it("AngleId の無い観点の得点欄は、観点が複数あればどの観点の小計にも結ばない", async () => {
+    const { examJson, subtotalsJson } = await convert({
+      questionAnglesFirst: false,
+      angleScoreAreasXml:
+        '<AngleScoreArea Page="1" X="100" Y="20" Width="150" Height="62" Visible="true" />',
+    })
+
+    expect(angleScoreAreaBindings(examJson, subtotalsJson)).toEqual([
+      { label: "観点", angleNames: [] },
+    ])
   })
 
   it("模範解答画像はファイル名の番号のページに割り当てる（番号が飛んでもずれない）", async () => {
