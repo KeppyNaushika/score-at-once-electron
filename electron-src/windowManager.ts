@@ -1,7 +1,8 @@
 import type { Event, IncomingMessage, RenderProcessGoneDetails } from "electron"
-import { app, BrowserWindow, Menu } from "electron"
+import { app, BrowserWindow, Menu, shell } from "electron"
 import * as path from "path"
 
+import { isSourceRepositoryUrl } from "./lib/sourceRepository"
 import menu from "./menu"
 import { rendererOrigin } from "./rendererPort"
 
@@ -162,12 +163,21 @@ function isAppUrl(url: string): boolean {
  * 画面がアプリの外へ出ないようにする。
  * - 新しいウィンドウは開かない。アプリは `window.open` を使っておらず、外部のページは
  *   main が持つ URL だけを main から既定のブラウザで開く（`aiProvider:openTermsLink`）。
- *   画面から届く任意の URL を外へ渡すと、それ自体が抜け道になるので回さない
+ *   画面から届く任意の URL を外へ渡すと、それ自体が抜け道になるので回さない。
+ *   例外は、package.json に書いたソースの在りか（「一括採点について」のリンク）だけで、
+ *   これは窓を開かずに既定のブラウザで開く（`isSourceRepositoryUrl`）
  * - アプリの画面以外への遷移は止める（preload を持った窓に外のページを読ませない）
  */
 function restrictNavigation(mainWindow: BrowserWindow): void {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    console.warn("新しいウィンドウを開く要求を断りました:", url)
+    // 窓は開かない。ソースの在りかなら、確かめてから既定のブラウザで開く
+    void isSourceRepositoryUrl(url).then((isSourceRepository) => {
+      if (isSourceRepository) {
+        void shell.openExternal(url)
+        return
+      }
+      console.warn("新しいウィンドウを開く要求を断りました:", url)
+    })
     return { action: "deny" }
   })
   const blockForeignNavigation = (event: Event, url: string) => {

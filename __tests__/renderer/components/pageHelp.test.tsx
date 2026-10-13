@@ -17,7 +17,7 @@
 
 import "@testing-library/jest-dom/vitest"
 
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { usePageHelp } from "@/components/help/usePageHelp"
@@ -36,6 +36,7 @@ function HelpProbe() {
 
 afterEach(() => {
   cleanup()
+  globalThis.scoreAtOnceWeb = undefined
 })
 
 function renderHelpAt(pathname: string) {
@@ -77,5 +78,34 @@ describe("ページごとの「使い方」", () => {
     renderHelpAt(pathname)
 
     expect(hasHelpButton()).toBe(false)
+  })
+})
+
+describe("設定画面の「使い方」はデスクトップ版と web 版で中身が変わる", () => {
+  /** 設定画面で「使い方」を開く */
+  function openSettingsHelp(): void {
+    renderHelpAt("/settings")
+    fireEvent.click(screen.getByRole("button", { name: "使い方" }))
+  }
+
+  it("デスクトップ版では同期の手引きを出す", () => {
+    openSettingsHelp()
+
+    expect(
+      screen.getByText("共有フォルダを通して、複数のPCで採点を分担する")
+    ).toBeInTheDocument()
+  })
+
+  it("web 版では同期の手引きの代わりに、データの置き場所の手引きを出す（web 版に同期は無い）", () => {
+    globalThis.scoreAtOnceWeb = true
+
+    openSettingsHelp()
+
+    expect(
+      screen.getByText("web 版のデータは、このブラウザの中にあります")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("共有フォルダを通して、複数のPCで採点を分担する")
+    ).not.toBeInTheDocument()
   })
 })

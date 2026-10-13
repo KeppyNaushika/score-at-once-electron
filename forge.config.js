@@ -397,6 +397,17 @@ module.exports = {
         }
         // アイコンは packager が `icon` から electron.icns として入れ、
         // Info.plist もそれを指す（ここで写し直す必要は無い）
+
+        // Electron と Chromium のライセンスを .app の中へ写す。packager は .app の隣に置くが、
+        // maker-zip は macOS では .app だけを zip にするので、隣のままでは配布物から落ちる
+        // （Windows・Linux はフォルダごと zip にするので隣のままで入る）。
+        // 「一括採点について」の画面がこの在りかを案内する
+        for (const licenseFile of ["LICENSE", "LICENSES.chromium.html"]) {
+          fs.copyFileSync(
+            path.join(options.outputPaths[0], licenseFile),
+            path.join(resourcesPath, licenseFile)
+          )
+        }
       } else {
         // Windows/Linux用のパス
         const resourcesPath = path.join(options.outputPaths[0], "resources")

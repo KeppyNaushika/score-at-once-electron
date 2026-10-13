@@ -8,6 +8,7 @@ import {
   FileArchive,
   FilePen,
   FileStack,
+  Info,
   Layers,
   ListTree,
   LogIn,
@@ -84,6 +85,7 @@ const navGroups: NavItem[][] = [
     },
     { href: "/audit-logs", label: "操作履歴", icon: RotateCcwClock },
     { href: "/glossary", label: "用語集", icon: BookA },
+    { href: "/about", label: "一括採点について", icon: Info },
   ],
 ]
 

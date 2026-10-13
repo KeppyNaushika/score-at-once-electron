@@ -21,6 +21,7 @@ import { HelpContentGradeList } from "@/components/help/page-specific/HelpConten
 import { HelpContentSettings } from "@/components/help/page-specific/HelpContentSettings"
 import { HelpContentStudents } from "@/components/help/page-specific/HelpContentStudents"
 import { HelpContentSubtotalGroups } from "@/components/help/page-specific/HelpContentSubtotalGroups"
+import { HelpContentWebVersion } from "@/components/help/page-specific/HelpContentWebVersion"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -60,10 +61,14 @@ const pageHelpComponents: {
 }
 
 /**
- * web 版では出さない手引き。設定の手引きは中身が同期（共有モード）だけで、web 版には
- * 同期設定のタブが無い
+ * web 版で差し替える手引き。設定の手引きは中身が同期（共有モード）だけで、web 版には
+ * 同期設定のタブが無いので、データの置き場所・控え・持ち運びの手引きを出す
  */
-const desktopOnlyHelpPageIds = new Set(["settings"])
+const webPageHelpComponents: {
+  [key: string]: React.ComponentType
+} = {
+  settings: HelpContentWebVersion,
+}
 
 interface UsePageHelpOptions {
   /**
@@ -108,9 +113,6 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       return "students"
     }
 
-    if (isWebRuntime && desktopOnlyHelpPageIds.has(lastSegment)) {
-      return undefined
-    }
     return Object.keys(pageHelpComponents).includes(lastSegment)
       ? lastSegment
       : undefined
@@ -118,7 +120,8 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
 
   const currentPageId = getCurrentPageId()
   const CurrentHelpComponent = currentPageId
-    ? pageHelpComponents[currentPageId]
+    ? ((isWebRuntime ? webPageHelpComponents[currentPageId] : undefined) ??
+      pageHelpComponents[currentPageId])
     : null
 
   // ページタイトルを取得。試験の段は段の一覧（タブと同じ名前）から引く
