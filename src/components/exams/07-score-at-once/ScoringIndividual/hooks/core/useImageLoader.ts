@@ -1,7 +1,7 @@
 /**
  * 画像読み込み・キャッシュ管理フック
  * - 答案画像の読み込み
- * - 複数ページ対応
+ * - 生徒の答案の全ページを読み込む（個別表示はページを縦に積んで出す）
  * - ファイル存在確認
  */
 import { useEffect, useMemo, useState } from "react"
@@ -10,15 +10,14 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import { fromAppImageUrl, toAppImageUrl } from "@/lib/appImageUrl"
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import { checkFileExists } from "@/queries/misc"
 
 import type { ImageLoaderReturn } from "./types"
 
 interface UseImageLoaderProps {
   currentScoringData: ScoringData | null
-  studentAnswerImages?: StudentAnswerImageWithExamStudents[]
-  showMultiplePages?: boolean
+  studentAnswerImages: StudentAnswerImageWithExamStudents[]
   imageRef: React.RefObject<HTMLImageElement | null>
 }
 
@@ -42,7 +41,6 @@ const NO_LOADED_ANSWER: LoadedAnswer = { examStudentId: null, pages: [] }
 export function useImageLoader({
   currentScoringData,
   studentAnswerImages,
-  showMultiplePages,
   imageRef,
 }: UseImageLoaderProps): ImageLoaderReturn {
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -58,41 +56,21 @@ export function useImageLoader({
         return
       }
 
-      let imagesToLoad: {
-        path: string
-        pageNumber: number
-        examPageId: string
-      }[]
-
-      if (showMultiplePages && studentAnswerImages) {
-        // 複数ページ表示：同一生徒の全ページを取得
-        const studentAnswerSheets = studentAnswerImages
-          .filter(
-            (sheet) => sheet.examStudentId === currentScoringData.examStudentId
-          )
-          .sort(
-            (sheetA, sheetB) =>
-              (sheetA.examPage?.pageNumber || 1) -
-              (sheetB.examPage?.pageNumber || 1)
-          )
-
-        imagesToLoad = studentAnswerSheets.map((sheet) => ({
+      // 同一生徒の全ページを取得
+      const imagesToLoad = studentAnswerImages
+        .filter(
+          (sheet) => sheet.examStudentId === currentScoringData.examStudentId
+        )
+        .sort(
+          (sheetA, sheetB) =>
+            (sheetA.examPage?.pageNumber || 1) -
+            (sheetB.examPage?.pageNumber || 1)
+        )
+        .map((sheet) => ({
           path: sheet.imagePath,
           pageNumber: sheet.examPage?.pageNumber || 1,
           examPageId: sheet.examPageId,
         }))
-      } else {
-        // 単一ページ表示：ScoringDataのimageUrlを使用（Grid Viewと同じ）
-        const imagePath = fromAppImageUrl(currentScoringData.imageUrl)
-        // 設問の載っているページの答案なので、ページは設問の採点領域のページ
-        imagesToLoad = [
-          {
-            path: imagePath,
-            pageNumber: 1,
-            examPageId: currentScoringData.questionRegion.examPageId,
-          },
-        ]
-      }
 
       // 画像を並列読み込み
       const loadPromises = imagesToLoad.map(async (imageInfo) => {
@@ -179,7 +157,7 @@ export function useImageLoader({
     if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [currentScoringData, studentAnswerImages, showMultiplePages, imageRef])
+  }, [currentScoringData, studentAnswerImages, imageRef])
 
   const loadedImages = useMemo(
     () => loadedAnswer.pages.map((page) => page.image),

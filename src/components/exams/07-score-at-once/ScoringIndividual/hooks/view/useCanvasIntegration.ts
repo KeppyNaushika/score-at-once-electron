@@ -1,21 +1,27 @@
 /**
  * @fileoverview Canvas初期化およびテキストボックス統合フック
- * キャンバスサイズ計算、アスペクト比、テキスト統合のロジックを提供
+ * 画像アスペクト比、テキスト統合のロジックを提供
  */
 import { useCallback, useMemo } from "react"
 
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   AnnotationTarget,
   DrawingAnnotation,
 } from "@/types/drawingAnnotation.types"
 
+import { loadedPageIndexOfCropRegion } from "../../utils/canvasPageLayout"
 import { useTextboxIntegration } from "../text/useTextboxIntegration"
 
 /** Canvas初期化およびテキストボックス統合フックのパラメータ */
 interface UseCanvasIntegrationParams {
   /** 読み込み済み画像配列 */
   loadedImages: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: string[]
+  /** 現在の設問領域（描画要素はこの設問のページに属する） */
+  currentCropRegion: QuestionAnswerRegionRow | null | undefined
   /** 注釈の行き先（答案＋設問＋採点者）。置き場所の採点行は保存時に main が用意する */
   annotationTarget: AnnotationTarget | null
   /** 描画要素配列 */
@@ -38,11 +44,7 @@ interface UseCanvasIntegrationParams {
 
 /** Canvas初期化およびテキストボックス統合フックの戻り値 */
 interface UseCanvasIntegrationReturn {
-  /** Canvas幅 */
-  canvasWidth: number
-  /** Canvas高さ */
-  canvasHeight: number
-  /** 画像アスペクト比 */
+  /** 現在の設問のページの画像アスペクト比 */
   imageAspectRatio: number
   /** 背景画像URL */
   backgroundImageUrl: string | undefined
@@ -58,7 +60,7 @@ interface UseCanvasIntegrationReturn {
  * Canvas初期化およびテキストボックス統合フック
  *
  * @description
- * キャンバスのサイズ計算、画像アスペクト比の算出、
+ * 現在の設問のページの画像アスペクト比の算出、
  * テキストエディタ統合の初期化を行うフック。
  *
  * @param params - フックパラメータ
@@ -66,6 +68,8 @@ interface UseCanvasIntegrationReturn {
  */
 export function useCanvasIntegration({
   loadedImages,
+  loadedExamPageIds,
+  currentCropRegion,
   annotationTarget,
   drawingElements,
   setDrawingElements,
@@ -73,18 +77,19 @@ export function useCanvasIntegration({
   updateDrawingElement,
   currentScoringData,
 }: UseCanvasIntegrationParams): UseCanvasIntegrationReturn {
-  // Canvas幅・高さ（画像サイズが確定してから初期化）
-  const canvasWidth = loadedImages.length > 0 ? loadedImages[0].width : 800
-  const canvasHeight = loadedImages.length > 0 ? loadedImages[0].height : 600
-
-  // 画像アスペクト比（Shift制約で正円/正方形にするため）
+  // 画像アスペクト比（Shift制約で正円/正方形にするため）。
+  // 描画要素の座標は現在の設問のページが基準なので、そのページの画像で測る。
+  // ページが答案に無い間は描画を止めているので使われない
   const imageAspectRatio = useMemo(() => {
-    if (loadedImages.length > 0) {
-      const image = loadedImages[0]
-      return image.naturalWidth / image.naturalHeight
-    }
-    return 1
-  }, [loadedImages])
+    const pageIndex = loadedPageIndexOfCropRegion(
+      currentCropRegion,
+      loadedExamPageIds
+    )
+    if (pageIndex === null) return 1
+    const pageImage = loadedImages[pageIndex]
+    if (!pageImage?.naturalWidth || !pageImage.naturalHeight) return 1
+    return pageImage.naturalWidth / pageImage.naturalHeight
+  }, [loadedImages, loadedExamPageIds, currentCropRegion])
 
   // 答案画像のURL取得（appimg://プロトコルをそのまま使用）
   const backgroundImageUrl = currentScoringData?.imageUrl
@@ -121,8 +126,6 @@ export function useCanvasIntegration({
   )
 
   return {
-    canvasWidth,
-    canvasHeight,
     imageAspectRatio,
     backgroundImageUrl,
     textboxIntegration,

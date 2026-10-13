@@ -42,7 +42,6 @@ export default function AnswerIndividualView({
   cropRegions,
   questionScoresByCropRegionId,
   studentAnswerImages,
-  showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
   currentExamStudentId,
   currentUserId,
@@ -180,7 +179,6 @@ export default function AnswerIndividualView({
     selectedElementIds: drawingState.selectedElementIds,
     isDrawingSelection: drawingState.isDrawingSelection,
     selectionRectangle: drawingState.selectionRectangle,
-    showMultiplePages,
     pageSpacing,
     isDraggingElement: drawingState.isDraggingElement,
     // 透明度制御用の全アノテーション
@@ -245,8 +243,6 @@ export default function AnswerIndividualView({
 
   // Canvas・テキストボックス統合フック
   const {
-    canvasWidth,
-    canvasHeight,
     imageAspectRatio,
     backgroundImageUrl,
     textboxIntegration,
@@ -254,6 +250,8 @@ export default function AnswerIndividualView({
     handleTextElementReClick,
   } = useCanvasIntegration({
     loadedImages,
+    loadedExamPageIds,
+    currentCropRegion,
     annotationTarget,
     drawingElements: drawingState.drawingElements,
     setDrawingElements: drawingState.setDrawingElements,
@@ -499,9 +497,6 @@ export default function AnswerIndividualView({
         onSubmit={textboxIntegration.confirmText}
         onCancel={textboxIntegration.cancelEdit}
         title="テキスト編集"
-        position={textboxIntegration.currentPosition}
-        canvasWidth={canvasWidth}
-        canvasHeight={canvasHeight}
         backgroundImageUrl={backgroundImageUrl}
         fontSize={textboxIntegration.currentFontSize}
         onFontSizeChange={textboxIntegration.setCurrentFontSize}
