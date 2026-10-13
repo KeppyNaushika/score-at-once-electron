@@ -100,6 +100,13 @@ npx next build && npm run web:build && npm run web:serve   # http://127.0.0.1:41
 上ほど先にやる。採点の流れ（取り込み → 採点 → 出力・印刷 → `.sao` での受け渡し）は、
 web で端から端まで通るところまで来ている。
 
+**いまの状態:** コードの側の作業（1〜3、4 の手元の分、5）は済んだ。公開に残るのは、順に
+次の3つ。
+
+1. デスクトップ版のパッケージでの確認（#1513）。デスクトップ版の次の公開と合わせて行う。
+2. Cloudflare と GitHub の設定（4 の「人がやること」の手順1〜5）。
+3. 配ったあとの確認（同じく手順6）。
+
 ### 1. 採点の流れで残っている粗（済んだ部分は上の「組み立て方」）
 
 | 粗                                   | 中身                                                                                                                                                                                                                                                                                                     |
@@ -196,7 +203,8 @@ XSS の被害が直接になる。しかも、攻撃者が中身を作れる入�
 **残り（Cloudflare・GitHub の側で人がやること）:**
 
 1. Cloudflare Pages のプロジェクトを「直接アップロード」で作る（Git の連携はしない。書き出しは CI が行う）。
-2. カスタムドメインを付ける。
+2. カスタムドメインを付ける。名前は `app.score.keppy.jp`。2段のサブドメインで証明書が出ないときは
+   `score-app.keppy.jp` にする。
 3. API トークンを作る。権限は「Cloudflare Pages: Edit」だけ、対象はそのアカウントだけ。
 4. GitHub の environment `web-production` を作り、承認者を付ける。そこに secrets
    `CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID` と vars `CLOUDFLARE_PAGES_PROJECT` を置く。

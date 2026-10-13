@@ -13,7 +13,8 @@ const SOURCE_REPOSITORY_URL = process.env.APP_REPOSITORY_URL ?? ""
  * 一括採点について。バージョン・ソースの在りか・ライセンス・同梱するライブラリのライセンス。
  *
  * AGPLv3 のもとで公開しているので、ネットワーク越しに使う web 版でも、利用者がソースを
- * 辿れるようにする（第13条）。ログインの前の画面からも辿れるよう、サイドバーに置く。
+ * 辿れるようにする（第13条）。ログインの前の画面からも辿れるよう、ログインの関門
+ * （`app/(app)/layout.tsx` の `AuthGate`）の外に置き、サイドバーから開けるようにする。
  *
  * ソースのリンクは、web 版ではブラウザの新しいタブで、デスクトップ版では main が既定の
  * ブラウザで開く（`electron-src/windowManager.ts` の `isSourceRepositoryUrl`）
