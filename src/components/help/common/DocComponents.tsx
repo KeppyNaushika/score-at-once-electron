@@ -304,7 +304,7 @@ export function KeyCap({
   return (
     <Kbd
       className={cn(
-        "h-7 min-w-7 rounded-md border border-b-2 bg-gradient-to-b px-2 font-mono text-sm font-bold",
+        "h-7 min-w-7 rounded-md border border-b-2 bg-linear-to-b px-2 font-mono text-sm font-bold",
         keyTones[tone]
       )}
     >
