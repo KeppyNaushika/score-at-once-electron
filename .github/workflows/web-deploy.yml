@@ -56,6 +56,9 @@ jobs:
       - name: Copy MathJax / PDF.js assets
         run: node scripts/setup-mathjax-fonts.js
 
+      - name: List third-party licenses
+        run: node scripts/thirdPartyLicenses.mjs
+
       - name: Build renderer
         run: npx next build
 

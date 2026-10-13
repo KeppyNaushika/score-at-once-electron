@@ -1,6 +1,7 @@
 import type { NextConfig } from "next"
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants"
 
+import packageJson from "./package.json"
 import {
   ROUTE_PARAM_NAMES,
   ROUTE_SHELL_PARAM,
@@ -39,6 +40,14 @@ export async function routeShellRewrites() {
 }
 
 const sharedConfig: NextConfig = {
+  /**
+   * 「一括採点について」に出すバージョンとソースの在りか。手で書かず package.json から埋め込む
+   * （web 版の Worker の `__APP_VERSION__` と同じ出どころ）
+   */
+  env: {
+    APP_VERSION: packageJson.version,
+    APP_REPOSITORY_URL: packageJson.repository.url,
+  },
   /**
    * 左下の開発インジケーター（「N」の丸）。撮影では消す。公式サイトの使い方に
    * 貼る図に開発中の印が写るため。ビルドやランタイムのエラー表示は消えない。
