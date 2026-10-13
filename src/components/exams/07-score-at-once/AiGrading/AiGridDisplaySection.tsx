@@ -39,6 +39,8 @@ interface AiGridDisplaySectionProps {
   selectedCount: number
   visibleCount: number
   totalCount: number
+  /** 類型方式の設問か（類型採点済みの絞り込みも並べる。一覧表示の「表示」節と同じ） */
+  isScaleQuestion?: boolean
 }
 
 /**
@@ -57,6 +59,7 @@ export function AiGridDisplaySection({
   selectedCount,
   visibleCount,
   totalCount,
+  isScaleQuestion = false,
 }: AiGridDisplaySectionProps) {
   return (
     <SidePanelSection
@@ -84,6 +87,7 @@ export function AiGridDisplaySection({
               filterSettings={filterSettings[source]}
               onToggleFilter={(status) => onToggleFilter(source, status)}
               commandIdOf={source === "ai" ? aiFilterCommandIdOf : undefined}
+              showEvaluated={isScaleQuestion}
             />
           </div>
         ))}

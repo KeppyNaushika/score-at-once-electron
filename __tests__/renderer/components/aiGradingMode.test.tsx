@@ -21,11 +21,13 @@ import { type ReactNode, useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiGradingRunDialog } from "@/components/exams/07-score-at-once/AiGrading/AiGradingRunDialog"
+import { AiGridDisplaySection } from "@/components/exams/07-score-at-once/AiGrading/AiGridDisplaySection"
 import { AiRunHistorySection } from "@/components/exams/07-score-at-once/AiGrading/AiRunHistorySection"
 import type {
   AiGradingAnswer,
   AiGradingRunRow,
 } from "@/components/exams/07-score-at-once/AiGrading/types"
+import { DEFAULT_AI_GRID_FILTER_SETTINGS } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridFilter"
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
 import { ShortcutProvider } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import GradingModeToggle from "@/components/exams/07-score-at-once/ScoringMain/GradingModeToggle"
@@ -536,6 +538,42 @@ describe("絞り込みのボタン（一覧表示と共通）", () => {
     )
     await userEvent.click(screen.getByRole("button", { name: "無答" }))
     expect(onToggleFilter).toHaveBeenCalledWith("no_answer")
+  })
+
+  it("類型方式の設問では、自分の採点・AI の採点の両方に類型採点済みも並べる", () => {
+    installFakeElectronApi({ isUnlocked: true })
+    renderWithProviders(
+      <AiGridDisplaySection
+        display={{
+          layoutDirection: "right-down",
+          onLayoutDirectionChange: () => {},
+          itemsPerLine: [4],
+          onItemsPerLineChange: () => {},
+          expandMargin: 0,
+          onExpandMarginChange: () => {},
+          autoScroll: false,
+          showStudentNames: true,
+          annotationRefreshKey: 0,
+        }}
+        filterSettings={DEFAULT_AI_GRID_FILTER_SETTINGS}
+        onToggleFilter={() => {}}
+        answerOrder="display"
+        onAnswerOrderChange={() => {}}
+        isWhitenessReady
+        selectedCount={0}
+        visibleCount={0}
+        totalCount={0}
+        isScaleQuestion
+      />
+    )
+    for (const groupName of ["自分の採点の絞り込み", "AI の採点の絞り込み"]) {
+      expect(
+        within(screen.getByRole("group", { name: groupName })).getByRole(
+          "button",
+          { name: "類型採点済み" }
+        )
+      ).toBeInTheDocument()
+    }
   })
 })
 
