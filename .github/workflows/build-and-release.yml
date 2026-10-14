@@ -55,6 +55,10 @@ jobs:
             arch: x64
             artifact_name: score-at-once-windows-x64
           - os: ubuntu-latest
+            # ubuntu-latest は 26.04 へ移る。ここで better-sqlite3 をビルドすると、より古い glibc の
+            # Linux（24.04 とその派生）で読み込めなくなりうる。動く範囲の広い 24.04 に固定する。
+            # 注: os ラベルは ubuntu-latest のまま維持（後続の matrix.os 条件分岐が依存）
+            runner: ubuntu-24.04
             platform: linux
             arch: x64
             artifact_name: score-at-once-linux-x64
