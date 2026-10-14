@@ -396,7 +396,6 @@ SQLite の Session 拡張には `sqlite3changeset_invert()` があり、changese
 | [type-assertion-audit.md](./type-assertion-audit.md)                                 | `as` の全数調査と処方                                    |
 | [schema-relation-audit.md](./schema-relation-audit.md)                               | スキーマのリレーション監査                               |
 | [internationalization-plan.md](./internationalization-plan.md)                       | 国際化。**段階表に載せない一計画**（着手時期未定）       |
-| [frame-detection-analysis.md](./frame-detection-analysis.md)                         | 採点枠自動検出の分析。§7 に未着手の改善候補3件           |
 
 ---
 

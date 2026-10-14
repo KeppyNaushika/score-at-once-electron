@@ -5,10 +5,21 @@
 
 "use client"
 
-import { memo, useCallback, useState } from "react"
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react"
+import { memo, useCallback, useRef, useState } from "react"
 
 import { OVERLAY_STYLES } from "../constants/detection"
 import type { DetectedRect, ImageDimensions } from "../types"
+
+/**
+ * 押してから離すまでにこれ以上動いたら、クリックではなくドラッグとみなす（px）。
+ * 検出枠の上から始めたドラッグも新しい枠の作成になるので、離したときのクリックで
+ * 検出枠からもう1つ作ってはいけない
+ */
+const CLICK_MOVE_TOLERANCE_PX = 4
 
 interface DetectedRectOverlayProps {
   /** 検出された矩形 */
@@ -34,6 +45,8 @@ export const DetectedRectOverlay = memo(function DetectedRectOverlay({
   onRectClick,
 }: DetectedRectOverlayProps) {
   const [hoveredRectId, setHoveredRectId] = useState<string | null>(null)
+  // 検出枠の上で押した位置。離したときのクリックがドラッグの終わりかを見分ける
+  const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null)
 
   const handleMouseEnter = useCallback((rectId: string) => {
     setHoveredRectId(rectId)
@@ -43,8 +56,26 @@ export const DetectedRectOverlay = memo(function DetectedRectOverlay({
     setHoveredRectId(null)
   }, [])
 
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      pointerDownPositionRef.current = { x: event.clientX, y: event.clientY }
+    },
+    []
+  )
+
   const handleClick = useCallback(
-    (rect: DetectedRect) => {
+    (rect: DetectedRect, event: ReactMouseEvent<HTMLDivElement>) => {
+      const pointerDownPosition = pointerDownPositionRef.current
+      pointerDownPositionRef.current = null
+      if (
+        pointerDownPosition &&
+        Math.hypot(
+          event.clientX - pointerDownPosition.x,
+          event.clientY - pointerDownPosition.y
+        ) > CLICK_MOVE_TOLERANCE_PX
+      ) {
+        return
+      }
       if (onRectClick) {
         onRectClick(rect)
       }
@@ -90,7 +121,8 @@ export const DetectedRectOverlay = memo(function DetectedRectOverlay({
             }}
             onMouseEnter={() => handleMouseEnter(rect.id)}
             onMouseLeave={handleMouseLeave}
-            onClick={() => handleClick(rect)}
+            onPointerDown={handlePointerDown}
+            onClick={(event) => handleClick(rect, event)}
           >
             {isHovered && (
               <div className="absolute -top-6 left-0 rounded bg-blue-600 px-2 py-0.5 text-xs whitespace-nowrap text-white">

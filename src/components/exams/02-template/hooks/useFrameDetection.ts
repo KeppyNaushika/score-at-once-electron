@@ -1,5 +1,9 @@
 /**
  * 採点枠検出フック
+ *
+ * 検出はバックグラウンド（Worker）で走り、利用者の操作を待たせない。
+ * 新しい検出を始めたとき・取り消したときは、走っている検出を止めて結果を捨てる。
+ * ページを素早く切り替えても、前のページの結果が今のページに出ることはない。
  */
 
 import { useCallback, useRef, useState } from "react"
@@ -19,6 +23,8 @@ import { findIntersectingRects } from "../utils/rectUtils"
 
 interface UseFrameDetectionProps {
   imageUrl: string | null
+  /** ページの用紙サイズ名（"A4"等）。mm の設定を画素に換算するのに使う */
+  pageSize: string | null
 }
 
 interface UseFrameDetectionReturn {
@@ -38,6 +44,8 @@ interface UseFrameDetectionReturn {
   resetSettings: () => void
   /** 画像全体から一括検出 */
   detectAll: () => Promise<void>
+  /** 走っている検出を取り消す（結果は捨てる） */
+  cancelDetection: () => void
   /** ドラッグ後にスナップする矩形を取得 */
   findSnappedRects: (dragRect: {
     x: number
@@ -54,6 +62,7 @@ interface UseFrameDetectionReturn {
  */
 export function useFrameDetection({
   imageUrl,
+  pageSize,
 }: UseFrameDetectionProps): UseFrameDetectionReturn {
   const [detectedRects, setDetectedRects] = useState<DetectedRect[]>([])
   const [isDetecting, setIsDetecting] = useState(false)
@@ -64,20 +73,16 @@ export function useFrameDetection({
     DEFAULT_DETECTION_SETTINGS
   )
 
-  // キャッシュ用（同じ画像・設定で再検出を防ぐ）
-  const cacheRef = useRef<{
-    imageUrl: string | null
-    settings: DetectionSettings
-    rects: DetectedRect[]
-  } | null>(null)
+  // 検出結果の控え（画像と設定の組ごと）。ページを行き来しても再検出しない
+  const rectsCacheRef = useRef(new Map<string, DetectedRect[]>())
+  // 走っている検出の取り消し口。次の検出・取り消しで abort する
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   /**
    * 検出設定を更新
    */
   const updateSettings = useCallback((partial: Partial<DetectionSettings>) => {
     setSettings((prev) => ({ ...prev, ...partial }))
-    // キャッシュを無効化
-    cacheRef.current = null
   }, [])
 
   /**
@@ -85,44 +90,61 @@ export function useFrameDetection({
    */
   const resetSettings = useCallback(() => {
     setSettings(DEFAULT_DETECTION_SETTINGS)
-    cacheRef.current = null
+  }, [])
+
+  /**
+   * 走っている検出を取り消す
+   */
+  const cancelDetection = useCallback(() => {
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    setIsDetecting(false)
   }, [])
 
   /**
    * 画像全体から一括検出
    */
   const detectAll = useCallback(async () => {
-    if (!imageUrl) return
+    if (!imageUrl || !pageSize) return
 
-    // キャッシュチェック
-    if (
-      cacheRef.current &&
-      cacheRef.current.imageUrl === imageUrl &&
-      JSON.stringify(cacheRef.current.settings) === JSON.stringify(settings)
-    ) {
-      setDetectedRects(cacheRef.current.rects)
+    // 前の検出（別のページ・前の設定）はもう要らない
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+
+    const cacheKey = `${imageUrl}\n${pageSize}\n${JSON.stringify(settings)}`
+    const cachedRects = rectsCacheRef.current.get(cacheKey)
+    if (cachedRects) {
+      setIsDetecting(false)
+      setDetectedRects(cachedRects)
       return
     }
 
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
     setIsDetecting(true)
 
     try {
-      const rects = await frameDetector.detectFromUrl(imageUrl, settings)
-      setDetectedRects(rects)
-
-      // キャッシュを更新
-      cacheRef.current = {
+      const rects = await frameDetector.detectFromUrl(
         imageUrl,
-        settings: { ...settings },
-        rects,
-      }
+        settings,
+        pageSize,
+        abortController.signal
+      )
+      rectsCacheRef.current.set(cacheKey, rects)
+      // 待っている間に取り消された（ページを切り替えた等）なら、今の画面には出さない
+      if (abortController.signal.aborted) return
+      setDetectedRects(rects)
     } catch (error) {
+      if (abortController.signal.aborted) return
       console.error("Frame detection failed:", error)
       setDetectedRects([])
     } finally {
-      setIsDetecting(false)
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null
+        setIsDetecting(false)
+      }
     }
-  }, [imageUrl, settings])
+  }, [imageUrl, pageSize, settings])
 
   /**
    * ドラッグ後にスナップする矩形を取得
@@ -140,11 +162,10 @@ export function useFrameDetection({
   )
 
   /**
-   * 検出結果をクリア
+   * 検出結果をクリア（控えは残す。同じページへ戻ったときにすぐ出せるように）
    */
   const clearDetectedRects = useCallback(() => {
     setDetectedRects([])
-    cacheRef.current = null
   }, [])
 
   return {
@@ -156,6 +177,7 @@ export function useFrameDetection({
     updateSettings,
     resetSettings,
     detectAll,
+    cancelDetection,
     findSnappedRects,
     clearDetectedRects,
   }

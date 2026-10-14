@@ -94,6 +94,7 @@ export default function TemplateStepPage() {
             backgroundImageUrl={backgroundImageUrl}
             imageDimensions={imageDimensions}
             examPageId={selectedMasterImage?.id ?? null}
+            pageSize={selectedMasterImage?.pageSize ?? null}
             defaultPoints={defaultPoints}
             onDefaultPointsChange={setDefaultPoints}
           />

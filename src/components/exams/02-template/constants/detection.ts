@@ -8,10 +8,10 @@ import type { DetectionMode, DetectionSettings } from "../types"
  * デフォルトの検出設定（シンプル版）
  */
 export const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
-  lineExtension: 0, // 線の延長なし（UIスライダーで調整可能）
-  minWidth: 0.02, // 画像幅の2%以上
-  minHeight: 0.01, // 画像高さの1%以上
-  sensitivity: 3, // 検出感度（1-5）
+  minLineLengthMm: 6, // 6mm 以上の連なりを罫線とみなす
+  minDividerLength: 0.9, // 枠の幅（高さ）の9割以上ある線は、壁に届かなくても仕切りとみなす
+  minWidthMm: 4,
+  minHeightMm: 3,
 }
 
 /**
