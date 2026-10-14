@@ -17,6 +17,11 @@ out/
 web-dist/
 # 同梱するライブラリのライセンスの一覧（scripts/thirdPartyLicenses.mjs がビルドのたびに作る）
 /public/third-party-licenses.json
+# scripts/setup-mathjax-fonts.js が node_modules から写すもの（MathJax・PDF.js の worker と WASM・個人成績表PDF用のフォント）
+/public/js/mathjax/
+/public/js/pdf.worker.min.mjs
+/public/js/wasm/
+/public/fonts/
 
 # production
 build/
