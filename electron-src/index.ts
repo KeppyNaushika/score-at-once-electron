@@ -72,9 +72,9 @@ protocol.registerSchemesAsPrivileged([
       standard: true,
       supportFetchAPI: true,
       stream: true,
-      // フレーム検出（02-template）は img.crossOrigin="anonymous" で読み込むため、
+      // フレーム検出（02-template）は画面の origin から fetch で読み込むため、
       // スキーム自体をCORS対象にしないと応答の Access-Control-Allow-Origin が
-      // 参照されず、crossOrigin付きの読み込みが onerror で失敗する。
+      // 参照されず、読み込みが失敗する。
       corsEnabled: true,
     },
   },

@@ -157,22 +157,23 @@ export interface DetectedRect {
   width: number
   /** 高さ（相対座標 0-1） */
   height: number
-  /** 検出信頼度 0-1 */
-  confidence: number
 }
 
 /**
  * 検出設定（シンプル版）
  */
 export interface DetectionSettings {
-  /** 線の延長ピクセル デフォルト: 0 */
-  lineExtension: number
-  /** 最小幅（相対座標）デフォルト: 0.02 */
-  minWidth: number
-  /** 最小高さ（相対座標）デフォルト: 0.01 */
-  minHeight: number
-  /** 検出感度 1-5（高いほど薄い線を検出）デフォルト: 3 */
-  sensitivity: number
+  /** 罫線とみなす最短の長さ（mm）デフォルト: 6 */
+  minLineLengthMm: number
+  /**
+   * 仕切り線とみなす線の長さ（枠の幅・高さに対する比）デフォルト: 0.9。
+   * 1 なら壁から壁まで届く線だけが仕切り（壁に届かない線は延ばさない）
+   */
+  minDividerLength: number
+  /** 枠として残す最小の幅（mm）デフォルト: 4 */
+  minWidthMm: number
+  /** 枠として残す最小の高さ（mm）デフォルト: 3 */
+  minHeightMm: number
 }
 
 /**

@@ -33,6 +33,8 @@ type CropRegionEditorProps = {
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   examPageId: string | null
+  /** ページの用紙サイズ名（"A4"等）。枠検出の mm の設定を画素に換算するのに使う */
+  pageSize: string | null
   defaultPoints: number
   onDefaultPointsChange: (points: number) => void
 }
@@ -46,6 +48,7 @@ const CropRegionEditor = ({
   backgroundImageUrl,
   imageDimensions,
   examPageId,
+  pageSize,
   defaultPoints,
   onDefaultPointsChange,
 }: CropRegionEditorProps) => {
@@ -53,7 +56,6 @@ const CropRegionEditor = ({
   const [selectedCropRegionId, setSelectedCropRegionId] = useState<
     string | null
   >(null)
-  const [settingsCollapsed, setSettingsCollapsed] = useState(true)
   // 削除の確認を待っている領域。選択と同じく id で持つ（確認の間に他の教員が
   // 領域を消すと並びが変わり、添字では別の領域を消してしまう）
   const cropRegionDeletion = useDialogTarget<string>()
@@ -68,21 +70,26 @@ const CropRegionEditor = ({
     updateSettings,
     resetSettings,
     detectAll,
+    cancelDetection,
     findSnappedRects,
     clearDetectedRects,
-  } = useFrameDetection({ imageUrl: backgroundImageUrl })
+  } = useFrameDetection({
+    imageUrl: backgroundImageUrl,
+    pageSize,
+  })
 
   // 画像が変更されたら検出結果をクリア
   useEffect(() => {
     clearDetectedRects()
   }, [backgroundImageUrl, clearDetectedRects])
 
-  // 検出モードが変更されたら一括検出を実行
+  // 検出モード・画像・設定が変わったら一括検出を実行。検出は裏で走り、
+  // ページ切替・手動指定への切替・設定の変更では走っている検出を取り消す
   useEffect(() => {
-    if (detectionMode !== "manual" && backgroundImageUrl) {
-      detectAll()
-    }
-  }, [detectionMode, backgroundImageUrl, detectAll])
+    if (detectionMode === "manual" || !backgroundImageUrl) return
+    detectAll()
+    return cancelDetection
+  }, [detectionMode, backgroundImageUrl, detectAll, cancelDetection])
 
   // 検出枠クリック時のハンドラ
   const handleDetectedRectClick = useCallback(
@@ -178,8 +185,6 @@ const CropRegionEditor = ({
           <DetectionModeToggle
             mode={detectionMode}
             onModeChange={setDetectionMode}
-            isDetecting={isDetecting}
-            onDetectAll={detectAll}
             disabled={disabled}
           />
           {detectionMode !== "manual" && (
@@ -187,14 +192,9 @@ const CropRegionEditor = ({
               settings={settings}
               onSettingsChange={updateSettings}
               onReset={resetSettings}
-              collapsed={settingsCollapsed}
-              onToggleCollapse={() => setSettingsCollapsed(!settingsCollapsed)}
+              isDetecting={isDetecting}
+              detectedCount={detectedRects.length}
             />
-          )}
-          {detectedRects.length > 0 && (
-            <div className="text-xs text-gray-500">
-              検出枠: {detectedRects.length}個
-            </div>
           )}
           <div className="flex items-center gap-2">
             <label className="text-xs whitespace-nowrap text-gray-600">

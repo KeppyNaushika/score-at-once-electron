@@ -1,5 +1,5 @@
 /**
- * 検出設定パネルコンポーネント（シンプル版）
+ * 検出設定パネルコンポーネント
  */
 
 "use client"
@@ -7,6 +7,7 @@
 import { memo, useCallback } from "react"
 
 import { Slider } from "@/components/ui/slider"
+import { Spinner } from "@/components/ui/spinner"
 
 import type { DetectionSettings } from "../types"
 
@@ -14,16 +15,18 @@ interface DetectionSettingsPanelProps {
   settings: DetectionSettings
   onSettingsChange: (partial: Partial<DetectionSettings>) => void
   onReset?: () => void
-  collapsed?: boolean
-  onToggleCollapse?: () => void
+  /** 検出中か（見出しの行に「検出中...」を出す） */
+  isDetecting: boolean
+  /** 検出された枠の数 */
+  detectedCount: number
 }
 
 export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
   settings,
   onSettingsChange,
   onReset,
-  collapsed = true,
-  onToggleCollapse,
+  isDetecting,
+  detectedCount,
 }: DetectionSettingsPanelProps) {
   const handleChange = useCallback(
     (key: keyof DetectionSettings, value: number) => {
@@ -33,121 +36,112 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
   )
 
   return (
-    <div className="rounded border border-gray-200 bg-white">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50"
-        onClick={onToggleCollapse}
-      >
-        <span>検出設定</span>
-        <svg
-          className={`h-4 w-4 transform transition-transform ${collapsed ? "" : "rotate-180"}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-
-      {!collapsed && (
-        <div className="space-y-3 border-t border-gray-200 px-3 py-2">
-          {/* 検出感度 */}
-          <div>
-            <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
-              <span>検出感度</span>
-              <span className="font-mono">{settings.sensitivity}/5</span>
-            </label>
-            <Slider
-              min={1}
-              max={5}
-              step={1}
-              value={[settings.sensitivity]}
-              onValueChange={([nextSensitivity]) =>
-                handleChange("sensitivity", nextSensitivity)
-              }
-              title="検出感度（高いほど薄い線を検出）"
-            />
-            <div className="mt-0.5 flex justify-between text-[10px] text-gray-400">
-              <span>くっきり</span>
-              <span>かすれ対応</span>
-            </div>
-          </div>
-
-          {/* 線の延長 */}
-          <div>
-            <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
-              <span>線の延長</span>
-              <span className="font-mono">{settings.lineExtension}px</span>
-            </label>
-            <Slider
-              min={0}
-              max={30}
-              step={1}
-              value={[settings.lineExtension]}
-              onValueChange={([nextLineExtension]) =>
-                handleChange("lineExtension", nextLineExtension)
-              }
-              title="線の延長"
-            />
-          </div>
-
-          {/* 最小幅 */}
-          <div>
-            <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
-              <span>最小幅</span>
-              <span className="font-mono">
-                {Math.round(settings.minWidth * 100)}%
-              </span>
-            </label>
-            <Slider
-              min={0.01}
-              max={0.3}
-              step={0.01}
-              value={[settings.minWidth]}
-              onValueChange={([nextMinWidth]) =>
-                handleChange("minWidth", nextMinWidth)
-              }
-              title="最小幅"
-            />
-          </div>
-
-          {/* 最小高さ */}
-          <div>
-            <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
-              <span>最小高さ</span>
-              <span className="font-mono">
-                {Math.round(settings.minHeight * 100)}%
-              </span>
-            </label>
-            <Slider
-              min={0.01}
-              max={0.3}
-              step={0.01}
-              value={[settings.minHeight]}
-              onValueChange={([nextMinHeight]) =>
-                handleChange("minHeight", nextMinHeight)
-              }
-              title="最小高さ"
-            />
-          </div>
-
-          {onReset && (
-            <button
-              type="button"
-              className="w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
-              onClick={onReset}
-            >
-              デフォルトに戻す
-            </button>
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">検出設定</h3>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          {isDetecting ? (
+            <>
+              <Spinner className="size-3" />
+              検出中...
+            </>
+          ) : (
+            `検出枠: ${detectedCount}個`
           )}
+        </span>
+      </div>
+
+      {/* 罫線の最短の長さ */}
+      <div>
+        <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
+          <span>罫線の最短の長さ</span>
+          <span className="font-mono">{settings.minLineLengthMm}mm</span>
+        </label>
+        <Slider
+          min={1}
+          max={30}
+          step={1}
+          value={[settings.minLineLengthMm]}
+          onValueChange={([nextMinLineLengthMm]) =>
+            handleChange("minLineLengthMm", nextMinLineLengthMm)
+          }
+          title="この長さ（用紙上の mm）以上の黒い線を罫線とみなす"
+        />
+        <div className="mt-0.5 flex justify-between text-[10px] text-gray-400">
+          <span>短い線も拾う</span>
+          <span>長い線だけ</span>
         </div>
+      </div>
+
+      {/* 仕切り線の長さ */}
+      <div>
+        <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
+          <span>仕切り線の長さ</span>
+          <span className="font-mono">
+            {Math.round(settings.minDividerLength * 100)}%
+          </span>
+        </label>
+        <Slider
+          min={0.5}
+          max={1}
+          step={0.05}
+          value={[settings.minDividerLength]}
+          onValueChange={([nextMinDividerLength]) =>
+            handleChange("minDividerLength", nextMinDividerLength)
+          }
+          title="枠の幅（高さ）に対してこの割合以上の長さがある線は、壁に届いていなくても仕切りとみなして枠を割る。100%なら壁から壁まで届く線だけ"
+        />
+        <div className="mt-0.5 flex justify-between text-[10px] text-gray-400">
+          <span>途切れた線も仕切りに</span>
+          <span>届く線だけ</span>
+        </div>
+      </div>
+
+      {/* 最小幅 */}
+      <div>
+        <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
+          <span>最小幅</span>
+          <span className="font-mono">{settings.minWidthMm}mm</span>
+        </label>
+        <Slider
+          min={1}
+          max={30}
+          step={1}
+          value={[settings.minWidthMm]}
+          onValueChange={([nextMinWidthMm]) =>
+            handleChange("minWidthMm", nextMinWidthMm)
+          }
+          title="これより幅の狭い枠は出さない（用紙上の mm）。縦の仕切り線で割るとこれより狭い枠ができるときは割らない"
+        />
+      </div>
+
+      {/* 最小高さ */}
+      <div>
+        <label className="mb-1 flex items-center justify-between text-xs text-gray-600">
+          <span>最小高さ</span>
+          <span className="font-mono">{settings.minHeightMm}mm</span>
+        </label>
+        <Slider
+          min={1}
+          max={30}
+          step={1}
+          value={[settings.minHeightMm]}
+          onValueChange={([nextMinHeightMm]) =>
+            handleChange("minHeightMm", nextMinHeightMm)
+          }
+          title="これより高さの低い枠は出さない（用紙上の mm）。横の仕切り線で割るとこれより低い枠ができるときは割らない"
+        />
+      </div>
+
+      {onReset && (
+        <button
+          type="button"
+          className="w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          onClick={onReset}
+        >
+          デフォルトに戻す
+        </button>
       )}
-    </div>
+    </section>
   )
 })
