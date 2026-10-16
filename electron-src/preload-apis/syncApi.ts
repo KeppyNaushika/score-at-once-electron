@@ -17,6 +17,8 @@ export function createSyncApi() {
 
       setTiming: bind("sync:setTiming"),
 
+      recordConsent: bind("sync:recordConsent"),
+
       chooseSharedFolder: bind("sync:chooseSharedFolder"),
 
       inspectSharedFolder: bind("sync:inspectSharedFolder"),

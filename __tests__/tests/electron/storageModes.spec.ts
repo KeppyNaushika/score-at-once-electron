@@ -64,6 +64,19 @@ async function stubFolderDialog(app: LaunchedApp, folder: string) {
   }, folder)
 }
 
+/** 共有モードの注意事項に、1項目ずつ確かめて同意する（同意するまで共有フォルダを選べない） */
+async function agreeToSyncConsent(page: Page) {
+  const dialog = page.getByRole("dialog", {
+    name: /共有モードの注意事項への同意/,
+  })
+  await expect(dialog).toBeVisible()
+  for (const checkbox of await dialog.getByRole("checkbox").all()) {
+    await checkbox.check()
+  }
+  await dialog.getByRole("button", { name: "同意する" }).click()
+  await expect(dialog).toHaveCount(0)
+}
+
 async function openSyncSettings(page: Page) {
   await page.goto(`${E2E_BASE_URL}/sync`, { waitUntil: "domcontentloaded" })
   await expect(page.getByText("起動するデータ")).toBeVisible({
@@ -81,6 +94,7 @@ test("PC-A: ローカルモードのデータを空の共有フォルダへ移�
   await stubFolderDialog(launched, SHARED_FOLDER)
   await openSyncSettings(page)
   await page.getByRole("button", { name: /共有フォルダを追加/ }).click()
+  await agreeToSyncConsent(page)
   await expect(page.getByText("共有しているデータがありません")).toBeVisible()
   await page
     .getByRole("button", { name: "ローカルのデータを移して始める" })
@@ -110,6 +124,7 @@ test("PC-B: PC-A が再起動する前に合流でき、共有モードで起動
   await stubFolderDialog(launched, SHARED_FOLDER)
   await openSyncSettings(page)
   await page.getByRole("button", { name: /共有フォルダを追加/ }).click()
+  await agreeToSyncConsent(page)
   await expect(page.getByText(/混ぜません/)).toBeVisible()
   await page.getByRole("button", { name: "合流する" }).click()
   await expect(page.getByText("再起動して切り替えますか？")).toBeVisible({

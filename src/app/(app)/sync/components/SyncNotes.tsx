@@ -2,38 +2,23 @@ import { CircleAlert } from "lucide-react"
 
 import { BetaBadge } from "@/components/common/BetaBadge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { SYNC_CONSENT_ITEMS } from "@/lib/shared/syncConsentText"
 
 /**
  * 同期を使う人への注意事項。**段ごとに役割を決めて並べる。**
  *
- * 現象を思いついた順に並べると、何を決めればよいのか読み取れない。段の役割は次の4つで、
+ * 現象を思いついた順に並べると、何を決めればよいのか読み取れない。段の役割は次の3つで、
  * この順に置く。どの段も畳まず、常に見えるようにする。
  *
- * 1. **この機能について** —— 何をする機能か、何を保証しないか
- * 2. **元に戻せないこと** —— 取り返しがつかない操作
- * 3. **使い始める前に** —— 満たしていないと使えない条件
- * 4. **使っているあいだ** —— そういう仕様だと知っておくこと
+ * 1. **同意いただいたこと** —— 何を保証しないか・取り返しがつかない操作。共有モードへ
+ *    入る前に1項目ずつ同意を求める項目（`SYNC_CONSENT_ITEMS`）をそのまま出す
+ * 2. **使い始める前に** —— 満たしていないと使えない条件
+ * 3. **使っているあいだ** —— そういう仕様だと知っておくこと
  *
  * 技術の言葉（版・主キー・親行・畳み）は使わない。利用者はデータの作りを知らないので、
  * **画面で見えるもの（試験・採点結果・タグ）を主語にする**。
  */
 const SYNC_NOTICE_SECTIONS: { heading: string; items: string[] }[] = [
-  {
-    heading: "この機能について",
-    items: [
-      "共有モードは、共有フォルダを通して、複数のPCで同じデータを使うための機能です。採点を分担するときに使います。",
-      "まだ beta です。これから動きが変わることがあり、不具合が残っている可能性もあります。",
-      "採点したデータは、同期とは別に、ご自身でもバックアップを取ってください（アーカイブの書き出し）。共有フォルダにある同期のための写しは、バックアップではありません。そこからデータを元に戻すことはできません。",
-    ],
-  },
-  {
-    heading: "元に戻せないこと",
-    items: [
-      "あるPCで消したものは、他のPCからも消えます。消す前に、他の先生の分も消えてよいか確かめてください。",
-      "消したものを元に戻す操作はありません。試験を消すと、その試験の採点結果も見られなくなります。同じ名前の試験を作り直しても、前の採点結果は戻りません。",
-      "元に戻したいときは、消す前に書き出しておいたファイルから取り込み直してください。",
-    ],
-  },
   {
     heading: "使い始める前に",
     items: [
@@ -69,6 +54,19 @@ export function SyncNotes() {
       </AlertTitle>
       <AlertDescription>
         <div className="mt-2 space-y-3 text-sm">
+          <section>
+            <h4 className="font-medium">同意いただいたこと</h4>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+              {SYNC_CONSENT_ITEMS.map((consentItem) => (
+                <li key={consentItem.key}>
+                  <span className="font-medium text-foreground">
+                    {consentItem.title}。
+                  </span>
+                  {consentItem.body}
+                </li>
+              ))}
+            </ul>
+          </section>
           {SYNC_NOTICE_SECTIONS.map((section) => (
             <section key={section.heading}>
               <h4 className="font-medium">{section.heading}</h4>

@@ -41,6 +41,18 @@ export interface ClientIdOwner {
 }
 
 /**
+ * 共有モードの同意の記録。そのPC（clientId）が、その版の同意文に同意した。
+ * 今の同意かどうかは `isSyncConsentCurrent`（`src/lib/shared/syncConsentText.ts`）が決める。
+ */
+export interface SyncConsent {
+  /** 同意したときのこのPCの clientId。振り直されたら（別のPCへ写ったら）同意し直す */
+  clientId: string
+  consentVersion: string
+  /** ISO 8601 */
+  consentedAt: string
+}
+
+/**
  * 同期とモードの設定。`data/sync-config.json` に置く（`syncConfig.ts`）。
  *
  * **userData には置かない。** アプリの更新で利用者が data を写せば、設定も一緒に移る。
@@ -56,6 +68,8 @@ export interface SyncAppConfig {
   clientId: string
   /** `clientId` を振ったPC */
   clientIdOwner: ClientIdOwner | null
+  /** 共有モードの同意。まだ同意していなければ null */
+  syncConsent: SyncConsent | null
   intervalMs: number
   changelogRetentionDays: number
 }
@@ -176,6 +190,7 @@ export const DEFAULT_SYNC_CONFIG: SyncAppConfig = {
   sharedProfiles: [],
   clientId: "",
   clientIdOwner: null,
+  syncConsent: null,
   intervalMs: 30000,
   changelogRetentionDays: 7,
 }

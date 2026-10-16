@@ -35,6 +35,14 @@ export const getSharedFolderFilesDirectory = (
   sharedFolderPath: string
 ): string => path.join(sharedFolderPath, "files")
 
+/**
+ * 共有フォルダの、同期の設定の記録の置き場（`syncSetupAuditLog.ts`）。
+ * PCごとに別のファイル（`client-<clientId>.jsonl`）へ書くので、PCどうしで書き合わない
+ */
+export const getSharedFolderAuditDirectory = (
+  sharedFolderPath: string
+): string => path.join(sharedFolderPath, "audit")
+
 /** 識別ファイルのパス */
 const getSharedFolderMarkerPath = (sharedFolderPath: string): string =>
   path.join(sharedFolderPath, SHARED_FOLDER_MARKER_FILE_NAME)
