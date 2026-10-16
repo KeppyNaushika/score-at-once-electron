@@ -12,13 +12,18 @@
  *
  * 採点項目を当てているマスで類型のキーを押すと、項目より優先する手での上書きになる
  * （`overridesRubric`。点の採点の書き込みの `rubricOverrideFor` と同じ決め方。§4-5・§4-8-6）
+ *
+ * 監査ログは正誤と同じく採点行1件ごとに残す（生徒と設問を対象に持ち、採点と部分点の前後を差分にする）。
+ * まとめて付けても、誰の何を何から何にしたかを引けるようにするため
  */
 
-import { recordAuditLog } from "./auditLog"
-import { resolveExamScopeByCropRegion } from "./auditScope"
-import { cropRegionAuditTarget } from "./auditTargets"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
+import {
+  previousScoreLabel,
+  recordScoreAudit,
+  scoreStatusLabel,
+} from "./questionScoreWrite"
 
 /** そのマスに採点項目の適用があれば、キーで付けた類型は項目より優先する（手での上書き） */
 const rubricOverrideFor = (row: { rubricApplications: unknown[] }) =>
@@ -69,70 +74,114 @@ export async function setScaleLevels(
       userId: actorUserId,
       examStudentId: { in: input.examStudentIds },
     },
-    include: { rubricApplications: true },
+    include: { rubricApplications: true, scaleLevel: true },
   })
   const existingByExamStudentId = new Map(
     existingRows.map((row) => [row.examStudentId, row])
   )
+  const examStudents = await prisma.examStudent.findMany({
+    where: { id: { in: input.examStudentIds } },
+    include: { student: true },
+  })
+  const studentByExamStudentId = new Map(
+    examStudents.map((examStudent) => [examStudent.id, examStudent.student])
+  )
+  if (studentByExamStudentId.size < new Set(input.examStudentIds).size) {
+    throw new Error("受験生徒が見つかりません")
+  }
 
   const written = []
   for (const examStudentId of input.examStudentIds) {
     const existing = existingByExamStudentId.get(examStudentId)
+    const student = studentByExamStudentId.get(examStudentId)
+    if (!student) continue
     if (scaleLevel === null) {
       if (!existing) continue
-      written.push(
-        await prisma.questionScore.update({
+      const cleared = await prisma.questionScore.update({
+        where: { id: existing.id },
+        data: {
+          status: "unscored",
+          scaleLevelId: null,
+          partialScore: null,
+          overridesRubric: rubricOverrideFor(existing),
+        },
+      })
+      await recordScoreAudit({
+        action: "exam.score.update",
+        scoreId: cleared.id,
+        student,
+        cropRegion,
+        userId: actorUserId,
+        changes: [
+          {
+            field: "status",
+            label: "採点",
+            before: previousScoreLabel(existing),
+            after: scoreStatusLabel(cleared.status),
+          },
+          {
+            field: "partialScore",
+            label: "部分点",
+            before:
+              existing.partialScore != null
+                ? Number(existing.partialScore)
+                : null,
+            after: null,
+          },
+        ],
+      })
+      written.push(cleared)
+      continue
+    }
+    const evaluated = existing
+      ? await prisma.questionScore.update({
           where: { id: existing.id },
           data: {
-            status: "unscored",
-            scaleLevelId: null,
+            status: "evaluated",
+            scaleLevelId: scaleLevel.id,
             partialScore: null,
             overridesRubric: rubricOverrideFor(existing),
           },
         })
-      )
-      continue
-    }
-    written.push(
-      existing
-        ? await prisma.questionScore.update({
-            where: { id: existing.id },
-            data: {
-              status: "evaluated",
-              scaleLevelId: scaleLevel.id,
-              partialScore: null,
-              overridesRubric: rubricOverrideFor(existing),
-            },
-          })
-        : await prisma.questionScore.create({
-            data: {
-              cropRegionId: input.cropRegionId,
-              examStudentId,
-              userId: actorUserId,
-              status: "evaluated",
-              scaleLevelId: scaleLevel.id,
-              partialScore: null,
-            },
-          })
-    )
-  }
-
-  if (written.length > 0) {
-    const scope = await resolveExamScopeByCropRegion(input.cropRegionId)
-    await recordAuditLog({
+      : await prisma.questionScore.create({
+          data: {
+            cropRegionId: input.cropRegionId,
+            examStudentId,
+            userId: actorUserId,
+            status: "evaluated",
+            scaleLevelId: scaleLevel.id,
+            partialScore: null,
+          },
+        })
+    await recordScoreAudit({
       action: "exam.score.evaluate",
+      scoreId: evaluated.id,
+      student,
+      cropRegion,
       userId: actorUserId,
-      entityType: "QuestionScore",
-      entityId: input.cropRegionId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary:
-        scaleLevel === null
-          ? `「${cropRegion.label}」の類型を外しました（${written.length}件）`
-          : `「${cropRegion.label}」に類型「${scaleLevel.label}」を付けました（${written.length}件）`,
-      targets: [cropRegionAuditTarget(cropRegion)],
-      extra: { count: written.length },
+      changes: [
+        {
+          field: "status",
+          label: "採点",
+          before: existing ? previousScoreLabel(existing) : null,
+          after: scaleLevel.label,
+        },
+        ...(existing
+          ? [
+              {
+                field: "partialScore",
+                label: "部分点",
+                before:
+                  existing.partialScore != null
+                    ? Number(existing.partialScore)
+                    : null,
+                after: null,
+              },
+            ]
+          : []),
+      ],
     })
+    written.push(evaluated)
   }
   return written
 }
