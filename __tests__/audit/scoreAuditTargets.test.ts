@@ -10,6 +10,9 @@
  *
  * あわせて、差分の表示が採点状態の正規の呼び名（`SCORING_STATUS_LABELS`）を使い、類型を付けた
  * 採点は状態名でなく類型の記号を出すことも固定する（#1492）。
+ *
+ * 類型の書き込み（`setScaleLevels`）は複数の生徒をまとめて受けるが、ログは正誤と同じく
+ * 採点行1件ごとに、生徒と設問を対象に、採点の前後を差分に持つ。
  */
 
 import * as path from "path"
@@ -38,6 +41,7 @@ import {
   setQuestionScore,
   updateQuestionScore,
 } from "@/electron-src/lib/prisma/questionScoreWrite"
+import { setScaleLevels } from "@/electron-src/lib/prisma/scaleLevelScoreWrite"
 
 import { createFullTestExam } from "../helpers/testExamBuilder"
 import {
@@ -153,5 +157,115 @@ describe("採点の監査ログの対象", () => {
       .map((change) => [change.before, change.after])
     expect(statusChanges).toContainEqual(["A", "無答"])
     expect(statusChanges.flat()).toContain("Wマーク")
+  })
+
+  it("類型をまとめて付け・付け替え・外しても、採点行1件ごとに生徒と前後の差分を残す", async () => {
+    const [firstExamStudent, secondExamStudent] = fixture.examStudents
+    const cropRegion = fixture.cropRegions[0]
+    const scoreScale = await testPrisma.scoreScale.create({
+      data: {
+        examId: fixture.exam.id,
+        name: "記述の類型",
+        levels: {
+          create: [
+            { label: "A", score: 10, sortOrder: 0 },
+            { label: "B", score: 6, sortOrder: 1 },
+          ],
+        },
+      },
+      include: { levels: { orderBy: { sortOrder: "asc" } } },
+    })
+    const [levelA, levelB] = scoreScale.levels
+    await testPrisma.cropRegion.update({
+      where: { id: cropRegion.id },
+      data: { scoringMethod: "scale", scoreScaleId: scoreScale.id },
+    })
+    await testPrisma.questionScore.create({
+      data: {
+        examStudentId: firstExamStudent.id,
+        cropRegionId: cropRegion.id,
+        userId: fixture.user.id,
+        status: "pending",
+        partialScore: 3,
+      },
+    })
+    const students = await testPrisma.student.findMany({
+      where: {
+        id: {
+          in: [firstExamStudent.studentId, secondExamStudent.studentId],
+        },
+      },
+    })
+    const studentLabelOf = (studentId: string) => {
+      const student = students.find((candidate) => candidate.id === studentId)
+      return `${student?.lastName} ${student?.firstName}`.trim()
+    }
+
+    const bothExamStudentIds = [firstExamStudent.id, secondExamStudent.id]
+    await setScaleLevels(
+      {
+        cropRegionId: cropRegion.id,
+        examStudentIds: bothExamStudentIds,
+        scaleLevelId: levelA.id,
+      },
+      fixture.user.id
+    )
+    await setScaleLevels(
+      {
+        cropRegionId: cropRegion.id,
+        examStudentIds: [firstExamStudent.id],
+        scaleLevelId: levelB.id,
+      },
+      fixture.user.id
+    )
+    await setScaleLevels(
+      {
+        cropRegionId: cropRegion.id,
+        examStudentIds: bothExamStudentIds,
+        scaleLevelId: null,
+      },
+      fixture.user.id
+    )
+
+    const statusChangesOf = async (studentId: string) => {
+      const page = await getAuditLogs({
+        targets: [{ targetType: "Student", targetId: studentId }],
+      })
+      for (const log of page.logs) {
+        expect(log.summary).toContain(studentLabelOf(studentId))
+        expect(log.summary).toContain(cropRegion.label)
+        expect(log.targets.map((target) => target.targetType).sort()).toEqual([
+          "CropRegion",
+          "Student",
+        ])
+      }
+      return page.logs.map((log) => {
+        const statusChange = (
+          JSON.parse(log.metadata ?? "{}") as {
+            changes?: { field: string; before: unknown; after: unknown }[]
+          }
+        ).changes?.find((change) => change.field === "status")
+        return [log.action, statusChange?.before, statusChange?.after]
+      })
+    }
+
+    // 並びは更新時刻の降順で、同じミリ秒に書いた行は順が決まらないので、順を問わずに比べる
+    const firstChanges = await statusChangesOf(firstExamStudent.studentId)
+    expect(firstChanges).toHaveLength(3)
+    expect(firstChanges).toEqual(
+      expect.arrayContaining([
+        ["exam.score.evaluate", "保留", "A"],
+        ["exam.score.evaluate", "A", "B"],
+        ["exam.score.update", "B", "未採点"],
+      ])
+    )
+    const secondChanges = await statusChangesOf(secondExamStudent.studentId)
+    expect(secondChanges).toHaveLength(2)
+    expect(secondChanges).toEqual(
+      expect.arrayContaining([
+        ["exam.score.evaluate", null, "A"],
+        ["exam.score.update", "A", "未採点"],
+      ])
+    )
   })
 })

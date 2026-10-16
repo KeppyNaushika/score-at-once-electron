@@ -37,13 +37,13 @@ import { PUBLIC_USER_OMIT } from "./publicUser"
 export const SCORE_TARGET_DELETED = "target-deleted" as const
 
 /** QuestionScore.status を日本語表示に変換（監査ログ差分用） */
-const scoreStatusLabel = (status: string | null | undefined): string =>
+export const scoreStatusLabel = (status: string | null | undefined): string =>
   isScoringStatus(status)
     ? SCORING_STATUS_LABELS[status]
     : (status ?? "（なし）")
 
 /** 変更前の採点の表示（監査ログ差分用）。類型を付けた採点は状態名でなく類型の記号を出す */
-const previousScoreLabel = (questionScore: {
+export const previousScoreLabel = (questionScore: {
   status: string
   scaleLevel: { label: string } | null
 }): string =>
@@ -56,9 +56,15 @@ const previousScoreLabel = (questionScore: {
  * （ここで取り直さない。採点はいちばん件数の多い操作で、1回ごとに1クエリ増える）。
  * 生徒と採点領域の両方を対象（`AuditLogTarget`）に付け、要約にも両方のラベルを載せる
  * （全文検索が「山田 太郎」「1-1」で引けるように）。
+ *
+ * 類型の書き込み（`scaleLevelScoreWrite.ts`）も、正誤と同じ形で1行ずつここを通す。
  */
-async function recordScoreAudit(opts: {
-  action: "exam.score.propose" | "exam.score.update" | "exam.score.delete"
+export async function recordScoreAudit(opts: {
+  action:
+    | "exam.score.propose"
+    | "exam.score.update"
+    | "exam.score.delete"
+    | "exam.score.evaluate"
   scoreId: string
   student: Student
   cropRegion: CropRegion
@@ -68,12 +74,13 @@ async function recordScoreAudit(opts: {
   const scope = await resolveExamScopeByCropRegion(opts.cropRegion.id)
   const studentLabel = studentAuditLabel(opts.student)
   const regionLabel = opts.cropRegion.label
-  const verb =
-    opts.action === "exam.score.propose"
-      ? "提案しました"
-      : opts.action === "exam.score.delete"
-        ? "削除しました"
-        : "変更しました"
+  const actionPhrase = {
+    "exam.score.propose": "採点を提案しました",
+    "exam.score.update": "採点を変更しました",
+    "exam.score.delete": "採点を削除しました",
+    "exam.score.evaluate": "類型を付けました",
+  }[opts.action]
+  const particle = opts.action === "exam.score.evaluate" ? "に" : "の"
   const subject = [
     studentLabel && `「${studentLabel}」`,
     regionLabel && `「${regionLabel}」`,
@@ -87,7 +94,7 @@ async function recordScoreAudit(opts: {
     entityId: opts.scoreId,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    summary: subject ? `${subject}の採点を${verb}` : `採点を${verb}`,
+    summary: subject ? `${subject}${particle}${actionPhrase}` : actionPhrase,
     changes: opts.changes,
     targets: [
       studentAuditTarget(opts.student),
