@@ -3,7 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import type { ReactNode } from "react"
-import { createContext, useContext, useEffect, useEffectEvent } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useRef,
+} from "react"
 import { toast } from "sonner"
 
 import { showSyncToast } from "@/components/common/syncNoticeToast"
@@ -40,28 +46,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (authUserId && users?.find((candidate) => candidate.id === authUserId)) ||
     null
 
-  // トークンが指す利用者が消えていたらトークンごと捨てる（次回から未ログイン）。
+  // トークンが指す利用者がいなければトークンごと捨てる（次回から未ログイン）。
   // 書き先は electron-store という外の入れ物なので effect で同期する。
   //
-  // ここに来るのは、ログイン中の利用者が他のPCで削除され、同期で届いた後に利用者
-  // 一覧を読み直したときだけ（自分でのログアウトはトークンを先に消すので来ない。
-  // 本人は自分を削除できない）。黙ってログイン画面へ戻すと何が起きたか分からない
-  // ので、閉じるまで残る知らせを出す。名前は一覧から消えているので出せない。
+  // トークンは userData に PC で1つだけで、DB とは別に残る。DB を作り直した・
+  // 再インストールした・ローカルと共有プロファイルを切り替えた、といったときは、
+  // 最初に読んだ一覧に初めからいない。これは別のデータのときの古いトークンなので、
+  // 何も言わずに捨てる（ログイン画面に戻るだけ）。
+  //
+  // この起動中に一度いると確かめた利用者が後から消えたときだけ、他のPCで削除され
+  // 同期で届いたとみなす（自分でのログアウトはトークンを先に消すので来ない。本人は
+  // 自分を削除できない）。黙ってログイン画面へ戻すと何が起きたか分からないので、
+  // 閉じるまで残る知らせを出す。名前は一覧から消えているので出せない。
   //
   // 気づくのは一覧を読み直したときで、同期のたびには読み直さない（他のデータも
   // 同期で読み直していないので、利用者だけを特別扱いしない）
-  const dropStaleToken = useEffectEvent(() => {
-    showSyncToast(
-      "warning",
-      "ログイン中のユーザーは、他のPCで削除されたためログアウトしました",
-      "このユーザーと、その採点結果などのデータは、同期で削除されています。別のユーザーでログインしてください。"
-    )
+  const confirmedUserIdRef = useRef<string | null>(null)
+  const dropStaleToken = useEffectEvent((wasConfirmed: boolean) => {
+    if (wasConfirmed) {
+      showSyncToast(
+        "warning",
+        "ログイン中のユーザーは、他のPCで削除されたためログアウトしました",
+        "このユーザーと、その採点結果などのデータは、同期で削除されています。別のユーザーでログインしてください。"
+      )
+    }
     clearAuthToken.mutate()
   })
   useEffect(() => {
     if (!authUserId || !users) return
-    if (users.some((candidate) => candidate.id === authUserId)) return
-    dropStaleToken()
+    if (users.some((candidate) => candidate.id === authUserId)) {
+      confirmedUserIdRef.current = authUserId
+      return
+    }
+    dropStaleToken(confirmedUserIdRef.current === authUserId)
   }, [authUserId, users])
 
   const quickLogin = async (selectedUser: PublicUser) => {
