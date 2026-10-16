@@ -73,6 +73,7 @@ export const ARCHIVE_COLUMN_TYPES: Readonly<
     description: "String?",
     markerCorrectionEnabled: "Boolean",
     anonymousScoringEnforced: "Boolean",
+    subtotalMarkColorEnabled: "Boolean",
     createdAt: "DateTime",
     updatedAt: "DateTime",
   },
@@ -155,6 +156,7 @@ export const ARCHIVE_COLUMN_TYPES: Readonly<
   SubtotalGroup: {
     id: "String",
     name: "String",
+    order: "Int",
     createdAt: "DateTime",
     updatedAt: "DateTime",
   },
@@ -163,6 +165,7 @@ export const ARCHIVE_COLUMN_TYPES: Readonly<
     name: "String",
     subtotalGroupId: "String",
     order: "Int",
+    markColor: "String?",
     createdAt: "DateTime",
     updatedAt: "DateTime",
   },

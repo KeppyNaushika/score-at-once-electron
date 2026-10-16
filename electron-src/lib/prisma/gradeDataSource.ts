@@ -19,6 +19,7 @@ import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
 import { serializePrisma } from "./serializePrisma"
+import { linkedSubtotalGroupDisplayOrderBy } from "./subtotalGroupOrder"
 
 /**
  * DataSource が参照するリレーションの include（単一 SSOT）。
@@ -346,6 +347,7 @@ export async function getExamSubtotalGroups(examId: string) {
         include: { subtotals: { orderBy: { order: "asc" } } },
       },
     },
+    orderBy: linkedSubtotalGroupDisplayOrderBy,
   })
   return examSubtotalGroups.map(
     (examSubtotalGroup) => examSubtotalGroup.subtotalGroup

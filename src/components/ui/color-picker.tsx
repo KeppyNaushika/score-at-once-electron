@@ -168,6 +168,8 @@ export function InlineColorPicker({
   disabled = false,
 }: InlineColorPickerProps) {
   const isPresetColor = presets.includes(value)
+  // 任意の色を選んでいるときだけ、カスタム色のボタンを選択中として囲む（空文字は未選択）
+  const isCustomColor = value !== "" && !isPresetColor
 
   return (
     <div className="flex items-center gap-2">
@@ -192,10 +194,10 @@ export function InlineColorPicker({
 
       {/* カスタム色ピッカー */}
       <ColorPicker
-        value={isPresetColor ? "#808080" : value}
+        value={isCustomColor ? value : "#808080"}
         onChange={onChange}
         disabled={disabled}
-        className={cn(!isPresetColor && "ring-2 ring-gray-400")}
+        className={cn(isCustomColor && "ring-2 ring-gray-400")}
       />
     </div>
   )

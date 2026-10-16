@@ -59,6 +59,8 @@ export interface UseImageCanvasProps {
   allCropRegionsWithStatus?: CropRegionWithStatus[]
   // 印字設定（採点マーク・点数表示のプレビュー用）
   scoringMarkConfig?: AnswerOverlaySettings | null
+  // 設問（CropRegion.id）→ 小計項目の採点マークの色
+  markColorByCropRegionId: ReadonlyMap<string, string>
   // 模範解答の用紙サイズ（mm→px変換基準）
   pageSize?: string
 }

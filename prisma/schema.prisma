@@ -134,6 +134,9 @@ model Exam {
   /// 匿名採点を試験として固定するか（docs/scoring-scope-and-permissions-design.md §3-5）。
   /// ON の間、オーナー以外は 07 で生徒の名前・答案の氏名欄・名簿順を見られず、自分で解除もできない
   anonymousScoringEnforced              Boolean                                   @default(false)
+  /// 小計項目に「採点マークの色」が設定されている設問は、採点マークと点数をその色で描くか（9. 結果と出力のスイッチ）。
+  /// OFF なら試験全体の色（ExamAnswerOverlayStyle）だけで描く
+  subtotalMarkColorEnabled              Boolean                                   @default(true)
   createdAt                             DateTime                                  @default(now())
   updatedAt                             DateTime                                  @default(now()) @updatedAt
   examPages                             ExamPage[]
@@ -356,6 +359,9 @@ model ExamStudentAssignment {
 model SubtotalGroup {
   id                 String              @id @default(uuid())
   name               String
+  /// 小計点管理での並び（小さいほど上）。同じ値どうしは createdAt の新しい順に並べる。
+  /// 1つの設問が色のある小計項目2つ以上に属するとき、上のグループの色が勝つ（src/lib/subtotalMarkColor.ts）
+  order              Int                 @default(0)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
   examSubtotalGroups ExamSubtotalGroup[]
@@ -376,6 +382,8 @@ model Subtotal {
   name             String
   subtotalGroupId  String
   order            Int               @default(0)
+  /// 採点マークの色（HEX #RRGGBB）。null なら試験全体の色。関連付けた設問の採点マークと点数をこの色で描く
+  markColor        String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @default(now()) @updatedAt
   cropSubtotals    CropSubtotal[]

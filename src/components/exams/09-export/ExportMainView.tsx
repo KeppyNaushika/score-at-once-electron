@@ -483,6 +483,7 @@ export default function ExportMainView() {
 
         {/* Canvas描画コンポーネント（非表示） */}
         <PdfCanvasRenderer
+          examId={exam?.id ?? ""}
           pages={pdfExportPages}
           answerOverlaySettings={answerOverlaySettings}
           startRendering={startCanvasRendering}

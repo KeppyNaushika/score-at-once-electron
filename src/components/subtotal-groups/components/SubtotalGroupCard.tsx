@@ -1,6 +1,7 @@
 "use client"
 
 import { ListTree, SquarePen, Trash } from "lucide-react"
+import type React from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,18 +12,22 @@ interface SubtotalGroupCardProps {
   group: SubtotalGroupRow
   onEdit: () => void
   onDelete: () => void
+  /** 並べ替えのつまみ。カードの見出しの先頭に置く */
+  dragHandle: React.ReactNode
 }
 
 export function SubtotalGroupCard({
   group,
   onEdit,
   onDelete,
+  dragHandle,
 }: SubtotalGroupCardProps) {
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
+            {dragHandle}
             <ListTree className="h-5 w-5 text-blue-600" />
             <CardTitle className="text-lg">{group.name}</CardTitle>
           </div>
@@ -110,6 +115,13 @@ export function SubtotalGroupCard({
                       className="flex items-center justify-between text-sm"
                     >
                       <span className="truncate">{subtotal.name}</span>
+                      {subtotal.markColor !== null && (
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full border"
+                          style={{ backgroundColor: subtotal.markColor }}
+                          title={`採点マークの色 ${subtotal.markColor}`}
+                        />
+                      )}
                     </div>
                   ))}
                 {group.subtotals.length > 3 && (

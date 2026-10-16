@@ -5,6 +5,7 @@
  */
 
 import { overlayPixelsPerMm } from "@/lib/answerOverlayPlacement"
+import { overlaySettingsForCropRegion } from "@/lib/subtotalMarkColor"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
@@ -28,36 +29,59 @@ import type {
   TotalScoreDataForPdf,
 } from "./types"
 
+/** 答案シート1枚分の描画に渡すもの */
+interface RenderAnswerSheetInput {
+  /** 描画先のCanvas要素 */
+  canvas: HTMLCanvasElement
+  /** 答案画像 */
+  image: HTMLImageElement
+  /** 採点データのリスト（設問ごと） */
+  scoringDataList: ScoringDataForPdf[]
+  /** 全アノテーション */
+  annotations: DrawingAnnotation[]
+  /** 採点マーク設定 */
+  config: AnswerOverlaySettings
+  /** 採点マーク画像のMap */
+  scoringMarkImages: Map<string, HTMLImageElement>
+  /**
+   * 設問（CropRegion.id）→ 小計項目の採点マークの色
+   * （`buildSubtotalMarkColorByCropRegionId`）。使うかどうかは `config` のスイッチが決める
+   */
+  markColorByCropRegionId: ReadonlyMap<string, string>
+  /** 小計点データのリスト */
+  subtotalDataList: SubtotalDataForPdf[]
+  /** 合計点データのリスト */
+  totalScoreDataList: TotalScoreDataForPdf[]
+  /**
+   * ページ番号（1-indexed、複数ページ対応用）
+   * UI側で複数ページが縦に結合されたキャンバス上で描画された場合、
+   * アノテーションのy座標は1ページ目の高さで正規化されるため
+   * 2ページ目以降のアノテーションはy > 1.0になる。
+   * このページ番号を使ってオフセットを計算し正しい座標に変換する。
+   */
+  pageNumber: number
+  /** 用紙サイズ（mm→px変換基準） */
+  pageSize: string
+}
+
 /**
  * 答案シート1枚分をCanvas上に描画
  *
- * @param canvas - 描画先のCanvas要素
- * @param image - 答案画像
- * @param scoringDataList - 採点データのリスト（設問ごと）
- * @param annotations - 全アノテーション
- * @param config - 採点マーク設定
- * @param scoringMarkImages - 採点マーク画像のMap
- * @param subtotalDataList - 小計点データのリスト
- * @param totalScoreDataList - 合計点データのリスト
- * @param pageNumber - ページ番号（1-indexed、複数ページ対応用）
- *                     UI側で複数ページが縦に結合されたキャンバス上で描画された場合、
- *                     アノテーションのy座標は1ページ目の高さで正規化されるため
- *                     2ページ目以降のアノテーションはy > 1.0になる。
- *                     このページ番号を使ってオフセットを計算し正しい座標に変換する。
  * @returns PNG Blob
  */
-export async function renderAnswerSheetToCanvas(
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
-  scoringDataList: ScoringDataForPdf[],
-  annotations: DrawingAnnotation[],
-  config: AnswerOverlaySettings,
-  scoringMarkImages: Map<string, HTMLImageElement>,
-  subtotalDataList: SubtotalDataForPdf[] = [],
-  totalScoreDataList: TotalScoreDataForPdf[] = [],
-  pageNumber: number = 1,
-  pageSize: string = "A4"
-): Promise<Blob> {
+export async function renderAnswerSheetToCanvas({
+  canvas,
+  image,
+  scoringDataList,
+  annotations,
+  config,
+  scoringMarkImages,
+  markColorByCropRegionId,
+  subtotalDataList,
+  totalScoreDataList,
+  pageNumber,
+  pageSize,
+}: RenderAnswerSheetInput): Promise<Blob> {
   const ctx = canvas.getContext("2d")
   if (!ctx) {
     throw new Error("Canvas context not available")
@@ -88,6 +112,13 @@ export async function renderAnswerSheetToCanvas(
 
   // 2. 各設問に対して採点マークと部分点を描画
   for (const scoringData of scoringDataList) {
+    // 小計項目の色がある設問は、採点マークと設問の点数だけその色で描く
+    const cropRegionConfig = overlaySettingsForCropRegion(
+      config,
+      markColorByCropRegionId,
+      scoringData.cropRegion.id
+    )
+
     // ステータスごとのマーク表示判定
     const shouldShowMark =
       config.visibility[toScoringStatus(scoringData.status)].showMark
@@ -104,7 +135,7 @@ export async function renderAnswerSheetToCanvas(
           ctx,
           scaleLevelLabel,
           scoringData.cropRegion,
-          config,
+          cropRegionConfig,
           imageWidth,
           imageHeight,
           pixelsPerMm
@@ -114,7 +145,7 @@ export async function renderAnswerSheetToCanvas(
           ctx,
           markImage,
           scoringData.cropRegion,
-          config,
+          cropRegionConfig,
           imageWidth,
           imageHeight,
           pixelsPerMm
@@ -134,7 +165,7 @@ export async function renderAnswerSheetToCanvas(
           ctx,
           scoreToDisplay,
           scoringData.cropRegion,
-          config,
+          cropRegionConfig,
           imageWidth,
           imageHeight,
           pixelsPerMm

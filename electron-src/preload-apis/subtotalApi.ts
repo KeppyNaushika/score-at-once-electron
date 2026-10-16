@@ -7,6 +7,7 @@ export function createSubtotalApi() {
     createSubtotalGroup: bind("create-subtotal-group"),
     updateSubtotalGroup: bind("update-subtotal-group"),
     deleteSubtotalGroup: bind("delete-subtotal-group"),
+    reorderSubtotalGroups: bind("reorder-subtotal-groups"),
 
     // New SubtotalGroup management API
     getSubtotalGroups: bind("get-subtotal-groups"),

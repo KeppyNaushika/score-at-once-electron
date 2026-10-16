@@ -27,6 +27,7 @@ import {
   setExamReportSettings,
   setExamReportStatisticVisibility,
   setExamReportTableSection,
+  setExamSubtotalMarkColorEnabled,
 } from "../lib/prisma/examSettings"
 import {
   listUserClickScoringActions,
@@ -197,6 +198,11 @@ export const settingsHandlers = {
     examId: string,
     visibility: AnswerOverlayVisibility
   ) => setExamAnswerOverlayVisibility(examId, visibility),
+
+  "settings:setExamSubtotalMarkColorEnabled": (
+    examId: string,
+    subtotalMarkColorEnabled: boolean
+  ) => setExamSubtotalMarkColorEnabled(examId, subtotalMarkColorEnabled),
 
   "settings:setExamReportStatisticVisibility": (
     examId: string,

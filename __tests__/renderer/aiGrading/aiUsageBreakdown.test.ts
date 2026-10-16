@@ -89,6 +89,7 @@ function makeMyRun(options: {
             description: null,
             markerCorrectionEnabled: false,
             anonymousScoringEnforced: false,
+            subtotalMarkColorEnabled: true,
             createdAt: FIXED_DATE,
             updatedAt: FIXED_DATE,
           },

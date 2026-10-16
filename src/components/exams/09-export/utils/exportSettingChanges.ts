@@ -27,6 +27,8 @@ import { SCORING_STATUSES } from "@/types/scoringStatus.types"
 export type ExportSettingChange =
   | { kind: "overlayStyle"; style: AnswerOverlayStyle }
   | { kind: "overlayVisibility"; visibility: AnswerOverlayVisibility }
+  /** 小計項目の採点マークの色を使うか（試験の行の1列） */
+  | { kind: "subtotalMarkColorEnabled"; subtotalMarkColorEnabled: boolean }
   | {
       /**
        * 統計の可視性1マス。種別と母集団は文字列で運ぶ。
@@ -123,6 +125,13 @@ export function answerOverlayChanges(
         visibility: next.visibility[status],
       })
     }
+  }
+
+  if (previous.subtotalMarkColorEnabled !== next.subtotalMarkColorEnabled) {
+    changes.push({
+      kind: "subtotalMarkColorEnabled",
+      subtotalMarkColorEnabled: next.subtotalMarkColorEnabled,
+    })
   }
 
   return changes

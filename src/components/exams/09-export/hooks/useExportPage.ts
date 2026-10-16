@@ -21,6 +21,7 @@ import {
   setExamReportSettingsMutation,
   setExamReportStatisticVisibilityMutation,
   setExamReportTableSectionMutation,
+  setExamSubtotalMarkColorEnabledMutation,
 } from "@/queries/settings"
 import {
   setSubtotalGroupSelectionMutation,
@@ -119,6 +120,9 @@ export function useExportPage() {
   const { mutateAsync: setOverlayVisibility } = useMutation(
     setExamAnswerOverlayVisibilityMutation(examId)
   )
+  const { mutateAsync: setSubtotalMarkColorEnabled } = useMutation(
+    setExamSubtotalMarkColorEnabledMutation(examId)
+  )
   const { mutateAsync: setStatisticVisibility } = useMutation(
     setExamReportStatisticVisibilityMutation(examId)
   )
@@ -208,6 +212,9 @@ export function useExportPage() {
           case "overlayVisibility":
             write(setOverlayVisibility(change.visibility))
             break
+          case "subtotalMarkColorEnabled":
+            write(setSubtotalMarkColorEnabled(change.subtotalMarkColorEnabled))
+            break
           case "statisticVisibility":
             write(
               setStatisticVisibility({
@@ -242,6 +249,7 @@ export function useExportPage() {
       setReportSettings,
       setReportTableSection,
       setStatisticVisibility,
+      setSubtotalMarkColorEnabled,
     ]
   )
 

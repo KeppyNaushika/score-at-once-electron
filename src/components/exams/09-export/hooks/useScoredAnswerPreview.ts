@@ -4,8 +4,10 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { useInvalidateOnSignal } from "@/hooks/useInvalidateOnSignal"
+import { buildSubtotalMarkColorByCropRegionId } from "@/lib/subtotalMarkColor"
 import type { PdfExportPageRow } from "@/queries/export"
 import { pdfExportDataQuery } from "@/queries/export"
+import { activeSubtotalGroupsQuery } from "@/queries/subtotal"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import type { ScoredAnswerPreviewPage } from "../types"
@@ -73,6 +75,7 @@ export function useScoredAnswerPreview({
   const [rendered, setRendered] = useState<{
     pages: PdfExportPageRow[]
     renderConfig: AnswerOverlaySettings
+    markColorByCropRegionId: ReadonlyMap<string, string>
     previewPages: ScoredAnswerPreviewPage[]
     error: string | null
   } | null>(null)
@@ -111,6 +114,17 @@ export function useScoredAnswerPreview({
     enabled: active,
   })
   const pages = active ? (exportData?.pages ?? null) : null
+
+  // 設問 → 小計項目の採点マークの色。取り直したときだけ作り直るので、
+  // 描き直しの合図（下の effect の比較）に混ぜても毎レンダー描き直しにはならない
+  const { data: examSubtotalGroups } = useQuery({
+    ...activeSubtotalGroupsQuery(examId),
+    enabled: active,
+  })
+  const markColorByCropRegionId = useMemo(
+    () => buildSubtotalMarkColorByCropRegionId(examSubtotalGroups ?? []),
+    [examSubtotalGroups]
+  )
   const isLoading = active && isFetching
 
   // タブへ戻ったら読み直す（出力はデータを読むので据え置くと食い違う）
@@ -145,7 +159,11 @@ export function useScoredAnswerPreview({
   // Canvas描画（取得済みデータ or 設定変更時）
   useEffect(() => {
     if (!enabled || !pages || pages.length === 0) return
-    if (rendered?.pages === pages && rendered.renderConfig === renderConfig)
+    if (
+      rendered?.pages === pages &&
+      rendered.renderConfig === renderConfig &&
+      rendered.markColorByCropRegionId === markColorByCropRegionId
+    )
       return
 
     let cancelled = false
@@ -203,18 +221,19 @@ export function useScoredAnswerPreview({
           // main が行をそのまま載せてくるので、キャストも組み立て直しも要らない
           const annotations = page.annotations
 
-          await renderAnswerSheetToCanvas(
+          await renderAnswerSheetToCanvas({
             canvas,
             image,
-            scoringDataForPdf,
+            scoringDataList: scoringDataForPdf,
             annotations,
-            renderConfig,
-            scoringMarkImagesRef.current!,
-            subtotalDataForPdf,
-            totalScoreDataForPdf,
-            page.pageNumber,
-            page.pageSize ?? "A4"
-          )
+            config: renderConfig,
+            scoringMarkImages: scoringMarkImagesRef.current!,
+            markColorByCropRegionId,
+            subtotalDataList: subtotalDataForPdf,
+            totalScoreDataList: totalScoreDataForPdf,
+            pageNumber: page.pageNumber,
+            pageSize: page.pageSize ?? "A4",
+          })
 
           if (cancelled) return
 
@@ -226,7 +245,13 @@ export function useScoredAnswerPreview({
         }
 
         if (!cancelled) {
-          setRendered({ pages, renderConfig, previewPages, error: null })
+          setRendered({
+            pages,
+            renderConfig,
+            markColorByCropRegionId,
+            previewPages,
+            error: null,
+          })
         }
       } catch (err) {
         if (!cancelled) {
@@ -234,6 +259,7 @@ export function useScoredAnswerPreview({
           setRendered({
             pages,
             renderConfig,
+            markColorByCropRegionId,
             previewPages: [],
             error:
               err instanceof Error
@@ -249,7 +275,7 @@ export function useScoredAnswerPreview({
     return () => {
       cancelled = true
     }
-  }, [pages, renderConfig, enabled, rendered])
+  }, [pages, renderConfig, markColorByCropRegionId, enabled, rendered])
 
   return { previewPages, isLoading, error }
 }

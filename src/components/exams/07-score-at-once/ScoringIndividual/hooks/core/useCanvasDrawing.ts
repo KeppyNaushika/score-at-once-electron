@@ -53,6 +53,7 @@ interface UseCanvasDrawingProps {
   hoveredElementId?: string | null
   allCropRegionsWithStatus?: CropRegionWithStatus[]
   scoringMarkConfig?: AnswerOverlaySettings | null
+  markColorByCropRegionId: ReadonlyMap<string, string>
   pageSize?: string
 }
 
@@ -84,6 +85,7 @@ export function useCanvasDrawing({
   hoveredElementId,
   allCropRegionsWithStatus = [],
   scoringMarkConfig,
+  markColorByCropRegionId,
   pageSize = "A4",
 }: UseCanvasDrawingProps): void {
   const { drawSingleElement } = useDrawingRenderer()
@@ -136,6 +138,7 @@ export function useCanvasDrawing({
         isDrawingSelection,
         isElementDragging: isDraggingRef.current,
         scoringMarkConfig,
+        markColorByCropRegionId,
         scoringMarkImages: scoringMarkImagesRef.current,
         drawSingleElement,
       })
@@ -157,6 +160,7 @@ export function useCanvasDrawing({
       drawSingleElement,
       allCropRegionsWithStatus,
       scoringMarkConfig,
+      markColorByCropRegionId,
       pageSize,
       loadedExamPageIds,
       nameRegionsByPageIndex,

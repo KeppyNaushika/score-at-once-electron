@@ -29,6 +29,8 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 
 import {
   createSubtotalGroup,
+  getSubtotalGroups,
+  reorderSubtotalGroups,
   updateSubtotalGroup,
 } from "@/electron-src/lib/prisma/subtotalGroup"
 
@@ -45,9 +47,9 @@ async function createTestSubtotalGroup() {
   return await createSubtotalGroup({
     name: "国語小計",
     subtotals: [
-      { name: "漢字", order: 0 },
-      { name: "読解", order: 1 },
-      { name: "作文", order: 2 },
+      { name: "漢字", order: 0, markColor: null },
+      { name: "読解", order: 1, markColor: null },
+      { name: "作文", order: 2, markColor: null },
     ],
   })
 }
@@ -151,6 +153,7 @@ describe("小計点グループの更新", () => {
         id: subtotal.id,
         name: subtotal.name,
         order: subtotal.order,
+        markColor: subtotal.markColor,
       })),
     })
 
@@ -182,6 +185,7 @@ describe("小計点グループの更新", () => {
         id: subtotal.id,
         name: subtotal.name,
         order: subtotal.order,
+        markColor: subtotal.markColor,
       })),
     })
 
@@ -199,8 +203,8 @@ describe("小計点グループの更新", () => {
     const updated = await updateSubtotalGroup(subtotalGroup.id, {
       name: subtotalGroup.name,
       subtotals: [
-        { id: kanji.id, name: kanji.name, order: 0 },
-        { id: sakubun.id, name: sakubun.name, order: 1 },
+        { id: kanji.id, name: kanji.name, order: 0, markColor: null },
+        { id: sakubun.id, name: sakubun.name, order: 1, markColor: null },
       ],
     })
 
@@ -227,9 +231,9 @@ describe("小計点グループの更新", () => {
     const updated = await updateSubtotalGroup(subtotalGroup.id, {
       name: subtotalGroup.name,
       subtotals: [
-        { id: sakubun.id, name: sakubun.name, order: 0 },
-        { id: kanji.id, name: kanji.name, order: 1 },
-        { id: dokkai.id, name: dokkai.name, order: 2 },
+        { id: sakubun.id, name: sakubun.name, order: 0, markColor: null },
+        { id: kanji.id, name: kanji.name, order: 1, markColor: null },
+        { id: dokkai.id, name: dokkai.name, order: 2, markColor: null },
       ],
     })
 
@@ -264,8 +268,9 @@ describe("小計点グループの更新", () => {
           id: subtotal.id,
           name: subtotal.name,
           order: subtotal.order,
+          markColor: subtotal.markColor,
         })),
-        { id: null, name: "書写", order: 3 },
+        { id: null, name: "書写", order: 3, markColor: null },
       ],
     })
 
@@ -297,9 +302,9 @@ describe("小計点グループの更新", () => {
     const updated = await updateSubtotalGroup(subtotalGroup.id, {
       name: subtotalGroup.name,
       subtotals: [
-        { id: kanji.id, name: dokkai.name, order: 0 },
-        { id: dokkai.id, name: kanji.name, order: 1 },
-        { id: sakubun.id, name: sakubun.name, order: 2 },
+        { id: kanji.id, name: dokkai.name, order: 0, markColor: null },
+        { id: dokkai.id, name: kanji.name, order: 1, markColor: null },
+        { id: sakubun.id, name: sakubun.name, order: 2, markColor: null },
       ],
     })
 
@@ -325,6 +330,7 @@ describe("小計点グループの更新", () => {
         id: subtotal.id,
         name: subtotal.name,
         order: subtotal.order,
+        markColor: subtotal.markColor,
       })),
     })
 
@@ -342,5 +348,107 @@ describe("小計点グループの更新", () => {
         subtotal.updatedAt.toISOString()
       )
     }
+  })
+
+  it("採点マークの色だけを変えると、その項目だけが書き換わる", async () => {
+    const subtotalGroup = await createBackdatedSubtotalGroup()
+    const [kanji, dokkai, sakubun] = subtotalGroup.subtotals
+
+    const updated = await updateSubtotalGroup(subtotalGroup.id, {
+      name: subtotalGroup.name,
+      subtotals: [
+        { id: kanji.id, name: kanji.name, order: 0, markColor: null },
+        { id: dokkai.id, name: dokkai.name, order: 1, markColor: "#2563eb" },
+        { id: sakubun.id, name: sakubun.name, order: 2, markColor: null },
+      ],
+    })
+
+    expect(updated.subtotals.map((subtotal) => subtotal.markColor)).toEqual([
+      null,
+      "#2563eb",
+      null,
+    ])
+    const afterKanji = await testPrisma.subtotal.findUniqueOrThrow({
+      where: { id: kanji.id },
+    })
+    expect(afterKanji.updatedAt.toISOString()).toBe(
+      PAST_TIMESTAMP.toISOString()
+    )
+    const afterDokkai = await testPrisma.subtotal.findUniqueOrThrow({
+      where: { id: dokkai.id },
+    })
+    expect(afterDokkai.updatedAt.toISOString()).not.toBe(
+      PAST_TIMESTAMP.toISOString()
+    )
+
+    // 色を外す（null へ戻す）保存も書ける
+    const cleared = await updateSubtotalGroup(subtotalGroup.id, {
+      name: subtotalGroup.name,
+      subtotals: updated.subtotals.map((subtotal) => ({
+        id: subtotal.id,
+        name: subtotal.name,
+        order: subtotal.order,
+        markColor: null,
+      })),
+    })
+    expect(
+      cleared.subtotals.every((subtotal) => subtotal.markColor === null)
+    ).toBe(true)
+  })
+
+  it("並べ替える前のグループは、作った日時の新しい順に並ぶ", async () => {
+    const olderGroup = await createSubtotalGroup({
+      name: "大問別",
+      subtotals: [{ name: "大問1", order: 0, markColor: null }],
+    })
+    await testPrisma.subtotalGroup.update({
+      where: { id: olderGroup.id },
+      data: { createdAt: PAST_TIMESTAMP },
+    })
+    const newerGroup = await createSubtotalGroup({
+      name: "観点別",
+      subtotals: [{ name: "知識・技能", order: 0, markColor: "#ef4444" }],
+    })
+
+    const subtotalGroups = await getSubtotalGroups()
+    expect(subtotalGroups.map((subtotalGroup) => subtotalGroup.id)).toEqual([
+      newerGroup.id,
+      olderGroup.id,
+    ])
+  })
+
+  it("並べ替えると受け取った並びになり、値の変わらない行は書き換えない", async () => {
+    const firstGroup = await createBackdatedSubtotalGroup()
+    const secondGroup = await createSubtotalGroup({
+      name: "観点別",
+      subtotals: [{ name: "知識・技能", order: 0, markColor: null }],
+    })
+    await testPrisma.subtotalGroup.update({
+      where: { id: secondGroup.id },
+      data: { createdAt: PAST_TIMESTAMP, updatedAt: PAST_TIMESTAMP },
+    })
+
+    // 先頭（order 0）は値が変わらないので書かない。2番目だけが 1 になる
+    await reorderSubtotalGroups([firstGroup.id, secondGroup.id])
+
+    const afterFirst = await testPrisma.subtotalGroup.findUniqueOrThrow({
+      where: { id: firstGroup.id },
+    })
+    const afterSecond = await testPrisma.subtotalGroup.findUniqueOrThrow({
+      where: { id: secondGroup.id },
+    })
+    expect(afterFirst.order).toBe(0)
+    expect(afterFirst.updatedAt.toISOString()).toBe(
+      PAST_TIMESTAMP.toISOString()
+    )
+    expect(afterSecond.order).toBe(1)
+
+    // 一覧も order の順になる
+    await reorderSubtotalGroups([secondGroup.id, firstGroup.id])
+    const subtotalGroups = await getSubtotalGroups()
+    expect(subtotalGroups.map((subtotalGroup) => subtotalGroup.id)).toEqual([
+      secondGroup.id,
+      firstGroup.id,
+    ])
   })
 })

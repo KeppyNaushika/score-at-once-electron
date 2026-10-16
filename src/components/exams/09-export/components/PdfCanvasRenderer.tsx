@@ -1,12 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import type {
   RenderedPageData,
   RenderProgress,
 } from "@/components/exams/09-export/types"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
+import { buildSubtotalMarkColorByCropRegionId } from "@/lib/subtotalMarkColor"
+import { activeSubtotalGroupsQuery } from "@/queries/subtotal"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import {
@@ -28,6 +31,8 @@ interface CanvasPoolItem {
 const DEFAULT_POOL_SIZE = 4
 
 interface PdfCanvasRendererProps {
+  /** 試験（小計項目の採点マークの色を引く） */
+  examId: string
   /** レンダリングするページのリスト */
   pages: PdfExportPageData[]
   /** 採点マーク設定 */
@@ -61,6 +66,7 @@ interface PdfCanvasRendererProps {
  * 描画完了したページは即座にonPageCompleteで通知される。
  */
 export function PdfCanvasRenderer({
+  examId,
   pages,
   answerOverlaySettings,
   startRendering,
@@ -72,6 +78,19 @@ export function PdfCanvasRenderer({
   pageSize = "A4",
 }: PdfCanvasRendererProps) {
   const [isRendering, setIsRendering] = useState(false)
+  const { data: examSubtotalGroups, status: examSubtotalGroupsStatus } =
+    useQuery({
+      ...activeSubtotalGroupsQuery(examId),
+      enabled: Boolean(examId),
+    })
+  // 小計点グループを読み終えるまで描き始めない（読む前に描くと、色の付くはずの設問が
+  // 試験全体の色のまま出力される）。読めなかったときは試験全体の色で描いて出力は止めない
+  const isMarkColorReady = !examId || examSubtotalGroupsStatus !== "pending"
+  // 設問 → 小計項目の採点マークの色
+  const markColorByCropRegionId = useMemo(
+    () => buildSubtotalMarkColorByCropRegionId(examSubtotalGroups ?? []),
+    [examSubtotalGroups]
+  )
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
     null
   )
@@ -197,18 +216,19 @@ export function PdfCanvasRenderer({
           totalScoreData.score != null
       )
 
-      const blob = await renderAnswerSheetToCanvas(
+      const blob = await renderAnswerSheetToCanvas({
         canvas,
         image,
-        scoringDataForPdf,
+        scoringDataList: scoringDataForPdf,
         annotations,
-        answerOverlaySettings,
-        markImages,
-        subtotalDataForPdf,
-        totalScoreDataForPdf,
-        page.pageNumber,
-        page.pageSize ?? pageSize
-      )
+        config: answerOverlaySettings,
+        scoringMarkImages: markImages,
+        markColorByCropRegionId,
+        subtotalDataList: subtotalDataForPdf,
+        totalScoreDataList: totalScoreDataForPdf,
+        pageNumber: page.pageNumber,
+        pageSize: page.pageSize ?? pageSize,
+      })
 
       const arrayBuffer = await blob.arrayBuffer()
 
@@ -219,7 +239,7 @@ export function PdfCanvasRenderer({
         imageData: arrayBuffer,
       }
     },
-    [loadImage, answerOverlaySettings, pageSize]
+    [loadImage, answerOverlaySettings, markColorByCropRegionId, pageSize]
   )
 
   /**
@@ -370,14 +390,19 @@ export function PdfCanvasRenderer({
   })
 
   useEffect(() => {
-    if (startRendering && !isRendering && pages.length > 0) {
+    if (
+      startRendering &&
+      isMarkColorReady &&
+      !isRendering &&
+      pages.length > 0
+    ) {
       isCancelledRef.current = false
       renderAllPagesRef.current()
     } else if (!startRendering && isRendering) {
       // startRenderingがfalseになったらキャンセル
       isCancelledRef.current = true
     }
-  }, [startRendering, pages.length, isRendering])
+  }, [startRendering, isMarkColorReady, pages.length, isRendering])
 
   // コンポーネントがアンマウントされたらCanvas Poolをクリーンアップ
   useEffect(() => {

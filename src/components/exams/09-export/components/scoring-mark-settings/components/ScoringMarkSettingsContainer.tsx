@@ -4,6 +4,7 @@ import { Settings } from "lucide-react"
 
 import { StatusDisplaySection } from "@/components/exams/09-export/components/scoring-mark-settings/components/StatusDisplaySection"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { InlineColorPicker } from "@/components/ui/color-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -267,6 +268,24 @@ export function ScoringMarkSettingsContainer({
           updateVisibility(status, { showScore: show })
         }
       />
+
+      <Separator />
+
+      <div className="flex items-center space-x-3">
+        <Checkbox
+          id="subtotal-mark-color-enabled"
+          checked={config.subtotalMarkColorEnabled}
+          onCheckedChange={(checked) =>
+            updateConfig({ subtotalMarkColorEnabled: checked === true })
+          }
+        />
+        <Label
+          htmlFor="subtotal-mark-color-enabled"
+          className="cursor-pointer text-sm"
+        >
+          小計項目に「採点マークの色」が設定されている設問はその色を優先する
+        </Label>
+      </div>
 
       <Separator />
 

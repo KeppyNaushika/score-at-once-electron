@@ -110,12 +110,18 @@ export type AnswerOverlayVisibility = Omit<
 export interface AnswerOverlaySettings {
   styles: Record<OverlayKind, AnswerOverlayStyle>
   visibility: Record<ScoringStatus, AnswerOverlayVisibility>
+  /**
+   * 小計項目に「採点マークの色」が設定されている設問は、採点マークと点数をその色で描くか
+   * （`Exam.subtotalMarkColorEnabled`）。色の決め方は `src/lib/subtotalMarkColor.ts`
+   */
+  subtotalMarkColorEnabled: boolean
 }
 
 /** DB 行を描画側の形へ組む。欠けている種別・状態は既定値で補う */
 export function toAnswerOverlaySettings(
   styleRows: ExamAnswerOverlayStyle[],
   visibilityRows: ExamAnswerOverlayVisibility[],
+  subtotalMarkColorEnabled: boolean,
   defaults: AnswerOverlaySettings
 ): AnswerOverlaySettings {
   const styles = { ...defaults.styles }
@@ -137,7 +143,7 @@ export function toAnswerOverlaySettings(
     }
   }
 
-  return { styles, visibility }
+  return { styles, visibility, subtotalMarkColorEnabled }
 }
 
 // =============================================================================
@@ -211,4 +217,5 @@ export const DEFAULT_ANSWER_OVERLAY_SETTINGS: AnswerOverlaySettings = {
   visibility: Object.fromEntries(
     SCORING_STATUSES.map((status) => [status, buildDefaultVisibility(status)])
   ) as Record<ScoringStatus, AnswerOverlayVisibility>,
+  subtotalMarkColorEnabled: true,
 }
