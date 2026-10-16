@@ -51,6 +51,8 @@ interface MainCanvasParams {
   /** 描画要素をドラッグ中か（呼び出し時点の値） */
   isElementDragging: boolean
   scoringMarkConfig: AnswerOverlaySettings | null | undefined
+  /** 設問（CropRegion.id）→ 小計項目の採点マークの色 */
+  markColorByCropRegionId: ReadonlyMap<string, string>
   scoringMarkImages: Map<string, HTMLImageElement>
   drawSingleElement: ReturnType<typeof useDrawingRenderer>["drawSingleElement"]
 }
@@ -77,6 +79,7 @@ export function drawMainCanvas(
     isDrawingSelection,
     isElementDragging,
     scoringMarkConfig,
+    markColorByCropRegionId,
     scoringMarkImages,
     drawSingleElement,
   }: MainCanvasParams
@@ -132,6 +135,7 @@ export function drawMainCanvas(
       zoom,
       pageSize,
       scoringMarkConfig,
+      markColorByCropRegionId,
       scoringMarkImages,
     },
     { allCropRegionsWithStatus, currentCropRegion, currentScoringData }

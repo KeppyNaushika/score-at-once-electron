@@ -85,6 +85,7 @@ function drawFrames(
       pageSize: "A4",
       scoringMarkConfig: null,
       scoringMarkImages: new Map(),
+      markColorByCropRegionId: new Map(),
     },
     {
       allCropRegionsWithStatus: [page1Region, page2Region, page3Region].map(

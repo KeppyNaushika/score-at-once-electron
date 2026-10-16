@@ -35,6 +35,7 @@ const EXAM: GradeExamCandidateRow = {
   description: null,
   markerCorrectionEnabled: false,
   anonymousScoringEnforced: false,
+  subtotalMarkColorEnabled: true,
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
 }
@@ -43,6 +44,7 @@ const SUBTOTAL_GROUPS: GradeExamSubtotalGroupRow[] = [
   {
     id: "group-1",
     name: "観点",
+    order: 0,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     subtotals: [
@@ -51,6 +53,7 @@ const SUBTOTAL_GROUPS: GradeExamSubtotalGroupRow[] = [
         name: "知識",
         subtotalGroupId: "group-1",
         order: 0,
+        markColor: null,
         createdAt: FIXED_DATE,
         updatedAt: FIXED_DATE,
       },

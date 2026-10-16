@@ -313,6 +313,17 @@ export const setExamAnswerOverlayVisibilityMutation = (examId: string) =>
     ...exportSettingsWrite(examId),
   })
 
+/** 小計項目の採点マークの色を使うか（試験の行の1列） */
+export const setExamSubtotalMarkColorEnabledMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (subtotalMarkColorEnabled: boolean) =>
+      window.electronAPI.settings.setExamSubtotalMarkColorEnabled(
+        examId,
+        subtotalMarkColorEnabled
+      ),
+    ...exportSettingsWrite(examId),
+  })
+
 /** 統計の可視性を、種別×母集団の1マスぶん */
 export const setExamReportStatisticVisibilityMutation = (examId: string) =>
   defineMutation({

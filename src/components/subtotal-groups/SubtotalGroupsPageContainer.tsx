@@ -1,6 +1,21 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import type { DragEndEvent } from "@dnd-kit/core"
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ListTree, Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
@@ -15,7 +30,7 @@ import {
 } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteSubtotalGroupModal } from "@/components/subtotal-groups/components/DeleteSubtotalGroupModal"
-import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
+import { SortableSubtotalGroupCard } from "@/components/subtotal-groups/components/SortableSubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,6 +45,7 @@ import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import {
+  reorderSubtotalGroupsMutation,
   subtotalGroupListQuery,
   type SubtotalGroupRow,
 } from "@/queries/subtotal"
@@ -89,6 +105,36 @@ export function SubtotalGroupsPageContainer() {
     toggleTagId,
     clearTagIds,
   } = useListFilter(subtotalGroups, SUBTOTAL_GROUP_FILTER_ACCESSORS)
+
+  // 並べ替え。絞り込み中は一部だけの並びから全体の順を決められないので止める
+  const isFiltering = searchTerm.trim() !== "" || filterTagIds.size > 0
+  const reorderSubtotalGroups = useMutation(reorderSubtotalGroupsMutation())
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // 離したら並びを手元へ先に映し、全グループの id を新しい並びで書く。
+  // 失敗しても書き込みのあとの取り直しで DB の並びへ戻る
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id || isFiltering) return
+
+    const activeIndex = subtotalGroups.findIndex(
+      (subtotalGroup) => subtotalGroup.id === active.id
+    )
+    const overIndex = subtotalGroups.findIndex(
+      (subtotalGroup) => subtotalGroup.id === over.id
+    )
+    if (activeIndex === -1 || overIndex === -1) return
+
+    const reorderedGroups = arrayMove(subtotalGroups, activeIndex, overIndex)
+    queryClient.setQueryData(subtotalGroupListQuery().queryKey, reorderedGroups)
+    reorderSubtotalGroups.mutate(
+      reorderedGroups.map((subtotalGroup) => subtotalGroup.id)
+    )
+  }
 
   // 新規作成
   const handleCreate = useCallback(() => {
@@ -223,16 +269,29 @@ export function SubtotalGroupsPageContainer() {
             )}
           </Empty>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredGroups.map((group) => (
-              <SubtotalGroupCard
-                key={group.id}
-                group={group}
-                onEdit={() => handleEdit(group)}
-                onDelete={() => groupDeletion.openWith(group)}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={filteredGroups.map((group) => group.id)}
+              strategy={rectSortingStrategy}
+              disabled={isFiltering}
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredGroups.map((group) => (
+                  <SortableSubtotalGroupCard
+                    key={group.id}
+                    group={group}
+                    onEdit={() => handleEdit(group)}
+                    onDelete={() => groupDeletion.openWith(group)}
+                    sortDisabled={isFiltering}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 

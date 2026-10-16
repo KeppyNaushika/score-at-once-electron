@@ -12,12 +12,12 @@ import {
   resolveOverlayPixelLengths,
   resolveTextAnchor,
 } from "@/lib/answerOverlayPlacement"
+import { getTintedMark } from "@/lib/markTinting"
 import type {
   AnswerOverlaySettings,
   AnswerOverlayStyle,
 } from "@/types/scoringOverlay.types"
 
-import { getTintedMark } from "./markTinting"
 import type {
   ScoringDataForPdf,
   SubtotalDataForPdf,

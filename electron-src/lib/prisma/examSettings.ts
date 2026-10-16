@@ -77,6 +77,8 @@ export async function getExamExportSettings(
     answerOverlay: toAnswerOverlaySettings(
       styleRows,
       visibilityRows,
+      exam?.subtotalMarkColorEnabled ??
+        DEFAULT_ANSWER_OVERLAY_SETTINGS.subtotalMarkColorEnabled,
       DEFAULT_ANSWER_OVERLAY_SETTINGS
     ),
     individualReport: {
@@ -241,6 +243,21 @@ export async function setExamAnswerOverlayVisibility(
     where: { examId_status: { examId, status } },
     update: values,
     create: { examId, status, ...values },
+  })
+  await recordExportSettingsAudit(examId)
+}
+
+/**
+ * 小計項目に「採点マークの色」が設定されている設問を、その色で描くかを書く。
+ * 列は試験の行（`Exam.subtotalMarkColorEnabled`）にある
+ */
+export async function setExamSubtotalMarkColorEnabled(
+  examId: string,
+  subtotalMarkColorEnabled: boolean
+): Promise<void> {
+  await prisma.exam.update({
+    where: { id: examId },
+    data: { subtotalMarkColorEnabled },
   })
   await recordExportSettingsAudit(examId)
 }

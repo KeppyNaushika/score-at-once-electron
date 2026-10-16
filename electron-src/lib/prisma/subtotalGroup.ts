@@ -17,6 +17,10 @@ import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
 import { subtotalGroupGradeUsageInclude } from "./gradeDataSourceUsage"
 import { serializePrisma } from "./serializePrisma"
+import {
+  linkedSubtotalGroupDisplayOrderBy,
+  subtotalGroupDisplayOrderBy,
+} from "./subtotalGroupOrder"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
@@ -83,7 +87,7 @@ export type SubtotalGroupWithSubtotals = Prisma.SubtotalGroupGetPayload<{
 export async function getSubtotalGroups() {
   const subtotalGroups = await prisma.subtotalGroup.findMany({
     include: subtotalGroupWithSubtotalsExamsAndTagsInclude,
-    orderBy: { createdAt: "desc" },
+    orderBy: subtotalGroupDisplayOrderBy,
   })
 
   // 同梱のデータソースが Decimal を持つので境界で変換する
@@ -98,6 +102,7 @@ export async function createSubtotalGroup(data: {
   subtotals: {
     name: string
     order: number
+    markColor: string | null
   }[]
 }) {
   const subtotalGroup = await prisma.subtotalGroup.create({
@@ -147,6 +152,7 @@ export async function updateSubtotalGroup(
       id: string | null
       name: string
       order: number
+      markColor: string | null
     }[]
   }
 ) {
@@ -166,26 +172,41 @@ export async function updateSubtotalGroup(
       // 既にある行を指していない id（画面側の並べ替え用の値や、他の端末が既に
       // 消した行の id）は、増えたものとして扱う
       const keptSubtotalIds = new Set<string>()
-      const changedSubtotals: { id: string; name: string; order: number }[] = []
-      const addedSubtotals: { name: string; order: number }[] = []
+      const changedSubtotals: {
+        id: string
+        name: string
+        order: number
+        markColor: string | null
+      }[] = []
+      const addedSubtotals: {
+        name: string
+        order: number
+        markColor: string | null
+      }[] = []
       for (const subtotal of data.subtotals) {
         const currentSubtotal =
           subtotal.id === null
             ? undefined
             : currentSubtotalById.get(subtotal.id)
         if (currentSubtotal === undefined) {
-          addedSubtotals.push({ name: subtotal.name, order: subtotal.order })
+          addedSubtotals.push({
+            name: subtotal.name,
+            order: subtotal.order,
+            markColor: subtotal.markColor,
+          })
           continue
         }
         keptSubtotalIds.add(currentSubtotal.id)
         if (
           currentSubtotal.name !== subtotal.name ||
-          currentSubtotal.order !== subtotal.order
+          currentSubtotal.order !== subtotal.order ||
+          currentSubtotal.markColor !== subtotal.markColor
         ) {
           changedSubtotals.push({
             id: currentSubtotal.id,
             name: subtotal.name,
             order: subtotal.order,
+            markColor: subtotal.markColor,
           })
         }
       }
@@ -206,7 +227,11 @@ export async function updateSubtotalGroup(
       for (const subtotal of changedSubtotals) {
         await tx.subtotal.update({
           where: { id: subtotal.id },
-          data: { name: subtotal.name, order: subtotal.order },
+          data: {
+            name: subtotal.name,
+            order: subtotal.order,
+            markColor: subtotal.markColor,
+          },
         })
       }
       if (addedSubtotals.length > 0) {
@@ -215,6 +240,7 @@ export async function updateSubtotalGroup(
             subtotalGroupId: id,
             name: subtotal.name,
             order: subtotal.order,
+            markColor: subtotal.markColor,
           })),
         })
       }
@@ -253,6 +279,52 @@ export async function updateSubtotalGroup(
   }
 
   return subtotalGroup
+}
+
+/**
+ * 小計点グループの並びを書く。受け取った id の並びの先頭から order を 0, 1, 2… と振る。
+ *
+ * **値の変わる行だけ書く。** 書けば同期には「その行が変わった」として流れる。
+ * 一覧に無い id（他の端末が消したグループ）は飛ばす
+ */
+export async function reorderSubtotalGroups(orderedSubtotalGroupIds: string[]) {
+  const hasWritten = await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      const currentGroups = await tx.subtotalGroup.findMany({
+        where: { id: { in: orderedSubtotalGroupIds } },
+      })
+      const currentOrderById = new Map(
+        currentGroups.map((subtotalGroup) => [
+          subtotalGroup.id,
+          subtotalGroup.order,
+        ])
+      )
+      const changedGroups = orderedSubtotalGroupIds.flatMap(
+        (subtotalGroupId, order) => {
+          const currentOrder = currentOrderById.get(subtotalGroupId)
+          return currentOrder === undefined || currentOrder === order
+            ? []
+            : [{ subtotalGroupId, order }]
+        }
+      )
+      for (const { subtotalGroupId, order } of changedGroups) {
+        await tx.subtotalGroup.update({
+          where: { id: subtotalGroupId },
+          data: { order },
+        })
+      }
+      return changedGroups.length > 0
+    }
+  )
+
+  if (hasWritten) {
+    await recordAuditLog({
+      action: "subtotal_group.reorder",
+      entityType: "SubtotalGroup",
+      entityId: "subtotal-group-order",
+      coalesceKey: "subtotal_group_reorder",
+    })
+  }
 }
 
 /**
@@ -353,7 +425,7 @@ export async function getAvailableSubtotalGroupsForExam(examId: string) {
       },
     },
     include: availableSubtotalGroupInclude,
-    orderBy: { name: "asc" },
+    orderBy: subtotalGroupDisplayOrderBy,
   })
 
   return subtotalGroups
@@ -368,11 +440,8 @@ export async function getActiveSubtotalGroupsForExam(examId: string) {
       examId,
     },
     include: { subtotalGroup: { include: subtotalGroupForScoringInclude } },
-    orderBy: {
-      subtotalGroup: {
-        name: "asc",
-      },
-    },
+    // 小計点管理と同じ並び（4. 設問グループ・Excel・個人成績表もこの順で並ぶ）
+    orderBy: linkedSubtotalGroupDisplayOrderBy,
   })
 
   return examSubtotalGroups

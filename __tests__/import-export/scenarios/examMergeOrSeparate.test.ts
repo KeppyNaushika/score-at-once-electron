@@ -520,6 +520,7 @@ describe("examMergeOrSeparate", () => {
         "examName",
         "id",
         "markerCorrectionEnabled",
+        "subtotalMarkColorEnabled",
         "updatedAt",
       ].sort()
     )

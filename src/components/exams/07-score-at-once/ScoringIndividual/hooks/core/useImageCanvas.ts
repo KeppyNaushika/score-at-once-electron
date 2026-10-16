@@ -37,6 +37,7 @@ export function useImageCanvas({
   hoveredElementId,
   allCropRegionsWithStatus = [],
   scoringMarkConfig,
+  markColorByCropRegionId,
   pageSize = "A4",
 }: UseImageCanvasProps): UseImageCanvasReturn {
   // キャンバス参照管理
@@ -89,6 +90,7 @@ export function useImageCanvas({
     hoveredElementId,
     allCropRegionsWithStatus,
     scoringMarkConfig,
+    markColorByCropRegionId,
     pageSize,
   })
 

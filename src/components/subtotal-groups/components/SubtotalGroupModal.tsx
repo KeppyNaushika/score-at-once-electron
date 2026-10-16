@@ -90,6 +90,7 @@ export function SubtotalGroupModal({
         subtotalId: subtotal.id,
         name: subtotal.name,
         order: index,
+        markColor: subtotal.markColor,
       }))
   )
   const [saving, setSaving] = useState(false)
@@ -146,6 +147,7 @@ export function SubtotalGroupModal({
       subtotalId: null,
       name: "",
       order: subtotals.length,
+      markColor: null,
     }
     setSubtotals([...subtotals, newSubtotal])
   }
@@ -155,6 +157,15 @@ export function SubtotalGroupModal({
     setSubtotals((prev) =>
       prev.map((subtotal) =>
         subtotal.key === key ? { ...subtotal, name } : subtotal
+      )
+    )
+  }
+
+  // 小計項目の採点マークの色を変える（null で未設定に戻す）
+  const changeSubtotalMarkColor = (key: string, markColor: string | null) => {
+    setSubtotals((prev) =>
+      prev.map((subtotal) =>
+        subtotal.key === key ? { ...subtotal, markColor } : subtotal
       )
     )
   }
@@ -214,6 +225,7 @@ export function SubtotalGroupModal({
         id: subtotal.subtotalId,
         name: subtotal.name.trim(),
         order: index,
+        markColor: subtotal.markColor,
       }))
 
       // **作った相手を覚える。** 作成のあとタグ側で失敗すると、モーダルは開いたまま
@@ -231,6 +243,7 @@ export function SubtotalGroupModal({
             subtotals: editedSubtotals.map((subtotal) => ({
               name: subtotal.name,
               order: subtotal.order,
+              markColor: subtotal.markColor,
             })),
           })
       setCreatedGroupId(savedGroup.id)
@@ -244,6 +257,7 @@ export function SubtotalGroupModal({
           subtotalId: subtotal.id,
           name: subtotal.name,
           order: subtotal.order,
+          markColor: subtotal.markColor,
         }))
       )
 
@@ -384,6 +398,14 @@ export function SubtotalGroupModal({
                 項目を追加
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                採点マークの色:
+              </span>{" "}
+              {
+                "この小計項目に関連付けた設問の採点マークを、この色で描きます。この小計点グループを使うすべての試験に効きます。試験ごとに「9. 結果と出力」で使わないようにもできます。1つの設問に色のある小計項目が2つ以上あるときは、上にある小計点グループ、その中で上にある小計項目の色を使います。"
+              }
+            </p>
 
             {subtotals.length === 0 ? (
               <div className="rounded-lg border-2 border-dashed py-8 text-center text-muted-foreground">
@@ -406,6 +428,7 @@ export function SubtotalGroupModal({
                         subtotal={subtotal}
                         position={position}
                         onRename={renameSubtotal}
+                        onMarkColorChange={changeSubtotalMarkColor}
                         onDelete={deleteSubtotal}
                       />
                     ))}

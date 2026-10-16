@@ -42,8 +42,9 @@ function toImportedMasterImagePath(
  * 既にある試験の列を、人が選んだ操作に従って書き換える。
  *
  * **Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
- * anonymousScoringEnforced / createdAt / updatedAt で全部**（prisma/schema.prisma）。
- * id は同定そのもの、createdAt は「既にある行」なので動かさない。残り6列がここの対象。
+ * anonymousScoringEnforced / subtotalMarkColorEnabled / createdAt / updatedAt で全部**
+ * （prisma/schema.prisma）。id は同定そのもの、createdAt は「既にある行」なので動かさない。
+ * 残り7列がここの対象。
  * 列を足したらここにも足すこと。
  */
 async function applyExamColumns(
@@ -75,6 +76,8 @@ async function applyExamColumns(
       markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
       // 旧形式（凍結）はこの列を持たない。読み込んだ側の試験は固定していなかったものとして既定へ倒す
       anonymousScoringEnforced: false,
+      // 旧形式（凍結）はこの列を持たない。既定（小計項目の色を使う）へ倒す
+      subtotalMarkColorEnabled: true,
       updatedAt,
     },
   })
@@ -275,7 +278,9 @@ export async function processExam(
       : exam.examName
 
   // Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
-  // anonymousScoringEnforced / createdAt / updatedAt で全部。列を足したらここも足すこと。
+  // anonymousScoringEnforced / subtotalMarkColorEnabled / createdAt / updatedAt で全部。
+  // 列を足したらここも足すこと（anonymousScoringEnforced と subtotalMarkColorEnabled は
+  // 旧形式に無いので schema の既定値に任せる）。
   await tx.exam.create({
     data: {
       id: exam.id,

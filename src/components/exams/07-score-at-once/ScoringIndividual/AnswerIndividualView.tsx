@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 
 import { Spinner } from "@/components/ui/spinner"
 import { useRouteParams } from "@/hooks/useRouteParams"
+import { buildSubtotalMarkColorByCropRegionId } from "@/lib/subtotalMarkColor"
 import { examExportSettingsQuery } from "@/queries/settings"
+import { activeSubtotalGroupsQuery } from "@/queries/subtotal"
 import type {
   AnnotationTarget,
   LineStyle,
@@ -83,6 +85,21 @@ export default function AnswerIndividualView({
   })
   const scoringMarkConfig =
     exportSettings?.answerOverlay ?? DEFAULT_ANSWER_OVERLAY_SETTINGS
+
+  // 設問 → 小計項目の採点マークの色（使うかどうかは印字設定のスイッチが決める）。
+  // 印字設定を読むまでは既定値（スイッチ ON）で描くので、スイッチ OFF の試験に一瞬だけ
+  // 色が付かないよう、印字設定を読むまでは色を渡さない
+  const { data: examSubtotalGroups } = useQuery({
+    ...activeSubtotalGroupsQuery(examId ?? ""),
+    enabled: Boolean(examId),
+  })
+  const markColorByCropRegionId = useMemo(
+    () =>
+      buildSubtotalMarkColorByCropRegionId(
+        exportSettings === undefined ? [] : (examSubtotalGroups ?? [])
+      ),
+    [exportSettings, examSubtotalGroups]
+  )
 
   // 現在表示中の採点データを取得
   const currentScoringData =
@@ -190,6 +207,7 @@ export default function AnswerIndividualView({
     allCropRegionsWithStatus,
     // 印字設定（採点マーク・点数表示のプレビュー用）
     scoringMarkConfig,
+    markColorByCropRegionId,
     pageSize,
   })
 

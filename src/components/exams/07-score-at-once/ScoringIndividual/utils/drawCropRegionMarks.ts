@@ -9,6 +9,8 @@ import {
   resolveOverlayPixelLengths,
   resolveTextAnchor,
 } from "@/lib/answerOverlayPlacement"
+import { getTintedMark } from "@/lib/markTinting"
+import { overlaySettingsForCropRegion } from "@/lib/subtotalMarkColor"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
@@ -35,6 +37,8 @@ interface CropRegionMarksParams {
   /** 試験の用紙サイズ。重ねる要素の mm を画素へ換算する基準（注釈と同じもの） */
   pageSize: string
   scoringMarkConfig: AnswerOverlaySettings | null | undefined
+  /** 設問（CropRegion.id）→ 小計項目の採点マークの色 */
+  markColorByCropRegionId: ReadonlyMap<string, string>
   scoringMarkImages: Map<string, HTMLImageElement>
 }
 
@@ -103,7 +107,8 @@ function drawCropRegionMark(
     pageSpacing,
     zoom,
     pageSize,
-    scoringMarkConfig,
+    scoringMarkConfig: examScoringMarkConfig,
+    markColorByCropRegionId,
     scoringMarkImages,
   }: CropRegionMarksParams,
   region: QuestionAnswerRegionRow,
@@ -112,6 +117,20 @@ function drawCropRegionMark(
   actualScore: number | null,
   scaleLevelLabel: string | null
 ): void {
+  // 小計項目の色がある設問は、採点マーク・類型の記号・点数だけその色で描く。
+  // 印字設定が未取得のときは差し替えない
+  const scoringMarkConfig = examScoringMarkConfig
+    ? overlaySettingsForCropRegion(
+        examScoringMarkConfig,
+        markColorByCropRegionId,
+        region.id
+      )
+    : examScoringMarkConfig
+  // 採点マーク画像は、ふだんは着色せずそのまま描く。小計項目の色で描く設問だけ着色する
+  const tintsMarkImage =
+    examScoringMarkConfig?.subtotalMarkColorEnabled === true &&
+    markColorByCropRegionId.has(region.id)
+
   // 設問のページは examPageId で決める（答案に無いページの設問は描かない）
   const regionPageIndex = loadedPageIndexOfCropRegion(region, loadedExamPageIds)
   if (regionPageIndex === null) return
@@ -212,7 +231,7 @@ function drawCropRegionMark(
 
       ctx.globalAlpha = opacity
       ctx.drawImage(
-        markImage,
+        tintsMarkImage ? getTintedMark(markImage, markStyle.color) : markImage,
         markPos.x,
         markPos.y,
         markLengths.size,

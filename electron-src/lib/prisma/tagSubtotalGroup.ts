@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client"
 
 import { recordTagLinkAudit } from "./auditTagLinks"
 import prisma from "./client"
+import { linkedSubtotalGroupDisplayOrderBy } from "./subtotalGroupOrder"
 
 /** タグ側から引く形（紐づく小計点グループ名を表示するため同梱） */
 const tagSubtotalGroupWithSubtotalGroupInclude = {
@@ -30,7 +31,7 @@ export async function getTagSubtotalGroups(tagId: string) {
   return prisma.tagSubtotalGroup.findMany({
     where: { tagId },
     include: tagSubtotalGroupWithSubtotalGroupInclude,
-    orderBy: { subtotalGroup: { name: "asc" } },
+    orderBy: linkedSubtotalGroupDisplayOrderBy,
   })
 }
 

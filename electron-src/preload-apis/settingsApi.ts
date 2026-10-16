@@ -41,6 +41,9 @@ export function createSettingsApi() {
       setExamAnswerOverlayVisibility: bind(
         "settings:setExamAnswerOverlayVisibility"
       ),
+      setExamSubtotalMarkColorEnabled: bind(
+        "settings:setExamSubtotalMarkColorEnabled"
+      ),
       setExamReportStatisticVisibility: bind(
         "settings:setExamReportStatisticVisibility"
       ),

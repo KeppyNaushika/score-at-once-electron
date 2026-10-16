@@ -97,6 +97,17 @@ export const updateSubtotalGroupMutation = () =>
     },
   })
 
+/** 小計点グループの並び。並びは採点マークの色の優先も決めるので、試験側も取り直す */
+export const reorderSubtotalGroupsMutation = () =>
+  defineMutation({
+    mutationFn: (orderedSubtotalGroupIds: string[]) =>
+      window.electronAPI.reorderSubtotalGroups(orderedSubtotalGroupIds),
+    meta: {
+      invalidates: [subtotalGroupListQuery().queryKey, ["exam"]],
+      errorMessage: "小計点グループの並び順を保存できませんでした",
+    },
+  })
+
 export const deleteSubtotalGroupMutation = () =>
   defineMutation({
     mutationFn: (subtotalGroupId: string) =>

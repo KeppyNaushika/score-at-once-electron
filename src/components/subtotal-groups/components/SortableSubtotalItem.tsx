@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+import { SubtotalMarkColorPicker } from "./SubtotalMarkColorPicker"
+
 /** 編集中の小計項目1つ（小計点グループの作成・編集のフォーム） */
 export interface SubtotalFormData {
   /**
@@ -21,6 +23,8 @@ export interface SubtotalFormData {
   subtotalId: string | null
   name: string
   order: number
+  /** 採点マークの色（HEX）。null は未設定＝試験全体の色で描く */
+  markColor: string | null
 }
 
 /** ドラッグで並べ替えられる小計項目1行。項目はこの画面の中の key で同定する */
@@ -28,12 +32,14 @@ export function SortableSubtotalItem({
   subtotal,
   position,
   onRename,
+  onMarkColorChange,
   onDelete,
 }: {
   subtotal: SubtotalFormData
   /** 何番目か（表示用。1始まりで見せる） */
   position: number
   onRename: (key: string, name: string) => void
+  onMarkColorChange: (key: string, markColor: string | null) => void
   onDelete: (key: string) => void
 }) {
   const {
@@ -74,6 +80,10 @@ export function SortableSubtotalItem({
           onChange={(e) => onRename(subtotal.key, e.target.value)}
         />
       </div>
+      <SubtotalMarkColorPicker
+        markColor={subtotal.markColor}
+        onChange={(markColor) => onMarkColorChange(subtotal.key, markColor)}
+      />
       <Button
         variant="ghost"
         size="sm"

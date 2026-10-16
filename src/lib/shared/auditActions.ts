@@ -904,6 +904,11 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "小計点グループ「{target}」を削除しました",
   },
+  "subtotal_group.reorder": {
+    category: "student",
+    verb: "update",
+    label: "小計点グループの並び順を変更しました",
+  },
 
   "tag.create": {
     category: "student",

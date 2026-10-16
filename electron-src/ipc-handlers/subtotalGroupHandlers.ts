@@ -10,6 +10,7 @@ import {
   getActiveSubtotalGroupsForExam,
   getAvailableSubtotalGroupsForExam,
   getSubtotalGroups,
+  reorderSubtotalGroups,
   updateSubtotalGroup,
 } from "../lib/prisma/subtotalGroup"
 import { type HandlerMap } from "./ipcHandlerUtils"
@@ -27,6 +28,7 @@ export const subtotalGroupHandlers = {
     subtotals: {
       name: string
       order: number
+      markColor: string | null
     }[]
   }) => {
     return await createSubtotalGroup(data)
@@ -42,10 +44,16 @@ export const subtotalGroupHandlers = {
         id: string | null
         name: string
         order: number
+        markColor: string | null
       }[]
     }
   ) => {
     return await updateSubtotalGroup(id, data)
+  },
+
+  // 小計点グループの並び（受け取った id の順に order を振り直す）
+  "reorder-subtotal-groups": async (orderedSubtotalGroupIds: string[]) => {
+    return await reorderSubtotalGroups(orderedSubtotalGroupIds)
   },
 
   // 小計点グループ削除
