@@ -6,22 +6,26 @@
  * 捨ててログイン画面へ戻る。黙って戻すと何が起きたか分からないので、閉じるまで残る
  * 知らせを出す。
  *
+ * トークンは DB と別に PC で1つだけ残るので、DB を作り直した・プロファイルを
+ * 切り替えたときは最初の一覧に初めからいない。これは同期の削除ではないので黙って捨てる。
+ *
  * 固定すること:
- * - トークンの利用者が一覧に無ければ、知らせを出してトークンを捨てる
+ * - この起動中に居た利用者が一覧から消えたら、知らせを出してトークンを捨てる
+ * - 最初の一覧に初めから居なければ、知らせを出さずにトークンを捨てる
  * - 一覧に居れば出さない。誰もログインしていなければ出さない
  * - 自分でログアウトしたときは出さない
  */
 
 import "../setup"
 
-import { QueryClientProvider } from "@tanstack/react-query"
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { toast } from "sonner"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AuthProvider, useAuth } from "@/contexts/AuthContext"
 import { createAppQueryClient } from "@/queries/queryClient"
-import type { PublicUser } from "@/queries/user"
+import { type PublicUser, userListQuery } from "@/queries/user"
 
 import {
   cleanupMockElectronAPI,
@@ -56,14 +60,16 @@ function ShowLogin() {
   )
 }
 
-function renderAuth() {
+function renderAuth(): QueryClient {
+  const queryClient = createAppQueryClient()
   render(
-    <QueryClientProvider client={createAppQueryClient()}>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ShowLogin />
       </AuthProvider>
     </QueryClientProvider>
   )
+  return queryClient
 }
 
 /** トークンと利用者一覧を差し込む。トークンを捨てたら null を返すようにする */
@@ -87,10 +93,20 @@ describe("ログイン中の利用者が消えたときの知らせ", () => {
     cleanupMockElectronAPI()
   })
 
-  it("トークンの利用者が一覧に無ければ、知らせを出してトークンを捨てる", async () => {
-    const electronAPI = setUpElectronAPI(loggedInUser.id, [otherUser])
+  it("この起動中に居た利用者が一覧から消えたら、知らせを出してトークンを捨てる", async () => {
+    const electronAPI = setUpElectronAPI(loggedInUser.id, [
+      loggedInUser,
+      otherUser,
+    ])
 
-    renderAuth()
+    const queryClient = renderAuth()
+    expect(await screen.findByText("教員1")).toBeInTheDocument()
+
+    // 他のPCで削除され、同期で届いた後に一覧を読み直した
+    electronAPI.fetchUsers.mockResolvedValue([otherUser])
+    await queryClient.invalidateQueries({
+      queryKey: userListQuery().queryKey,
+    })
 
     await waitFor(() => expect(electronAPI.clearAuthToken).toHaveBeenCalled())
     expect(toast.warning).toHaveBeenCalledTimes(1)
@@ -103,6 +119,16 @@ describe("ログイン中の利用者が消えたときの知らせ", () => {
       closeButton: true,
     })
     expect(await screen.findByText("未ログイン")).toBeInTheDocument()
+  })
+
+  it("最初の一覧に初めから居なければ、知らせを出さずにトークンを捨てる", async () => {
+    const electronAPI = setUpElectronAPI(loggedInUser.id, [otherUser])
+
+    renderAuth()
+
+    await waitFor(() => expect(electronAPI.clearAuthToken).toHaveBeenCalled())
+    expect(await screen.findByText("未ログイン")).toBeInTheDocument()
+    expect(toast.warning).not.toHaveBeenCalled()
   })
 
   it("利用者が一覧に居れば出さない", async () => {
