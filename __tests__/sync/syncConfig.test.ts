@@ -15,6 +15,10 @@ import {
   upsertSharedProfile,
 } from "../../electron-src/lib/sync/syncConfig"
 import { DEFAULT_SYNC_CONFIG } from "../../electron-src/lib/sync/types"
+import {
+  isSyncConsentCurrent,
+  SYNC_CONSENT_VERSION,
+} from "../../src/lib/shared/syncConsentText"
 
 const DATA_DIR = path.join(os.tmpdir(), "score-at-once-sync-config-test")
 
@@ -84,6 +88,73 @@ describe("設定の置き場", () => {
     expect(parsed.mode).toBe("local")
     expect(parsed.activeSharedFolderId).toBeNull()
     expect(parsed.sharedProfiles).toHaveLength(1)
+  })
+})
+
+describe("共有モードの同意の記録", () => {
+  it("書いた同意をそのまま読める", () => {
+    const config = {
+      ...DEFAULT_SYNC_CONFIG,
+      clientId: "6c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5",
+      syncConsent: {
+        clientId: "6c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5",
+        consentVersion: SYNC_CONSENT_VERSION,
+        consentedAt: "2026-10-16T00:00:00.000Z",
+      },
+    }
+    saveSyncConfig(config, DATA_DIR)
+    expect(loadSyncConfig(DATA_DIR)).toEqual(config)
+  })
+
+  it("同意の記録が無い旧版の設定は、同意していないとして読む", () => {
+    expect(
+      parseSyncAppConfig({ mode: "local", clientId: "pc" }).syncConsent
+    ).toBeNull()
+  })
+
+  it("欠けた同意の記録は、同意していないとして読む", () => {
+    expect(
+      parseSyncAppConfig({
+        clientId: "pc",
+        syncConsent: { clientId: "pc", consentVersion: SYNC_CONSENT_VERSION },
+      }).syncConsent
+    ).toBeNull()
+  })
+})
+
+describe("今の同意か", () => {
+  const consentedConfig = {
+    clientId: "pc-1",
+    syncConsent: {
+      clientId: "pc-1",
+      consentVersion: SYNC_CONSENT_VERSION,
+      consentedAt: "2026-10-16T00:00:00.000Z",
+    },
+  }
+
+  it("このPCが今の版に同意していれば、今の同意", () => {
+    expect(isSyncConsentCurrent(consentedConfig)).toBe(true)
+  })
+
+  it("同意していなければ、今の同意ではない", () => {
+    expect(isSyncConsentCurrent({ clientId: "pc-1", syncConsent: null })).toBe(
+      false
+    )
+  })
+
+  it("文面の版が上がったら、同意し直す", () => {
+    expect(
+      isSyncConsentCurrent({
+        ...consentedConfig,
+        syncConsent: { ...consentedConfig.syncConsent, consentVersion: "old" },
+      })
+    ).toBe(false)
+  })
+
+  it("data を別のPCへ写して clientId が振り直されたら、同意し直す", () => {
+    expect(isSyncConsentCurrent({ ...consentedConfig, clientId: "pc-2" })).toBe(
+      false
+    )
   })
 })
 

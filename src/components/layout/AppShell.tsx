@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { BrowserStorageNotifier } from "@/components/common/BrowserStorageNotifier"
+import { SyncConsentReminder } from "@/components/common/SyncConsentReminder"
 import { SyncFoldNotifier } from "@/components/common/SyncFoldNotifier"
 import { SyncParentDeletedNotifier } from "@/components/common/SyncParentDeletedNotifier"
 import { SyncWarningNotifier } from "@/components/common/SyncWarningNotifier"
@@ -126,6 +127,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SyncFoldNotifier />
       <SyncParentDeletedNotifier />
       <SyncWarningNotifier />
+      <SyncConsentReminder />
       <BrowserStorageNotifier />
     </SidebarProvider>
   )

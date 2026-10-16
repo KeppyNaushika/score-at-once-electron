@@ -9,6 +9,7 @@ import {
   getStorageOverview,
   inspectSharedFolderForSetup,
   migrateProfileToLocal,
+  recordSyncConsent,
   relaunchApp,
   selectStartupStorage,
   type SharedFolderConnectAction,
@@ -48,6 +49,11 @@ export const syncHandlers = {
     return result.filePaths[0]
   },
 
+  /** このPCが共有モードの注意事項に同意したことを記録する（版は main が決める） */
+  "sync:recordConsent": async () => {
+    await recordSyncConsent()
+  },
+
   /** 共有フォルダを見る（何も書かない） */
   "sync:inspectSharedFolder": async (sharedFolderPath: string) =>
     inspectSharedFolderForSetup(sharedFolderPath),
@@ -62,7 +68,7 @@ export const syncHandlers = {
   "sync:selectStartupStorage": async (
     selection: { mode: "local" } | { mode: "shared"; sharedFolderId: string }
   ) => {
-    selectStartupStorage(selection)
+    await selectStartupStorage(selection)
   },
 
   /** 共有プロファイルのデータを空のローカルモードへ移し、次の起動をローカルモードにする */

@@ -14,8 +14,11 @@
  * - **モードとプロファイルの切り替えは、再起動で効く。** 設定を変えただけでは
  *   動いている根は変わらないので、再起動待ちであることを出す。空の共有フォルダを
  *   選んだら、ローカルのデータを移すか空で始めるかを選ばせ、選ぶまで何もしない
+ * - **共有モードへ入る前に、1項目ずつ同意を求める。** 同意するまで共有フォルダを
+ *   選ばせない。ただし同意の無いまま共有モードで動いているPCの同期は止めない
  */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -25,10 +28,22 @@ import {
   DEFAULT_SYNC_CONFIG,
   type SyncAppStatus,
 } from "@/electron-src/lib/sync/types"
+import {
+  SYNC_CONSENT_ITEMS,
+  SYNC_CONSENT_VERSION,
+} from "@/lib/shared/syncConsentText"
 
-const { connectSharedFolder, triggerSync, syncSettings } = vi.hoisted(() => ({
+const {
+  connectSharedFolder,
+  triggerSync,
+  chooseSharedFolder,
+  recordConsent,
+  syncSettings,
+} = vi.hoisted(() => ({
   connectSharedFolder: vi.fn(async () => undefined),
   triggerSync: vi.fn(async () => undefined),
+  chooseSharedFolder: vi.fn(async () => "/nas/new-share"),
+  recordConsent: vi.fn(async () => undefined),
   syncSettings: { current: null as unknown },
 }))
 
@@ -56,8 +71,13 @@ function renderTab(
   options: {
     restartPending?: boolean
     inspection?: SharedFolderInspection
+    /** このPCが今の版の同意文に同意しているか（既定は同意済み） */
+    consented?: boolean
+    runningMode?: "local" | "shared"
   } = {}
 ): void {
+  const consented = options.consented ?? true
+  const runningMode = options.runningMode ?? "local"
   syncSettings.current = {
     config: {
       ...DEFAULT_SYNC_CONFIG,
@@ -67,10 +87,20 @@ function renderTab(
         { sharedFolderId: SHARED_ID, sharedFolderPath: "/nas/share" },
       ],
       clientId: "this-pc",
+      syncConsent: consented
+        ? {
+            clientId: "this-pc",
+            consentVersion: SYNC_CONSENT_VERSION,
+            consentedAt: "2026-10-16T00:00:00.000Z",
+          }
+        : null,
     },
     running: {
-      mode: "local",
-      sharedFolder: null,
+      mode: runningMode,
+      sharedFolder:
+        runningMode === "shared"
+          ? { sharedFolderId: SHARED_ID, sharedFolderPath: "/nas/share" }
+          : null,
       databasePath: "/app/data/database.db",
       sharedFilesDirectory: "/app/data",
       localDataDirectory: "/app/data",
@@ -85,19 +115,30 @@ function renderTab(
     selectStartupStorage: vi.fn(async () => undefined),
     migrateProfileToLocal: vi.fn(async () => undefined),
     isMigratingToLocal: false,
-    chooseSharedFolder: vi.fn(async () => "/nas/new-share"),
+    chooseSharedFolder,
     inspectSharedFolder: vi.fn(
       async () => options.inspection ?? { kind: "empty" }
     ),
     relaunch: vi.fn(async () => undefined),
   }
-  render(<SyncSettingsPanel />)
+  // 同意の画面は同意の記録を自分で書く（useMutation）ので、取得の器が要る
+  Object.defineProperty(window, "electronAPI", {
+    configurable: true,
+    value: { sync: { recordConsent } },
+  })
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <SyncSettingsPanel />
+    </QueryClientProvider>
+  )
 }
 
 describe("SyncSettingsPanel", () => {
   beforeEach(() => {
     connectSharedFolder.mockClear()
     triggerSync.mockClear()
+    chooseSharedFolder.mockClear()
+    recordConsent.mockClear()
   })
 
   it("入口に beta の印を出す", () => {
@@ -116,7 +157,8 @@ describe("SyncSettingsPanel", () => {
     expect(
       screen.getAllByText(/ご自身でもバックアップを取ってください/).length
     ).toBeGreaterThan(0)
-    expect(screen.getByText(/まだ beta です/)).toBeTruthy()
+    expect(screen.getByText(/まだ beta であり/)).toBeTruthy()
+    expect(screen.getByText(/一切の保証はありません/)).toBeTruthy()
   })
 
   it("残りのご注意も、開かずに読める（畳まない）", () => {
@@ -214,5 +256,61 @@ describe("SyncSettingsPanel", () => {
         action: "join",
       })
     )
+  })
+
+  it("同意していなければ、共有フォルダを選ぶ前に同意を求め、全項目を確かめるまで同意できない", async () => {
+    renderTab([], { consented: false })
+
+    fireEvent.click(screen.getByRole("button", { name: /共有フォルダを追加/ }))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog.textContent).toContain("共有モードの注意事項への同意")
+    expect(chooseSharedFolder).not.toHaveBeenCalled()
+    const consentButton = screen.getByRole("button", { name: "同意する" })
+    expect(consentButton.hasAttribute("disabled")).toBe(true)
+
+    const checkboxes = screen.getAllByRole("checkbox")
+    expect(checkboxes).toHaveLength(SYNC_CONSENT_ITEMS.length)
+    checkboxes.forEach((checkbox) => fireEvent.click(checkbox))
+    expect(consentButton.hasAttribute("disabled")).toBe(false)
+
+    fireEvent.click(consentButton)
+    await waitFor(() => expect(recordConsent).toHaveBeenCalled())
+    // 同意したら、そのまま共有フォルダを選ぶところへ進む
+    await waitFor(() => expect(chooseSharedFolder).toHaveBeenCalled())
+  })
+
+  it("同意の画面を閉じたら、共有フォルダを選ばない", async () => {
+    renderTab([], { consented: false })
+
+    fireEvent.click(screen.getByRole("button", { name: /共有フォルダを追加/ }))
+    await screen.findByRole("dialog")
+    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }))
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(chooseSharedFolder).not.toHaveBeenCalled()
+    expect(recordConsent).not.toHaveBeenCalled()
+  })
+
+  it("同意済みなら、同意を求めずに共有フォルダを選ぶ", async () => {
+    renderTab()
+
+    fireEvent.click(screen.getByRole("button", { name: /共有フォルダを追加/ }))
+
+    await waitFor(() => expect(chooseSharedFolder).toHaveBeenCalled())
+    expect(screen.queryByText("共有モードの注意事項への同意")).toBeNull()
+  })
+
+  it("同意の無いまま共有モードで動いていれば、同期は続いていると言って同意を促す", () => {
+    renderTab([], { consented: false, runningMode: "shared" })
+
+    expect(screen.getByText(/今の注意事項にまだ同意していません/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: "確認して同意する" })).toBeTruthy()
+    // 同期は止めない
+    expect(
+      screen
+        .getByRole("button", { name: /今すぐ同期/ })
+        .hasAttribute("disabled")
+    ).toBe(false)
   })
 })

@@ -104,6 +104,16 @@ export const connectSharedFolderMutation = () =>
     },
   })
 
+/** このPCが共有モードの注意事項に同意したことを記録する。版は main が決める */
+export const recordSyncConsentMutation = () =>
+  defineMutation({
+    mutationFn: () => window.electronAPI.sync.recordConsent(),
+    meta: {
+      invalidates: [syncConfigQuery().queryKey],
+      errorMessage: "同意を記録できませんでした",
+    },
+  })
+
 /** 次の起動で使うモード・プロファイルを選ぶ */
 export const selectStartupStorageMutation = () =>
   defineMutation({

@@ -18,6 +18,7 @@ import type {
   SharedProfile,
   StorageMode,
   SyncAppConfig,
+  SyncConsent,
 } from "./types"
 import { DEFAULT_SYNC_CONFIG } from "./types"
 
@@ -69,6 +70,17 @@ const parseClientIdOwner = (value: unknown): ClientIdOwner | null => {
   return { installationId, hostname }
 }
 
+const parseSyncConsent = (value: unknown): SyncConsent | null => {
+  if (!isRecord(value)) return null
+  const clientId = readString(value, "clientId")
+  const consentVersion = readString(value, "consentVersion")
+  const consentedAt = readString(value, "consentedAt")
+  if (clientId === "" || consentVersion === "" || consentedAt === "") {
+    return null
+  }
+  return { clientId, consentVersion, consentedAt }
+}
+
 /**
  * 設定ファイルの中身を型に起こす。欠けた項目・形の合わない項目は既定値にする。
  *
@@ -100,6 +112,7 @@ export function parseSyncAppConfig(raw: unknown): SyncAppConfig {
     sharedProfiles,
     clientId: readString(raw, "clientId"),
     clientIdOwner: parseClientIdOwner(raw.clientIdOwner),
+    syncConsent: parseSyncConsent(raw.syncConsent),
     intervalMs: readPositiveNumber(
       raw,
       "intervalMs",

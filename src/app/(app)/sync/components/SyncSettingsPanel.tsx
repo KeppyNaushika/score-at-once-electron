@@ -5,6 +5,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { useSyncSettings } from "@/app/(app)/sync/hooks/useSyncSettings"
+import { SyncConsentDialog } from "@/components/common/SyncConsentDialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import type { SharedFolderConnectAction } from "@/electron-src/lib/sync/storageModeService"
 import type { SharedProfile } from "@/electron-src/lib/sync/types"
+import { isSyncConsentCurrent } from "@/lib/shared/syncConsentText"
 
 import {
   type InspectedSharedFolder,
@@ -29,6 +31,15 @@ import {
 import { StorageProfileList } from "./StorageProfileList"
 import { SyncNotes } from "./SyncNotes"
 import { SyncWarningList } from "./SyncWarningList"
+
+/**
+ * 同意してから続ける操作。共有モードへ入る操作は、同意が無ければ先に同意を求め、
+ * 同意したらそのまま続ける（同意だけのときは続ける操作が無い）
+ */
+type ConsentContinuation =
+  | { kind: "add-shared-folder" }
+  | { kind: "select-shared-profile"; sharedFolderId: string }
+  | { kind: "consent-only" }
 
 function StateIndicator({ state }: { state: string }) {
   switch (state) {
@@ -85,6 +96,8 @@ export function SyncSettingsPanel() {
     null
   )
   const [isRestartPromptOpen, setIsRestartPromptOpen] = useState(false)
+  const [pendingConsent, setPendingConsent] =
+    useState<ConsentContinuation | null>(null)
 
   if (isLoading || !config || !running) {
     return (
@@ -95,6 +108,7 @@ export function SyncSettingsPanel() {
   }
 
   const isSharedRunning = running.mode === "shared"
+  const hasCurrentConsent = isSyncConsentCurrent(config)
 
   /** 共有フォルダを選んで見る。共有できないフォルダなら理由を出して終わる */
   const handleAddSharedFolder = async () => {
@@ -118,6 +132,26 @@ export function SyncSettingsPanel() {
     })
     setInspected(null)
     setIsRestartPromptOpen(true)
+  }
+
+  const continueAfterConsent = (continuation: ConsentContinuation) => {
+    if (continuation.kind === "add-shared-folder") {
+      void handleAddSharedFolder()
+    } else if (continuation.kind === "select-shared-profile") {
+      void handleSelectStartup({
+        mode: "shared",
+        sharedFolderId: continuation.sharedFolderId,
+      })
+    }
+  }
+
+  /** 共有モードへ入る操作。今の同意が無ければ、先に同意を求める */
+  const requireConsent = (continuation: ConsentContinuation) => {
+    if (hasCurrentConsent) {
+      continueAfterConsent(continuation)
+      return
+    }
+    setPendingConsent(continuation)
   }
 
   const handleSelectStartup = async (
@@ -159,6 +193,20 @@ export function SyncSettingsPanel() {
 
       <SyncNotes />
 
+      {isSharedRunning && !hasCurrentConsent && (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <p className="text-sm text-amber-800">
+            このPCは、今の注意事項にまだ同意していません。同期は続いています。
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setPendingConsent({ kind: "consent-only" })}
+          >
+            確認して同意する
+          </Button>
+        </div>
+      )}
+
       {restartPending && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
           <p className="text-sm text-amber-800">
@@ -186,10 +234,12 @@ export function SyncSettingsPanel() {
           isBusy={isConnecting || isMigratingToLocal}
           onSelectLocal={() => void handleSelectStartup({ mode: "local" })}
           onSelectProfile={(sharedFolderId) =>
-            void handleSelectStartup({ mode: "shared", sharedFolderId })
+            requireConsent({ kind: "select-shared-profile", sharedFolderId })
           }
           onMigrateProfileToLocal={setMigrationSource}
-          onAddSharedFolder={() => void handleAddSharedFolder()}
+          onAddSharedFolder={() =>
+            requireConsent({ kind: "add-shared-folder" })
+          }
         />
       </div>
 
@@ -239,6 +289,21 @@ export function SyncSettingsPanel() {
         </Button>
         <StateIndicator state={status.state} />
       </div>
+
+      {pendingConsent !== null && (
+        <SyncConsentDialog
+          situation={
+            pendingConsent.kind === "consent-only"
+              ? "while-running"
+              : "before-start"
+          }
+          onConsented={() => {
+            setPendingConsent(null)
+            continueAfterConsent(pendingConsent)
+          }}
+          onClose={() => setPendingConsent(null)}
+        />
+      )}
 
       <SharedFolderConnectDialog
         inspected={inspected}
