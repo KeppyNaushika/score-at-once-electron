@@ -750,6 +750,13 @@ export async function seedSecondGrader(
           partialScore: graderPartialScore,
           status: graderStatus,
           userId: grader.id,
+          // 食い違えたところには、そう付けた理由の覚え書きを残す。採点確定の右の
+          // パネル（採点者の結果）に出る
+          comment: isConflict
+            ? graderStatus === "partial"
+              ? "答えは合っているが、途中の式が抜けているので部分点"
+              : "書き方は違うが、意味は合っているので正答"
+            : "",
         },
       })
     }
@@ -901,6 +908,44 @@ export async function seedCoursework(
 
   console.log(`  [SEED] 試験外成績資料 (courseworkId=${courseworkId})`)
   return courseworkId
+}
+
+/**
+ * 資料評価項目の資料評価記号を、生徒（資料の並び順 customOrder）ごとに書き換える
+ *
+ * 変換表に無い記号の図のために使う。書き換える前の値を返すので、同じコマンドに
+ * 渡し直せば元に戻る。
+ */
+export async function setCourseworkLetterValues(
+  courseworkId: string,
+  itemName: string,
+  entries: { customOrder: number; letterValue: string | null }[]
+): Promise<{ customOrder: number; letterValue: string | null }[]> {
+  const db = getPrisma()
+  const item = await db.courseworkItem.findFirstOrThrow({
+    where: { courseworkId, name: itemName },
+  })
+  const previous: { customOrder: number; letterValue: string | null }[] = []
+  for (const entry of entries) {
+    const courseworkStudent = await db.courseworkStudent.findFirstOrThrow({
+      where: { courseworkId, customOrder: entry.customOrder },
+    })
+    const score = await db.courseworkScore.findFirstOrThrow({
+      where: {
+        courseworkItemId: item.id,
+        courseworkStudentId: courseworkStudent.id,
+      },
+    })
+    previous.push({
+      customOrder: entry.customOrder,
+      letterValue: score.letterValue,
+    })
+    await db.courseworkScore.update({
+      where: { id: score.id },
+      data: { letterValue: entry.letterValue },
+    })
+  }
+  return previous
 }
 
 // ---------------------------------------------------------------------------

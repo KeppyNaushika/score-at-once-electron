@@ -9,7 +9,7 @@ export const COURSEWORK_TEXT_JA: Record<CourseworkTermId, GlossaryTermText> = {
     variants: ["資料", "新しい資料"],
     avoidedAliases: [],
     distinctions: {
-      exam: "試験は答案の画像を採点する。資料は得点を直接入れる。",
+      exam: "試験は答案の画像を採点する。資料は得点や資料評価記号を直接入れる。",
     },
   },
   courseworkReferenceDate: {
@@ -30,7 +30,8 @@ export const COURSEWORK_TEXT_JA: Record<CourseworkTermId, GlossaryTermText> = {
   },
   courseworkStudent: {
     label: "対象生徒（試験外成績資料）",
-    summary: "資料の名簿の1人。得点はこの行×資料評価項目に付く。",
+    summary:
+      "資料の名簿の1人。得点や資料評価記号は、この行×資料評価項目に付く。",
     variants: ["資料の対象生徒"],
     avoidedAliases: [],
     distinctions: {},
@@ -38,7 +39,7 @@ export const COURSEWORK_TEXT_JA: Record<CourseworkTermId, GlossaryTermText> = {
   courseworkItem: {
     label: "資料評価項目",
     summary:
-      "資料の中で得点を入れる単位（例: 提出物、小テスト）。配点と入力方式（点数・評価記号）を持つ。",
+      "資料の中で、生徒ごとの得点や資料評価記号を入れる単位（例: 提出物、小テスト）。配点と入力方式（点数・評価記号）を持つ。",
     variants: ["項目名"],
     avoidedAliases: ["評価項目"],
     distinctions: {
@@ -77,10 +78,13 @@ export const COURSEWORK_TEXT_JA: Record<CourseworkTermId, GlossaryTermText> = {
   courseworkScore: {
     label: "得点（試験外成績資料）",
     summary:
-      "対象生徒×資料評価項目の値。数の得点か資料評価記号に加えて、加減点・理由・個人成績通知書に載せるコメントを持つ。",
+      "対象生徒×資料評価項目の点数。入力方式が点数なら入れた数、評価記号なら変換表で資料評価記号を換えた点数。加減点はこの点数に足し引きする。",
     variants: ["得点入力", "資料の得点"],
     avoidedAliases: ["点数入力"],
-    distinctions: {},
+    distinctions: {
+      courseworkInputLetter:
+        "資料評価記号そのものは得点ではない。マス1つには、得点か資料評価記号と、加減点・理由・個人成績通知書に載せるコメントを入れる。",
+    },
   },
   courseworkScoreAdjustment: {
     label: "加減点（試験外成績資料）",

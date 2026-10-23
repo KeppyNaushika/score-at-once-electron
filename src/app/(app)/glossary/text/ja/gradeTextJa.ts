@@ -54,7 +54,7 @@ export const GRADE_TEXT_JA: Record<GradeTermId, GlossaryTermText> = {
     avoidedAliases: ["評価項目"],
     distinctions: {
       courseworkItem:
-        "資料評価項目は別の表。配点と入力方式を持ち、得点を直接入れる。成績評価項目は得点を持たず、データソースを集める。",
+        "資料評価項目は別の表。配点と入力方式を持ち、得点や資料評価記号を直接入れる。成績評価項目は得点を持たず、データソースを集める。",
       rubricItem: "採点項目は設問の中の採点の基準。成績とは関係しない。",
     },
   },
