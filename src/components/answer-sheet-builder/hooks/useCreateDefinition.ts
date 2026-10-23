@@ -3,14 +3,12 @@ import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
 
 import { useInFlightGuard } from "@/hooks/useInFlightGuard"
-import {
-  answerSheetBuilderWorkflowSteps,
-  workflowStepHref,
-} from "@/lib/shared/workflowSteps"
 import { createAnswerSheetDefinitionMutation } from "@/queries/answerSheetBuilder"
 
 /**
- * 解答用紙を新しく作り、そのまま作成ページ（エディタ）へ進む。
+ * 解答用紙を新しく作り、そのまま概要ページへ進む。
+ *
+ * 試験・試験外成績資料・成績算出の「新規作成」と同じく、名前は概要ページで付ける。
  *
  * 一覧にはヘッダーと空のときの2か所に作成ボタンが同時に出るので、作成中の判定は
  * ボタンごとでなくこのフック1つで持ち、どちらを押しても二重に作らない
@@ -36,14 +34,7 @@ export function useCreateDefinition(userId: string) {
       definition.id = newId
 
       await createDefinition({ definition, userId })
-      // 作成直後は編集したいので作成ページへ直行
-      router.push(
-        workflowStepHref(
-          `/answer-sheet-builder/${newId}`,
-          answerSheetBuilderWorkflowSteps,
-          "01-edit"
-        )
-      )
+      router.push(`/answer-sheet-builder/${newId}`)
     } catch {
       // 失敗の通知は MutationCache が出す
     } finally {

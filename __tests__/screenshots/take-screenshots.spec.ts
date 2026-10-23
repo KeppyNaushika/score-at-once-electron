@@ -432,6 +432,10 @@ test.describe.serial("第1章: 初期設定", () => {
     await clickWhenReady(page.getByRole("button", { name: "ログアウト" }))
     await page.waitForURL(`${BASE_URL}/login`, { timeout: 15_000 })
     await waitForReady(page)
+    // 「ログアウトしました」の通知が消えてから撮る（ログイン画面の図に要らない）
+    await expect(page.getByText("ログアウトしました")).toBeHidden({
+      timeout: 15_000,
+    })
     await ss(page, "ch1-setup/01-login.png")
 
     await page.getByText("山田 太郎").first().click()
@@ -516,8 +520,11 @@ test.describe.serial("第1章: 初期設定", () => {
     await captureOptional("ch1-setup/07-add-classroom-dialog.png", async () => {
       await clickWhenReady(page.getByRole("button", { name: "学級追加" }))
       await expect(page.getByRole("dialog")).toBeVisible()
-      await page.getByLabel("学級名").first().fill("2年A組")
-      await page.getByLabel("学年").first().fill("2")
+      // 一覧にも「学級名で検索」の欄があり、ラベルの部分一致で隠れた方を掴む。
+      // ダイアログの中に限り、完全一致で掴む
+      const addDialog = page.getByRole("dialog")
+      await addDialog.getByLabel("学級名", { exact: true }).fill("2年A組")
+      await addDialog.getByLabel("学年", { exact: true }).fill("2")
       await ss(page, "ch1-setup/07-add-classroom-dialog.png")
       await page.keyboard.press("Escape")
       await page.waitForTimeout(300)
@@ -537,8 +544,8 @@ test.describe.serial("第1章: 初期設定", () => {
       await clickWhenReady(page.getByRole("button", { name: "学級追加" }))
       const classroomDialog = page.getByRole("dialog")
       await expect(classroomDialog).toBeVisible()
-      await page.getByLabel("学級名").first().fill("2年C組")
-      await page.getByLabel("学年").first().fill("2")
+      await classroomDialog.getByLabel("学級名", { exact: true }).fill("2年C組")
+      await classroomDialog.getByLabel("学年", { exact: true }).fill("2")
       await clickWhenReady(
         classroomDialog.getByRole("button", { name: "保存" })
       )
@@ -610,7 +617,8 @@ test.describe.serial("第1章: 初期設定", () => {
         )
         const subtotalDialog = page.getByRole("dialog")
         await expect(subtotalDialog).toBeVisible()
-        await page.getByLabel("グループ名").first().fill("観点別評価")
+        // ラベルは「グループ名 *」。一覧の検索欄と取り違えないよう、ダイアログの中で掴む
+        await subtotalDialog.getByLabel("グループ名").fill("観点別評価")
 
         const subtotalNames = [
           "知識・技能",
@@ -630,6 +638,15 @@ test.describe.serial("第1章: 初期設定", () => {
             .fill(subtotalName)
         }
 
+        // 最後に打った欄は末尾まで流れて頭が切れる。入力を外し、どの欄も頭から見せる
+        await subtotalDialog
+          .locator('input[placeholder="小計項目名"]')
+          .evaluateAll((inputs) => {
+            for (const input of inputs) {
+              ;(input as HTMLInputElement).blur()
+              input.scrollLeft = 0
+            }
+          })
         await page.waitForTimeout(300)
         await ss(page, "ch1-setup/12-add-subtotal-group-dialog.png")
         await page.keyboard.press("Escape")
@@ -902,11 +919,6 @@ test.describe.serial("第2章: 試験準備", () => {
     await ss(page, "ch2-exam-prep/18-subtotal-matrix.png")
   })
 
-  test("2-8 受験生徒", async () => {
-    await nav(page, `/exams/${examId}/05-students`)
-    await ss(page, "ch2-exam-prep/19-exam-students.png")
-  })
-
   test("2-9 通常の手順（模範解答と採点領域を画面から入れる）", async () => {
     // 試験一覧（第１回確認テストと第２回定期テストが並ぶ）
     await nav(page, "/exams")
@@ -1060,6 +1072,13 @@ test.describe.serial("第2章: 試験準備", () => {
         await ss(page, "ch2-exam-prep/28-regular-exam-classrooms.png")
       }
     )
+    // 受験生徒の一覧も、先生が1人の試験で撮る。2人で採点する試験では「採点担当」の
+    // タブが増え、同じ記事の 27・28 とタブの数がそろわない
+    await captureOptional("ch2-exam-prep/19-exam-students.png", async () => {
+      await clickWhenReady(page.getByRole("tab", { name: "受験生徒一覧" }))
+      await page.waitForTimeout(800)
+      await ss(page, "ch2-exam-prep/19-exam-students.png")
+    })
   })
 })
 
@@ -1091,7 +1110,7 @@ test.describe.serial("第3章: 採点と出力", () => {
     await captureOptional(
       "ch3-scoring/22-answers-name-preview.png",
       async () => {
-        await clickWhenReady(page.getByRole("button", { name: "氏名欄のみ" }))
+        await clickWhenReady(page.getByRole("radio", { name: "氏名欄のみ" }))
         await page.waitForTimeout(1500)
         await ss(page, "ch3-scoring/22-answers-name-preview.png")
       }
@@ -1132,9 +1151,21 @@ test.describe.serial("第3章: 採点と出力", () => {
 
   test("3-3 一括採点（個別表示）", async () => {
     await captureOptional("ch3-scoring/04-scoring-individual.png", async () => {
-      await clickWhenReady(page.getByRole("button", { name: "個別表示" }))
+      await clickWhenReady(page.getByRole("radio", { name: "個別表示" }))
       await page.waitForTimeout(2000)
       await ss(page, "ch3-scoring/04-scoring-individual.png")
+    })
+
+    // 選んでいる答案（佐藤 翔太の 1-(1)-ア）に覚え書きを書く。欄の外へ出ると残る
+    await captureOptional("ch3-scoring/24-score-comment.png", async () => {
+      const commentField = page.getByPlaceholder(
+        "なぜこの点にしたか（自分用の覚え書き）"
+      )
+      await commentField.scrollIntoViewIfNeeded()
+      await commentField.fill("答えは合っている。途中の書き直しは減点しない")
+      await commentField.evaluate((field) => (field as HTMLElement).blur())
+      await page.waitForTimeout(800)
+      await ss(page, "ch3-scoring/24-score-comment.png")
     })
   })
 
@@ -1204,7 +1235,7 @@ test.describe.serial("第3章: 採点と出力", () => {
       "ch3-scoring/05-scoring-keyboard-help.png",
       async () => {
         // 一覧表示へ戻す（個別表示のままだと採点の道具立てが出ない）
-        await clickWhenReady(page.getByRole("button", { name: "一覧表示" }))
+        await clickWhenReady(page.getByRole("radio", { name: "一覧表示" }))
         await page.waitForTimeout(1000)
         // ショートカット一覧を開くのはヘッダーの「ショートカットキー」
         await clickWhenReady(
@@ -1228,9 +1259,17 @@ test.describe.serial("第3章: 採点と出力", () => {
 
     // 先頭の答案が選ばれた状態で開き、右パネルに採点者ごとの結果が出る
     await captureOptional("ch3-scoring/07-finalize-decision.png", async () => {
-      await expect(page.getByText("採点者の結果")).toBeVisible({
+      await expect(page.getByText("採点者の結果").first()).toBeVisible({
         timeout: 15_000,
       })
+      // 06 と同じ絵にならないよう、右のパネルを「採点者の結果」まで送る。
+      // ほかの先生の覚え書きが読めるのはここだけ（seedSecondGrader が書いている）
+      await page
+        .getByText("採点者の結果")
+        .last()
+        .evaluate((heading) =>
+          heading.scrollIntoView({ block: "start", behavior: "instant" })
+        )
       await page.waitForTimeout(600)
       await ss(page, "ch3-scoring/07-finalize-decision.png")
     })
@@ -1423,6 +1462,109 @@ test.describe.serial("第4章: 成績算出・その他", () => {
     }
   })
 
+  test("4-4b 変換表に無い資料評価記号", async () => {
+    // 変換表（A/B/C）に無い記号を数人に入れる。撮り終えたら元に戻す（成績算出の
+    // 図とヒーロー画像は、このあと元の値で撮る）
+    const originalLetterValues = runSeedCommand("setCourseworkLetterValues", [
+      courseworkId,
+      "取り組みの様子",
+      [
+        { customOrder: 2, letterValue: "A+" },
+        { customOrder: 5, letterValue: "A+" },
+        { customOrder: 9, letterValue: "Ｂ" },
+      ],
+    ])
+
+    try {
+      await captureOptional(
+        "ch4-grades/28-coursework-unlisted-notice.png",
+        async () => {
+          await nav(page, `/coursework/${courseworkId}/03-items`)
+          await page.waitForTimeout(600)
+          await page
+            .getByText(/変換表にない資料評価記号が入力されています/)
+            .scrollIntoViewIfNeeded()
+          await ss(page, "ch4-grades/28-coursework-unlisted-notice.png")
+        }
+      )
+
+      // ロック中の表は入力欄にならず、赤いマスも出ない。貼り付けも編集できるときだけ
+      // 効くので、ロックを解除してから撮る
+      await nav(page, `/coursework/${courseworkId}/04-scores`)
+      await page.waitForTimeout(600)
+      await clickWhenReady(page.getByRole("button", { name: "ロックを解除" }))
+      await clickWhenReady(
+        page.getByRole("alertdialog").getByRole("button", { name: "編集する" })
+      )
+      await page.waitForTimeout(600)
+
+      await captureOptional(
+        "ch4-grades/27-coursework-unlisted-cells.png",
+        async () => {
+          // 説明はマスの title（OS が描くツールチップ）なので図には写らない。
+          // 赤いマスになっていることだけ確かめて撮る
+          await expect
+            .poll(() =>
+              page.evaluate(
+                () =>
+                  Array.from(document.querySelectorAll("input")).filter(
+                    (input) =>
+                      input.title ===
+                      "想定していない値です（入力どおり保存します）"
+                  ).length
+              )
+            )
+            .toBeGreaterThan(0)
+          await page.waitForTimeout(300)
+          await ss(page, "ch4-grades/27-coursework-unlisted-cells.png")
+        }
+      )
+
+      await captureOptional(
+        "ch4-grades/29-coursework-fullwidth-paste.png",
+        async () => {
+          // 入力欄の値は名前に入らないので、値で探して選ぶ（貼り付けの起点になる）
+          await page.evaluate(() => {
+            const target = Array.from(document.querySelectorAll("input")).find(
+              (input) => input.value === "Ｂ"
+            )
+            target?.focus()
+          })
+          await page
+            .locator("table")
+            .first()
+            .evaluate((table) => {
+              const clipboard = new DataTransfer()
+              clipboard.setData("text/plain", "Ｂ")
+              table.dispatchEvent(
+                new ClipboardEvent("paste", {
+                  clipboardData: clipboard,
+                  bubbles: true,
+                  cancelable: true,
+                })
+              )
+            })
+          const pasteDialog = page.getByRole("alertdialog", {
+            name: "全角文字が検知されました",
+          })
+          await expect(pasteDialog).toBeVisible()
+          await page.waitForTimeout(300)
+          await ss(page, "ch4-grades/29-coursework-fullwidth-paste.png")
+          await clickWhenReady(
+            pasteDialog.getByRole("button", { name: "そのまま貼り付ける" })
+          )
+          await expect(pasteDialog).toBeHidden()
+        }
+      )
+    } finally {
+      runSeedCommand("setCourseworkLetterValues", [
+        courseworkId,
+        "取り組みの様子",
+        originalLetterValues,
+      ])
+    }
+  })
+
   test("4-5 PDF加工", async () => {
     await nav(page, "/pdf-tools")
     // ファイルの選択はネイティブのダイアログなので、答案の PDF を返すよう差し替える
@@ -1496,6 +1638,48 @@ test.describe.serial("第4章: 成績算出・その他", () => {
       }
     )
   })
+
+  test("4-9 取り込みで、両方にあるデータの扱いを選ぶ", async () => {
+    // 先生が1人の試験を書き出し、同じものを取り込みに掛ける。どれも両方にあるので
+    // 「上書きする」「新しい方を残す」「別で追加する」を選ぶ段まで進む。取り込みはしない。
+    // 書き出しは監査ログに残るので、操作履歴の図（4-7）より後に置く
+    const archiveDir = path.join(TEST_DATA_DIR, "temp-archive")
+    fs.rmSync(archiveDir, { recursive: true, force: true })
+    fs.mkdirSync(archiveDir, { recursive: true })
+    const archivePath = path.join(archiveDir, "第１回確認テスト 中２数学.sao")
+
+    await captureOptional(
+      "ch4-grades/30-import-action-choice.png",
+      async () => {
+        await page.evaluate(
+          ({ examIdToExport, outputPath }) =>
+            window.electronAPI.unifiedArchive.export({
+              selection: { roots: { Exam: [examIdToExport] } },
+              outputPath,
+            }),
+          { examIdToExport: regularExamId, outputPath: archivePath }
+        )
+        // ファイルを選ぶダイアログはネイティブなので、書き出したものを返すよう差し替える
+        await electronApp.evaluate(({ ipcMain }, selectedPath) => {
+          ipcMain.removeHandler("unifiedArchive:selectAnyImportFile")
+          ipcMain.handle("unifiedArchive:selectAnyImportFile", async () => ({
+            path: selectedPath,
+            kind: "sao",
+          }))
+        }, archivePath)
+
+        await nav(page, "/exams")
+        await clickWhenReady(page.getByRole("button", { name: "取り込み" }))
+        const choice = page.getByText("新しい方を残す", { exact: true })
+        await expect(choice).toBeVisible({ timeout: 60_000 })
+        await choice.scrollIntoViewIfNeeded()
+        await page.waitForTimeout(600)
+        await ss(page, "ch4-grades/30-import-action-choice.png")
+        await page.keyboard.press("Escape")
+        await page.waitForTimeout(500)
+      }
+    )
+  })
 })
 
 // ===========================
@@ -1518,6 +1702,14 @@ test.describe.serial("ヒーロー画像", () => {
     await page.waitForTimeout(2500)
     await captureOptional("hero/01-scoring-wide.png", async () => {
       await showAllScoredAnswers(page)
+      // この試験は成績算出で使っているのでロックの帯が出る。トップページと採点の記事の
+      // 図には要らないので、**画面の表示だけ**隠す（成績算出に使っていない試験の見た目）
+      await page
+        .getByText(/成績算出で使われているため、ロックしています/)
+        .evaluate((lockMessage) => {
+          const lockBar = lockMessage.closest("div.border-b")
+          if (lockBar instanceof HTMLElement) lockBar.style.display = "none"
+        })
       await ss(page, "hero/01-scoring-wide.png")
     })
 

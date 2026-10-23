@@ -33,6 +33,7 @@ import {
   seedSecondGrader,
   seedStudents,
   seedSubtotalAndTag,
+  setCourseworkLetterValues,
   sheetBoxesForDrawing,
 } from "./helpers/seed-in-test"
 
@@ -51,6 +52,7 @@ const SEED_COMMANDS = {
   regenerateAnswerImages,
   seedSecondGrader,
   seedCoursework,
+  setCourseworkLetterValues,
   seedGradeProject,
   buildUploadFiles,
   resolveRemainingConflicts,
