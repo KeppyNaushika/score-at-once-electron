@@ -16,8 +16,8 @@ import type {
  * 揃える。照合だけ緩めると、マスが赤くならないまま成績側で欠測になる。
  */
 
-/** 貼り付けで確認を促す全角文字（英数・長音／マイナス・全角ピリオド） */
-const FULL_WIDTH_PATTERN = /[Ａ-Ｚａ-ｚ０-９－ー−．]/
+/** 貼り付けで確認を促す全角文字（英数・ハイフン／マイナス・全角ピリオド）。カタカナの長音「ー」は文字の一部なので含めない */
+const FULL_WIDTH_PATTERN = /[Ａ-Ｚａ-ｚ０-９－−．]/
 
 /** 全角文字を含むか */
 export function containsFullWidth(text: string): boolean {
@@ -30,7 +30,7 @@ export function toHalfWidth(text: string): string {
     .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (fullWidthChar) =>
       String.fromCharCode(fullWidthChar.charCodeAt(0) - 0xfee0)
     )
-    .replace(/[－ー−]/g, "-")
+    .replace(/[－−]/g, "-")
     .replace(/[．]/g, ".")
 }
 

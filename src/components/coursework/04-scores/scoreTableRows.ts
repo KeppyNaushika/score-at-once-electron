@@ -40,8 +40,12 @@ export const commentColId = (itemId: string) => `${itemId}::comment`
  * `１０` は 10 のことであって別の数ではないので、数値として読むために寄せる。
  * **文字評価には通さない。** 評語は `Ａ` と `A` が別の評語でありうるので、
  * 表記を寄せるかどうかは貼り付けのときに人へ尋ねる（`transformPastedText`）。
+ *
+ * 長音「ー」は `toHalfWidth` では寄せない（文字評価ではカタカナの一部）。数値の
+ * 前に打たれた「ー」はマイナスのつもりなので、数値として読むときだけ「-」にする。
  */
-const normalizeInput = (value: string): string => toHalfWidth(value).trim()
+const normalizeInput = (value: string): string =>
+  toHalfWidth(value).replace(/ー/g, "-").trim()
 
 /** 空欄、または有限の数値として読める入力か（満点超過・負数も有効） */
 export const isBlankOrFiniteNumber = (value: string): boolean => {
