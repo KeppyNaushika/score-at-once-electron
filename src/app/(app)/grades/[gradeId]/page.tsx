@@ -105,7 +105,7 @@ export default function GradeDetailPage() {
       <EntityOverviewPage
         nameLabel="成績算出名"
         dateLabel="成績算出日"
-        dateHint="学級から生徒を追加するとき、この日に在籍していた生徒が対象になります。未設定なら本日が基準です。"
+        dateHint="学級から生徒を登録するとき、この日に在籍していた生徒が対象になります。未設定なら本日が基準です。"
         basics={{
           name: grade.name,
           referenceDate: toDateInputValue(grade.referenceDate),

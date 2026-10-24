@@ -21,7 +21,7 @@ export const COURSEWORK_TEXT_JA: Record<CourseworkTermId, GlossaryTermText> = {
   },
   courseworkClassroom: {
     label: "登録済み学級（試験外成績資料）",
-    summary: "資料に結び付けた学級。",
+    summary: "資料に対応付けた学級。",
     variants: ["資料の学級"],
     avoidedAliases: [],
     distinctions: {

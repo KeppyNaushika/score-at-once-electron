@@ -229,7 +229,7 @@ export function DataSourceRow({
           size="icon"
           className="h-7 w-7 text-destructive"
           onClick={() => setIsDeleteConfirmOpen(true)}
-          aria-label={`データソース「${dataSource.name}」を削除`}
+          aria-label={`データソース「${dataSource.name}」を外す`}
         >
           <Trash className="h-3 w-3" />
         </Button>
@@ -238,9 +238,9 @@ export function DataSourceRow({
       <ConfirmationModal
         open={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}
-        title="データソースを削除しますか？"
+        title="データソースを外しますか？"
         description={`「${dataSource.name}」をこの成績評価項目から外します。元の試験や資料の得点は消えませんが、推定に使うデータソースとしてこれを選んでいた設定からは外れます。`}
-        confirmText="削除"
+        confirmText="外す"
         variant="destructive"
         icon="trash"
         onConfirm={() => {

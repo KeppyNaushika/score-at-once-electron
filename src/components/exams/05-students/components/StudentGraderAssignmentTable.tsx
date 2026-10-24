@@ -209,7 +209,7 @@ export function StudentGraderAssignmentTable({
         <Users className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>受験生徒がいません</p>
         <p className="text-sm">
-          「受験生徒一覧」で生徒を追加すると、ここに並びます
+          「受験生徒一覧」で生徒を登録すると、ここに並びます
         </p>
       </div>
     )
@@ -227,7 +227,7 @@ export function StudentGraderAssignmentTable({
         )}
         {!canManage && (
           <Badge variant="outline" className="text-xs">
-            読み取り専用（担当を決められるのは所有者だけです）
+            読み取り専用（採点担当を割り当てられるのは所有者だけです）
           </Badge>
         )}
       </div>
@@ -277,7 +277,7 @@ export function StudentGraderAssignmentTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="center">
                           <DropdownMenuLabel className="text-xs">
-                            {grader.name}の担当にする
+                            {grader.name}に割り当てる
                           </DropdownMenuLabel>
                           {classrooms.length === 0 && (
                             <DropdownMenuItem disabled>
@@ -307,7 +307,7 @@ export function StudentGraderAssignmentTable({
                               setGraderAssignments(grader, examStudents, false)
                             }
                           >
-                            {grader.name}の担当をすべて外す
+                            {grader.name}への割り当てをすべて解除
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -414,7 +414,8 @@ export function StudentGraderAssignmentTable({
             自分の生徒」が並びます
           </li>
           <li>
-            • 列見出しの「学級から」で、その学級の生徒をまとめて担当にできます。
+            •
+            列見出しの「学級から」で、その学級の生徒をまとめて割り当てられます。
             学級は受験生徒一覧と同じ（受験日の在籍）で、後から在籍が変わっても担当は変わりません
           </li>
           <li>

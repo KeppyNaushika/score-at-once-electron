@@ -47,7 +47,7 @@ export const TABLE_LABELS: Readonly<Record<string, string>> = {
   ReturnSnapshot: "返却版",
   SubtotalGroup: "小計点グループ",
   Subtotal: "小計項目",
-  CropSubtotal: "設問と小計項目の関連付け",
+  CropSubtotal: "設問と小計項目の対応付け",
   TagSubtotalGroup: "小計点グループのタグ",
   ScoreScale: "類型表",
   ScoreScaleLevel: "類型",
@@ -73,7 +73,7 @@ export const TABLE_LABELS: Readonly<Record<string, string>> = {
   AiRubricProposalAdviceDraft: "AI採点の項目の案の助言の下書き",
   AiRubricProposalInstructionDraft: "AI採点の項目の案の再採点への指示の下書き",
   RubricItem: "採点項目",
-  RubricApplication: "採点項目の適用",
+  RubricApplication: "採点項目のチェック",
   RubricAdviceCombination: "重なった助言の決まり",
   RubricAdviceCombinationItem: "重なった助言の決まりの項目",
 

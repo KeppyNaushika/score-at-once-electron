@@ -70,10 +70,10 @@ export default function StudentRemovalConfirmModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <TriangleAlert className="h-5 w-5 text-destructive" />
-            生徒の削除確認
+            受験生徒の登録を外す確認
           </DialogTitle>
           <DialogDescription>
-            以下の生徒を試験から削除しようとしています。
+            以下の生徒の、この試験への登録を外そうとしています。
           </DialogDescription>
         </DialogHeader>
 
@@ -111,7 +111,7 @@ export default function StudentRemovalConfirmModal({
                     採点データが存在します
                   </h4>
                   <p className="text-sm text-muted-foreground">
-                    削除する生徒には
+                    登録を外す生徒には
                     <strong className="text-destructive">
                       {deletionCounts
                         .map(
@@ -120,8 +120,8 @@ export default function StudentRemovalConfirmModal({
                         )
                         .join("、")}
                     </strong>
-                    が関連付けられています。
-                    生徒を削除すると、以下のデータも連動して削除されます：
+                    があります。
+                    登録を外すと、以下のデータも連動して削除されます：
                   </p>
                   <ul className="ml-4 space-y-1 text-sm text-muted-foreground">
                     <li>• 答案シート情報</li>
@@ -143,9 +143,9 @@ export default function StudentRemovalConfirmModal({
               <div className="flex items-start gap-3">
                 <Trash className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                 <div className="space-y-1">
-                  <h4 className="font-medium">試験から削除</h4>
+                  <h4 className="font-medium">登録を外す</h4>
                   <p className="text-sm text-muted-foreground">
-                    選択した生徒は試験から削除されますが、採点データがないため安全に削除できます。
+                    選択した生徒の登録を外します。採点データがないため、安全に外せます。
                     生徒の基本情報は保持され、他の試験には影響しません。
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export default function StudentRemovalConfirmModal({
         {/* 数えている途中・数えられなかったとき。件数不明のまま押させない */}
         {deletionCounts === null && (
           <p className="text-sm text-muted-foreground">
-            消えるものを数えています…（数え終わるまで削除できません）
+            消えるものを数えています…（数え終わるまで登録を外せません）
           </p>
         )}
 
@@ -183,7 +183,7 @@ export default function StudentRemovalConfirmModal({
             className="gap-2"
           >
             <Trash className="h-4 w-4" />
-            削除する
+            登録を外す
           </Button>
         </DialogFooter>
       </DialogContent>

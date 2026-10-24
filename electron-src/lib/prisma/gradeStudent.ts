@@ -209,10 +209,10 @@ const gradeRosterAdapter: RosterAdapter = {
     reorderAction: "grade.student.reorder",
     reorderCoalescePrefix: "grade_student_reorder",
     addFromClassroomSummary: (count) =>
-      `学級から成績対象生徒を${count}名追加しました`,
-    addIndividualSummary: (count) => `成績対象生徒を${count}名追加しました`,
+      `学級から成績対象生徒を${count}名登録しました`,
+    addIndividualSummary: (count) => `成績対象生徒を${count}名登録しました`,
     removeClassroomSummary: (count) =>
-      `学級を成績から外し、生徒${count}名を削除しました`,
+      `学級と成績算出の対応付けを解除し、生徒${count}名の登録を外しました`,
   },
 }
 

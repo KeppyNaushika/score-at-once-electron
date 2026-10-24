@@ -132,7 +132,7 @@ async function renderTagEditor() {
   render(<TagEditorHarness />, { wrapper: createQueryWrapper() })
   await screen.findByText("英語")
   await user.click(screen.getByLabelText("タグを編集"))
-  await screen.findByPlaceholderText("タグを追加...")
+  await screen.findByPlaceholderText("タグを付ける...")
   return user
 }
 
@@ -200,7 +200,7 @@ describe("タグ欄: 取り直しが着地する前の隙間", () => {
     await waitFor(() => expect(setDefinitionTags).toHaveBeenCalledTimes(1))
 
     // 取り直しの着地を待っている間に打って Enter（入力欄そのものは塞がない）
-    const tagInput = screen.getByPlaceholderText("タグを追加...")
+    const tagInput = screen.getByPlaceholderText("タグを付ける...")
     await user.type(tagInput, "数学{Enter}")
 
     expect(setDefinitionTags).toHaveBeenCalledTimes(1)

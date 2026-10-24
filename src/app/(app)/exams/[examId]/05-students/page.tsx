@@ -173,7 +173,7 @@ export default function StudentsPage() {
               受験生徒一覧
             </TabsTrigger>
             <TabsTrigger value="classrooms" className="px-4">
-              学級の関連付け
+              学級の対応付け
             </TabsTrigger>
             {showAssignments && (
               <TabsTrigger value="grader-assignment" className="px-4">
@@ -193,12 +193,13 @@ export default function StudentsPage() {
                       onClick={initiateStudentRemoval}
                     >
                       <Users className="mr-2 h-4 w-4" />
-                      選択した生徒を削除 ({selectedStudentsForRemoval.size})
+                      選択した生徒の登録を外す (
+                      {selectedStudentsForRemoval.size})
                     </Button>
                   )}
                   <Button onClick={() => setShowAddDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    生徒を追加
+                    生徒を登録
                   </Button>
                 </div>
               </>
@@ -207,7 +208,7 @@ export default function StudentsPage() {
                 <ClassroomStatisticsCards examClassrooms={examClassrooms} />
                 <Button onClick={() => setShowAddClassroomDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  学級を追加
+                  学級を対応付ける
                 </Button>
               </>
             ) : null}

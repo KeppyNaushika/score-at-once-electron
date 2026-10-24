@@ -83,7 +83,7 @@ afterAll(async () => {
   await disconnectTestPrisma()
 })
 
-describe("試験の参加者の役割変更", () => {
+describe("試験のメンバーの役割変更", () => {
   beforeEach(async () => {
     loggedIn.userId = null
     await cleanupTestDatabase()
@@ -159,7 +159,7 @@ describe("試験の参加者の役割変更", () => {
 
     await expect(
       changeExamMemberRole(examId, outsider.id, "OWNER")
-    ).rejects.toThrow(/参加者ではありません/)
+    ).rejects.toThrow(/メンバーではありません/)
 
     loggedIn.userId = null
     await expect(
@@ -171,7 +171,7 @@ describe("試験の参加者の役割変更", () => {
     const { examId, owner, grader } = await buildExam()
 
     await expect(removeExamMember(examId, owner.id, owner.id)).rejects.toThrow(
-      /最後の所有者は外せません/
+      /最後の所有者はメンバーから外せません/
     )
     expect(await roleOf(examId, owner.id)).toBe("OWNER")
 

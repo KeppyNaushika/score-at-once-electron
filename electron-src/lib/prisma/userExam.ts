@@ -168,7 +168,7 @@ export const removeExamMember = async (
       })
       if (ownerCount <= 1) {
         throw new Error(
-          "最後の所有者は外せません。先に別の参加者を所有者にしてください"
+          "最後の所有者はメンバーから外せません。先に別のメンバーを所有者にしてください"
         )
       }
     }
@@ -234,7 +234,7 @@ export const changeExamMemberRole = async (
     where: { userId_examId: { userId, examId } },
   })
   if (!before) {
-    throw new Error("このユーザーは試験の参加者ではありません")
+    throw new Error("このユーザーは試験のメンバーではありません")
   }
 
   if (before.role === "OWNER" && role !== "OWNER") {
@@ -243,7 +243,7 @@ export const changeExamMemberRole = async (
     })
     if (ownerCount <= 1) {
       throw new Error(
-        "最後の所有者はほかの権限に変えられません。先に別の参加者を所有者にしてください"
+        "最後の所有者はほかの権限に変えられません。先に別のメンバーを所有者にしてください"
       )
     }
   }
@@ -302,7 +302,7 @@ export const setExamMemberExportPermission = async (
     where: { userId_examId: { userId, examId } },
   })
   if (!before) {
-    throw new Error("このユーザーは試験の参加者ではありません")
+    throw new Error("このユーザーは試験のメンバーではありません")
   }
 
   const updated = await prisma.userExam.update({

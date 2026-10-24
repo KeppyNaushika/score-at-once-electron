@@ -159,7 +159,7 @@ export function MemberInviteDialog({
     try {
       await removeMember.mutateAsync(userId)
     } catch {
-      setMutationError("メンバーの削除に失敗しました")
+      setMutationError("メンバーから外せませんでした")
     } finally {
       setRemovingUserId(null)
     }

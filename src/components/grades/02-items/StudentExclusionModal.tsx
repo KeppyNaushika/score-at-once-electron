@@ -157,7 +157,7 @@ export function StudentExclusionModal({
 
         <div className="flex items-center justify-between border-t pt-3">
           <p className="text-xs text-muted-foreground">
-            チェック = 含む（デフォルト）、チェックなし = 除外
+            チェックあり = 含める（既定）、チェックなし = 除外する
           </p>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             閉じる

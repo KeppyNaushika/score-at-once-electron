@@ -87,7 +87,7 @@ describe("planRubricRecalculation", () => {
     expect(planRubricRecalculation(SOURCE)).toEqual([])
   })
 
-  it("項目の値を変えると、その項目を当てている行だけが変わる（上書きの行は飛ばす）", () => {
+  it("項目の値を変えると、その項目にチェックが入っている行だけが変わる（上書きの行は飛ばす）", () => {
     const edited = withEditedRubricItem(SOURCE.rubricItems, {
       ...unitMissing,
       pointDelta: -1,
@@ -130,7 +130,7 @@ describe("planRubricRecalculation", () => {
     })
   })
 
-  it("項目を消すと、その項目だけが当たっていた行は unscored に戻る", () => {
+  it("項目を消すと、その項目だけが該当していた行は unscored に戻る", () => {
     const changes = planRubricRecalculation(
       {
         ...SOURCE,

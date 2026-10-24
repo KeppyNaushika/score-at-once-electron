@@ -304,7 +304,7 @@ export const unassignCropRegionMutation = (examId: string) =>
     scope: { id: `exam:${examId}:cropRegionAssignments` },
     meta: {
       invalidates: assignmentInvalidations(examId),
-      errorMessage: "採点担当を外せませんでした",
+      errorMessage: "採点担当の割り当てを解除できませんでした",
     },
   })
 

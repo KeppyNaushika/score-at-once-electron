@@ -142,7 +142,7 @@ export const addTagToExamsMutation = () =>
     },
     meta: {
       invalidates: [["exam"], tagListQuery().queryKey],
-      errorMessage: "タグを追加できませんでした",
+      errorMessage: "タグを付けられませんでした",
     },
   })
 
@@ -189,7 +189,7 @@ export const addTagToAnswerSheetDefinitionsMutation = () =>
     },
     meta: {
       invalidates: [["answerSheetDefinition"], tagListQuery().queryKey],
-      errorMessage: "タグを追加できませんでした",
+      errorMessage: "タグを付けられませんでした",
     },
   })
 

@@ -220,13 +220,13 @@ export function RubricPanel({
           {isChoosingAdvice
             ? "重なった助言の朱書きの扱いを決めます"
             : choiceScene.isOpen
-              ? "数字で当てる・外す／0 で項目を追加／Enter で次の答案／Esc で戻る"
-              : "Space で選択の場面に入り、数字で項目を当てます"}
+              ? "数字でチェックを入れる・外す／0 で項目を追加／Enter で次の答案／Esc で戻る"
+              : "Space で選択の場面に入り、数字で項目にチェックを入れます"}
         </p>
         <p className="mt-0.5 text-[11px] text-gray-500">
           {selectedCells.length > 0
             ? `選んだ答案 ${selectedCells.length}件`
-            : "答案を選ぶと、項目を当てられます"}
+            : "答案を選ぶと、項目にチェックを入れられます"}
         </p>
       </div>
 

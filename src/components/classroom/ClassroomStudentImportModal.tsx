@@ -129,19 +129,19 @@ export default function ClassroomStudentImportModal({
 
       if (failedStudentNumbers.length > 0) {
         toast.error(
-          `${failedStudentNumbers.length}名の生徒を学級に追加できませんでした`,
+          `${failedStudentNumbers.length}名の生徒の在籍を登録できませんでした`,
           { description: summarizeStudentNumbers(failedStudentNumbers) }
         )
       }
 
       if (successCount > 0) {
-        toast.success(`${successCount}名の生徒を学級に追加しました`)
+        toast.success(`${successCount}名の生徒の在籍を登録しました`)
         onImportSuccess()
         onClose()
       }
     } catch (error) {
       console.error("学級への生徒追加に失敗:", error)
-      toast.error("生徒を学級に追加できませんでした")
+      toast.error("在籍を登録できませんでした")
     } finally {
       setIsProcessing(false)
     }
@@ -153,10 +153,10 @@ export default function ClassroomStudentImportModal({
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ClipboardPaste className="h-5 w-5" />
-            {className}への生徒一括追加
+            {className}の在籍の一括登録
           </DialogTitle>
           <DialogDescription>
-            学籍番号、出席番号、在籍期間を入力して、学級に生徒を一括で追加できます。
+            学籍番号、出席番号、在籍期間を入力して、学級に生徒の在籍を一括で登録できます。
             同じ学籍番号の生徒が既に在籍中の場合は上書きされます。
           </DialogDescription>
         </DialogHeader>
@@ -189,7 +189,7 @@ export default function ClassroomStudentImportModal({
               validation.errors.length > 0 || validCount === 0 || isProcessing
             }
           >
-            {isProcessing ? "追加中..." : `${validCount}名を追加`}
+            {isProcessing ? "登録中..." : `${validCount}名の在籍を登録`}
           </Button>
         </DialogFooter>
       </DialogContent>

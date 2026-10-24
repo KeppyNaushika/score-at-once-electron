@@ -28,7 +28,7 @@ export const EXAM_ROLE_LABELS: Record<ExamRole, string> = {
 /** ロールでできること（メンバー管理の説明に出す） */
 export const EXAM_ROLE_DESCRIPTIONS: Record<ExamRole, string> = {
   OWNER:
-    "すべての段を使える。試験の設定、参加者の招待・権限の変更、採点担当の割り当て、採点の確定ができる。複数人にできる",
+    "すべての段を使える。試験の設定、メンバーの招待・権限の変更、採点担当の割り当て、採点の確定ができる。複数人にできる",
   EDITOR:
     "「7. 採点」と、許可されていれば「9. 結果と出力」を使える。試験の設定は変えられない",
   VIEWER: "「9. 結果と出力」だけを使える。採点はしない",

@@ -241,14 +241,14 @@ export default function ClassroomDetailPage() {
       id: "add-student",
       priority: 80,
       icon: Plus,
-      label: "生徒を追加",
+      label: "在籍を登録",
       onClick: handleAddMembership,
     }),
     toolbarButtonAction({
       id: "spreadsheet-import",
       priority: 70,
       icon: ClipboardPaste,
-      label: "Excel 貼付一括追加",
+      label: "Excel 貼付で在籍を登録",
       onClick: () => setIsStudentImportModalOpen(true),
     }),
     toolbarButtonAction({

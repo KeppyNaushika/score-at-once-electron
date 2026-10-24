@@ -101,8 +101,8 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
     const firstLabel = targets[0]?.targetLabel
     const summary =
       newStudentIds.length === 1 && firstLabel
-        ? `受験生徒「${firstLabel}」を追加しました`
-        : `受験生徒を${newStudentIds.length}名追加しました`
+        ? `受験生徒「${firstLabel}」を登録しました`
+        : `受験生徒を${newStudentIds.length}名登録しました`
     await recordAuditLog({
       action: "exam.student.add",
       entityType: "ExamStudent",
@@ -154,8 +154,8 @@ export async function removeStudentsFromExam(
   const firstLabel = targets[0]?.targetLabel
   const summary =
     studentIds.length === 1 && firstLabel
-      ? `受験生徒「${firstLabel}」を削除しました`
-      : `受験生徒を${studentIds.length}名削除しました`
+      ? `受験生徒「${firstLabel}」の登録を外しました`
+      : `受験生徒${studentIds.length}名の登録を外しました`
   await recordAuditLog({
     action: "exam.student.remove",
     entityType: "ExamStudent",

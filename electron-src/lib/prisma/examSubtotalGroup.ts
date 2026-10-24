@@ -80,7 +80,7 @@ export async function removeSubtotalGroupFromExam(
     })
 
     throw new Error(
-      `この小計点グループは以下の設問で使用されており、試験から削除できません:\n\n${assignments.join(", ")}\n\n設問との関連付けを先に解除してから削除してください。`
+      `この小計点グループは以下の設問で使用されており、試験から削除できません:\n\n${assignments.join(", ")}\n\n設問との対応付けを先に解除してから削除してください。`
     )
   }
 

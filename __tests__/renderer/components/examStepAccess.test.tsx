@@ -6,7 +6,7 @@
  *    VIEWER は概要・09
  * 2. **入れない段は中身の代わりに理由と行き先を出す。** タブから外しても URL を直に
  *    開けるので、段そのものを止める
- * 3. **参加者でなければ絞らない。** 参加の行を持たない古いデータで締め出さない
+ * 3. **メンバーでなければ絞らない。** 参加の行を持たない古いデータで締め出さない
  */
 
 import "@testing-library/jest-dom/vitest"
@@ -123,7 +123,7 @@ describe("入れない段のガード", () => {
     expect(screen.getByText("採点の中身")).toBeInTheDocument()
   })
 
-  it("参加者でなければ（ロールが無ければ）絞らない", () => {
+  it("メンバーでなければ（ロールが無ければ）絞らない", () => {
     pathname.current = "/exams/exam-1/03-region-info"
     render(
       <ExamStepGuard
@@ -140,7 +140,7 @@ describe("入れない段のガード", () => {
     expect(screen.getByText("領域設定の中身")).toBeInTheDocument()
   })
 
-  it("参加者の取得が済むまでは中身を出さない（入れない段がちらつかない）", () => {
+  it("メンバーの取得が済むまでは中身を出さない（入れない段がちらつかない）", () => {
     pathname.current = "/exams/exam-1/03-region-info"
     render(
       <ExamStepGuard

@@ -160,7 +160,7 @@ export function GraderAssignmentTable({
     return (
       <div className="py-8 text-center text-muted-foreground">
         <Users className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p>参加している先生がいません</p>
+        <p>試験のメンバーがいません</p>
       </div>
     )
   }
@@ -177,7 +177,7 @@ export function GraderAssignmentTable({
         )}
         {!canManage && (
           <Badge variant="outline" className="text-xs">
-            読み取り専用（担当を決められるのは所有者だけです）
+            読み取り専用（採点担当を割り当てられるのは所有者だけです）
           </Badge>
         )}
       </div>

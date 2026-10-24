@@ -253,7 +253,7 @@ export const addStudentsToExamMutation = (examId: string) =>
       window.electronAPI.addStudentsToExam(examId, studentIds),
     meta: {
       invalidates: [examScope(examId)],
-      errorMessage: "受験生徒を追加できませんでした",
+      errorMessage: "受験生徒を登録できませんでした",
     },
   })
 
@@ -277,7 +277,7 @@ export const removeStudentsFromExamMutation = (examId: string) =>
       ),
     meta: {
       invalidates: [examScope(examId)],
-      errorMessage: "受験生徒を外せませんでした",
+      errorMessage: "受験生徒の登録を外せませんでした",
     },
   })
 

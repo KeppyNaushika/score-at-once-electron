@@ -184,7 +184,7 @@ export const createCropSubtotalMutation = (examId: string) =>
     scope: { id: `exam:${examId}:cropSubtotals` },
     meta: {
       invalidates: [cropRegionsQuery(examId).queryKey],
-      errorMessage: "関連付けを保存できませんでした",
+      errorMessage: "対応付けを保存できませんでした",
     },
   })
 
@@ -196,6 +196,6 @@ export const deleteCropSubtotalMutation = (examId: string) =>
     scope: { id: `exam:${examId}:cropSubtotals` },
     meta: {
       invalidates: [cropRegionsQuery(examId).queryKey],
-      errorMessage: "関連付けを解除できませんでした",
+      errorMessage: "対応付けを解除できませんでした",
     },
   })

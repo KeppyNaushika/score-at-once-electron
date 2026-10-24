@@ -283,7 +283,7 @@ export function buildDeletionBlockedMessage(
   const label = BLOCKED_TARGET_LABEL[kind]
   return (
     `この${label}は次の成績算出で使われているため、削除できません。` +
-    `削除するには、先に各成績算出の「${GRADE_ITEMS_STEP_LABEL}」でこの${label}を使っているデータソースを削除してください。\n` +
+    `削除するには、先に各成績算出の「${GRADE_ITEMS_STEP_LABEL}」でこの${label}を使っているデータソースを外してください。\n` +
     toBulletLines(dataSources.map(describeDataSource))
   )
 }
@@ -303,7 +303,7 @@ export function buildStudentDeletionBlockedMessage(
   if (gradeNames.length === 0) return null
   return (
     `この生徒は次の成績算出の名簿に載っているため、削除できません。` +
-    `削除するには、先に各成績算出の「${STUDENTS_STEP_LABEL}」でこの生徒を名簿から外してください。\n` +
+    `削除するには、先に各成績算出の「${STUDENTS_STEP_LABEL}」でこの生徒の登録を外してください。\n` +
     toBulletLines(gradeNames.map((gradeName) => `成績算出「${gradeName}」`))
   )
 }
@@ -388,7 +388,7 @@ export function buildRosterRemovalWarning(
   const { target, roster } = ROSTER_REMOVAL_LABEL[kind]
   return (
     `この${target}は次の成績算出で使われています。` +
-    `${roster}から外した生徒は、各成績算出でこの${target}の得点が欠測になります` +
+    `${roster}の登録を外した生徒は、各成績算出でこの${target}の得点が欠測になります` +
     `（その成績算出の名簿に載っている場合）。\n` +
     toBulletLines(gradeNames.map((gradeName) => `成績算出「${gradeName}」`))
   )

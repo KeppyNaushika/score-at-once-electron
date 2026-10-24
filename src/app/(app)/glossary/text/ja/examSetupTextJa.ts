@@ -28,9 +28,9 @@ export const EXAM_SETUP_TEXT_JA: Record<ExamSetupTermId, GlossaryTermText> = {
   examMember: {
     label: "メンバー",
     summary:
-      "試験に参加している教員と、その試験での権限（所有者・採点者・閲覧者）の組み合わせ。所有者が招待する。試験を作った人は自動で所有者になる。",
-    variants: ["参加者", "試験のメンバー"],
-    avoidedAliases: ["ロール", "役割"],
+      "試験に参加している教員と、その試験での権限（所有者・採点者・閲覧者）の組み合わせ。所有者が招待し、「メンバーから外す」で外す。試験を作った人は自動で所有者になる。",
+    variants: ["試験のメンバー"],
+    avoidedAliases: ["ロール", "役割", "参加者"],
     distinctions: {
       graderAssignmentByQuestion:
         "採点担当は、メンバーのうち誰がどの設問・生徒を採点するかの割り当て。",
@@ -150,7 +150,7 @@ export const EXAM_SETUP_TEXT_JA: Record<ExamSetupTermId, GlossaryTermText> = {
   subtotalArea: {
     label: "小計（採点領域）",
     summary:
-      "小計点を書き込む用紙上の枠（種類が「小計」の採点領域）。どの小計項目を出すかは「4. 小計点」で関連付ける。",
+      "小計点を書き込む用紙上の枠（種類が「小計」の採点領域）。どの小計項目を出すかは「4. 小計点」で対応付ける。",
     variants: ["小計欄"],
     avoidedAliases: [],
     distinctions: {
@@ -191,7 +191,7 @@ export const EXAM_SETUP_TEXT_JA: Record<ExamSetupTermId, GlossaryTermText> = {
   subtotal: {
     label: "小計項目",
     summary:
-      "小計点グループの中の1項目（例「大問1」「知識・理解」）。関連付けた設問の得点を合計して小計点を出す。成績算出のデータソースにもなる。",
+      "小計点グループの中の1項目（例「大問1」「知識・理解」）。対応付けた設問の得点を合計して小計点を出す。成績算出のデータソースにもなる。",
     variants: ["小計点", "小計", "項目"],
     avoidedAliases: [],
     distinctions: {
@@ -199,17 +199,17 @@ export const EXAM_SETUP_TEXT_JA: Record<ExamSetupTermId, GlossaryTermText> = {
     },
   },
   cropSubtotal: {
-    label: "設問と小計項目の関連付け",
+    label: "設問と小計項目の対応付け",
     summary:
-      "「4. 小計点」の対応表のマス1つ。設問をその小計項目へ足し込む関連付けと、小計の枠にどの小計項目を出すかの関連付けの2種類がある。",
+      "「4. 小計点」の対応表のマス1つ。設問をその小計項目へ足し込む対応付けと、小計の枠にどの小計項目を出すかの対応付けの2種類がある。",
     variants: [],
-    avoidedAliases: [],
+    avoidedAliases: ["設問と小計項目の関連付け"],
     distinctions: {},
   },
   examStudent: {
     label: "受験生徒",
     summary:
-      "その試験を受ける生徒として登録したもの。答案画像・採点・採点確定・返却版はすべてこれに付くので、試験から外すと採点も消える。",
+      "その試験を受ける生徒として登録したもの。答案画像・採点・採点確定・返却版はすべてこれに付くので、登録を外すと採点も消える。",
     variants: ["受験者"],
     avoidedAliases: [],
     distinctions: {
@@ -227,7 +227,7 @@ export const EXAM_SETUP_TEXT_JA: Record<ExamSetupTermId, GlossaryTermText> = {
   studentAnswerImage: {
     label: "答案画像",
     summary:
-      "受験生徒1人の答案1ページ分のスキャン画像。「6. 生徒答案」でファイル名などから生徒に結び付ける。",
+      "受験生徒1人の答案1ページ分のスキャン画像。「6. 生徒答案」でファイル名などから生徒に配置する。生徒から外すことを「配置を外す」と言う。",
     variants: ["答案", "生徒答案"],
     avoidedAliases: [],
     distinctions: {},
@@ -235,9 +235,9 @@ export const EXAM_SETUP_TEXT_JA: Record<ExamSetupTermId, GlossaryTermText> = {
   examClassroom: {
     label: "試験の学級",
     summary:
-      "試験に結び付けた学級（「5. 受験生徒」の「学級の関連付け」）。再採番・教員集計・生徒表示の3つのスイッチと、優先の順を持つ。",
-    variants: ["学級の関連付け"],
-    avoidedAliases: ["対象クラス"],
+      "試験に対応付けた学級（「5. 受験生徒」の「学級の対応付け」）。再採番・教員集計・生徒表示の3つのスイッチと、優先の順を持つ。",
+    variants: ["学級の対応付け"],
+    avoidedAliases: ["対象クラス", "学級の関連付け"],
     distinctions: {
       classroomMembership:
         "在籍は生徒と学級の結び付き。試験の学級は生徒を直接持たない。",

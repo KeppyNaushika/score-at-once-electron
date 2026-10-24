@@ -234,7 +234,7 @@ export const setRubricApplicationsMutation = (
         rubricScope(examId, cropRegionId),
         questionScoresQuery(examId, cropRegionId).queryKey,
       ],
-      errorMessage: "採点項目を当てられませんでした",
+      errorMessage: "採点項目のチェックを変えられませんでした",
     },
   })
 
