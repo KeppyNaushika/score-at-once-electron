@@ -19,7 +19,7 @@ export const DELETION_COUNT_NAME = {
   /** 受験生徒を試験から外すときに消える採点データ（05 の生徒削除） */
   gradingData: "採点データ",
   /** 学級を外すときに一緒に消える、その学級にのみ在籍する生徒（成績・資料） */
-  exclusiveStudent: "この学級にのみ在籍する生徒",
+  exclusiveStudent: "この学級にだけ在籍する生徒",
   /** 試験の削除で消えるもの */
   masterAnswer: "模範解答",
   cropRegion: "採点領域",

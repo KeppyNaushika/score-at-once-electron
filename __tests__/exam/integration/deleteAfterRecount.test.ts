@@ -247,7 +247,7 @@ describe("消す前に数え直して中止する", () => {
       data: { id: crypto.randomUUID(), name: "数え直しの学級", grade: 1 },
     })
     // 在籍0名の学級を成績へ登録する。利用者はここで
-    // 「この学級にのみ在籍する生徒はいません」を見た
+    // 「この学級にだけ在籍する生徒はいません」を見た
     await addStudentsFromClassroomToGrade(grade.id, classroom.id, false)
 
     // 押すまでの間に、別の教員がこの学級へ生徒を在籍させた
@@ -274,7 +274,7 @@ describe("消す前に数え直して中止する", () => {
 
     await expect(
       removeClassroomFromGrade(grade.id, classroom.id, true, SHOWN_NOTHING)
-    ).rejects.toThrow(/この学級にのみ在籍する生徒 0件 → 1件/)
+    ).rejects.toThrow(/この学級にだけ在籍する生徒 0件 → 1件/)
 
     // 学級の登録も在籍も残っている
     expect(

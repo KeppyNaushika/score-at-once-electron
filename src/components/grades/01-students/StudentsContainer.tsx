@@ -202,7 +202,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             scopeId={gradeId}
             entries={classroomEntries}
             removalMode="can-delete-students"
-            description="ドラッグで並び替えできます。学級の対応付けを解除するときは、専属の生徒の登録を残すか外すか選べます。"
+            description="ドラッグで並び替えできます。学級の対応付けを解除するときは、その学級にだけ在籍する生徒の登録を、残すか外すか選べます。"
             deletionLosses={[
               "この成績算出の固定値",
               "成績評価記号の上書き",

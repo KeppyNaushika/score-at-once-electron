@@ -220,7 +220,7 @@ export function AiRunCostEstimate({
         ))}
       </ul>
       <p className="mt-1 text-xs text-muted-foreground">
-        実際の請求は思考の量・キャッシュの効き方で変わります
+        実際の請求は思考の量と、キャッシュが使われるかどうかで変わります
         {runSettings.mode === "batch" && "（バッチの割合を含む）"}
       </p>
       {isOverBudget && (

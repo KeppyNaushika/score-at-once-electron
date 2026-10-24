@@ -54,7 +54,9 @@ export default function SpreadsheetImportModal({
       }
 
       if (importedStudents.length > 0) {
-        toast.success(`${importedStudents.length}名の生徒を登録しました`)
+        toast.success(
+          `${importedStudents.length}名の生徒を生徒管理に登録しました`
+        )
         onImportSuccess(importedStudents)
         onClose()
       }

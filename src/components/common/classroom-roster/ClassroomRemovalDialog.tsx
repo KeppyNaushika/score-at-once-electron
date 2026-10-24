@@ -123,9 +123,9 @@ function RemovalChoiceForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>学級の対応付けを解除</DialogTitle>
+        <DialogTitle>「{entry.name}」の対応付けを解除しますか？</DialogTitle>
         <DialogDescription>
-          「{entry.name}」の対応付けの解除のしかたを選択してください。
+          この学級にだけ在籍する生徒の登録を、残すか外すか選択してください。
         </DialogDescription>
       </DialogHeader>
 
@@ -141,19 +141,19 @@ function RemovalChoiceForm({
         <div className="flex items-start gap-2">
           <RadioGroupItem value="unlink" id="removal-unlink" />
           <Label htmlFor="removal-unlink" className="font-normal">
-            対応付けだけ解除（生徒の登録は残す）
+            登録を残す
             <span className="ml-1 text-xs text-muted-foreground">推奨</span>
           </Label>
         </div>
         <div className="flex items-start gap-2">
           <RadioGroupItem value="delete-students" id="removal-delete" />
           <Label htmlFor="removal-delete" className="font-normal">
-            対応付けを解除し、専属の生徒の登録も外す
+            登録を外す
             <span className="ml-1 block text-xs text-muted-foreground">
               {deletionCounts === null
                 ? "対象生徒数を確認中…"
                 : deleteCount === 0
-                  ? "この学級にのみ在籍する生徒はいません"
+                  ? "この学級にだけ在籍する生徒はいません"
                   : describeDeletionCounts(deletionCounts)}
             </span>
           </Label>
@@ -189,7 +189,7 @@ function RemovalChoiceForm({
             }
           }}
         >
-          {willDeleteStudents && deleteCount > 0 ? "次へ" : "対応付けを解除"}
+          {willDeleteStudents && deleteCount > 0 ? "次へ" : "解除する"}
         </Button>
       </DialogFooter>
     </>
@@ -306,10 +306,11 @@ export function ClassroomRemovalDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>学級の対応付けを解除しますか？</AlertDialogTitle>
+            <AlertDialogTitle>
+              「{entry?.name}」の対応付けを解除しますか？
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              「{entry?.name}
-              」の対応付けを解除します。生徒は受験生徒の登録のまま残ります（採点データは削除されません）。
+              受験生徒の登録と採点は残ります。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -323,7 +324,7 @@ export function ClassroomRemovalDialog({
                 void runConfirm()
               }}
             >
-              対応付けを解除
+              解除する
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -366,9 +367,9 @@ export function ClassroomRemovalDialog({
             <AlertDialogTitle>生徒の登録を外しますか？</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                「{finalConfirm.target?.name}」にのみ在籍する{" "}
-                {sumDeletionCounts(deletionCounts)}名 を
-                の登録を外します。連動して以下も削除されます：
+                「{finalConfirm.target?.name}」にだけ在籍する
+                {sumDeletionCounts(deletionCounts)}
+                名の登録を外します。あわせて、以下も削除されます：
               </span>
               <span className="block pl-4 text-muted-foreground">
                 {(deletionLosses ?? ["その生徒の入力済みデータ"]).map(

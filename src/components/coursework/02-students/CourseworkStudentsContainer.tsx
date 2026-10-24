@@ -216,7 +216,7 @@ export function CourseworkStudentsContainer({
             scopeId={courseworkId}
             entries={classroomEntries}
             removalMode="can-delete-students"
-            description="ドラッグで並び替えできます。学級の対応付けを解除するときは、専属の生徒の登録を残すか外すか選べます。"
+            description="ドラッグで並び替えできます。学級の対応付けを解除するときは、その学級にだけ在籍する生徒の登録を、残すか外すか選べます。"
             deletionLosses={[
               "この資料のすべての資料評価項目に入力された得点・資料評価記号",
               "加減点とその理由",
