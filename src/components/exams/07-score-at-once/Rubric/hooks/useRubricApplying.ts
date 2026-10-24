@@ -70,7 +70,7 @@ export function useRubricApplying({
   const toggleItem = useCallback(
     async (rubricItemId: string) => {
       if (selectedCells.length === 0) {
-        toast.info("項目を当てる答案を選んでください")
+        toast.info("項目にチェックを入れる答案を選んでください")
         return
       }
       const examStudentIds = selectedCells.map((cell) => cell.examStudentId)

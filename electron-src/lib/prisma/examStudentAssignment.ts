@@ -127,7 +127,7 @@ export const setExamStudentAssignments = async ({
     targets,
     summary: assigned
       ? `${changedExamStudentIds.length}人の生徒の採点担当に${userLabel ?? userId}を割り当てました`
-      : `${changedExamStudentIds.length}人の生徒の採点担当から${userLabel ?? userId}を外しました`,
+      : `${changedExamStudentIds.length}人の生徒の採点担当の、${userLabel ?? userId}への割り当てを解除しました`,
     extra: { count: changedExamStudentIds.length },
   })
 

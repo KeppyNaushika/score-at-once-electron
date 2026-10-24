@@ -123,8 +123,8 @@ export function useEntityListControls<TRow extends { id: string }>(
       } catch {
         return
       }
-      toast.success("タグを追加しました", {
-        description: `${rowIds.length}件の${rowNoun}に「${trimmedTagName}」を追加`,
+      toast.success("タグを付けました", {
+        description: `${rowIds.length}件の${rowNoun}に「${trimmedTagName}」を付けました`,
       })
       clearSelection()
     },

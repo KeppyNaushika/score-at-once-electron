@@ -170,7 +170,7 @@ export function ConfirmChangesModal({
                   </span>
                   <div className="flex flex-1 items-center gap-2 text-sm">
                     <span className="font-medium">
-                      {change.fromPosition.studentName || "未割当"}
+                      {change.fromPosition.studentName || "未配置"}
                       <span className="ml-1 text-gray-500">
                         P{change.fromPosition.pageNumber}
                       </span>
@@ -181,7 +181,7 @@ export function ConfirmChangesModal({
                       <ArrowRight className="h-4 w-4 text-gray-400" />
                     )}
                     <span className="font-medium">
-                      {change.toPosition.studentName || "未割当"}
+                      {change.toPosition.studentName || "未配置"}
                       <span className="ml-1 text-gray-500">
                         P{change.toPosition.pageNumber}
                       </span>

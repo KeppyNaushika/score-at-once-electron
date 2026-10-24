@@ -122,7 +122,7 @@ export function RubricAdvicePreview({
   if (previewScoringDatas.length === 0) {
     return (
       <p className="p-3 text-xs text-gray-500">
-        自分の答案には、この組み合わせが当たっている答案がありません
+        自分の答案には、この組み合わせに該当する答案がありません
       </p>
     )
   }

@@ -72,7 +72,7 @@ export const addStudentsToGradeMutation = (gradeId: string) =>
       window.electronAPI.grade.addStudentsToGrade(gradeId, studentIds),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "生徒を追加できませんでした",
+      errorMessage: "生徒を登録できませんでした",
     },
   })
 
@@ -86,7 +86,7 @@ export const addStudentsFromClassroomMutation = (gradeId: string) =>
       ),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "学級を追加できませんでした",
+      errorMessage: "学級の生徒を登録できませんでした",
     },
   })
 
@@ -106,7 +106,7 @@ export const removeGradeClassroomMutation = (gradeId: string) =>
       ),
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "学級を削除できませんでした",
+      errorMessage: "学級の対応付けを解除できませんでした",
     },
   })
 
@@ -137,6 +137,6 @@ export const previewGradeClassroomRemovalMutation = (gradeId: string) =>
       window.electronAPI.grade.classroomRemovalPreview(gradeId, classroomId),
     meta: {
       writesDatabase: false,
-      errorMessage: "学級の削除内容を確認できませんでした",
+      errorMessage: "対応付けの解除で消えるものを確認できませんでした",
     },
   })

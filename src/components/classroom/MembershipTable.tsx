@@ -188,7 +188,7 @@ export default function ClassroomMembershipTable({
                   onClick={handleBulkDelete}
                 >
                   <Trash className="mr-2 h-4 w-4" />
-                  選択した{selectedIds.size}件を削除
+                  選択した{selectedIds.size}件の在籍を削除
                 </Button>
               )}
             </div>

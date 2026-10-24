@@ -104,7 +104,7 @@ export function MemberRoleSelect({
     <>
       {isLastOwner ? (
         // 無効の部品はポインタを拾わないので、外側の span で tooltip を受ける
-        <WithTooltip content="最後の所有者はほかの権限に変えられません。先に別の参加者を所有者にしてください">
+        <WithTooltip content="最後の所有者はほかの権限に変えられません。先に別のメンバーを所有者にしてください">
           <span tabIndex={0} className="inline-flex">
             {select}
           </span>
@@ -123,7 +123,7 @@ export function MemberRoleSelect({
           {
             type: "warning",
             message:
-              "変更した後は、この試験の設定の変更・参加者の招待や権限の変更・採点担当の割り当て・採点の確定ができなくなります。もう一度所有者にするには、ほかの所有者に頼んでください。",
+              "変更した後は、この試験の設定の変更・メンバーの招待や権限の変更・採点担当の割り当て・採点の確定ができなくなります。もう一度所有者にするには、ほかの所有者に頼んでください。",
           },
         ]}
         onConfirm={() =>

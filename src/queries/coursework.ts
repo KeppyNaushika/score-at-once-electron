@@ -300,7 +300,7 @@ export const addCourseworkStudentsMutation = (courseworkId: string) =>
       window.electronAPI.coursework.addStudents(courseworkId, studentIds),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "生徒を追加できませんでした",
+      errorMessage: "生徒を登録できませんでした",
     },
   })
 
@@ -316,7 +316,7 @@ export const addCourseworkStudentsFromClassroomMutation = (
       ),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "学級を追加できませんでした",
+      errorMessage: "学級の生徒を登録できませんでした",
     },
   })
 
@@ -326,7 +326,7 @@ export const removeCourseworkStudentsMutation = (courseworkId: string) =>
       window.electronAPI.coursework.removeStudents(courseworkId, studentIds),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "生徒を外せませんでした",
+      errorMessage: "生徒の登録を外せませんでした",
     },
   })
 
@@ -346,7 +346,7 @@ export const removeCourseworkClassroomMutation = (courseworkId: string) =>
       ),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
-      errorMessage: "学級を外せませんでした",
+      errorMessage: "学級の対応付けを解除できませんでした",
     },
   })
 
@@ -405,7 +405,7 @@ export const addTagToCourseworksMutation = () =>
     meta: {
       // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
       invalidates: [courseworkListQuery().queryKey, tagListQuery().queryKey],
-      errorMessage: "タグを追加できませんでした",
+      errorMessage: "タグを付けられませんでした",
     },
   })
 

@@ -217,7 +217,7 @@ export function EntityTagEditor({
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="タグを追加..."
+                placeholder="タグを付ける..."
                 className="h-8 text-sm"
               />
               <Button
@@ -227,7 +227,7 @@ export function EntityTagEditor({
                 disabled={isBlocked}
                 onClick={() => void handleAdd()}
               >
-                追加
+                付ける
               </Button>
             </div>
             {suggestions.length > 0 && (

@@ -248,7 +248,7 @@ export function buildStage2OutputSchema(
     },
     matchedRubricItemId: {
       type: ["string", "null"],
-      description: "既存の項目に当たる特徴ならその id。新しい特徴なら null",
+      description: "既存の項目に該当する特徴ならその id。新しい特徴なら null",
     },
     memberAnswerKeys: {
       type: "array",

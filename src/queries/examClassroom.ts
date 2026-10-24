@@ -52,7 +52,7 @@ export const addExamClassroomMutation = (examId: string) =>
     ) => window.electronAPI.examClassroom.add(options),
     meta: {
       invalidates: [examScope(examId)],
-      errorMessage: "学級を追加できませんでした",
+      errorMessage: "学級を対応付けられませんでした",
     },
   })
 
@@ -74,7 +74,7 @@ export const removeExamClassroomMutation = (examId: string) =>
       window.electronAPI.examClassroom.remove(examClassroomId),
     meta: {
       invalidates: [examScope(examId)],
-      errorMessage: "学級を外せませんでした",
+      errorMessage: "学級の対応付けを解除できませんでした",
     },
   })
 
@@ -99,6 +99,6 @@ export const addStudentsFromClassroomToExamMutation = (examId: string) =>
       ),
     meta: {
       invalidates: [examScope(examId)],
-      errorMessage: "学級の生徒を追加できませんでした",
+      errorMessage: "学級の生徒を登録できませんでした",
     },
   })

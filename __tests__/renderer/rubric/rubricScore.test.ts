@@ -208,7 +208,7 @@ describe("computeRubricScore（類型方式の設問）", () => {
     setItem("old-correct", "correct", null, -1),
   ]
 
-  it("類型にする項目を当てるとその類型になり、点は書かない", () => {
+  it("類型にする項目にチェックを入れるとその類型になり、点は書かない", () => {
     expect(computeRubricScore(scale, SCALE_ITEMS, applied("to-b"))).toEqual({
       kind: "computed",
       result: { status: "evaluated", partialScore: null, scaleLevelId: "level-b" },
@@ -217,7 +217,7 @@ describe("computeRubricScore（類型方式の設問）", () => {
     })
   })
 
-  it("複数当たれば並び順が先の項目を採り、残りを返す", () => {
+  it("複数該当すれば並び順が先の項目を採り、残りを返す", () => {
     expect(
       computeRubricScore(scale, SCALE_ITEMS, applied("to-b", "to-a"))
     ).toMatchObject({
@@ -243,7 +243,7 @@ describe("computeRubricScore（類型方式の設問）", () => {
     ).toMatchObject({ result: { status: "pending", scaleLevelId: null } })
   })
 
-  it("方式を変える前の加減・正答の項目は効かない（当たっていても未採点）", () => {
+  it("方式を変える前の加減・正答の項目は効かない（該当していても未採点）", () => {
     expect(
       computeRubricScore(
         scale,

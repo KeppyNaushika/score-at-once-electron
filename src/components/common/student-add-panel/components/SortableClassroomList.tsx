@@ -64,7 +64,7 @@ export function SortableClassroomList({
   if (selectedClassrooms.length === 0) {
     return (
       <div className="py-4 text-center text-sm text-muted-foreground">
-        学級を選択すると、ここで追加順序を設定できます
+        学級を選択すると、ここで登録の順序を設定できます
       </div>
     )
   }
@@ -114,7 +114,7 @@ export function SortableClassroomList({
       }
     >
       <div className="space-y-2">
-        <p className="text-sm font-medium">追加順序（ドラッグで並び替え）</p>
+        <p className="text-sm font-medium">登録の順序（ドラッグで並び替え）</p>
         <div className="space-y-2">
           {selectedClassrooms.map((candidate, index) => (
             <div

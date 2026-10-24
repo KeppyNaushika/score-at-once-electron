@@ -9,7 +9,7 @@ export const CLASSROOM_TEXT_JA: Record<ClassroomTermId, GlossaryTermText> = {
     variants: [],
     avoidedAliases: ["クラス"],
     distinctions: {
-      examClassroom: "試験の学級は、学級を1つの試験に結び付けたもの。",
+      examClassroom: "試験の学級は、学級を1つの試験に対応付けたもの。",
       grade:
         "学級の「学年」の列は grade だが、成績算出（Grade）とは関係しない。",
     },
@@ -29,7 +29,7 @@ export const CLASSROOM_TEXT_JA: Record<ClassroomTermId, GlossaryTermText> = {
     avoidedAliases: ["学級所属", "所属関係", "所属学級"],
     distinctions: {
       examClassroom:
-        "試験の学級は試験と学級の結び付き。在籍は生徒と学級の結び付き（日付つき）。",
+        "試験の学級は試験と学級の対応付け。在籍は生徒と学級の結び付き（日付つき）で、画面では「在籍を登録する」「在籍を削除する」と言う。",
     },
   },
   membershipPhase: {

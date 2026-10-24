@@ -83,7 +83,7 @@ export const SCORING_METHOD_LABELS: Record<ScoringMethod, string> = {
 /** 採点方式の説明（選択肢の下に添える） */
 export const SCORING_METHOD_DESCRIPTIONS: Record<ScoringMethod, string> = {
   points: "採点キー・部分点で点を付けます（これまでどおり）",
-  deduction: "配点から、当たった項目の減点を引きます",
-  addition: "0点から、当たった項目の加点を足します",
+  deduction: "配点から、該当する項目の減点を引きます",
+  addition: "0点から、該当する項目の加点を足します",
   scale: "A/B/C などの類型で評価し、点は類型ごとに決めた点数にします",
 }

@@ -185,12 +185,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">生徒管理</h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        成績算出の対象生徒を学級単位で追加してください。ドラッグで並び替えできます。
+        成績算出の対象生徒を学級単位で登録してください。ドラッグで並び替えできます。
       </p>
 
       {/* 生徒追加（学級まるごと・個別） */}
       <div className="mb-6 rounded-lg border p-4">
-        <h3 className="mb-3 text-sm font-medium">生徒を追加</h3>
+        <h3 className="mb-3 text-sm font-medium">生徒を登録</h3>
         <StudentAddPanel adapter={addPanelAdapter} onAdded={reloadAll} />
       </div>
 
@@ -202,7 +202,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
             scopeId={gradeId}
             entries={classroomEntries}
             removalMode="can-delete-students"
-            description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
+            description="ドラッグで並び替えできます。学級の対応付けを解除するときは、その学級にだけ在籍する生徒の登録を、残すか外すか選べます。"
             deletionLosses={[
               "この成績算出の固定値",
               "成績評価記号の上書き",

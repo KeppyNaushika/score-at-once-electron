@@ -95,13 +95,13 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   pointAllocation: {
     label: "配点",
     summary:
-      "項目に定める100%の点数。設問の配点、資料評価項目の配点、成績算出の換算配点がこれに当たる。試験全体の100%は「合計配点」と呼ぶ。",
+      "項目に定める100%の点数。設問の配点、資料評価項目の配点、成績算出の換算配点がこれに該当する。試験全体の100%は「合計配点」と呼ぶ。",
     variants: [],
     avoidedAliases: ["満点"],
     distinctions: {
       earnedPoints:
         "得点は、ある生徒がその項目で与えられた点数。配点はその100%の側。",
-      pointValue: "点数は、配点にも得点にも当たらない定めた値と、点の総称。",
+      pointValue: "点数は、配点にも得点にも該当しない定めた値と、点の総称。",
     },
   },
   earnedPoints: {
@@ -120,7 +120,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   pointValue: {
     label: "点数",
     summary:
-      "配点にも得点にも当たらない、定めた値（類型の点数・変換表の点数）。点の総称としても使う。得点率・得点分布・換算得点はこの区別によらず、その呼び名のまま。",
+      "配点にも得点にも該当しない、定めた値（類型の点数・変換表の点数）。点の総称としても使う。得点率・得点分布・換算得点はこの区別によらず、その呼び名のまま。",
     variants: [],
     avoidedAliases: [],
     distinctions: {
@@ -181,7 +181,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   scoringMethodDeduction: {
     label: "減点方式",
     summary:
-      "配点から、当たった採点項目の減点を引く採点方式。結果は0〜配点に収める。",
+      "配点から、該当する採点項目の減点を引く採点方式。結果は0〜配点に収める。",
     variants: [],
     avoidedAliases: [],
     distinctions: {},
@@ -189,7 +189,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   scoringMethodAddition: {
     label: "加点方式",
     summary:
-      "0点から、当たった採点項目の加点を足す採点方式。結果は0〜配点に収める。",
+      "0点から、該当する採点項目の加点を足す採点方式。結果は0〜配点に収める。",
     variants: [],
     avoidedAliases: [],
     distinctions: {},
@@ -222,7 +222,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
       gradeItem: "成績評価項目は成績を出す単位。採点項目は設問の中の基準。",
       courseworkItem: "資料評価項目は資料の列。採点項目は設問の中の基準。",
       scoreScaleLevel:
-        "類型は答案を当てはめる区分の1つ。採点項目は当たり外れを付ける基準。",
+        "類型は答案を当てはめる区分の1つ。採点項目は答案ごとにチェックを入れるかどうかを決める基準。",
     },
   },
   rubricItemReason: {
@@ -238,7 +238,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   rubricAdjust: {
     label: "点を加減する",
     summary:
-      "採点項目の種類の1つ。当たると決めた点（減点は負の数）を足し引きする。",
+      "採点項目の種類の1つ。チェックを入れると、決めた点（減点は負の数）を足し引きする。",
     variants: ["加減"],
     avoidedAliases: [],
     distinctions: {},
@@ -246,17 +246,22 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   rubricSet: {
     label: "判定と点を決める",
     summary:
-      "採点項目の種類の1つ。当たると採点状態（正答・部分点・誤答・無答・保留）と得点を決める。加減より優先する。",
+      "採点項目の種類の1つ。チェックを入れると採点状態（正答・部分点・誤答・無答・保留）と得点を決める。加減より優先する。",
     variants: [],
     avoidedAliases: [],
     distinctions: {},
   },
   rubricApplication: {
-    label: "採点項目の適用",
+    label: "採点項目のチェック",
     summary:
-      "「この答案にこの採点項目が当たっている」という記録。採点者ごとに持つ。画面では「当てる・外す」と言う。",
-    variants: ["当てる", "外す"],
-    avoidedAliases: [],
+      "「この答案にこの採点項目が該当する」という記録。採点者ごとに持つ。画面では「チェックを入れる・チェックを外す」と言い、チェックの入った項目を「該当する採点項目」、その答案の件数を「該当する数」と呼ぶ。",
+    variants: [
+      "チェックを入れる",
+      "チェックを外す",
+      "該当する採点項目",
+      "該当する数",
+    ],
+    avoidedAliases: ["採点項目の適用", "当てる", "当たる", "当たり外れ"],
     distinctions: {},
   },
   manualOverride: {
@@ -273,7 +278,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   rubricAdvice: {
     label: "助言",
     summary:
-      "採点項目に書く生徒向けの文。当たった答案に朱書きとして入る。空なら朱書きを作らない。",
+      "採点項目に書く生徒向けの文。その採点項目に該当する答案に朱書きとして入る。空なら朱書きを作らない。",
     variants: ["朱書き", "助言の朱書き"],
     avoidedAliases: [],
     distinctions: {
@@ -284,7 +289,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
   rubricAdviceCombination: {
     label: "重なった助言の決まり",
     summary:
-      "助言のある採点項目が2つ以上同時に当たったとき、朱書きをどうするかの決まり（まとめた一文・1つの項目の助言だけ・すべて並べる・朱書きなし）。決まりの無い組み合わせは「未決定」と出る。",
+      "1つの答案で、助言のある採点項目が2つ以上同時に該当するとき、朱書きをどうするかの決まり（まとめた一文・1つの項目の助言だけ・すべて並べる・朱書きなし）。決まりの無い組み合わせは「未決定」と出る。",
     variants: ["重なった助言", "朱書きの扱い"],
     avoidedAliases: [],
     distinctions: {},
@@ -299,7 +304,7 @@ export const SCORING_TEXT_JA: Record<ScoringTermId, GlossaryTermText> = {
       scoringMethodScale: "類型方式は、この表を使って採点する採点方式の名前。",
       statusEvaluated: "類型採点済みは、類型を付けた答案の状態。",
       rubricItem:
-        "採点項目は答案に当たり外れを付ける基準。類型表は答案を1つの類型に当てはめるための表。",
+        "採点項目は答案ごとにチェックを入れるかどうかを決める基準。類型表は答案を1つの類型に当てはめるための表。",
       courseworkLetterScale: "資料の変換表も記号を点数に換えるが、別の表。",
     },
   },

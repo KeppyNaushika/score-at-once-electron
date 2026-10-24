@@ -168,7 +168,7 @@ export function useRubricItemEditing({
         options: { onlyRubricItemId: rubricItem.id },
         alwaysConfirm: true,
         title: "項目を削除しますか",
-        description: `項目${itemName(rubricItem)}を削除し、当てていた答案からも外します。`,
+        description: `項目${itemName(rubricItem)}を削除し、チェックを入れていた答案からも外します。`,
         confirmLabel: "削除する",
         change: async () => {
           // 消すと適用が消えるので、当たっていた行を先に読んでおく

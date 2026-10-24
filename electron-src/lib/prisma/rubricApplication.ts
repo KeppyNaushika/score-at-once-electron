@@ -125,7 +125,7 @@ export async function setRubricApplications(
 
   if (touchedQuestionScoreIds.length > 0) {
     const scope = await resolveExamScopeByCropRegion(input.cropRegionId)
-    const verb = input.applied ? "当てました" : "外しました"
+    const verb = input.applied ? "入れました" : "外しました"
     await recordAuditLog({
       action: input.applied ? "exam.rubric.apply" : "exam.rubric.unapply",
       userId: actorUserId,
@@ -134,7 +134,7 @@ export async function setRubricApplications(
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       target: rubricItem.label || null,
-      summary: `採点項目「${rubricItem.label}」を${touchedQuestionScoreIds.length}件の答案に${verb}`,
+      summary: `${touchedQuestionScoreIds.length}件の答案で採点項目「${rubricItem.label}」のチェックを${verb}`,
       extra: { count: touchedQuestionScoreIds.length },
       targets: [cropRegionAuditTarget(rubricItem.cropRegion)],
     })

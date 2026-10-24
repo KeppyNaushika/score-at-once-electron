@@ -24,7 +24,7 @@ export function SubtotalSettingsSection({
       <div className="flex flex-col gap-2">
         {/* 共通オプション */}
         <OptionCard
-          label="設問と関連付けのない小計点を非表示"
+          label="設問と対応付けのない小計点を非表示"
           checked={options.hideUnassignedSubtotals}
           onChange={(value) => updateOption("hideUnassignedSubtotals", value)}
         />

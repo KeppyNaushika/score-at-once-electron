@@ -149,6 +149,6 @@ export const unassignCropRegion = async (
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     targets: await resolveCropRegionTargets(cropRegionId),
-    summary: `設問の採点担当から${userLabel ?? userId}を外しました`,
+    summary: `設問の採点担当の、${userLabel ?? userId}への割り当てを解除しました`,
   })
 }

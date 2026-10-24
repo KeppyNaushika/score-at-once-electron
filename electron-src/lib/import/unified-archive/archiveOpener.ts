@@ -446,7 +446,7 @@ const applyPendingMigrations = (
       recordAppliedMigration(db, name, sql, startedAt)
     } catch (error) {
       throw new UnifiedArchiveOpenError("schemaMismatch", [
-        `migration ${name} を当てられない: ${errorMessageOf(error)}`,
+        `migration ${name} を適用できない: ${errorMessageOf(error)}`,
       ])
     }
   }

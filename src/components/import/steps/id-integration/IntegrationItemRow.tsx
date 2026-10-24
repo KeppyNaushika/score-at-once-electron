@@ -249,7 +249,7 @@ export function IntegrationItemRow({
         {selectedKind === "same_person" && (
           <div className="mt-1 ml-4 space-y-2">
             <p className="text-xs text-muted-foreground">
-              紐づけ先（照合で当たったものが先頭です）
+              紐づけ先（照合で該当したものが先頭です）
             </p>
             <Combobox
               options={existingOptions}

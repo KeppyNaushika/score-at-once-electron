@@ -222,7 +222,7 @@ export function RosterTable({
               size="sm"
               onClick={() => rowRemoval.openWith(Array.from(selectedIds))}
             >
-              選択した生徒を削除 ({selectedIds.size})
+              選択した生徒の登録を外す ({selectedIds.size})
             </Button>
           )
         }
@@ -243,11 +243,11 @@ export function RosterTable({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              選択した生徒{rowRemoval.target?.length ?? 0}名を削除しますか？
+              選択した生徒{rowRemoval.target?.length ?? 0}名の登録を外しますか？
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                生徒を削除すると、以下のデータも連動して削除されます：
+                登録を外すと、以下のデータも連動して削除されます：
               </span>
               <span className="block pl-4 text-muted-foreground">
                 {(slots?.removalLosses ?? ["この名簿に入力された値"]).map(
@@ -285,7 +285,7 @@ export function RosterTable({
               }}
               disabled={isRemoving}
             >
-              {isRemoving ? "削除中..." : "削除"}
+              {isRemoving ? "登録を外しています..." : "登録を外す"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
