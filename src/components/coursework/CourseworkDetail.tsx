@@ -110,7 +110,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
       <EntityOverviewPage
         nameLabel="資料名"
         dateLabel="実施日"
-        dateHint="学級から生徒を追加するとき、この日に在籍していた生徒が対象になります。"
+        dateHint="学級から生徒を登録するとき、この日に在籍していた生徒が対象になります。"
         basics={{
           name: coursework.name,
           referenceDate: toDateInputValue(coursework.referenceDate),

@@ -190,7 +190,7 @@ export const deleteDataSourceMutation = (gradeId: string) =>
         gradeScope(gradeId),
         gradeSourceFitsQuery(gradeId).queryKey,
       ],
-      errorMessage: "データソースを削除できませんでした",
+      errorMessage: "データソースを外せませんでした",
     },
   })
 
@@ -289,7 +289,7 @@ export const createGradeComparisonMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:comparisons` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "比較を追加できませんでした",
+      errorMessage: "比較を対応付けられませんでした",
     },
   })
 
@@ -300,7 +300,7 @@ export const deleteGradeComparisonMutation = (gradeId: string) =>
     scope: { id: `grade:${gradeId}:comparisons` },
     meta: {
       invalidates: [gradeScope(gradeId)],
-      errorMessage: "比較を削除できませんでした",
+      errorMessage: "比較の対応付けを解除できませんでした",
     },
   })
 

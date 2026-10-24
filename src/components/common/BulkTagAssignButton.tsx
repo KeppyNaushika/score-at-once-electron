@@ -65,7 +65,7 @@ function BulkTagAssignPanel({
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
-        選択中の{selectedCount}件にタグを追加
+        選択中の{selectedCount}件にタグを付ける
       </p>
       <Input
         ref={inputRef}
@@ -78,7 +78,7 @@ function BulkTagAssignPanel({
           }
         }}
         placeholder="タグ名を入力してEnter"
-        aria-label="追加するタグ名"
+        aria-label="付けるタグ名"
         className="h-8 text-sm"
       />
       {allTags.length > 0 && (
@@ -115,7 +115,7 @@ function BulkTagAssignButton(props: BulkTagAssignPanelProps) {
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-lg">
           <Tag className="mr-2 h-4 w-4" />
-          タグを一括追加
+          タグを付ける
         </Button>
       </PopoverTrigger>
       <PopoverContent

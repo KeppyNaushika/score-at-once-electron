@@ -70,7 +70,7 @@ export const CropRegionDeleteConfirmModal = ({
           </AlertDialogTitle>
           <AlertDialogDescription>
             この領域を削除しますか？ ⚠️
-            注意：この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
+            注意：この領域の採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
           </AlertDialogDescription>
         </AlertDialogHeader>
         {gradeWarning && (

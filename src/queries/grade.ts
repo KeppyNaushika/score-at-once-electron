@@ -152,7 +152,7 @@ export const addTagToGradesMutation = () =>
     meta: {
       // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
       invalidates: [gradeListQuery().queryKey, tagListQuery().queryKey],
-      errorMessage: "タグを追加できませんでした",
+      errorMessage: "タグを付けられませんでした",
     },
   })
 

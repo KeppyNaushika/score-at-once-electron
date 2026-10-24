@@ -106,7 +106,7 @@ export default function ExamDetailPage() {
       <EntityOverviewPage
         nameLabel="試験名"
         dateLabel="試験日"
-        dateHint="学級から生徒を追加するとき、この日に在籍していた生徒が対象になります。"
+        dateHint="学級から生徒を登録するとき、この日に在籍していた生徒が対象になります。"
         basics={{
           name: exam.examName,
           referenceDate: toDateInputValue(exam.referenceDate),

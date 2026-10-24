@@ -59,7 +59,7 @@ export function KeyboardHelpDialog({
                 ))}
                 {section.showChoiceSelect && (
                   <div className="flex justify-between gap-2">
-                    <span>番号の項目を当てる・外す（採点項目）</span>
+                    <span>番号の項目のチェックを入れる・外す（採点項目）</span>
                     <code className="rounded bg-gray-100 px-2 py-1">
                       {displayKey("choice.select1")}〜
                       {displayKey("choice.select9")}

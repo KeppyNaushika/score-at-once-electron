@@ -72,7 +72,7 @@ export function RubricItemEntry({
           type="button"
           className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
           aria-pressed={isAppliedToAll}
-          aria-label={`${name}を当てる・外す`}
+          aria-label={`${name}のチェックを入れる・外す`}
           onClick={onToggle}
         >
           <span
@@ -104,7 +104,7 @@ export function RubricItemEntry({
           {selectedCount > 0 && (
             <span
               className="shrink-0 text-[10px] text-gray-500"
-              title="選んだ答案のうち、当たっている数"
+              title="選んだ答案のうち、該当する数"
             >
               {appliedCount}/{selectedCount}
             </span>

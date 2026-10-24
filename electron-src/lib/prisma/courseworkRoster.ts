@@ -212,10 +212,10 @@ const courseworkRosterAdapter: RosterAdapter = {
     removeAction: "coursework.student.remove",
     reorderAction: "coursework.student.reorder",
     reorderCoalescePrefix: "coursework_student_reorder",
-    addFromClassroomSummary: (n) => `学級から資料対象生徒を${n}名追加しました`,
-    addIndividualSummary: (n) => `資料対象生徒を${n}名追加しました`,
+    addFromClassroomSummary: (n) => `学級から資料対象生徒を${n}名登録しました`,
+    addIndividualSummary: (n) => `資料対象生徒を${n}名登録しました`,
     removeClassroomSummary: (n) =>
-      `学級を資料から外し、生徒${n}名を削除しました`,
+      `学級と資料の対応付けを解除し、生徒${n}名の登録を外しました`,
   },
 }
 
@@ -275,7 +275,7 @@ export async function removeStudentsFromCoursework(
     entityId: courseworkId,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    summary: `資料対象生徒を${studentIds.length}名削除しました`,
+    summary: `資料対象生徒${studentIds.length}名の登録を外しました`,
     extra: { count: studentIds.length },
     targets: await resolveStudentTargets(studentIds),
   })

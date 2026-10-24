@@ -110,11 +110,11 @@ export function ClassroomExamManager({
       removalMode="unlink-only"
       description={
         <>
-          再採番（並べ替え・出席番号）の対象の学級を管理します。生徒の追加は「生徒を追加」から行います。
+          再採番（並べ替え・出席番号）の対象の学級を管理します。受験生徒の登録は「生徒を登録」から行います。
           {entries.length > 0 && <> • 再採番対象: {administeredCount}学級</>}
         </>
       }
-      emptyHint="「学級を追加」ボタンから学級を追加してください"
+      emptyHint="「学級を対応付ける」ボタンから学級を対応付けてください"
       // 候補は境界が返す学級（在籍を同梱）をそのまま渡す。人数は表示側が数える
       fetchAvailableClassrooms={() =>
         queryClient.fetchQuery(availableExamClassroomsQuery(examId))

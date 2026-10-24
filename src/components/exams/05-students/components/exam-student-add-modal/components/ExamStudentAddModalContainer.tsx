@@ -99,9 +99,9 @@ export function ExamStudentAddModalContainer({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="flex h-[85vh] w-[92vw] max-w-5xl flex-col overflow-hidden sm:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>受験生徒の追加</DialogTitle>
+          <DialogTitle>受験生徒の登録</DialogTitle>
           <DialogDescription>
-            学級単位での一括追加、または個別生徒の選択追加が可能です。
+            学級単位でまとめて登録するか、生徒を選んで個別に登録できます。
           </DialogDescription>
         </DialogHeader>
 

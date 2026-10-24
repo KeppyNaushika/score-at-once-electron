@@ -81,7 +81,7 @@ function ComparisonRow({
         size="icon"
         className="h-7 w-7 text-destructive"
         onClick={() => deleteComparison.mutate(comparison.id)}
-        aria-label={`比較「${comparedLabel(comparison, gradeId)}」を削除`}
+        aria-label={`比較「${comparedLabel(comparison, gradeId)}」の対応付けを解除`}
       >
         <Trash className="h-3 w-3" />
       </Button>
@@ -225,7 +225,7 @@ export function GradeItemComparisons({
           disabled={!selectedGradeItemId || createComparison.isPending}
         >
           <Plus className="mr-1 h-3.5 w-3.5" />
-          追加
+          対応付ける
         </Button>
       </div>
     </Card>

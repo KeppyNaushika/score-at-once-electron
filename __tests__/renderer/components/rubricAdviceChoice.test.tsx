@@ -4,8 +4,8 @@
  * （docs/vlm-grading-design.md §3-7・§4-7）。
  *
  * ここで固定すること:
- * - 項目を当てると、当てたマスの助言の朱書きを作る（印付きで、差分を main へ渡す）
- * - 助言のある項目が2つ当たった答案の組み合わせは「未決定」としてパネルに出る
+ * - 項目にチェックを入れると、そのマスの助言の朱書きを作る（印付きで、差分を main へ渡す）
+ * - 助言のある項目が2つ該当する答案の組み合わせは「未決定」としてパネルに出る
  * - 選択の場面で、項目の続きの番号で未決定の組み合わせを開き、数字で選ぶと下見の朱書きが
  *   変わり、Enter で決まりを保存してその組み合わせの答案の朱書きを作る。Esc で項目へ戻る
  * - まとめた一文は 0 で書き始め、入力欄の Enter で決める
@@ -138,7 +138,7 @@ const signError = makeRubricItem({
   sortOrder: 1,
 })
 
-/** 自分の採点行（s1）に2つの項目が当たっている */
+/** 自分の採点行（s1）に2つの項目が該当する */
 const ownRow = makeQuestionScore({
   id: "score-s1",
   examStudentId: "s1",
@@ -287,8 +287,8 @@ beforeEach(() => {
   })
 })
 
-describe("項目を当てたときの朱書き", () => {
-  it("当てたマスの助言の朱書きを、印を付けて作る", async () => {
+describe("項目にチェックを入れたときの朱書き", () => {
+  it("チェックを入れたマスの助言の朱書きを、印を付けて作る", async () => {
     fakeRubricApi.listApplications.mockResolvedValue([])
     const singleApplication = applicationsOfOwnRow.slice(0, 1)
     fakeRubricApi.setApplications.mockResolvedValue([
@@ -307,7 +307,7 @@ describe("項目を当てたときの朱書き", () => {
     renderPanel(<RubricPanelHarness selectedExamStudentIds={["s1"]} />)
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "単位が無いを当てる・外す" })
+      await screen.findByRole("button", { name: "単位が無いのチェックを入れる・外す" })
     )
     await waitFor(() =>
       expect(fakeRubricApi.syncAdviceAnnotations).toHaveBeenCalledWith({
@@ -396,7 +396,7 @@ describe("重なった助言の問いかけ", () => {
       )
     )
     // 決めたら項目の一覧へ戻る（場面には残る）
-    expect(await screen.findByText(/数字で当てる・外す/)).toBeInTheDocument()
+    expect(await screen.findByText(/数字でチェックを入れる・外す/)).toBeInTheDocument()
     expect(screen.queryByLabelText("重なった助言の決まり")).toBeNull()
   })
 
@@ -407,7 +407,7 @@ describe("重なった助言の問いかけ", () => {
     await userEvent.keyboard("3")
     await screen.findByLabelText("重なった助言の決まり")
     await userEvent.keyboard("{Escape}")
-    expect(await screen.findByText(/数字で当てる・外す/)).toBeInTheDocument()
+    expect(await screen.findByText(/数字でチェックを入れる・外す/)).toBeInTheDocument()
     expect(screen.queryByLabelText("重なった助言の決まり")).toBeNull()
     expect(fakeRubricApi.saveAdviceCombination).not.toHaveBeenCalled()
   })

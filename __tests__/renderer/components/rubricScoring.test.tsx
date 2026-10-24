@@ -8,7 +8,7 @@
  * - 項目を押すと、選んだ答案にまとめて当て（外し）、項目から計算した点を書く
  * - 手での上書きの印と、上書きを解除して項目の点へ戻す操作
  * - 項目の削除は、点の変わる件数を示していつも確認する。値の検証に通らなければ書かない
- * - 選択の場面: Space で入り、数字で当てる・Enter で次の答案・Esc で抜ける。
+ * - 選択の場面: Space で入り、数字でチェックを入れる・Enter で次の答案・Esc で抜ける。
  *   場面の中では採点中のキー（数字の部分点）が止まり、抜ければまた効く
  *
  * window.electronAPI は偽物で、実データには触れない。
@@ -129,7 +129,7 @@ const processMissing = makeRubricItem({
   sortOrder: 1,
 })
 
-/** 採点行に、当たっている項目を同梱した形（main が付け外しのあとに返すもの） */
+/** 採点行に、該当する項目を同梱した形（main が付け外しのあとに返すもの） */
 function withApplications(
   questionScore: QuestionScoreRow,
   rubricItemIds: string[]
@@ -375,7 +375,7 @@ describe("ルーブリック採点の画面", () => {
   })
 
   describe("手での適用", () => {
-    it("項目を押すと選んだ答案にまとめて当て、項目から計算した点を書く", async () => {
+    it("項目を押すと選んだ答案にまとめてチェックを入れ、項目から計算した点を書く", async () => {
       fakeRubricApi.setApplications.mockResolvedValue([
         withApplications(
           makeQuestionScore({
@@ -401,7 +401,7 @@ describe("ルーブリック採点の画面", () => {
         />
       )
       await userEvent.click(
-        await screen.findByRole("button", { name: "単位が無いを当てる・外す" })
+        await screen.findByRole("button", { name: "単位が無いのチェックを入れる・外す" })
       )
       await waitFor(() =>
         expect(fakeRubricApi.setApplications).toHaveBeenCalledWith({
@@ -432,7 +432,7 @@ describe("ルーブリック採点の画面", () => {
       )
     })
 
-    it("選んだ全部に当たっている項目を押すと外す", async () => {
+    it("選んだ全部に該当する項目を押すとチェックを外す", async () => {
       const ownRow = makeQuestionScore({
         id: "score-s1",
         examStudentId: "s1",
@@ -452,7 +452,7 @@ describe("ルーブリック採点の画面", () => {
         />
       )
       const itemButton = await screen.findByRole("button", {
-        name: "単位が無いを当てる・外す",
+        name: "単位が無いのチェックを入れる・外す",
       })
       await waitFor(() =>
         expect(itemButton).toHaveAttribute("aria-pressed", "true")
@@ -518,7 +518,7 @@ describe("ルーブリック採点の画面", () => {
       )
     })
 
-    it("マスの印は、当たっている項目の数と上書きを示す", () => {
+    it("マスの印は、該当する項目の数と上書きを示す", () => {
       render(
         <RubricCellMark
           cell={{
@@ -591,7 +591,7 @@ describe("ルーブリック採点の画面", () => {
   })
 
   describe("選択の場面のキー", () => {
-    it("Space で入り、数字で当て、Enter で次の答案へ、Esc で抜ける", async () => {
+    it("Space で入り、数字でチェックを入れ、Enter で次の答案へ、Esc で抜ける", async () => {
       fakeRubricApi.setApplications.mockResolvedValue([])
       const onAdvance = vi.fn()
       renderWithProviders(
@@ -604,7 +604,7 @@ describe("ルーブリック採点の画面", () => {
       await screen.findByText("単位が無い")
 
       await userEvent.keyboard(" ")
-      expect(await screen.findByText(/数字で当てる・外す/)).toBeInTheDocument()
+      expect(await screen.findByText(/数字でチェックを入れる・外す/)).toBeInTheDocument()
 
       await userEvent.keyboard("2")
       await waitFor(() =>

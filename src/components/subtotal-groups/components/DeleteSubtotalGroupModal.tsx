@@ -91,7 +91,7 @@ export function DeleteSubtotalGroupModal({
     },
     {
       type: "info" as const,
-      message: `設問との関連付けがある場合は削除できません。削除前に、使っている試験の「${workflowStep(examWorkflowSteps, "04-question-group").label}」タブで設問の割り当てを解除してください。`,
+      message: `設問との対応付けがある場合は削除できません。削除前に、使っている試験の「${workflowStep(examWorkflowSteps, "04-question-group").label}」タブで設問との対応付けを解除してください。`,
     },
     ...(blockedMessage
       ? [{ type: "destructive" as const, message: blockedMessage }]

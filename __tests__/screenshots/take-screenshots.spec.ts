@@ -593,10 +593,10 @@ test.describe.serial("第1章: 初期設定", () => {
       "ch1-setup/15-classroom-excel-paste.png",
       async () => {
         await clickWhenReady(
-          page.getByRole("button", { name: "Excel 貼付一括追加" })
+          page.getByRole("button", { name: "Excel 貼付で在籍を登録" })
         )
         const importDialog = page.getByRole("dialog", {
-          name: /への生徒一括追加/,
+          name: /の在籍の一括登録/,
         })
         await expect(importDialog).toBeVisible()
         const pastedRows = [
@@ -619,7 +619,7 @@ test.describe.serial("第1章: 初期設定", () => {
             )
           }, pastedRows)
         await expect(
-          importDialog.getByRole("button", { name: "3名を追加" })
+          importDialog.getByRole("button", { name: "3名の在籍を登録" })
         ).toBeEnabled()
         await ss(page, "ch1-setup/15-classroom-excel-paste.png")
         await page.keyboard.press("Escape")
@@ -813,7 +813,7 @@ test.describe.serial("第2章: 試験準備", () => {
     // (C) タグは popover の中で編集する（段階64 で場所が変わった）
     await captureOptional("ch2-exam-prep/11-exam-tag-editor.png", async () => {
       await clickWhenReady(page.getByLabel("タグを編集"))
-      const tagInput = page.getByPlaceholder("タグを追加...")
+      const tagInput = page.getByPlaceholder("タグを付ける...")
       await expect(tagInput).toBeVisible()
       await tagInput.fill("数学")
       await page.waitForTimeout(500)
@@ -1089,18 +1089,18 @@ test.describe.serial("第2章: 試験準備", () => {
       }
     )
 
-    // (D) 受験生徒: 学級単位で追加するダイアログ → 学級の関連付け
+    // (D) 受験生徒: 学級単位で登録するダイアログ → 学級の対応付け
     await nav(page, `/exams/${regularExamId}/05-students`)
     await captureOptional(
       "ch2-exam-prep/27-regular-add-students.png",
       async () => {
-        await clickWhenReady(page.getByRole("button", { name: "生徒を追加" }))
-        const addDialog = page.getByRole("dialog", { name: "受験生徒の追加" })
+        await clickWhenReady(page.getByRole("button", { name: "生徒を登録" }))
+        const addDialog = page.getByRole("dialog", { name: "受験生徒の登録" })
         await expect(addDialog).toBeVisible()
         await addDialog.getByLabel("2年A組").check()
         await ss(page, "ch2-exam-prep/27-regular-add-students.png")
         await clickWhenReady(
-          addDialog.getByRole("button", { name: /選択した学級を追加/ })
+          addDialog.getByRole("button", { name: /選択した学級の生徒を登録/ })
         )
         await page.waitForTimeout(800)
         await clickWhenReady(addDialog.getByRole("button", { name: "閉じる" }))
@@ -1110,7 +1110,7 @@ test.describe.serial("第2章: 試験準備", () => {
     await captureOptional(
       "ch2-exam-prep/28-regular-exam-classrooms.png",
       async () => {
-        await clickWhenReady(page.getByRole("tab", { name: "学級の関連付け" }))
+        await clickWhenReady(page.getByRole("tab", { name: "学級の対応付け" }))
         await page.waitForTimeout(800)
         await ss(page, "ch2-exam-prep/28-regular-exam-classrooms.png")
       }

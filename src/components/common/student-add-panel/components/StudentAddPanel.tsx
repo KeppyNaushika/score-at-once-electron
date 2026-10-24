@@ -90,15 +90,15 @@ export function StudentAddPanel({
       case "noStudents":
         return "生徒が登録されていません。先に「生徒」ページで生徒を登録してください。"
       case "noClassroomMembership":
-        return "学級に在籍している生徒がいません。「個別で追加」タブから追加できます。"
+        return "学級に在籍している生徒がいません。「個別に登録」タブから登録できます。"
       case "noCurrentInClassroom":
         return "在籍中の生徒がいる学級がありません。スイッチをオフにすると、現在在籍していない生徒も表示できます。"
       case "allAdded":
         return classroomActiveOnly
-          ? "在籍中の生徒は全て追加しました。"
-          : "学級に在籍する生徒は全て追加しました。"
+          ? "在籍中の生徒は全て登録しました。"
+          : "学級に在籍する生徒は全て登録しました。"
       default:
-        return "追加可能な学級がありません"
+        return "登録できる学級がありません"
     }
   })()
 
@@ -117,8 +117,8 @@ export function StudentAddPanel({
         return "未在籍・在籍中の生徒がいません。スイッチをオフにすると、現在在籍していない生徒も表示できます。"
       case "allAdded":
         return studentActiveOnly
-          ? "未在籍・在籍中の生徒は全て追加しました。"
-          : "すべての生徒を追加しました。"
+          ? "未在籍・在籍中の生徒は全て登録しました。"
+          : "すべての生徒を登録しました。"
       default:
         return "該当する生徒が見つかりません"
     }
@@ -143,8 +143,8 @@ export function StudentAddPanel({
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className={tabsClass}>
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="classrooms">学級で追加</TabsTrigger>
-        <TabsTrigger value="individuals">個別で追加</TabsTrigger>
+        <TabsTrigger value="classrooms">学級で登録</TabsTrigger>
+        <TabsTrigger value="individuals">個別に登録</TabsTrigger>
       </TabsList>
 
       {/* 学級で追加 */}
@@ -170,7 +170,7 @@ export function StudentAddPanel({
             <CardHeader>
               <CardTitle className="text-lg">利用可能な学級</CardTitle>
               <CardDescription>
-                追加したい学級を選択してください
+                登録したい学級を選択してください
               </CardDescription>
             </CardHeader>
             <CardContent className={classListContentClass}>
@@ -245,9 +245,9 @@ export function StudentAddPanel({
           {/* 追加順序 */}
           <Card className={listCardClass}>
             <CardHeader>
-              <CardTitle className="text-lg">追加順序</CardTitle>
+              <CardTitle className="text-lg">登録の順序</CardTitle>
               <CardDescription>
-                選択した学級の追加順序を設定できます
+                選択した学級の登録の順序を設定できます
               </CardDescription>
             </CardHeader>
             <CardContent className={reorderContentClass}>
@@ -266,8 +266,8 @@ export function StudentAddPanel({
           >
             <Plus className="mr-2 h-4 w-4" />
             {isAdding
-              ? "追加中..."
-              : `選択した学級を追加 (${selectedClassroomCount}学級)`}
+              ? "登録中..."
+              : `選択した学級の生徒を登録 (${selectedClassroomCount}学級)`}
           </Button>
         </div>
       </TabsContent>
@@ -368,8 +368,8 @@ export function StudentAddPanel({
           >
             <UserPlus className="mr-2 h-4 w-4" />
             {isAdding
-              ? "追加中..."
-              : `選択した生徒を追加 (${selectedStudentCount}名)`}
+              ? "登録中..."
+              : `選択した生徒を登録 (${selectedStudentCount}名)`}
           </Button>
         </div>
       </TabsContent>

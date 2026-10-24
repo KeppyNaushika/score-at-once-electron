@@ -239,12 +239,12 @@ const AUDIT_ACTIONS = {
   "exam.student.add": {
     category: "exam",
     verb: "create",
-    label: "受験生徒「{target}」を追加しました",
+    label: "受験生徒「{target}」を登録しました",
   },
   "exam.student.remove": {
     category: "exam",
     verb: "delete",
-    label: "受験生徒「{target}」を削除しました",
+    label: "受験生徒「{target}」の登録を外しました",
   },
   "exam.student.attendance_update": {
     category: "exam",
@@ -269,7 +269,7 @@ const AUDIT_ACTIONS = {
   "exam.answer.assign": {
     category: "exam",
     verb: "update",
-    label: "生徒答案を割り当てました",
+    label: "生徒答案を配置しました",
   },
   "exam.answer.delete": {
     category: "exam",
@@ -325,7 +325,7 @@ const AUDIT_ACTIONS = {
   "exam.score.unassign": {
     category: "exam",
     verb: "delete",
-    label: "設問の採点担当を解除しました",
+    label: "設問の採点担当の割り当てを解除しました",
   },
   "exam.student.assign": {
     category: "exam",
@@ -335,7 +335,7 @@ const AUDIT_ACTIONS = {
   "exam.student.unassign": {
     category: "exam",
     verb: "delete",
-    label: "生徒の採点担当を解除しました",
+    label: "生徒の採点担当の割り当てを解除しました",
   },
 
   "exam.annotation.create": {
@@ -412,12 +412,12 @@ const AUDIT_ACTIONS = {
   "exam.rubric.apply": {
     category: "exam",
     verb: "update",
-    label: "採点項目を答案に当てました",
+    label: "答案に採点項目のチェックを入れました",
   },
   "exam.rubric.unapply": {
     category: "exam",
     verb: "update",
-    label: "採点項目を答案から外しました",
+    label: "答案から採点項目のチェックを外しました",
   },
   /** 自分の採点行へ、項目から計算した点を書いた。1回の書き込みを1件にまとめる */
   "exam.score.rubric": {
@@ -478,18 +478,18 @@ const AUDIT_ACTIONS = {
   "exam.class.assign": {
     category: "exam",
     verb: "create",
-    label: "学級「{target}」を試験に割り当てました",
+    label: "学級「{target}」を試験に対応付けました",
   },
   "exam.class.unassign": {
     category: "exam",
     verb: "delete",
-    label: "学級の試験割り当てを解除しました",
+    label: "学級と試験の対応付けを解除しました",
   },
   /** 設問と小計の対応の付け外し。04 の表で続けて触るので試験ごとに1行へまとめる */
   "exam.subtotal_assignment.update": {
     category: "exam",
     verb: "update",
-    label: "設問と小計項目の関連付けを更新しました",
+    label: "設問と小計項目の対応付けを更新しました",
   },
   "exam.omr_config.update": {
     category: "exam",
@@ -530,7 +530,7 @@ const AUDIT_ACTIONS = {
   "exam.user.remove": {
     category: "exam",
     verb: "delete",
-    label: "「{target}」を試験から外しました",
+    label: "「{target}」を試験のメンバーから外しました",
   },
 
   // ── 成績（grade） ────────────────────────────────────────────
@@ -572,12 +572,12 @@ const AUDIT_ACTIONS = {
   "grade.student.add": {
     category: "grade",
     verb: "create",
-    label: "成績対象生徒「{target}」を追加しました",
+    label: "成績対象生徒「{target}」を登録しました",
   },
   "grade.student.remove": {
     category: "grade",
     verb: "delete",
-    label: "成績対象生徒「{target}」を削除しました",
+    label: "成績対象生徒「{target}」の登録を外しました",
   },
   "grade.data_source.add": {
     category: "grade",
@@ -592,7 +592,7 @@ const AUDIT_ACTIONS = {
   "grade.data_source.remove": {
     category: "grade",
     verb: "delete",
-    label: "データソースを削除しました",
+    label: "データソースを外しました",
   },
   /**
    * **過去の記録専用。** 成績算出の手入力の点数。資料（Coursework）へ昇格し、
@@ -631,12 +631,12 @@ const AUDIT_ACTIONS = {
   "grade.comparison.create": {
     category: "grade",
     verb: "create",
-    label: "成績評価項目「{target}」に比較を追加しました",
+    label: "成績評価項目「{target}」に比較を対応付けました",
   },
   "grade.comparison.delete": {
     category: "grade",
     verb: "delete",
-    label: "成績評価項目「{target}」の比較を削除しました",
+    label: "成績評価項目「{target}」の比較の対応付けを解除しました",
   },
   "grade.item.create": {
     category: "grade",
@@ -705,7 +705,7 @@ const AUDIT_ACTIONS = {
   "grade.exclusion.update": {
     category: "grade",
     verb: "update",
-    label: "成績評価項目の対象生徒を変更しました",
+    label: "成績評価項目の除外を変更しました",
   },
   /** 個人成績通知書の設定。出力画面で続けて触るので成績算出ごとに1行へまとめる */
   "grade.report_settings.update": {
@@ -739,12 +739,12 @@ const AUDIT_ACTIONS = {
   "coursework.student.add": {
     category: "grade",
     verb: "create",
-    label: "資料対象生徒を追加しました",
+    label: "資料対象生徒を登録しました",
   },
   "coursework.student.remove": {
     category: "grade",
     verb: "delete",
-    label: "資料対象生徒を削除しました",
+    label: "資料対象生徒の登録を外しました",
   },
   "coursework.student.reorder": {
     category: "grade",
@@ -881,12 +881,12 @@ const AUDIT_ACTIONS = {
   "class.membership.add": {
     category: "student",
     verb: "create",
-    label: "「{target}」を学級に追加しました",
+    label: "「{target}」の在籍を登録しました",
   },
   "class.membership.remove": {
     category: "student",
     verb: "delete",
-    label: "「{target}」を学級から削除しました",
+    label: "「{target}」の在籍を削除しました",
   },
 
   "subtotal_group.create": {

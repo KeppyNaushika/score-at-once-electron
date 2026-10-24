@@ -161,7 +161,7 @@ export function SubtotalGroupSelector({
               「{groupRemoval.target?.name}」をこの試験から外しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              この試験の小計点に使わなくなります。小計点グループ自体は残るので、あとで「グループを追加」から戻せます。設問に割り当てている場合は外せないため、先に設問の割り当てを解除してください。
+              この試験の小計点に使わなくなります。小計点グループ自体は残るので、あとで「グループを追加」から戻せます。設問と対応付けている場合は外せないため、先に設問との対応付けを解除してください。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -25,7 +25,7 @@ const ARCHIVE_COLUMN_LABELS: Readonly<Record<string, string>> = {
   statisticKind: "統計の種類",
   scope: "範囲",
   choiceIndex: "選択肢の番号",
-  assignmentType: "割り当ての種類",
+  assignmentType: "対応付けの種類",
   username: "ユーザー名",
   studentNumber: "学籍番号",
   lastName: "姓",

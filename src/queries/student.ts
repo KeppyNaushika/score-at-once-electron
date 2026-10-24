@@ -137,7 +137,7 @@ export const addStudentToClassroomMutation = () =>
       ),
     meta: {
       invalidates: [classroomsKey, studentsKey],
-      errorMessage: "生徒を学級へ追加できませんでした",
+      errorMessage: "在籍を登録できませんでした",
     },
   })
 

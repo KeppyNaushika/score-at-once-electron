@@ -155,7 +155,7 @@ export default function StudentClassroomMembershipModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {membershipToEdit ? "在籍を編集" : "在籍を追加"}
+            {membershipToEdit ? "在籍を編集" : "在籍を登録"}
           </DialogTitle>
           <DialogDescription>
             生徒の学級の在籍を入力してください。

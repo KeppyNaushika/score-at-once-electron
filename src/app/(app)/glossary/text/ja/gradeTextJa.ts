@@ -27,12 +27,12 @@ export const GRADE_TEXT_JA: Record<GradeTermId, GlossaryTermText> = {
   gradeClassroom: {
     label: "登録済み学級（成績算出）",
     summary:
-      "成績算出に結び付けた学級。並び順をリセットするときの学級の順になる。",
+      "成績算出に対応付けた学級。並び順をリセットするときの学級の順になる。",
     variants: ["成績算出の学級"],
     avoidedAliases: [],
     distinctions: {
       gradeStudent:
-        "対象生徒は成績を付ける1人1人。学級を外しても、ほかの学級から入った生徒は残せる。",
+        "対象生徒は成績を付ける1人1人。学級の対応付けを解除しても、ほかの学級から登録した生徒は残せる。",
     },
   },
   gradeStudent: {
@@ -43,7 +43,7 @@ export const GRADE_TEXT_JA: Record<GradeTermId, GlossaryTermText> = {
     avoidedAliases: [],
     distinctions: {
       courseworkStudent:
-        "資料の対象生徒は別の名簿。資料から外しても成績算出の名簿は変わらない。",
+        "資料の対象生徒は別の名簿。資料から登録を外しても成績算出の名簿は変わらない。",
     },
   },
   gradeItem: {
@@ -148,12 +148,12 @@ export const GRADE_TEXT_JA: Record<GradeTermId, GlossaryTermText> = {
   gradeItemExclusion: {
     label: "成績評価項目の除外",
     summary:
-      "特定の対象生徒について、ある成績評価項目を成績算出から外す設定（名簿の行×成績評価項目）。画面では「対象生徒設定」から開く。",
+      "特定の対象生徒について、ある成績評価項目を成績算出から除外する設定（名簿の行×成績評価項目）。画面では「対象生徒設定」から開き、「含める」「除外する」を選ぶ。",
     variants: ["除外", "対象生徒設定"],
     avoidedAliases: [],
     distinctions: {
       gradeStudent:
-        "名簿から外すとすべての成績評価項目から消える。除外はその項目だけを外し、生徒は名簿に残る。",
+        "名簿から登録を外すとすべての成績評価項目から消える。除外はその項目だけを除外し、生徒は名簿に残る。",
     },
   },
   gradeItemBoundary: {
@@ -230,13 +230,13 @@ export const GRADE_TEXT_JA: Record<GradeTermId, GlossaryTermText> = {
     ],
     distinctions: {
       gradeFrozenScore:
-        "成績の固定は、上書きを当てた今の値をまとめて固定する。上書きは1マスの書き換え。",
+        "成績の固定は、上書きを反映した今の値をまとめて固定する。上書きは1マスの書き換え。",
     },
   },
   gradeFrozenScore: {
     label: "成績の固定",
     summary:
-      "固定した時点の値（算出に上書きを当てたもの）を対象生徒×成績評価項目ごとに固定する。固定した値は「固定値」と呼ぶ。以後は資料や成績境界を変えても動かず、元データが変わると知らせる。採用の順は 固定値 > 上書き > 算出。",
+      "固定した時点の値（算出に上書きを反映したもの）を対象生徒×成績評価項目ごとに固定する。固定した値は「固定値」と呼ぶ。以後は資料や成績境界を変えても動かず、元データが変わると知らせる。採用の順は 固定値 > 上書き > 算出。",
     variants: ["固定値"],
     avoidedAliases: [
       "成績の確定",
@@ -265,7 +265,7 @@ export const GRADE_TEXT_JA: Record<GradeTermId, GlossaryTermText> = {
   gradeExportComparison: {
     label: "載せる比較",
     summary:
-      "比較を出力（Excel の成績一覧・個人成績通知書の記号）に載せるかどうかの選択。何もしなければ載り、外したときだけ記録が残る。",
+      "比較を出力（Excel の成績一覧・個人成績通知書の記号）に載せるかどうかの選択。何もしなければ載り、載せないとしたときだけ記録が残る。",
     variants: ["出力に載せる比較"],
     avoidedAliases: [],
     distinctions: {},

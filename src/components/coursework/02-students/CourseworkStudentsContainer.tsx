@@ -199,12 +199,12 @@ export function CourseworkStudentsContainer({
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">生徒管理</h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        評価対象の生徒を学級単位で追加してください。ドラッグで並び替えできます。
+        評価対象の生徒を学級単位で登録してください。ドラッグで並び替えできます。
       </p>
 
       {/* 生徒追加（学級まるごと・個別） */}
       <div className="mb-6 rounded-lg border p-4">
-        <h3 className="mb-3 text-sm font-medium">生徒を追加</h3>
+        <h3 className="mb-3 text-sm font-medium">生徒を登録</h3>
         <StudentAddPanel adapter={addPanelAdapter} onAdded={reloadAll} />
       </div>
 
@@ -216,7 +216,7 @@ export function CourseworkStudentsContainer({
             scopeId={courseworkId}
             entries={classroomEntries}
             removalMode="can-delete-students"
-            description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"
+            description="ドラッグで並び替えできます。学級の対応付けを解除するときは、専属の生徒の登録を残すか外すか選べます。"
             deletionLosses={[
               "この資料のすべての資料評価項目に入力された得点・資料評価記号",
               "加減点とその理由",

@@ -57,7 +57,7 @@ describe("ClassroomRemovalDialog", () => {
       />
     )
 
-    await user.click(screen.getByRole("button", { name: "登録を解除" }))
+    await user.click(screen.getByRole("button", { name: "対応付けを解除" }))
 
     expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
   })
@@ -79,9 +79,9 @@ describe("ClassroomRemovalDialog", () => {
       />
     )
 
-    // プレビュー取得を待つ（既定の「登録を解除」ボタンが有効化される）
+    // プレビュー取得を待つ（既定の「対応付けを解除」ボタンが有効化される）
     const actionButton = await screen.findByRole("button", {
-      name: "登録を解除",
+      name: "対応付けを解除",
     })
     await user.click(actionButton)
 
@@ -107,14 +107,14 @@ describe("ClassroomRemovalDialog", () => {
 
     // 専属生徒も削除を選択
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalled())
-    await user.click(screen.getByRole("radio", { name: /専属の生徒も削除/ }))
+    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
 
     // 「次へ」で2段階目へ
     const nextButton = await screen.findByRole("button", { name: "次へ" })
     await user.click(nextButton)
 
     // 2段階目の最終確認
-    const deleteButton = await screen.findByRole("button", { name: "削除する" })
+    const deleteButton = await screen.findByRole("button", { name: "登録を外す" })
     await user.click(deleteButton)
 
     expect(onConfirm).toHaveBeenCalledWith(entry, true, exclusiveStudents(2))
@@ -142,14 +142,14 @@ describe("ClassroomRemovalDialog", () => {
 
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalled())
     // 「専属生徒も削除」を選んでも、件数不明なので確定ボタンは無効
-    await user.click(screen.getByRole("radio", { name: /専属の生徒も削除/ }))
+    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
     expect(
-      screen.getByRole("button", { name: /次へ|登録を解除/ })
+      screen.getByRole("button", { name: /次へ|対応付けを解除/ })
     ).toBeDisabled()
 
     // 「登録解除のみ」に切り替えれば実行可（安全側は通る）
-    await user.click(screen.getByRole("radio", { name: /登録だけ解除/ }))
-    const unlinkButton = screen.getByRole("button", { name: "登録を解除" })
+    await user.click(screen.getByRole("radio", { name: /対応付けだけ解除/ }))
+    const unlinkButton = screen.getByRole("button", { name: "対応付けを解除" })
     expect(unlinkButton).toBeEnabled()
     await user.click(unlinkButton)
     expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
@@ -173,17 +173,17 @@ describe("ClassroomRemovalDialog", () => {
     )
 
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalled())
-    await user.click(screen.getByRole("radio", { name: /専属の生徒も削除/ }))
+    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
 
-    // 削除対象0名 → ボタンは「登録を解除」、押すと直接実行（2段階目なし）
+    // 削除対象0名 → ボタンは「対応付けを解除」、押すと直接実行（2段階目なし）
     const actionButton = await screen.findByRole("button", {
-      name: "登録を解除",
+      name: "対応付けを解除",
     })
     await user.click(actionButton)
 
     expect(onConfirm).toHaveBeenCalledWith(entry, true, [])
     expect(
-      screen.queryByRole("button", { name: "削除する" })
+      screen.queryByRole("button", { name: "登録を外す" })
     ).not.toBeInTheDocument()
   })
 
@@ -217,7 +217,7 @@ describe("ClassroomRemovalDialog", () => {
     )
 
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole("radio", { name: /専属の生徒も削除/ }))
+    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
     await user.click(await screen.findByRole("button", { name: "次へ" }))
 
     // 2段階目は見せた件数（3名）を出す
@@ -225,7 +225,7 @@ describe("ClassroomRemovalDialog", () => {
     expect(finalConfirmDialog.textContent).toContain("3名")
 
     // 押すと main が中止し、その場で数え直す
-    await user.click(screen.getByRole("button", { name: "削除する" }))
+    await user.click(screen.getByRole("button", { name: "登録を外す" }))
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalledTimes(2))
 
     // 中止の文言（何が変わったか）は残しつつ、本文は数え直した4名へそろう
@@ -238,7 +238,7 @@ describe("ClassroomRemovalDialog", () => {
     )
 
     // もう一度押したときに消えるのは、本文が言っている4名
-    await user.click(screen.getByRole("button", { name: "削除する" }))
+    await user.click(screen.getByRole("button", { name: "登録を外す" }))
     expect(onConfirm).toHaveBeenNthCalledWith(
       1,
       entry,

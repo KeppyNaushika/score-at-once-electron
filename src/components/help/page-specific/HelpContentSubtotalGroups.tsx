@@ -78,8 +78,8 @@ export function HelpContentSubtotalGroups() {
             />
             <StepItem
               number={4}
-              title="関連付け"
-              description="設問領域と小計項目を関連付け"
+              title="対応付け"
+              description="設問領域と小計項目を対応付け"
             />
           </div>
           <TipItem type="info">
@@ -130,7 +130,7 @@ export function HelpContentSubtotalGroups() {
           <div className="space-y-3">
             <TipItem type="warning">
               <strong>削除できない：</strong>
-              設問と関連付け中のグループは削除不可です。試験の「小計点の設定」ページで関連付けを解除してください。
+              設問と対応付け中のグループは削除不可です。試験の「小計点の設定」ページで対応付けを解除してください。
             </TipItem>
 
             <TipItem type="info">
@@ -140,7 +140,7 @@ export function HelpContentSubtotalGroups() {
 
             <TipItem type="info">
               <strong>項目の削除：</strong>
-              小計項目の削除で既存の関連付けも削除されます。
+              小計項目の削除で既存の対応付けも削除されます。
             </TipItem>
           </div>
         </HelpSection>

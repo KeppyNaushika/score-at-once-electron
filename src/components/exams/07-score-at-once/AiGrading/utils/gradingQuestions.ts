@@ -294,8 +294,8 @@ export function buildGradingQuestioning({
           label: SCORING_METHOD_LABELS[method],
           description:
             method === "deduction"
-              ? "配点から、当たった項目の減点を引きます"
-              : "0点から、当たった項目の加点を足します",
+              ? "配点から、該当する項目の減点を引きます"
+              : "0点から、該当する項目の加点を足します",
           recommended: method === recommended,
           score: null,
           writesScore: false,
@@ -327,7 +327,7 @@ export function buildGradingQuestioning({
       id: OUTSIDE_STEP_ID,
       kind: "outside",
       title: "どの案にも入らない答案",
-      question: "AI がどの案にも項目にも当てられなかった答案です。",
+      question: "AI がどの案にも入れず、どの項目にも該当しないとした答案です。",
       detail: "",
       advice: null,
       members,

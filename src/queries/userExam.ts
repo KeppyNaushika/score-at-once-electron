@@ -62,7 +62,7 @@ export const inviteExamMemberMutation = (examId: string) =>
         // 生徒の担当もメンバーでない担当者を落として返すので、参加者と一緒に古くなる
         [...scopeKeys.exam(examId), "examStudentAssignments"],
       ],
-      errorMessage: "参加者を招待できませんでした",
+      errorMessage: "メンバーを招待できませんでした",
     },
   })
 
@@ -135,6 +135,6 @@ export const removeExamMemberMutation = (
         // 生徒の担当もメンバーでない担当者を落として返すので、参加者と一緒に古くなる
         [...scopeKeys.exam(examId), "examStudentAssignments"],
       ],
-      errorMessage: "参加者を外せませんでした",
+      errorMessage: "メンバーから外せませんでした",
     },
   })

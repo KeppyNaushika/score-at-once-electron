@@ -135,7 +135,7 @@ function ClassroomRowCells({
       ))}
       <TableCell>
         <TooltipButton
-          label="学級を外す"
+          label="学級の対応付けを解除"
 
           variant="ghost"
           size="icon"
@@ -324,7 +324,7 @@ export function ClassroomRosterManager({
 
       {localEntries.length === 0 ? (
         <div className="rounded-md border py-8 text-center text-muted-foreground">
-          <p>学級が関連付けられていません</p>
+          <p>学級が対応付けられていません</p>
           {emptyHint && <p className="mt-1 text-sm">{emptyHint}</p>}
         </div>
       ) : (
@@ -360,15 +360,15 @@ export function ClassroomRosterManager({
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>学級を追加</DialogTitle>
+            <DialogTitle>学級を対応付ける</DialogTitle>
             <DialogDescription>
-              関連付ける学級を選択してください。
+              対応付ける学級を選択してください。
             </DialogDescription>
           </DialogHeader>
 
           {availableClassrooms.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              <p>追加可能な学級がありません</p>
+              <p>対応付けられる学級がありません</p>
               <p className="mt-1 text-sm">
                 「学級管理」から新しい学級を作成してください
               </p>
@@ -439,7 +439,9 @@ export function ClassroomRosterManager({
               disabled={selectedClassroomIds.size === 0 || adding}
             >
               <Plus className="mr-2 h-4 w-4" />
-              {adding ? "追加中..." : `${selectedClassroomIds.size}件追加`}
+              {adding
+                ? "対応付け中..."
+                : `${selectedClassroomIds.size}件を対応付ける`}
             </Button>
           </DialogFooter>
         </DialogContent>

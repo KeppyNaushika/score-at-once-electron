@@ -174,7 +174,7 @@ describe("ルーブリック項目", () => {
 })
 
 describe("適用", () => {
-  it("行の無いマスに当てると採点行を用意し、外すと適用だけが消える", async () => {
+  it("行の無いマスでチェックを入れると採点行を用意し、外すとチェックだけが消える", async () => {
     const item = await createDeduction(-2)
     const touched = await setRubricApplications(
       {
@@ -192,7 +192,7 @@ describe("適用", () => {
       1, 1,
     ])
 
-    // 2度当てても重ならない
+    // 2度チェックを入れても重ならない
     await setRubricApplications(
       {
         cropRegionId: cropRegionId(),
@@ -225,7 +225,7 @@ describe("適用", () => {
     ).toBe(2)
   })
 
-  it("別の設問の項目は当てられない", async () => {
+  it("別の設問の項目にはチェックを入れられない", async () => {
     const otherRegion = await testPrisma.cropRegion.create({
       data: {
         examPageId: fixture.pages[0].id,

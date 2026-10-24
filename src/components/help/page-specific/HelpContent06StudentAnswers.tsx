@@ -137,7 +137,7 @@ export function HelpContent06StudentAnswers() {
       <style>{HELP06_KEYFRAMES}</style>
       <HelpHero
         eyebrow="ステップ 6 / 答案"
-        title="答案を取り込んで、生徒に紐づける"
+        title="答案を取り込んで、生徒に配置する"
         lead="生徒の答案を画像やPDFで取り込み、「どの生徒の・何ページ目か」を表の上で確かめながら保存します。スキャンの順番に合わせて配置のしかたを選べば、ほとんど自動で並びます。"
       />
 

@@ -85,8 +85,8 @@ export const examWorkflowSteps = [
   {
     id: "06-student-answers",
     label: "6. 生徒答案",
-    title: "生徒答案の追加と関連付け",
-    description: "スキャンした答案画像を取り込み、生徒に結び付ける",
+    title: "生徒答案の追加と配置",
+    description: "スキャンした答案画像を取り込み、生徒に配置する",
     path: "/06-student-answers",
   },
   {
