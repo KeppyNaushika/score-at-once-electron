@@ -130,6 +130,12 @@ describe("containsFullWidth / toHalfWidth", () => {
     expect(toHalfWidth("Ａｂ１０－．")).toBe("Ab10-.")
     expect(toHalfWidth("認定")).toBe("認定")
   })
+
+  it("カタカナの長音「ー」は全角として扱わず、寄せもしない", () => {
+    expect(containsFullWidth("ゴール")).toBe(false)
+    expect(toHalfWidth("ゴール")).toBe("ゴール")
+    expect(toHalfWidth("Ａー")).toBe("Aー")
+  })
 })
 
 describe("collectUnknownLetterValues", () => {
