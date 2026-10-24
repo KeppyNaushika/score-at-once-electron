@@ -32,7 +32,7 @@ const OPTIONAL_ITEMS: readonly {
   {
     value: "auditLog",
     label: "操作履歴",
-    description: "書き出す試験・資料・成績算出・解答用紙定義についての記録",
+    description: "書き出す試験・資料・成績算出・解答用紙についての記録",
   },
   {
     value: "aiGradingRecords",

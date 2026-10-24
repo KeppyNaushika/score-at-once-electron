@@ -1334,3 +1334,245 @@ export async function buildUploadFiles(
   )
   return { masterAnswerPngPath, answerSheetsPdfPath }
 }
+
+// ---------------------------------------------------------------------------
+// ブログ記事の図のために一時的に足すもの（撮り終えたら元に戻す）
+// ---------------------------------------------------------------------------
+
+/**
+ * 試験の1ページ目に、答案の氏名欄・受験番号欄の採点領域を足す
+ *
+ * 採点付きの試験（`seedExamWithScoring`）の採点領域は設問だけで、氏名欄が無い。
+ * 匿名採点で塗りつぶされるのは氏名欄（STUDENT_NAME / STUDENT_ID）なので、それが
+ * 無いと匿名採点の図に塗りつぶしが写らない。位置は解答用紙の記入欄と同じ。
+ *
+ * @returns 足した採点領域の id（`deleteCropRegions` に渡して消す）
+ */
+export async function addNameRegions(
+  examId: string,
+  templatePath: string
+): Promise<string[]> {
+  const db = getPrisma()
+  const examPage = await db.examPage.findFirstOrThrow({
+    where: { examId, pageNumber: 1 },
+  })
+  const nameRegionTypes: [labelPart: string, type: string][] = [
+    ["氏名", "STUDENT_NAME"],
+    ["番号", "STUDENT_ID"],
+  ]
+  const createdIds: string[] = []
+  for (const headerFieldBox of computeHeaderFieldBoxes(templatePath)) {
+    const regionType = nameRegionTypes.find(([labelPart]) =>
+      headerFieldBox.label.includes(labelPart)
+    )?.[1]
+    if (!regionType) continue
+    const cropRegion = await db.cropRegion.create({
+      data: {
+        id: crypto.randomUUID(),
+        examPageId: examPage.id,
+        label: headerFieldBox.label,
+        type: regionType,
+        x: headerFieldBox.x,
+        y: headerFieldBox.y,
+        width: headerFieldBox.width,
+        height: headerFieldBox.height,
+      },
+    })
+    createdIds.push(cropRegion.id)
+  }
+  if (createdIds.length === 0) {
+    throw new Error("テンプレートに氏名欄・受験番号欄がありません")
+  }
+  console.log(`  [SEED] 氏名欄の採点領域 ${createdIds.length}件を追加`)
+  return createdIds
+}
+
+/** `addNameRegions` で足した採点領域を消す */
+export async function deleteCropRegions(
+  cropRegionIds: string[]
+): Promise<void> {
+  await getPrisma().cropRegion.deleteMany({
+    where: { id: { in: cropRegionIds } },
+  })
+}
+
+/**
+ * 試験の匿名採点の固定を書き換える
+ *
+ * 画面（試験メンバー管理）でオンにした固定を、撮り終えたあとに戻すのに使う。
+ */
+export async function setAnonymousScoringEnforced(
+  examId: string,
+  enforced: boolean
+): Promise<void> {
+  await getPrisma().exam.update({
+    where: { id: examId },
+    data: { anonymousScoringEnforced: enforced },
+  })
+}
+
+/**
+ * 比較の相手にする、前の学期の成績算出を作り、今回の成績算出の各項目に比較を付ける
+ *
+ * 比較の記号（↑↓→）は、比べる相手の成績評価記号が今回と違うときに動く。前の学期の
+ * 成績は試験外成績資料の項目から作るので、今回（試験の小計）と記号が上下どちらにも
+ * ずれる。成績境界は今回と同じ A〜E。中身は架空のもの。
+ *
+ * @returns 作った成績算出の id（`deleteGrade` に渡して消す。比較も一緒に消える）
+ */
+export async function seedComparisonGrade(
+  gradeId: string,
+  courseworkId: string,
+  studentIds: string[],
+  classAId: string,
+  classBId: string
+): Promise<string> {
+  const db = getPrisma()
+  const coursework = await db.coursework.findUniqueOrThrow({
+    where: { id: courseworkId },
+    include: { items: true },
+  })
+  const comparisonGradeId = crypto.randomUUID()
+  await db.grade.create({
+    data: {
+      id: comparisonGradeId,
+      name: "１学期 数学 成績",
+      description: "比較の相手にする前の学期の成績",
+      referenceDate: new Date("2025-07-18"),
+    },
+  })
+  for (const classroomId of [classAId, classBId]) {
+    await db.gradeClassroom.create({
+      data: {
+        id: crypto.randomUUID(),
+        gradeId: comparisonGradeId,
+        classroomId,
+      },
+    })
+  }
+  for (const [studentOrder, studentId] of studentIds.entries()) {
+    await db.gradeStudent.create({
+      data: {
+        id: crypto.randomUUID(),
+        gradeId: comparisonGradeId,
+        studentId,
+        customOrder: studentOrder + 1,
+      },
+    })
+  }
+
+  // 前の学期の項目と、その元にする資料の項目
+  const itemSources: [gradeItemName: string, courseworkItemName: string][] = [
+    ["知識・技能", "確認テスト"],
+    ["思考・判断・表現", "課題プリント"],
+    ["主体的に学習に取り組む態度", "課題プリント"],
+    ["評定", "確認テスト"],
+  ]
+  const boundaryLabels = [
+    { label: "A", minPercentage: 80 },
+    { label: "B", minPercentage: 65 },
+    { label: "C", minPercentage: 50 },
+    { label: "D", minPercentage: 35 },
+    { label: "E", minPercentage: 0 },
+  ]
+  const currentGradeItems = await db.gradeItem.findMany({ where: { gradeId } })
+  for (const [
+    itemOrder,
+    [gradeItemName, courseworkItemName],
+  ] of itemSources.entries()) {
+    const courseworkItem = coursework.items.find(
+      (item) => item.name === courseworkItemName
+    )
+    const currentGradeItem = currentGradeItems.find(
+      (item) => item.name === gradeItemName
+    )
+    if (!courseworkItem || !currentGradeItem) {
+      throw new Error(
+        `比較の項目が見つかりません: ${gradeItemName} ← ${courseworkItemName}`
+      )
+    }
+    const previousGradeItem = await db.gradeItem.create({
+      data: {
+        id: crypto.randomUUID(),
+        gradeId: comparisonGradeId,
+        name: gradeItemName,
+        order: itemOrder,
+      },
+    })
+    await db.gradeDataSource.create({
+      data: {
+        id: crypto.randomUUID(),
+        gradeItemId: previousGradeItem.id,
+        type: "coursework",
+        courseworkItemId: courseworkItem.id,
+        name: `${coursework.name}(${courseworkItem.name})`,
+        weight: 1.0,
+      },
+    })
+    for (const [boundaryOrder, boundary] of boundaryLabels.entries()) {
+      await db.gradeItemBoundary.create({
+        data: {
+          id: crypto.randomUUID(),
+          gradeItemId: previousGradeItem.id,
+          label: boundary.label,
+          minPercentage: boundary.minPercentage,
+          order: boundaryOrder,
+        },
+      })
+    }
+    await db.gradeComparison.create({
+      data: {
+        id: crypto.randomUUID(),
+        gradeItemId: currentGradeItem.id,
+        comparedGradeItemId: previousGradeItem.id,
+      },
+    })
+  }
+  console.log(`  [SEED] 比較の相手の成績算出 (gradeId=${comparisonGradeId})`)
+  return comparisonGradeId
+}
+
+/** 成績算出を消す（項目・比較・生徒などは一緒に消える） */
+export async function deleteGrade(gradeId: string): Promise<void> {
+  await getPrisma().grade.delete({ where: { id: gradeId } })
+}
+
+/**
+ * 生徒を、新年度（次の4月1日）から在籍する学級へ入れる
+ *
+ * 生徒管理の一覧で、在籍予定の学級に「予定」が付くのを撮るために使う。開始日は
+ * 撮る日から見た次の4月1日なので、いつ撮っても在籍予定になる。
+ *
+ * @param studentIds - 新しい学級へ入れる生徒（出席番号は並びの順）
+ * @returns 作った学級の id（`deleteClassroom` に渡して消す。在籍も一緒に消える）
+ */
+export async function seedUpcomingClassroom(
+  studentIds: string[]
+): Promise<string> {
+  const db = getPrisma()
+  const today = new Date()
+  const nextAprilYear =
+    today.getMonth() >= 3 ? today.getFullYear() + 1 : today.getFullYear()
+  const nextAprilFirst = new Date(`${nextAprilYear}-04-01T00:00:00+09:00`)
+  const classroom = await db.classroom.create({
+    data: { id: crypto.randomUUID(), name: "3年A組", grade: 3 },
+  })
+  for (const [studentOrder, studentId] of studentIds.entries()) {
+    await db.studentClassroomMembership.create({
+      data: {
+        id: crypto.randomUUID(),
+        studentId,
+        classroomId: classroom.id,
+        attendanceNumber: studentOrder + 1,
+        startDate: nextAprilFirst,
+      },
+    })
+  }
+  console.log(`  [SEED] 在籍予定の学級 3年A組（${studentIds.length}名）`)
+  return classroom.id
+}
+
+/** 学級を消す（在籍も一緒に消える） */
+export async function deleteClassroom(classroomId: string): Promise<void> {
+  await getPrisma().classroom.delete({ where: { id: classroomId } })
+}

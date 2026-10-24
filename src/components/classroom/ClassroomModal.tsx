@@ -162,7 +162,7 @@ export default function ClassroomModal({
               </Label>
               {!isVisible && (
                 <span className="text-xs text-muted-foreground">
-                  （非表示の学級は生徒一覧や取り込みで使用されません）
+                  （非表示の学級は学級管理の一覧から隠れます。生徒や在籍はそのまま残り、生徒管理の絞り込みでも選べます）
                 </span>
               )}
             </div>

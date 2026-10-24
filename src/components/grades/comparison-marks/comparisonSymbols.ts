@@ -15,7 +15,10 @@ export const COMPARISON_SYMBOLS: Record<
     symbol: "*",
     description: "成績境界に無い成績評価記号なので上下を決められない",
   },
-  missing: { symbol: "・", description: "比較先に成績評価記号が無い" },
+  missing: {
+    symbol: "・",
+    description: "今回か比較先のどちらかに成績評価記号が無い",
+  },
 }
 
 /** マス1つの記号を登録順に連ねる（例「↑→」） */
