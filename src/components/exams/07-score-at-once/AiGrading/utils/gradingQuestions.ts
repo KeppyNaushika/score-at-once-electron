@@ -327,7 +327,7 @@ export function buildGradingQuestioning({
       id: OUTSIDE_STEP_ID,
       kind: "outside",
       title: "どの案にも入らない答案",
-      question: "AI がどの案にも入れず、どの項目にも該当しないとした答案です。",
+      question: "AI が、どの案にもどの採点項目にも振り分けなかった答案です。",
       detail: "",
       advice: null,
       members,

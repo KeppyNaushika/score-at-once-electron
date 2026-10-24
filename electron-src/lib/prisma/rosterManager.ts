@@ -252,7 +252,7 @@ async function computeExclusiveStudents(
  *
  * ここで返した件数を利用者はそのまま画面で見て、同じ配列が削除の要求に添えられて
  * 戻ってくる。main は消す直前に**同じ関数で**数え直して突き合わせる（段階26）。
- * 0名なら項目を返さない（「この学級にのみ在籍する生徒はいません」に対応する）。
+ * 0名なら項目を返さない（「この学級にだけ在籍する生徒はいません」に対応する）。
  */
 async function countExclusiveStudentDeletion(
   adapter: RosterAdapter,

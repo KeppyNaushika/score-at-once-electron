@@ -518,7 +518,7 @@ describe("Coursework CRUD", () => {
       )
       // classroomA の s1,s2 は他学級に属さない → 2名
       expect(preview).toEqual([
-        { countedName: "この学級にのみ在籍する生徒", shownCount: 2 },
+        { countedName: "この学級にだけ在籍する生徒", shownCount: 2 },
       ])
     })
 
