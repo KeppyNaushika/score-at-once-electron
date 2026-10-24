@@ -242,6 +242,22 @@ async function chooseScoringMode(page: Page) {
 }
 
 /**
+ * いったんログアウトして、別のユーザーでログインし直す
+ *
+ * 撮影用のユーザーはどちらもパスコードが無いので、ログイン画面で名前をクリックすれば入れる。
+ *
+ * @param userName - ログイン画面に並ぶ名前（山田 太郎・大槻 里美）
+ */
+async function switchUser(userName: string) {
+  await clickWhenReady(page.getByRole("button", { name: "ログアウト" }))
+  await page.waitForURL(`${BASE_URL}/login`, { timeout: 15_000 })
+  await waitForReady(page)
+  await page.getByText(userName).first().click({ timeout: 10_000 })
+  await page.waitForURL(`${BASE_URL}/exams`, { timeout: 30_000 })
+  await waitForReady(page)
+}
+
+/**
  * 07 の一覧表示で全ての答案を出す
  *
  * 表示の絞り込みは初期値が「未採点だけ」で、種データは全て採点済みなので、
@@ -401,6 +417,19 @@ test.beforeAll(async () => {
       browserWindow.webContents.on("will-prevent-unload", (event) =>
         event.preventDefault()
       )
+    }
+  })
+  // Next.js の開発用の表示（左下の「Issues」「Insight」の札）を消す。`devIndicators: false`
+  // （next.config.ts）でも Next.js 16.4 ではこの札が残り、左下の「ログアウト」に被さって
+  // クリックを横取りする。図にも写るので、ページを読むたびに CSS で消す。
+  // 札は `nextjs-portal` 要素（中身は shadow DOM）なので、外からはその要素ごと消す
+  await electronApp.evaluate(({ BrowserWindow }) => {
+    const hideDevOverlay = "nextjs-portal { display: none !important; }"
+    for (const browserWindow of BrowserWindow.getAllWindows()) {
+      browserWindow.webContents.on("dom-ready", () => {
+        void browserWindow.webContents.insertCSS(hideDevOverlay)
+      })
+      void browserWindow.webContents.insertCSS(hideDevOverlay)
     }
   })
   await setCaptureViewport(CAPTURE_WIDTH, CAPTURE_HEIGHT)
@@ -991,6 +1020,20 @@ test.describe.serial("第2章: 試験準備", () => {
         await ss(page, "ch2-exam-prep/23-regular-template-empty.png")
       }
     )
+    // 自動検出の検出枠（青い点線）。枠に吸い付かないよう、撮ったら手動指定へ戻して描く
+    await captureOptional(
+      "ch2-exam-prep/29-regular-template-auto-detect.png",
+      async () => {
+        await clickWhenReady(page.getByRole("tab", { name: "自動検出" }))
+        await expect(page.getByText(/検出枠: [1-9]\d*個/)).toBeVisible({
+          timeout: 60_000,
+        })
+        await page.waitForTimeout(800)
+        await ss(page, "ch2-exam-prep/29-regular-template-auto-detect.png")
+        await clickWhenReady(page.getByRole("tab", { name: "手動指定" }))
+        await expect(page.getByText("領域を作成してください")).toBeVisible()
+      }
+    )
     await captureOptional(
       "ch2-exam-prep/25-regular-regions-drawn.png",
       async () => {
@@ -1364,6 +1407,120 @@ test.describe.serial("第3章: 採点と出力", () => {
 })
 
 // ===========================
+// 第3章の続き: 何人かで採点する試験（ブログ記事の図）
+// ===========================
+
+/**
+ * 成績算出を作る前（第4章の前）に撮る。成績算出で使われるとロックの帯が出て、
+ * 採点の画面の図に要らないものが写る。
+ */
+test.describe.serial("第3章の続き: メンバーと匿名採点", () => {
+  test("3-7 試験メンバー管理と匿名採点の固定", async () => {
+    await nav(page, `/exams/${examId}`)
+    const memberDialog = page.getByRole("dialog", { name: "試験メンバー管理" })
+
+    // 2人（所有者の山田 太郎・採点者の大槻 里美）がいる試験
+    await captureOptional("ch3-scoring/25-exam-members.png", async () => {
+      await clickWhenReady(
+        page.getByRole("button", { name: "メンバー", exact: true })
+      )
+      await expect(memberDialog).toBeVisible()
+      await expect(memberDialog.getByText("大槻 里美")).toBeVisible()
+      await page.waitForTimeout(500)
+      await ss(page, "ch3-scoring/25-exam-members.png")
+    })
+
+    // 固定をオンにする。大槻 里美は結果出力を許可されているので、その注意も出る
+    await captureOptional(
+      "ch3-scoring/26-anonymous-scoring-enforced.png",
+      async () => {
+        const enforceSwitch = memberDialog.getByRole("switch", {
+          name: "匿名採点を固定する",
+        })
+        await clickWhenReady(enforceSwitch)
+        await expect(enforceSwitch).toBeChecked()
+        await expect(
+          memberDialog.getByText(/結果出力を許可している採点者が/)
+        ).toBeVisible()
+        await page.waitForTimeout(500)
+        await ss(page, "ch3-scoring/26-anonymous-scoring-enforced.png")
+        await page.keyboard.press("Escape")
+        await expect(memberDialog).toBeHidden()
+      }
+    )
+  })
+
+  test("3-8 採点者から見た匿名採点", async () => {
+    // この試験の採点領域は設問だけで、塗りつぶす氏名欄が無い。撮る間だけ足す
+    const nameRegionIds = runSeedCommand("addNameRegions", [
+      examId,
+      TEMPLATE_PATH,
+    ])
+    try {
+      await switchUser("大槻 里美")
+      await nav(page, `/exams/${examId}/07-score-at-once`)
+      // 採点操作モードの選択はユーザーごとに覚えるので、大槻 里美には初めて出る
+      const modeModalShown = await page
+        .getByText("採点操作モードを選択")
+        .waitFor({ timeout: 10_000 })
+        .then(
+          () => true,
+          () => false
+        )
+      if (modeModalShown) await chooseScoringMode(page)
+
+      // 個別表示の全体表示: 答案の氏名欄・受験番号欄が灰色に塗られ、名前は「匿名 n」に
+      // なる。全体表示のボタンは道具の棚の3つ目（名前を持たないので、3-3b と同じく
+      // 位置で押す）
+      await captureOptional(
+        "ch3-scoring/27-anonymous-scoring-grader.png",
+        async () => {
+          await clickWhenReady(page.getByRole("radio", { name: "個別表示" }))
+          await page.waitForTimeout(2000)
+          const maximizeButton = { x: 288, y: 243 }
+          await page.mouse.move(maximizeButton.x, maximizeButton.y)
+          await page.waitForTimeout(500)
+          await page.mouse.click(maximizeButton.x, maximizeButton.y)
+          await page.waitForTimeout(1000)
+          // 仮の名前は右のパネルの「生徒答案」の欄に出る。見える位置へ送る
+          const pseudonym = page.getByText(/匿名 \d+/).first()
+          await expect(pseudonym).toBeAttached({ timeout: 15_000 })
+          await pseudonym.evaluate((element) =>
+            element.scrollIntoView({ block: "center", behavior: "instant" })
+          )
+          // 道具の棚は3秒触らないと消える。答案の左端に被さるので、離れて消えるのを待つ。
+          // 行き先は答案の右の余白（右のパネルの上だとボタンの説明が出る）
+          await page.mouse.move(900, 700)
+          await page.waitForTimeout(3500)
+          await ss(page, "ch3-scoring/27-anonymous-scoring-grader.png")
+          await clickWhenReady(page.getByRole("radio", { name: "一覧表示" }))
+        }
+      )
+    } finally {
+      await switchUser("山田 太郎")
+      runSeedCommand("deleteCropRegions", [nameRegionIds])
+      runSeedCommand("setAnonymousScoringEnforced", [examId, false])
+    }
+  })
+
+  test("3-9 採点マークと点数の表示設定の mm の欄", async () => {
+    await nav(page, `/exams/${examId}/09-export`)
+    await captureOptional("ch3-scoring/28-export-overlay-mm.png", async () => {
+      await clickWhenReady(page.getByRole("tab", { name: "採点済み答案PDF" }))
+      await page.waitForTimeout(800)
+      // mm の欄は設定の下のほう。最初の「左右(mm)」が上に来るまで送る
+      const firstOffsetLabel = page.getByText("左右(mm)").first()
+      await expect(firstOffsetLabel).toBeVisible({ timeout: 15_000 })
+      await firstOffsetLabel.evaluate((label) =>
+        label.scrollIntoView({ block: "center", behavior: "instant" })
+      )
+      await page.waitForTimeout(600)
+      await ss(page, "ch3-scoring/28-export-overlay-mm.png")
+    })
+  })
+})
+
+// ===========================
 // 第4章: 成績算出・試験外成績資料・その他
 // ===========================
 
@@ -1679,6 +1836,106 @@ test.describe.serial("第4章: 成績算出・その他", () => {
         await page.waitForTimeout(500)
       }
     )
+  })
+})
+
+// ===========================
+// 第4章の続き: ブログ記事の図
+// ===========================
+
+/**
+ * 記事にだけ使う図。一時的に足したデータ（在籍予定の学級・比較の相手の成績算出）は
+ * 撮り終えたら消す。このあとのヒーロー画像は元のデータで撮る。
+ */
+test.describe.serial("第4章の続き: ブログ記事の図", () => {
+  test("4-10 成績算出で使われている試験のロックの帯", async () => {
+    await nav(page, `/exams/${examId}`)
+    await captureOptional("ch4-grades/31-exam-grade-lock.png", async () => {
+      await expect(
+        page.getByText(
+          "この試験は成績算出で使われているため、ロックしています。"
+        )
+      ).toBeVisible({ timeout: 15_000 })
+      await expect(
+        page.getByRole("button", { name: "ロックを解除" })
+      ).toBeVisible()
+      await ss(page, "ch4-grades/31-exam-grade-lock.png")
+    })
+  })
+
+  test("4-11 成績算出の比較の記号（強調）", async () => {
+    const comparisonGradeId = runSeedCommand("seedComparisonGrade", [
+      gradeId,
+      courseworkId,
+      studentIds,
+      classAId,
+      classBId,
+    ])
+    try {
+      await nav(page, `/grades/${gradeId}/05-results`)
+      await page.waitForTimeout(1500)
+      await captureOptional(
+        "ch4-grades/32-grade-results-comparison.png",
+        async () => {
+          await clickWhenReady(page.getByRole("radio", { name: "強調" }))
+          await expect(page.getByRole("radio", { name: "強調" })).toBeChecked()
+          await page.waitForTimeout(800)
+          await ss(page, "ch4-grades/32-grade-results-comparison.png")
+          // 変化の表示はユーザーの設定に残るので、既定の「記号」へ戻す
+          await clickWhenReady(page.getByRole("radio", { name: "記号" }))
+        }
+      )
+    } finally {
+      runSeedCommand("deleteGrade", [comparisonGradeId])
+    }
+  })
+
+  test("4-12 データ書き出し（関連で入るもの）", async () => {
+    await nav(page, "/data-export")
+    await captureOptional("ch4-grades/33-data-export.png", async () => {
+      await clickWhenReady(
+        page.getByRole("option", { name: /第２回定期テスト 中２数学/ }).first()
+      )
+      await expect(page.getByText("関連で入る").first()).toBeVisible({
+        timeout: 30_000,
+      })
+      await page.waitForTimeout(800)
+      await ss(page, "ch4-grades/33-data-export.png")
+    })
+  })
+
+  test("4-13 用語集", async () => {
+    await nav(page, "/glossary")
+    await captureOptional("ch4-grades/34-glossary.png", async () => {
+      const entry = page.locator("#glossary-term-scoreConflict")
+      await expect(entry).toBeVisible({ timeout: 15_000 })
+      await entry.evaluate((element) =>
+        element.scrollIntoView({ block: "start", behavior: "instant" })
+      )
+      await page.waitForTimeout(600)
+      await ss(page, "ch4-grades/34-glossary.png")
+    })
+  })
+
+  test("4-14 生徒管理の在籍予定", async () => {
+    // 2年A組の20名を、次の4月1日から3年A組に入れる（一覧の上のほうに「予定」が並ぶ）
+    const upcomingClassroomId = runSeedCommand("seedUpcomingClassroom", [
+      studentIds.slice(0, 20),
+    ])
+    try {
+      await nav(page, "/students")
+      await captureOptional(
+        "ch4-grades/35-student-list-upcoming.png",
+        async () => {
+          await expect(
+            page.getByText("予定", { exact: true }).first()
+          ).toBeVisible({ timeout: 15_000 })
+          await ss(page, "ch4-grades/35-student-list-upcoming.png")
+        }
+      )
+    } finally {
+      runSeedCommand("deleteClassroom", [upcomingClassroomId])
+    }
   })
 })
 

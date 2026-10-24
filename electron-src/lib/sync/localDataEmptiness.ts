@@ -31,7 +31,7 @@ const TABLES_THAT_MUST_BE_EMPTY: ReadonlyArray<{
   { table: "Exam", label: "試験" },
   { table: "Coursework", label: "試験外成績資料" },
   { table: "Grade", label: "成績算出" },
-  { table: "AsbDefinition", label: "解答用紙定義" },
+  { table: "AsbDefinition", label: "解答用紙" },
   { table: "Tag", label: "タグ" },
 ]
 

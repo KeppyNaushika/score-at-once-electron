@@ -9,7 +9,7 @@ export function formatTagUsage(tag: TagWithAllRelations): string {
     { label: "試験", links: tag.examTags },
     { label: "資料", links: tag.courseworkTags },
     { label: "成績算出", links: tag.gradeTags },
-    { label: "解答用紙定義", links: tag.asbDefinitionTags },
+    { label: "解答用紙", links: tag.asbDefinitionTags },
     { label: "小計点グループ", links: tag.tagSubtotalGroups },
   ]
     .filter((usage) => usage.links.length > 0)

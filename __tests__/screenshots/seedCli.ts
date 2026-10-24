@@ -18,21 +18,28 @@
 import * as fs from "fs"
 
 import {
+  addNameRegions,
   assertSeedLoaded,
   buildUploadFiles,
+  deleteClassroom,
+  deleteCropRegions,
   deleteDrawingAnnotations,
+  deleteGrade,
   disconnectPrisma,
   findClassroomId,
   linkCourseworkToGrade,
   regenerateAnswerImages,
   resolveRemainingConflicts,
   seedClasses,
+  seedComparisonGrade,
   seedCoursework,
   seedExamWithScoring,
   seedGradeProject,
   seedSecondGrader,
   seedStudents,
   seedSubtotalAndTag,
+  seedUpcomingClassroom,
+  setAnonymousScoringEnforced,
   setCourseworkLetterValues,
   sheetBoxesForDrawing,
 } from "./helpers/seed-in-test"
@@ -60,6 +67,13 @@ const SEED_COMMANDS = {
   findClassroomId,
   sheetBoxesForDrawing,
   deleteDrawingAnnotations,
+  addNameRegions,
+  deleteCropRegions,
+  setAnonymousScoringEnforced,
+  seedComparisonGrade,
+  deleteGrade,
+  seedUpcomingClassroom,
+  deleteClassroom,
 }
 
 export type SeedCommands = typeof SEED_COMMANDS
