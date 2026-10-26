@@ -97,7 +97,7 @@
     "@radix-ui/react-toggle": "^1.1.18",
     "@radix-ui/react-toggle-group": "^1.1.19",
     "@radix-ui/react-tooltip": "^1.2.16",
-    "@sqlite.org/sqlite-wasm": "^3.53.4-build1",
+    "@sqlite.org/sqlite-wasm": "^3.54.1-build1",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-table": "^9.1.2",
     "adm-zip": "^0.6.0",
