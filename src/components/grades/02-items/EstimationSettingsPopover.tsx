@@ -200,7 +200,7 @@ export function EstimationSettingsPopover({
                   </span>
                   {sourceFit.correlation >= 0.999 ? (
                     <span className="text-amber-700 dark:text-amber-300">
-                      （他ソースから完全再現＝定義上のつながり。予測ではなく復元）
+                      （計算に使用したデータでは、他のデータソースから得点をほぼ再現できています）
                     </span>
                   ) : (
                     <>

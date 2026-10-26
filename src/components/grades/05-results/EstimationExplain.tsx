@@ -284,7 +284,7 @@ export function EstimationExplain({
         <p className="mt-1 text-amber-700/80 dark:text-amber-300/80">
           予測の確かさ: 相関 R = {fmt(estimation.correlation, 2)}
           {estimation.correlation >= 0.999
-            ? "（他ソースから完全再現＝定義上のつながり。予測ではなく復元）"
+            ? "（計算に使用したデータでは、他のデータソースから得点をほぼ再現できています）"
             : `（実力の約${Math.round(estimation.correlation * 100)}%を反映／残り約${100 - Math.round(estimation.correlation * 100)}%は中心へ寄る）`}
         </p>
       )}
