@@ -57,7 +57,7 @@ describe("ClassroomRemovalDialog", () => {
       />
     )
 
-    await user.click(screen.getByRole("button", { name: "対応付けを解除" }))
+    await user.click(screen.getByRole("button", { name: "解除する" }))
 
     expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
   })
@@ -79,9 +79,9 @@ describe("ClassroomRemovalDialog", () => {
       />
     )
 
-    // プレビュー取得を待つ（既定の「対応付けを解除」ボタンが有効化される）
+    // プレビュー取得を待つ（既定の「解除する」ボタンが有効化される）
     const actionButton = await screen.findByRole("button", {
-      name: "対応付けを解除",
+      name: "解除する",
     })
     await user.click(actionButton)
 
@@ -107,7 +107,7 @@ describe("ClassroomRemovalDialog", () => {
 
     // 専属生徒も削除を選択
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalled())
-    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
+    await user.click(screen.getByRole("radio", { name: /^登録を外す/ }))
 
     // 「次へ」で2段階目へ
     const nextButton = await screen.findByRole("button", { name: "次へ" })
@@ -142,14 +142,14 @@ describe("ClassroomRemovalDialog", () => {
 
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalled())
     // 「専属生徒も削除」を選んでも、件数不明なので確定ボタンは無効
-    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
+    await user.click(screen.getByRole("radio", { name: /^登録を外す/ }))
     expect(
-      screen.getByRole("button", { name: /次へ|対応付けを解除/ })
+      screen.getByRole("button", { name: /次へ|解除する/ })
     ).toBeDisabled()
 
     // 「登録解除のみ」に切り替えれば実行可（安全側は通る）
-    await user.click(screen.getByRole("radio", { name: /対応付けだけ解除/ }))
-    const unlinkButton = screen.getByRole("button", { name: "対応付けを解除" })
+    await user.click(screen.getByRole("radio", { name: /^登録を残す/ }))
+    const unlinkButton = screen.getByRole("button", { name: "解除する" })
     expect(unlinkButton).toBeEnabled()
     await user.click(unlinkButton)
     expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
@@ -173,11 +173,11 @@ describe("ClassroomRemovalDialog", () => {
     )
 
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalled())
-    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
+    await user.click(screen.getByRole("radio", { name: /^登録を外す/ }))
 
-    // 削除対象0名 → ボタンは「対応付けを解除」、押すと直接実行（2段階目なし）
+    // 削除対象0名 → ボタンは「解除する」、押すと直接実行（2段階目なし）
     const actionButton = await screen.findByRole("button", {
-      name: "対応付けを解除",
+      name: "解除する",
     })
     await user.click(actionButton)
 
@@ -217,7 +217,7 @@ describe("ClassroomRemovalDialog", () => {
     )
 
     await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole("radio", { name: /専属の生徒の登録も外す/ }))
+    await user.click(screen.getByRole("radio", { name: /^登録を外す/ }))
     await user.click(await screen.findByRole("button", { name: "次へ" }))
 
     // 2段階目は見せた件数（3名）を出す
@@ -234,7 +234,7 @@ describe("ClassroomRemovalDialog", () => {
     )
     expect(screen.getByRole("alertdialog").textContent).toContain("3件 → 4件")
     expect(screen.getByRole("alertdialog").textContent).not.toContain(
-      "在籍する 3名"
+      "在籍する3名"
     )
 
     // もう一度押したときに消えるのは、本文が言っている4名
