@@ -49,7 +49,7 @@ export function BrowserStorageSection() {
             <CautionNotice>
               {"保護されていません。ブラウザは空き容量が足りなくなると、知らせずにこのデータを消すことがあります。\n" +
                 "ブラウザは、ブックマークやアプリとしてのインストールなど、このサイトの使われ方を見て保護するかを決めます。" +
-                "保護されるまでは、データ書き出し（.sao）で控えを取っておいてください。"}
+                "保護されるまでは、データ書き出し（.sao）でバックアップを取っておいてください。"}
             </CautionNotice>
             <Button
               variant="outline"
@@ -80,7 +80,7 @@ export function BrowserStorageSection() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">控えを取る</h2>
+        <h2 className="text-lg font-semibold">バックアップを取る</h2>
         <p className="text-sm text-muted-foreground">
           {"データ書き出しで .sao に書き出したファイルは、このブラウザの外に残ります。" +
             "別のPCや、デスクトップ版でも読み込めます。"}

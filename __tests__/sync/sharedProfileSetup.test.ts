@@ -1,7 +1,7 @@
 /**
  * 共有プロファイルの用意と、モードをまたぐ移行（本物のスキーマ・本物の sqlite-nas-sync）
  *
- * - ローカル → 共有: 空の共有フォルダへ DB と画像を丸写しし、同期の写しまで上げる。
+ * - ローカル → 共有: 空の共有フォルダへ DB と画像を丸写しし、同期用ファイルまで上げる。
  *   空でなければ断る。写しの途中で失敗したら、作ったものだけを片づける
  * - 空のプロファイル: 見本だけの DB で共有を始める
  * - 合流: **空の DB にマイグレーションを当て、全クライアントの写しから読み込むだけで
@@ -266,7 +266,7 @@ describe("ローカル → 共有の移行", () => {
     // ローカルは写しただけで変えない
     expect(snapshotAppTables(localDatabasePath(DATA_A))).toEqual(before)
     expect(fs.existsSync(path.join(DATA_A, IMAGE_RELATIVE))).toBe(true)
-    // 移した時点で同期の写しまで上がっている（再起動を待たずに合流できる）
+    // 移した時点で同期用ファイルまで上がっている（再起動を待たずに合流できる）
     expect(fs.readdirSync(getSharedFolderSyncDirectory(SHARED))).toEqual([
       `client-${CLIENT_A}.sqlite`,
     ])
@@ -322,7 +322,7 @@ describe("合流（空の DB から共有フォルダに追いつく）", () => 
         sharedFolderPath: markerOnly,
         clientId: CLIENT_B,
       })
-    ).rejects.toThrow(/まだ同期の写しがありません/)
+    ).rejects.toThrow(/まだ同期用ファイルがありません/)
     expect(fs.existsSync(path.join(DATA_B, "shared"))).toBe(false)
   })
 
@@ -403,7 +403,7 @@ describe("合流（空の DB から共有フォルダに追いつく）", () => 
 })
 
 describe("空の共有プロファイル", () => {
-  it("見本だけの控えを作り、同期の写しを上げ、識別ファイルを置く", async () => {
+  it("見本だけの控えを作り、同期用ファイルを上げ、識別ファイルを置く", async () => {
     const clientId = crypto.randomUUID()
     const profile = await createEmptySharedProfile({
       localDataDirectory: DATA_C,

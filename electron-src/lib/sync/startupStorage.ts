@@ -71,7 +71,7 @@ function findSharedStartupProblem(
   )
   if (!fs.existsSync(replicaPath)) {
     return (
-      `共有プロファイル（${profile.sharedFolderPath}）の手元の控えがありません（${replicaPath}）。` +
+      `共有プロファイル（${profile.sharedFolderPath}）で使う、このPCの共有モードのデータベースがありません（${replicaPath}）。` +
       `同期設定の画面で共有フォルダを選び直すと、作り直せます。`
     )
   }

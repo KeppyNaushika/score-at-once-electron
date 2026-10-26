@@ -10,6 +10,8 @@ export const DATA_TERM_IDS = [
   "idIntegration",
   "storageMode",
   "sharedProfile",
+  "sharedReplica",
+  "syncFile",
   "sync",
   "syncRecordFold",
   "syncParentDeleted",
@@ -47,6 +49,18 @@ export const DATA_CATEGORY: GlossaryCategory<DataTermId> = {
     ],
     storageMode: [identifier("StorageMode", SYNC_TYPES)],
     sharedProfile: [identifier("SharedProfile", SYNC_TYPES)],
+    sharedReplica: [
+      identifier(
+        "getSharedReplicaDatabasePath",
+        "electron-src/lib/sync/sharedFolder.ts"
+      ),
+    ],
+    syncFile: [
+      identifier(
+        "getSharedFolderSyncDirectory",
+        "electron-src/lib/sync/sharedFolder.ts"
+      ),
+    ],
     sync: [identifier("SyncAppConfig", SYNC_TYPES)],
     syncRecordFold: [identifier("SyncRecordFold", SYNC_TYPES)],
     syncParentDeleted: [identifier("SyncParentDeleted", SYNC_TYPES)],

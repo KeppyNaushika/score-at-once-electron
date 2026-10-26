@@ -6,7 +6,7 @@
  * ```
  * <共有フォルダ>/
  *   score-at-once-shared-folder.json   識別ファイル（sharedFolderId: uuidv4）
- *   sync/client-<clientId>.sqlite      同期の写し（sqlite-nas-sync が置く）
+ *   sync/client-<clientId>.sqlite      同期用ファイル（sqlite-nas-sync が置く）
  *   files/exams/...                    答案・模範解答の画像
  *   files/answer-sheet-builder/...     ASB の画像
  * ```
@@ -25,7 +25,7 @@ const SHARED_FOLDER_MARKER_FILE_NAME = "score-at-once-shared-folder.json"
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-/** 共有フォルダの同期の写しの置き場 */
+/** 共有フォルダの同期用ファイルの置き場 */
 export const getSharedFolderSyncDirectory = (
   sharedFolderPath: string
 ): string => path.join(sharedFolderPath, "sync")
@@ -73,7 +73,7 @@ export const SHARED_FILE_DIRECTORIES = [
  * 共有フォルダを見た結果。
  *
  * - `unreachable`: フォルダが無い・読めない
- * - `empty`: 共有しているものが無い。識別ファイルも同期の写しも無く、画像の置き場も空
+ * - `empty`: 共有しているものが無い。識別ファイルも同期用ファイルも無く、画像の置き場も空
  * - `shared`: 識別ファイルがある（既に共有されている）
  * - `unusable`: 識別ファイルが壊れている、または識別ファイルが無いのに写しや画像がある
  */
@@ -122,7 +122,7 @@ export function writeSharedFolderMarker(
   )
 }
 
-/** 同期の写し（`client-*.sqlite`）があるか */
+/** 同期用ファイル（`client-*.sqlite`）があるか */
 export function hasSyncCopies(sharedFolderPath: string): boolean {
   const syncDirectory = getSharedFolderSyncDirectory(sharedFolderPath)
   if (!fs.existsSync(syncDirectory)) return false
@@ -165,7 +165,7 @@ export function inspectSharedFolder(
     return {
       kind: "unusable",
       reason:
-        "識別ファイルが無いのに、同期の写しがあります（一括採点の共有フォルダが壊れているか、別の版で作られたものです）",
+        "識別ファイルが無いのに、同期用ファイルがあります（一括採点の共有フォルダが壊れているか、別の版で作られたものです）",
     }
   }
   if (isNonEmptyDirectory(getSharedFolderFilesDirectory(sharedFolderPath))) {

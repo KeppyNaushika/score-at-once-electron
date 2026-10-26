@@ -45,7 +45,7 @@ async function checkBrowserStorage(): Promise<void> {
       id: NOT_PERSISTED_TOAST_ID,
       description:
         "データはこのブラウザの中にだけ置かれています。このブラウザは空き容量が足りなくなると、" +
-        "知らせずにデータを消すことがあります。データ書き出し（.sao）で控えを取っておいてください。\n" +
+        "知らせずにデータを消すことがあります。データ書き出し（.sao）でバックアップを取っておいてください。\n" +
         SETTINGS_HINT,
       duration: Infinity,
       closeButton: true,

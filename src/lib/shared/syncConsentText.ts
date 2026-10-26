@@ -13,7 +13,7 @@
 import type { SyncAppConfig } from "@/electron-src/lib/sync/types"
 
 /** 同意文の版。同意の記録（`sync-config.json`）にこの文字列が残り、一致しなければ同意し直す */
-export const SYNC_CONSENT_VERSION = "2026-10-16"
+export const SYNC_CONSENT_VERSION = "2026-10-26"
 
 /** 同意の1項目。利用者は項目ごとに確かめる（読み飛ばせない形にする） */
 interface SyncConsentItem {
@@ -38,7 +38,7 @@ export const SYNC_CONSENT_ITEMS: readonly SyncConsentItem[] = [
   {
     key: "backup",
     title: "バックアップは、同期とは別にご自身で取ってください",
-    body: "採点したデータは、同期とは別に、ご自身でもバックアップを取ってください（アーカイブの書き出し）。共有フォルダにある同期のための写しは、バックアップではありません。そこからデータを元に戻すことはできません。",
+    body: "採点したデータは、同期とは別に、ご自身でもバックアップを取ってください（アーカイブの書き出し）。共有フォルダにある同期用ファイルは、バックアップではありません。そこからデータを元に戻すことはできません。",
   },
   {
     key: "deletion-propagates",

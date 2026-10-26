@@ -6,8 +6,8 @@
  *
  * | 操作 | 前提 | すること |
  * | --- | --- | --- |
- * | {@link createEmptySharedProfile} | 共有フォルダが空 | 見本だけの新しい DB で共有を始め、同期の写しを上げる |
- * | {@link migrateLocalDataToSharedFolder} | 共有フォルダが空 | ローカルの DB と画像を丸写しして共有を始め、同期の写しを上げる |
+ * | {@link createEmptySharedProfile} | 共有フォルダが空 | 見本だけの新しい DB で共有を始め、同期用ファイルを上げる |
+ * | {@link migrateLocalDataToSharedFolder} | 共有フォルダが空 | ローカルの DB と画像を丸写しして共有を始め、同期用ファイルを上げる |
  * | {@link joinSharedFolder} | 共有フォルダに識別ファイルがある | 共有フォルダの写しだけから手元の控えを作る |
  * | {@link migrateSharedProfileToLocal} | ローカルの data が空 | 手元の控えと共有フォルダの画像を、ローカルへ丸写しし、同期の仕組みを取り除く |
  *
@@ -57,7 +57,7 @@ interface SharedFolderSetupContext {
   localDataDirectory: string
   /** 利用者が選んだ共有フォルダ */
   sharedFolderPath: string
-  /** このPCの clientId（同期の写しの名前になる） */
+  /** このPCの clientId（同期用ファイルの名前になる） */
   clientId: string
   /** 当てるマイグレーション（省略するとアプリに束ねた一覧） */
   migrations?: readonly MigrationScript[]
@@ -141,7 +141,7 @@ async function createSchemaOnlyDatabase(
 }
 
 /**
- * 共有フォルダの骨組み（sync / files）を作り、手元の控えから同期の写しを上げ、
+ * 共有フォルダの骨組み（sync / files）を作り、手元の控えから同期用ファイルを上げ、
  * 最後に識別ファイルを置く。
  *
  * 写しを上げるのは、共有モードの起動時と同じライブラリの経路（`setupSync` → `syncNow`）。
@@ -179,7 +179,7 @@ async function publishAndFinishSharedFolder(
     await instance.close()
   }
   if (!fs.existsSync(copyPath)) {
-    throw new Error(`同期の写しを共有フォルダに置けませんでした: ${copyPath}`)
+    throw new Error(`同期用ファイルを共有フォルダに置けませんでした: ${copyPath}`)
   }
   // 識別ファイルは最後。これがある＝用意が終わった、という印になる
   writeSharedFolderMarker(context.sharedFolderPath, sharedFolderId)
@@ -310,7 +310,7 @@ function describeJoinFailure(
       warning.startsWith("Rebuild deferred")
   )
   if (blocking.length > 0) {
-    return `共有フォルダの内容を手元の控えへ反映できませんでした: ${blocking.join(" / ")}`
+    return `共有フォルダの内容をこのPCの共有モードのデータベースへ反映できませんでした: ${blocking.join(" / ")}`
   }
   if (result.clientsSynced === 0 && result.skippedRemotes.length > 0) {
     const newer = result.skippedRemotes.some(
@@ -323,7 +323,7 @@ function describeJoinFailure(
       : "共有フォルダのデータは、このPCより古い版のアプリで作られています。共有しているPCのアプリを更新してから、もう一度選んでください。"
   }
   if (result.clientsSynced === 0) {
-    return "共有フォルダの同期の写しを1つも読めませんでした。"
+    return "共有フォルダの同期用ファイルを1つも読めませんでした。"
   }
   const db = openAppDatabase(replicaPath)
   try {
@@ -361,7 +361,7 @@ export async function joinSharedFolder(
   }
   if (!hasSyncCopies(context.sharedFolderPath)) {
     throw new Error(
-      "この共有フォルダには、まだ同期の写しがありません。共有を始めたPCで、共有モードで一度起動してから選んでください。"
+      "この共有フォルダには、まだ同期用ファイルがありません。共有を始めたPCで、共有モードで一度起動してから選んでください。"
     )
   }
   const replicaPath = getSharedReplicaDatabasePath(
@@ -438,7 +438,9 @@ export async function migrateSharedProfileToLocal({
     profile.sharedFolderId
   )
   if (!fs.existsSync(replicaPath)) {
-    throw new Error(`このプロファイルの手元の控えがありません: ${replicaPath}`)
+    throw new Error(
+      `この共有プロファイルで使う、このPCの共有モードのデータベースがありません: ${replicaPath}`
+    )
   }
 
   const created = new CreatedEntries()
