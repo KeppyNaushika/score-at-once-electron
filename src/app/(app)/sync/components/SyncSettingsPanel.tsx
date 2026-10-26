@@ -223,7 +223,7 @@ export function SyncSettingsPanel() {
       <div className="space-y-2">
         <Label className="text-base">起動するデータ</Label>
         <p className="text-sm text-muted-foreground">
-          ローカルモードと共有モードは別々のデータです。切り替えてもデータは行き来しません。切り替えは再起動したときに効きます。
+          ローカルモードと共有モードは別々のデータです。切り替えてもデータは行き来しません。切り替えは再起動したあとに反映されます。
         </p>
         <StorageProfileList
           nextMode={config.mode}
@@ -257,7 +257,7 @@ export function SyncSettingsPanel() {
           className="bg-muted font-mono text-xs"
         />
         <p className="text-xs text-muted-foreground">
-          上がデータベース、下が答案・模範解答などの画像の置き場です。共有モードの共有フォルダにあるのは同期のための写しで、バックアップではありません。
+          上がデータベース、下が答案・模範解答などの画像の置き場です。共有フォルダには、画像のほかに同期用ファイルがあります。同期用ファイルはバックアップではありません。
         </p>
       </div>
 

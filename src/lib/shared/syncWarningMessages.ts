@@ -104,14 +104,14 @@ const RULES: SyncWarningRule[] = [
     pattern: /^Rebuild failed:/,
     severity: "warning",
     describe: () =>
-      "一部のデータを画面へ反映できませんでした。この知らせが続くときは、データの控えを取ったうえで問い合わせてください。",
+      "一部のデータを画面へ反映できませんでした。このメッセージが続けて表示されるときは、アーカイブの書き出しでバックアップを取ったうえで問い合わせてください。",
   },
   {
     key: "unplaceable",
     pattern: /^Unplaceable ([^:]+):/,
     severity: "warning",
     describe: (match) =>
-      `${tableLabel(match[1])}に、まだ画面に出せていないデータがあります。消えてはいません。関わりのあるデータが他のPCから届けば、自動で表示に戻ります。`,
+      `${tableLabel(match[1])}に、まだ画面に表示できていないデータがあります。削除されてはいません。関わりのあるデータが他のPCから同期されれば、自動で表示されます。`,
   },
   {
     key: "changelog-unparseable",
@@ -139,7 +139,7 @@ const RULES: SyncWarningRule[] = [
     pattern: /^_sns_rebuilding に行が残っている/,
     severity: "warning",
     describe: () =>
-      "前回の同期が、画面への反映の途中で終わっていたようです。今回やり直しています。それまでのあいだ、このPCでの変更は他のPCへ届いていませんでした。",
+      "前回の同期が、画面への反映の途中で終わっていたようです。今回やり直しています。それまでのあいだ、このPCでの変更は他のPCへ同期されていませんでした。",
   },
   {
     key: "client-id-taken",
@@ -160,7 +160,7 @@ const RULES: SyncWarningRule[] = [
     pattern: /NAS 上の自分のコピー .* が読めない/,
     severity: "warning",
     describe: () =>
-      "共有フォルダにある、このPC用の控えを読み取れませんでした。共有フォルダにつながっているか確認してください。",
+      "共有フォルダにある、このPCの同期用ファイルを読み取れませんでした。共有フォルダにつながっているか確認してください。",
   },
   {
     key: "missing-parent-synced",

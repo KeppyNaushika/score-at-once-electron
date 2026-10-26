@@ -49,7 +49,7 @@ describe("describeSyncWarnings", () => {
     expect(notice.message).toContain("受験生徒")
     expect(notice.message).not.toContain("ExamStudent")
     // 消えていないことを必ず書く（表に出ないだけで、事実は残っている）
-    expect(notice.message).toContain("消えてはいません")
+    expect(notice.message).toContain("削除されてはいません")
   })
 
   it("同じ種類の注意は1行にまとめて件数を出す", () => {
