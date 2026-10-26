@@ -69,7 +69,7 @@
     "github:prerelease:rc:major": "node scripts/github-release.js major rc"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.131.0",
+    "@anthropic-ai/sdk": "^1.3.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -155,7 +155,7 @@
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "autoprefixer": "^10.5.4",
-    "electron": "^43.2.0",
+    "electron": "^44.9.3",
     "esbuild": "^0.28.1",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",

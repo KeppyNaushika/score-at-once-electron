@@ -87,6 +87,7 @@ function createMessage(
       output_tokens_details: null,
       server_tool_use: null,
       service_tier: null,
+      speed: null,
     },
     ...overrides,
   }
@@ -139,6 +140,10 @@ function createModelInfo(
     id,
     display_name: overrides.displayName ?? `Display ${id}`,
     created_at: overrides.createdAt ?? "2026-09-01T00:00:00Z",
+    deprecated_at: null,
+    lifecycle: "active",
+    line: null,
+    retires_at: null,
     max_input_tokens: 200000,
     max_tokens: 64000,
     type: "model",
@@ -165,11 +170,18 @@ function createModelInfo(
             },
             image_input: supported(true),
             pdf_input: supported(true),
+            server_tools: {
+              supported: true,
+              code_execution: supported(true),
+              web_search: supported(true),
+            },
             structured_outputs: supported(true),
             thinking: {
               supported: true,
               types: {
                 adaptive: supported(overrides.adaptive ?? true),
+                between_tools: supported(true),
+                disabled: supported(true),
                 enabled: supported(true),
               },
             },
