@@ -179,7 +179,9 @@ async function publishAndFinishSharedFolder(
     await instance.close()
   }
   if (!fs.existsSync(copyPath)) {
-    throw new Error(`同期用ファイルを共有フォルダに置けませんでした: ${copyPath}`)
+    throw new Error(
+      `同期用ファイルを共有フォルダに置けませんでした: ${copyPath}`
+    )
   }
   // 識別ファイルは最後。これがある＝用意が終わった、という印になる
   writeSharedFolderMarker(context.sharedFolderPath, sharedFolderId)
