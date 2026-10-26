@@ -120,7 +120,7 @@ describe("describeSyncWarnings", () => {
     expect(notice.originals).toEqual([original])
     expect(notice.message).toContain("受験生徒")
     expect(notice.message).toContain("5件")
-    expect(notice.message).toContain("表示から外れます")
+    expect(notice.message).toContain("表示されなくなります")
   })
 
   it("設定の取り違えは、戻した値まで伝える", () => {
@@ -132,7 +132,55 @@ describe("describeSyncWarnings", () => {
     expect(notice.message).not.toContain("changelogRetentionDays")
   })
 
-  it("同じ識別番号のPCが2台ある知らせは、同期を止めたことまで伝える", () => {
+  it("読み取り失敗は、他のPCの変更の取り込みと復元判定を区別する", () => {
+    const [remote, self, restored] = describeSyncWarnings([
+      "Failed to open remote database: other-pc",
+      "NAS 上の自分のコピー /nas/sync/a.sqlite が読めない。この回は、DB がバックアップから戻されたかどうかを判定できない",
+      "手元の lamport (1) が、NAS 上の自分のコピーに記録した値 (2) より小さい。DB がバックアップから戻されたか、外で書き換えられた可能性がある",
+    ])
+
+    expect(remote.key).toMatch(/^remote-unreadable:/)
+    expect(remote.message).toContain("今回は取り込まれていません")
+    expect(self.key).toMatch(/^self-copy-unreadable:/)
+    expect(self.message).toContain("復元されたかどうかを確認できませんでした")
+    expect(restored.key).toMatch(/^restored-from-backup:/)
+    for (const notice of [remote, self]) {
+      expect(notice.message).toContain("次回の同期で再度")
+      expect(notice.message).not.toContain("対処の必要はありません")
+    }
+  })
+
+  it("反映対象から除外された場合は、再起動まで反映されないことを伝える", () => {
+    const [notice] = describeSyncWarnings([
+      "Rebuild failed: 外部キーの違反が残るので、作り直しの対象から外した: ExamStudent",
+    ])
+
+    expect(notice.message).toContain("再起動するまで")
+    expect(notice.message).toContain("再起動してください")
+    expect(notice.message).toContain("バックアップを作成してください")
+    expect(notice.message).not.toContain("問い合わせ")
+  })
+
+  it("参照先がない残りの表も、同期対象かどうかで影響と対処を書き分ける", () => {
+    const notices = describeSyncWarnings([
+      "ほか 2 表の、同期に関わる行にも親がいない（合計 7 件）。この状態で同期を始めると、それらの行はユーザーテーブルから外れる（バージョンは残る）",
+      "ほか 2 表にも親のいない行がある（合計 7 件）。同期は触らないが、DB がもともと壊れている印なので、あわせて直すこと",
+    ])
+
+    expect(notices).toHaveLength(2)
+    expect(notices[0].key).toMatch(/^missing-parent-rest-synced:/)
+    expect(notices[0].message).toContain("表示されなくなります")
+    expect(notices[1].key).toMatch(/^missing-parent-rest-unsynced:/)
+    expect(notices[1].message).toContain("修復しません")
+    for (const notice of notices) {
+      expect(notice.translated).toBe(true)
+      expect(notice.message).toContain("2種類")
+      expect(notice.message).toContain("合計7件")
+      expect(notice.message).toContain("バックアップを作成してください")
+    }
+  })
+
+  it("識別番号が重複した知らせは、同期の中止と一方だけを使用する対処を伝える", () => {
     const [notice] = describeSyncWarnings([
       "NAS 上の自分のコピー /nas/sync/a.db の sns.instanceId が X になっている（自分は Y）。" +
         "同じ clientId を使うクライアントが他にあるので、この回の同期を止めた。" +
@@ -141,6 +189,8 @@ describe("describeSyncWarnings", () => {
 
     expect(notice.message).toContain("同じ識別番号")
     expect(notice.message).toContain("中止")
+    expect(notice.message).toContain("同じPC内で複製")
+    expect(notice.message).toContain("一方だけを使用してください")
     expect(notice.message).not.toContain("clientId")
     expect(notice.message).not.toContain("instanceId")
   })
