@@ -20,7 +20,7 @@ const OUTCOME_HEADLINES: Record<ProviderConnectionTestOutcome, string> = {
   authentication:
     "API キーが受け付けられませんでした。キーと、事業者の契約を確かめてください",
   connection:
-    "事業者へつながりませんでした。ネットワークやプロキシの設定を確かめてください",
+    "事業者のサーバーに接続できませんでした。ネットワークやプロキシの設定を確認してください。",
   rate_limit:
     "利用の上限に達しています。しばらく待つか、事業者の契約の上限を確かめてください",
   unknown: "接続を確かめられませんでした",
@@ -31,7 +31,7 @@ interface AiProviderConnectionTestProps {
   hasApiKey: boolean
 }
 
-/** 保存したキーで事業者へつながるか試す（トークンを消費しない呼び出しを使う） */
+/** 保存したキーで事業者のサーバーに接続できるか試す（トークンを消費しない呼び出しを使う） */
 export function AiProviderConnectionTest({
   provider,
   hasApiKey,
