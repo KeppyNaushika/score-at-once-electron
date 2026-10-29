@@ -39,7 +39,6 @@ import type {
   AnswerImageIdentity,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
-import { Card, CardContent } from "@/components/ui/card"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 interface AnswerTableShellProps {
@@ -104,7 +103,7 @@ interface AnswerTableShellProps {
 }
 
 /**
- * upload / view 共通の答案テーブル外枠（Card・DndContext・ヘッダー・グリッド・
+ * upload / view 共通の答案テーブル外枠（DndContext・ヘッダー・グリッド・
  * ドラッグオーバーレイ・孤立答案ストリップ・モーダル）。DnD の振る舞いはスロット
  * （renderFileCell / renderEmptyCell）で注入し、TableContent は DnD 非依存に保つ。
  */
@@ -154,15 +153,11 @@ export function AnswerTableShell({
   // 模範解答が存在しない場合
   if (maxPages === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="py-8 text-center text-gray-500">
-            <FileImage className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-            <p className="text-lg">模範解答が登録されていません</p>
-            <p className="text-sm">まず模範解答をアップロードしてください</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="py-8 text-center text-gray-500">
+        <FileImage className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+        <p className="text-lg">模範解答が登録されていません</p>
+        <p className="text-sm">まず模範解答をアップロードしてください</p>
+      </div>
     )
   }
 
@@ -317,7 +312,7 @@ export function AnswerTableShell({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
-        <Card>
+        <div className="flex flex-col gap-4">
           <TableHeader
             maxPages={maxPages}
             enabledFilesCount={enabledFilesCount}
@@ -340,24 +335,22 @@ export function AnswerTableShell({
             onMarkerCorrectionChange={onMarkerCorrectionChange}
           />
 
-          <CardContent className="p-4">
-            <div className="min-h-96">
-              {/* upload（方式A）だけ SortableContext で並べ替え文脈を張る。
-                  view（方式B）は素の droppable マス＋draggable 答案で構成し、
-                  sortable の reflow で周囲が動かないようにする。 */}
-              {mode === "upload" ? (
-                <SortableContext
-                  items={sortableItemIds}
-                  strategy={rectSortingStrategy}
-                >
-                  {tableBody}
-                </SortableContext>
-              ) : (
-                tableBody
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          <div className="min-h-96">
+            {/* upload（方式A）だけ SortableContext で並べ替え文脈を張る。
+                view（方式B）は素の droppable マス＋draggable 答案で構成し、
+                sortable の reflow で周囲が動かないようにする。 */}
+            {mode === "upload" ? (
+              <SortableContext
+                items={sortableItemIds}
+                strategy={rectSortingStrategy}
+              >
+                {tableBody}
+              </SortableContext>
+            ) : (
+              tableBody
+            )}
+          </div>
+        </div>
 
         <TableDragOverlay
           activeDisplay={activeDisplay}

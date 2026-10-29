@@ -23,10 +23,11 @@ export function PlacementStrategySelector({
         aria-label="配置戦略"
         onValueChange={ignoreDeselect(PLACEMENT_STRATEGIES, onFileOrderChange)}
       >
-        <ToggleGroupItem value="page-first" className="px-3">
+        {/* 項目の横幅は「表示」のトグル（PreviewModeToggle）とそろえる */}
+        <ToggleGroupItem value="page-first" className="w-20">
           ページ順
         </ToggleGroupItem>
-        <ToggleGroupItem value="student-first" className="px-3">
+        <ToggleGroupItem value="student-first" className="w-20">
           生徒順
         </ToggleGroupItem>
       </ToggleGroup>
