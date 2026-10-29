@@ -167,16 +167,16 @@ export default function StudentsPage() {
         className="flex flex-1 flex-col px-6 pt-4"
       >
         {/* タブ・統計・アクションボタン */}
-        <div className="mb-4 flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="students" className="px-4">
+        <div className="mb-4 flex items-center gap-4">
+          <TabsList className="flex-1">
+            <TabsTrigger value="students" className="flex-1">
               受験生徒一覧
             </TabsTrigger>
-            <TabsTrigger value="classrooms" className="px-4">
+            <TabsTrigger value="classrooms" className="flex-1">
               学級の対応付け
             </TabsTrigger>
             {showAssignments && (
-              <TabsTrigger value="grader-assignment" className="px-4">
+              <TabsTrigger value="grader-assignment" className="flex-1">
                 採点担当
               </TabsTrigger>
             )}

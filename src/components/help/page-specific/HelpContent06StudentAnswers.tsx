@@ -207,7 +207,7 @@ export function HelpContent06StudentAnswers() {
         </Figure>
         <p>
           名前を確認しやすくするための表示の切り替えもあります。表の上の
-          <strong>「プレビュー」</strong>で<strong>「氏名欄のみ」</strong>
+          <strong>「表示」</strong>で<strong>「氏名欄のみ」</strong>
           を選ぶと、答案の氏名欄だけを大きく表示できます。氏名欄を使うには、
           採点領域の設定で氏名欄をあらかじめ決めておく必要があります。
         </p>
