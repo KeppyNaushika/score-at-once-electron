@@ -7,6 +7,7 @@ import { Plus, Tag } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   type ToolbarAction,
   toolbarButtonAction,
@@ -221,9 +222,11 @@ export function TagsPageContainer() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              タグ「{tagDeletion.target?.name}」を削除しますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="destructive">
+              <AlertDialogTitle>
+                タグ「{tagDeletion.target?.name}」を削除しますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               {tagToDeleteUsage === null || tagToDeleteUsage === "未使用"
                 ? null
@@ -236,7 +239,7 @@ export function TagsPageContainer() {
               className={buttonVariants({ variant: "destructive" })}
               onClick={handleConfirmDelete}
             >
-              削除
+              削除する
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

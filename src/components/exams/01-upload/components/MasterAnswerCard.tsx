@@ -7,6 +7,7 @@ import React, { useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { TooltipButton } from "@/components/common/TooltipButton"
 import type { MasterAnswerCardProps } from "@/components/exams/01-upload/types"
 import {
@@ -19,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -273,12 +275,14 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
         <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                ページ {answer.pageNumber} を削除しますか？
-              </AlertDialogTitle>
+              <ConfirmationTitleRow variant="destructive">
+                <AlertDialogTitle>
+                  ページ {answer.pageNumber} を削除しますか？
+                </AlertDialogTitle>
+              </ConfirmationTitleRow>
               <AlertDialogDescription className="space-y-2">
                 <span className="block">
-                  このページと一緒に、次のものも削除されます。
+                  このページと一緒に、以下も削除されます：
                 </span>
                 <span className="block pl-4 text-muted-foreground">
                   {answerImageCount > 0 && (
@@ -293,6 +297,9 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
                       ・ページ上の設問（採点領域） {cropRegionCount} 個
                     </span>
                   )}
+                </span>
+                <span className="block font-medium">
+                  この操作は元に戻すことができません。
                 </span>
                 <span className="block">
                   模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。
@@ -321,7 +328,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
                 disabled={
                   !canConfirm || (cropRegionCount > 0 && examDetail.isPending)
                 }
-                className="bg-destructive text-white hover:bg-destructive/90"
+                className={buttonVariants({ variant: "destructive" })}
               >
                 削除する
               </AlertDialogAction>

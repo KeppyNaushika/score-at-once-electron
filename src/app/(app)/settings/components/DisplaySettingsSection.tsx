@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { RotateCcw } from "lucide-react"
+import { Rabbit, RotateCcw, Turtle } from "lucide-react"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
@@ -240,8 +240,8 @@ export function DisplaySettingsSection() {
           <div className="space-y-1 pt-2">
             <Label className="text-sm">クリック判定の待ち時間</Label>
             <div className="flex items-center gap-2">
-              <span className="shrink-0 text-lg" title="速い">
-                🐇
+              <span className="shrink-0 text-muted-foreground" title="速い">
+                <Rabbit className="h-5 w-5" />
               </span>
               <Slider
                 {...debounceMsSlider.sliderProps}
@@ -250,8 +250,8 @@ export function DisplaySettingsSection() {
                 max={800}
                 step={50}
               />
-              <span className="shrink-0 text-lg" title="遅い">
-                🐢
+              <span className="shrink-0 text-muted-foreground" title="遅い">
+                <Turtle className="h-5 w-5" />
               </span>
               <span className="w-14 shrink-0 text-right text-sm text-muted-foreground">
                 {debounceMsSlider.shown}ms

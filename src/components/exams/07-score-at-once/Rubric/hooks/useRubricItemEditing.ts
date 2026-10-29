@@ -134,7 +134,7 @@ export function useRubricItemEditing({
             : source
         },
         options: { onlyRubricItemId: rubricItem.id },
-        title: "項目を変更しますか",
+        title: "項目を変更しますか？",
         description: `項目${itemName(rubricItem)}は採点者の間で共有しています。`,
         confirmLabel: "変更する",
         change: async () => {
@@ -167,7 +167,7 @@ export function useRubricItemEditing({
         }),
         options: { onlyRubricItemId: rubricItem.id },
         alwaysConfirm: true,
-        title: "項目を削除しますか",
+        title: "項目を削除しますか？",
         description: `項目${itemName(rubricItem)}を削除し、チェックを入れていた答案からも外します。`,
         confirmLabel: "削除する",
         change: async () => {
@@ -213,7 +213,7 @@ export function useRubricItemEditing({
             sortOrder: sortOrderById.get(sourceItem.id) ?? sourceItem.sortOrder,
           })),
         }),
-        title: "項目の並びを変えますか",
+        title: "項目の並びを変えますか？",
         description:
           "判定を決める項目が重なった答案では、並びが先の項目を採ります。",
         confirmLabel: "並びを変える",

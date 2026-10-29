@@ -5,6 +5,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { useSyncSettings } from "@/app/(app)/sync/hooks/useSyncSettings"
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { SyncConsentDialog } from "@/components/common/SyncConsentDialog"
 import {
   AlertDialog,
@@ -323,14 +324,18 @@ export function SyncSettingsPanel() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>ローカルモードへ移行しますか？</AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>
+                ローカルモードへ移行しますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription className="break-all whitespace-pre-line">
-              {`${migrationSource?.sharedFolderPath ?? ""}\n\nこの共有プロファイルのデータ（データベースと画像）を、このPCのローカルモードへ写します。移せるのは、ローカルモードにまだデータが無いときだけです。共有フォルダには何も書きません。\nまとめたい場合は、アーカイブの書き出しと取り込みを使ってください。`}
+              {`${migrationSource?.sharedFolderPath ?? ""}\n\nこの共有プロファイルのデータ（データベースと画像）を、このPCのローカルモードへ写します。移せるのは、ローカルモードにまだデータが無いときだけです。共有フォルダには何も書きません。まとめたい場合は、アーカイブの書き出しと取り込みを使ってください。`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isMigratingToLocal}>
-              やめる
+              キャンセル
             </AlertDialogCancel>
             <Button
               disabled={isMigratingToLocal}
@@ -349,7 +354,9 @@ export function SyncSettingsPanel() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>再起動して切り替えますか？</AlertDialogTitle>
+            <ConfirmationTitleRow variant="default">
+              <AlertDialogTitle>再起動して切り替えますか？</AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               起動するデータの設定を保存しました。切り替わるのは再起動したときです。
             </AlertDialogDescription>

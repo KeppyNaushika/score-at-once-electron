@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +54,9 @@ export function GlobalScaleEditConfirmDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>共通の類型表を直しますか</AlertDialogTitle>
+          <ConfirmationTitleRow variant="warning">
+            <AlertDialogTitle>共通の類型表を直しますか？</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>
             {pendingEdit
               ? `「${scoreScale.name || "名前なし"}」は ${usage.examCount}試験・${usage.cropRegionCount}設問で使っています。${EDIT_DESCRIPTIONS[pendingEdit.kind]}と、使っているすべての試験の点が変わります（終わった試験の合計や成績算出の結果も変わります。固定値は変わりません）。`
@@ -61,7 +64,7 @@ export function GlobalScaleEditConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>やめる</AlertDialogCancel>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
           {onDuplicate && (
             <Button variant="outline" onClick={() => void onDuplicate()}>
               この試験用に複製して直す

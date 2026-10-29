@@ -143,10 +143,9 @@ export default function DeleteExamModal({
     {
       type: "destructive" as const,
       message:
-        "この操作は取り消せません。" +
         (destroyedLabels.length > 0
           ? "関連するすべてのデータも同時に削除されます。"
-          : ""),
+          : "") + "この操作は元に戻すことができません。",
     },
     ...(destroyedLabels.length > 0
       ? [
@@ -171,7 +170,7 @@ export default function DeleteExamModal({
     <ConfirmationModal
       open={open}
       onClose={() => onOpenChange(false)}
-      title="試験の削除"
+      title="試験を削除しますか？"
       description="以下の試験を完全に削除します。"
       confirmText="削除する"
       cancelText="キャンセル"

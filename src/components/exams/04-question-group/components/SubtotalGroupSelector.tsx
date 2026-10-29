@@ -5,6 +5,7 @@ import { ListTree, Plus, Search, Trash } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,9 +160,11 @@ export function SubtotalGroupSelector({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              「{groupRemoval.target?.name}」をこの試験から外しますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>
+                「{groupRemoval.target?.name}」をこの試験から外しますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               この試験の小計点に使わなくなります。小計点グループ自体は残るので、あとで「グループを追加」から戻せます。設問と対応付けている場合は外せないため、先に設問との対応付けを解除してください。
             </AlertDialogDescription>

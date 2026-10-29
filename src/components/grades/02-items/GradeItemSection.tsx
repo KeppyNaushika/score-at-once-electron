@@ -129,8 +129,8 @@ export function GradeItemSection({
           open={isDeleteConfirmOpen}
           onClose={() => setIsDeleteConfirmOpen(false)}
           title="成績評価項目を削除しますか？"
-          description={`「${gradeItem.name}」を削除します。この成績評価項目のデータソース${gradeItem.dataSources.length}件・成績境界・上書き・固定値も一緒に削除され、元に戻せません。`}
-          confirmText="削除"
+          description={`「${gradeItem.name}」を削除します。この成績評価項目のデータソース${gradeItem.dataSources.length}件・成績境界・上書き・固定値も一緒に削除されます。この操作は元に戻すことができません。`}
+          confirmText="削除する"
           variant="destructive"
           icon="trash"
           onConfirm={handleDelete}

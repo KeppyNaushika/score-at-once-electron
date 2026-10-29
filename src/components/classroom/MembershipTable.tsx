@@ -308,7 +308,7 @@ export default function ClassroomMembershipTable({
         open={bulkDeletion.isOpen}
         onClose={bulkDeletion.close}
         title={`選択された${bulkDeletion.target?.length ?? 0}件の在籍を削除しますか？`}
-        confirmText="削除"
+        confirmText="削除する"
         variant="destructive"
         icon="trash"
         onConfirm={handleConfirmBulkDelete}

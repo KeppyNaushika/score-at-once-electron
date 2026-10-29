@@ -1,7 +1,6 @@
 "use client"
 
-import { Lock } from "lucide-react"
-
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,10 +55,9 @@ export function GradeLockDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <Lock className="h-4 w-4" />
-            成績算出で使われています
-          </AlertDialogTitle>
+          <ConfirmationTitleRow variant="warning" icon="lock">
+            <AlertDialogTitle>成績算出で使われています</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>{message.lead}</AlertDialogDescription>
         </AlertDialogHeader>
         {/* 成績算出ごとに、成績評価項目とデータソースを表で並べる */}

@@ -89,7 +89,7 @@ export function DeleteStudentModal({
     {
       type: "destructive" as const,
       message:
-        "この操作は取り消せません。学級の在籍と、試験の答案・採点結果、試験外成績資料に入力された得点も削除されます。",
+        "学級の在籍と、試験の答案・採点結果、試験外成績資料に入力された得点も削除されます。この操作は元に戻すことができません。",
     },
     ...(blockedMessage
       ? [{ type: "destructive" as const, message: blockedMessage }]
@@ -104,7 +104,7 @@ export function DeleteStudentModal({
     <ConfirmationModal
       open={open}
       onClose={onClose}
-      title="生徒の削除"
+      title="生徒を削除しますか？"
       description="以下の生徒を完全に削除します。"
       confirmText="削除する"
       cancelText="キャンセル"

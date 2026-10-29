@@ -62,7 +62,7 @@ export function DeleteCourseworkModal({
     <ConfirmationModal
       open={open}
       onClose={onClose}
-      title="試験外成績資料の削除"
+      title="試験外成績資料を削除しますか？"
       description="以下の試験外成績資料を完全に削除します。"
       confirmText="削除する"
       cancelText="キャンセル"
@@ -92,7 +92,7 @@ export function DeleteCourseworkModal({
         {
           type: "destructive",
           message:
-            "この操作は取り消せません。対象生徒の登録・資料評価項目（変換表を含む）・入力した得点や資料評価記号・加減点とその理由・個人成績通知書に載せるコメントもすべて削除されます。",
+            "対象生徒の登録・資料評価項目（変換表を含む）・入力した得点や資料評価記号・加減点とその理由・個人成績通知書に載せるコメントもすべて削除されます。この操作は元に戻すことができません。",
         },
         {
           type: "info",

@@ -1,3 +1,4 @@
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +36,9 @@ export function FullWidthPasteDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>全角文字が検知されました</AlertDialogTitle>
+          <ConfirmationTitleRow variant="default" icon="help">
+            <AlertDialogTitle>全角文字が検知されました</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>
             半角文字でよろしいですか？「そのまま貼り付ける」を選ぶと、貼り付けた文字のまま入力します。
           </AlertDialogDescription>

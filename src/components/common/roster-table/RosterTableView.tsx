@@ -4,6 +4,7 @@ import type { Classroom } from "@prisma/client"
 import { RotateCcw } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { RosterDragOverlay } from "@/components/common/roster-table/RosterDragOverlay"
 import { RosterTableFilters } from "@/components/common/roster-table/RosterTableFilters"
 import { RosterTableHeader } from "@/components/common/roster-table/RosterTableHeader"
@@ -178,7 +179,9 @@ export function RosterTableView({
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>並び順をリセットしますか？</AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>並び順をリセットしますか？</AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
                 手動で設定した並び順を、学級の対応付けの設定に基づいて再設定します（検索・フィルタ中でも全生徒が対象になります）。

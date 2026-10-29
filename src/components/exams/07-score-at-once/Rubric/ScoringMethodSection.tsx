@@ -65,7 +65,7 @@ export function ScoringMethodSection({
     if (nextMethod === scoringMethod) return
     void runWithRecalculation({
       transform: (source) => ({ ...source, scoringMethod: nextMethod }),
-      title: "採点方式を変えますか",
+      title: "採点方式を変えますか？",
       description: `${cropRegion.label} を「${SCORING_METHOD_LABELS[nextMethod]}」にします。`,
       confirmLabel: "変える",
       change: () =>

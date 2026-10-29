@@ -1,5 +1,7 @@
 "use client"
 
+import { ChevronRight } from "lucide-react"
+
 import { Textarea } from "@/components/ui/textarea"
 
 import { useOtherInstructionKeys } from "./hooks/useOtherInstructionKeys"
@@ -43,9 +45,10 @@ export function AiQuestioningOptions({
         const cursor = (
           <span
             aria-hidden
-            className={`font-bold text-primary ${isFocused ? "" : "invisible"}`}
+            // 行は文字の基線でそろえる。アイコンには基線が無いので、この欄だけ中央に置く
+            className={`self-center text-primary ${isFocused ? "" : "invisible"}`}
           >
-            ❯
+            <ChevronRight className="h-3 w-3" strokeWidth={3} />
           </span>
         )
         if (entry.kind === "option") {

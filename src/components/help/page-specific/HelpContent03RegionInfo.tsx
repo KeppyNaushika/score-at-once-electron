@@ -1,5 +1,7 @@
 "use client"
 
+import { Check } from "lucide-react"
+
 import {
   Callout,
   Figure,
@@ -188,13 +190,13 @@ function OmrScanFigure() {
         />
         {/* 読み取り結果のチェック */}
         <span
-          className="pointer-events-none absolute top-0 right-2 text-lg font-bold text-emerald-500"
+          className="pointer-events-none absolute top-0 right-2 text-emerald-500"
           style={{
-            top: "2px",
+            top: "4px",
             animation: "help03Check 4s ease-in-out infinite",
           }}
         >
-          ✓
+          <Check className="h-5 w-5" strokeWidth={3} />
         </span>
       </div>
       <span className="text-[11px] text-gray-500">

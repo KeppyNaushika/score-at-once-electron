@@ -122,7 +122,7 @@ describe("類型評価をまたぐ切り替え", () => {
     renderPanel("deduction")
     await userEvent.click(screen.getByRole("button", { name: "類型方式" }))
     await screen.findByText(/方式と合わない採点が 1件あります/)
-    await userEvent.click(screen.getByRole("button", { name: "やめる" }))
+    await userEvent.click(screen.getByRole("button", { name: "キャンセル" }))
     expect(fakeApi.rubric.setScoringMethod).not.toHaveBeenCalled()
   })
 

@@ -1,5 +1,7 @@
 "use client"
 
+import { Hand } from "lucide-react"
+
 import { Kbd } from "@/components/ui/kbd"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 
@@ -67,9 +69,7 @@ function DrawToolAnimation({ tool }: { tool: DrawToolKind }) {
       {tool === "hand" ? (
         <g style={{ animation: "help07Pan 3.2s ease-in-out infinite" }}>
           <ToolBackdrop />
-          <text x="82" y="44" fontSize="22">
-            ✋
-          </text>
+          <Hand x={82} y={24} size={22} color="#374151" />
         </g>
       ) : (
         <ToolBackdrop />

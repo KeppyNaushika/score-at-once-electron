@@ -11,6 +11,7 @@ import {
 } from "react"
 import { toast } from "sonner"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 
 export interface DirtyDetail {
   label: string
@@ -324,7 +326,9 @@ export function NavigationGuardProvider({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>未保存のデータがあります</AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>未保存のデータがあります</AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription asChild>
               <div>
                 {details.length > 0 && (
@@ -343,8 +347,15 @@ export function NavigationGuardProvider({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleStay}>戻る</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLeave}>離れる</AlertDialogAction>
+            <AlertDialogCancel onClick={handleStay}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleLeave}
+            >
+              離れる
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

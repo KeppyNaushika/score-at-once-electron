@@ -36,7 +36,7 @@ export function DeleteGradeModal({
     <ConfirmationModal
       open={open}
       onClose={onClose}
-      title="成績算出の削除"
+      title="成績算出を削除しますか？"
       description="以下の成績算出を完全に削除します。"
       confirmText="削除する"
       cancelText="キャンセル"
@@ -66,7 +66,7 @@ export function DeleteGradeModal({
         {
           type: "destructive",
           message:
-            "この操作は取り消せません。成績評価項目・データソース・成績境界・上書き・成績の固定もすべて削除されます。",
+            "成績評価項目・データソース・成績境界・上書き・成績の固定もすべて削除されます。この操作は元に戻すことができません。",
         },
         {
           type: "info",

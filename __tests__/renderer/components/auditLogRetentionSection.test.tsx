@@ -93,7 +93,7 @@ describe("AuditLogRetentionSection", () => {
     await chooseRetention(user, "90日")
 
     const dialog = await screen.findByRole("alertdialog")
-    expect(dialog).toHaveTextContent("元に戻せません")
+    expect(dialog).toHaveTextContent("この操作は元に戻すことができません")
     expect(settings.setAuditLogRetentionDays).not.toHaveBeenCalled()
 
     await user.click(within(dialog).getByRole("button", { name: "短くする" }))
@@ -107,7 +107,7 @@ describe("AuditLogRetentionSection", () => {
 
     await chooseRetention(user, "180日")
     const dialog = await screen.findByRole("alertdialog")
-    await user.click(within(dialog).getByRole("button", { name: "やめる" }))
+    await user.click(within(dialog).getByRole("button", { name: "キャンセル" }))
 
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
     expect(settings.setAuditLogRetentionDays).not.toHaveBeenCalled()

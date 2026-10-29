@@ -128,7 +128,7 @@ function drawDebugBorder(
   if (redBorderDisplay) {
     redBorderDisplay.innerHTML = `
       <div class="bg-red-50 p-2 rounded border border-red-200">
-        <div class="font-medium text-red-700 mb-1">🔴 実際の赤枠サイズ</div>
+        <div class="font-medium text-red-700 mb-1 flex items-center gap-1.5"><span class="inline-block size-2 rounded-full bg-red-600"></span>実際の赤枠サイズ</div>
         <div class="text-sm">
           <div>位置: (${Math.round(x)}, ${Math.round(y)})</div>
           <div>サイズ: <span class="font-bold text-red-800">${Math.round(width)} × ${Math.round(height)}px</span></div>

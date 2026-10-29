@@ -38,14 +38,14 @@ describe("解答用紙の削除確認", () => {
     renderDialog(false)
     expect(screen.getByText("解答用紙を削除しますか？")).toBeTruthy()
     expect(
-      screen.getByText("「一学期中間」を削除します。この操作は取り消せません。")
+      screen.getByText("「一学期中間」を削除します。この操作は元に戻すことができません。")
     ).toBeTruthy()
   })
 
   it("削除していない間は押せ、押すと削除を送る", async () => {
     const user = userEvent.setup()
     const onConfirm = renderDialog(false)
-    await user.click(buttonNamed("削除"))
+    await user.click(buttonNamed("削除する"))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 

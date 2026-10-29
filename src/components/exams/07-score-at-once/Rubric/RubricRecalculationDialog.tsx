@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,14 +49,16 @@ export function RubricRecalculationDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
+          <ConfirmationTitleRow variant="warning">
+            <AlertDialogTitle>{pending?.title}</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>
             {pending?.description}
             {pending ? describeRubricRecalculation(pending.summary) : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>やめる</AlertDialogCancel>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
           <AlertDialogAction onClick={() => void pending?.proceed()}>
             {pending?.confirmLabel}
           </AlertDialogAction>

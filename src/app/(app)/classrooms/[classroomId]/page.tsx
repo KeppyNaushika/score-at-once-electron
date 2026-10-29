@@ -387,7 +387,7 @@ export default function ClassroomDetailPage() {
         open={membershipIdToDelete !== null}
         onClose={() => setMembershipIdToDelete(null)}
         title="この在籍を削除しますか？"
-        confirmText="削除"
+        confirmText="削除する"
         variant="destructive"
         icon="trash"
         onConfirm={handleConfirmDeleteMembership}
@@ -397,7 +397,7 @@ export default function ClassroomDetailPage() {
         open={isDeleteClassroomConfirmOpen}
         onClose={() => setIsDeleteClassroomConfirmOpen(false)}
         title="この学級を削除しますか？"
-        confirmText="削除"
+        confirmText="削除する"
         variant="destructive"
         icon="trash"
         loading={deleteClassroom.isPending}
