@@ -2,15 +2,16 @@
 
 import type { Subtotal } from "@prisma/client"
 import {
+  Eraser,
   FileText,
   Group,
   ListOrdered,
   ListTree,
   type LucideIcon,
-  RotateCcw,
 } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { CheckboxCellWithFillHandle } from "@/components/exams/shared/CheckboxCellWithFillHandle"
 import { useFillHandleDrag } from "@/components/exams/shared/useFillHandleDrag"
 import { Badge } from "@/components/ui/badge"
@@ -35,9 +36,11 @@ interface AssignmentTypePresentation {
   emptyIcon: LucideIcon
   emptyTitle: string
   emptyHint: string
-  headerTitle: string
+  /** 表の1行目に置く見出し */
   tableTitle: string
   rowHeading: string
+  /** 小計項目の見出しに、チェックした行の配点の合計を添えるか */
+  showSubtotalPoints: boolean
   /** 小計グループの列見出しの配色 */
   groupHeadClassName: string
   groupHeadTextClassName: string
@@ -60,9 +63,9 @@ const PRESENTATION_BY_ASSIGNMENT_TYPE: Record<
     emptyIcon: FileText,
     emptyTitle: "設問がありません",
     emptyHint: "採点領域から設問を作成してください",
-    headerTitle: "設問と小計項目の対応付け",
-    tableTitle: "対応表",
+    tableTitle: "設問と小計項目の対応付け",
     rowHeading: "設問",
+    showSubtotalPoints: true,
     groupHeadClassName: "border-blue-200 bg-blue-50/50",
     groupHeadTextClassName: "text-blue-700",
     renderRowLabel: (cropRegion) =>
@@ -89,9 +92,9 @@ const PRESENTATION_BY_ASSIGNMENT_TYPE: Record<
     emptyIcon: ListOrdered,
     emptyTitle: "小計の領域がありません",
     emptyHint: "採点領域から小計の領域を作成してください",
-    headerTitle: "小計の領域と小計項目の対応付け",
-    tableTitle: "小計点の対応表",
+    tableTitle: "小計の領域と小計項目の対応付け",
     rowHeading: "小計の領域",
+    showSubtotalPoints: false,
     groupHeadClassName: "border-green-200 bg-green-50/50",
     groupHeadTextClassName: "text-green-700",
     renderRowLabel: (cropRegion) =>
@@ -136,8 +139,6 @@ interface CropSubtotalAssignmentTableProps {
    * 小計欄領域 SUBTOTAL_SCORE）。割り当ての出所でもある
    */
   cropRegions: CropRegionWithSubtotals[]
-  /** 保存済みの割り当てを取り直す */
-  onReload: () => void
 }
 
 /** 採点領域（設問・小計欄）と小計項目の紐付けを、フィルハンドル付きのチェック表で編集する */
@@ -146,13 +147,14 @@ export function CropSubtotalAssignmentTable({
   subtotalGroups,
   assignmentType,
   cropRegions,
-  onReload,
 }: CropSubtotalAssignmentTableProps) {
   const presentation = PRESENTATION_BY_ASSIGNMENT_TYPE[assignmentType]
   const EmptyIcon = presentation.emptyIcon
 
   // 選択されたセルの状態（rowId-colId形式）
   const [selectedCell, setSelectedCell] = useState<string | null>(null)
+  const [clearAllOpen, setClearAllOpen] = useState(false)
+  const [clearingAll, setClearingAll] = useState(false)
 
   // 全ての小計項目をフラットな配列に変換（列データ）
   const allSubtotals = subtotalGroups.flatMap((group) => group.subtotals)
@@ -174,6 +176,34 @@ export function CropSubtotalAssignmentTable({
     cols: allSubtotals,
     onFillComplete: fillCells,
   })
+
+  /** その小計項目にチェックした設問の配点の合計 */
+  const subtotalPoints = (subtotal: Subtotal): number =>
+    cropRegions
+      .filter((cropRegion) => isAssigned(cropRegion, subtotal))
+      .reduce((acc, cropRegion) => acc + (cropRegion.points ?? 0), 0)
+
+  /** 表に並んでいるマスのうち、チェックの入っているもの */
+  const assignedCells = cropRegions.flatMap((cropRegion) =>
+    allSubtotals
+      .filter((subtotal) => isAssigned(cropRegion, subtotal))
+      .map((subtotal) => ({ cropRegion, subtotal }))
+  )
+
+  /** 表に並んでいるマスのチェックをすべて外す（表に出ていない小計項目の対応付けは残す） */
+  const handleClearAll = async () => {
+    setClearingAll(true)
+    try {
+      await Promise.all(
+        assignedCells.map(({ cropRegion, subtotal }) =>
+          setCellAssignment(cropRegion, subtotal, false)
+        )
+      )
+      setClearAllOpen(false)
+    } finally {
+      setClearingAll(false)
+    }
+  }
 
   // セル選択
   const handleCellClick = (rowId: string, colId: string) => {
@@ -208,11 +238,11 @@ export function CropSubtotalAssignmentTable({
 
   return (
     <div className="space-y-4">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="rounded-lg border">
+        {/* 見出しの行。表を横に送っても見出しと操作が隠れないよう、表の外に置く */}
+        <div className="flex items-center gap-3 border-b px-4 py-2">
           <Group className="h-5 w-5" />
-          <span className="font-medium">{presentation.headerTitle}</span>
+          <h2 className="text-lg font-semibold">{presentation.tableTitle}</h2>
           {saving && (
             <Badge
               variant="outline"
@@ -221,24 +251,16 @@ export function CropSubtotalAssignmentTable({
               保存中...
             </Badge>
           )}
-        </div>
-        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={onReload}
-            disabled={saving}
+            className="ml-auto"
+            onClick={() => setClearAllOpen(true)}
+            disabled={saving || assignedCells.length === 0}
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            リセット
+            <Eraser className="mr-2 h-4 w-4" />
+            すべての対応付けを解除
           </Button>
-        </div>
-      </div>
-
-      {/* 対応表 */}
-      <div className="rounded-lg border">
-        <div className="border-b bg-gray-50 px-4 py-3">
-          <h3 className="text-base font-medium">{presentation.tableTitle}</h3>
         </div>
         <div
           className="relative min-h-96 w-full overflow-auto"
@@ -298,6 +320,14 @@ export function CropSubtotalAssignmentTable({
                       <div className="text-xs text-muted-foreground">
                         {subtotal.name}
                       </div>
+                      {presentation.showSubtotalPoints && (
+                        <Badge
+                          variant="outline"
+                          className="mt-1 text-xs tabular-nums"
+                        >
+                          {subtotalPoints(subtotal)}点
+                        </Badge>
+                      )}
                     </TableHead>
                   ))
                 )}
@@ -366,6 +396,7 @@ export function CropSubtotalAssignmentTable({
                               disabled={saving}
                               isInFillRange={isInFillRange(region, subtotal)}
                               disableFillHandle={false}
+                              checkboxClassName="size-6 rounded-md [&_svg]:size-5"
                             />
                           </TableCell>
                         )
@@ -378,6 +409,17 @@ export function CropSubtotalAssignmentTable({
           </Table>
         </div>
       </div>
+
+      <ConfirmationModal
+        open={clearAllOpen}
+        onClose={() => setClearAllOpen(false)}
+        title="すべての対応付けを解除しますか？"
+        description={`「${presentation.tableTitle}」のチェック${assignedCells.length}件をすべて外します。`}
+        confirmText="すべて解除"
+        variant="destructive"
+        onConfirm={handleClearAll}
+        loading={clearingAll}
+      />
 
       {/* 説明 */}
       <div
