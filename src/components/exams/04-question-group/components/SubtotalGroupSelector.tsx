@@ -36,6 +36,8 @@ import {
   removeSubtotalGroupFromExamMutation,
 } from "@/queries/subtotal"
 
+import { SubtotalGroupExamUsage } from "./SubtotalGroupExamUsage"
+
 interface SubtotalGroupSelectorProps {
   examId: string
   activeSubtotalGroups: SubtotalGroupWithSubtotals[]
@@ -258,15 +260,15 @@ export function SubtotalGroupSelector({
                             .join(", ")}
                         </div>
                         <div className="mt-0.5 text-xs text-muted-foreground">
-                          {group.examSubtotalGroups.length > 0
-                            ? `使用中: ${group.examSubtotalGroups
-                                .map(
-                                  (examSubtotalGroup) =>
-                                    examSubtotalGroup.exam.examName
-                                )
-                                .join(", ")}`
-                            : "どの試験でも使っていません"}
-                          ・作成 {group.createdAt.toLocaleDateString("ja-JP")}
+                          <SubtotalGroupExamUsage
+                            exams={group.examSubtotalGroups.map(
+                              (examSubtotalGroup) => examSubtotalGroup.exam
+                            )}
+                            searchTerm={searchTerm}
+                          />
+                        </div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">
+                          作成 {group.createdAt.toLocaleDateString("ja-JP")}
                         </div>
                       </div>
                       <Button
