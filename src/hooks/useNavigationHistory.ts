@@ -234,8 +234,15 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
       setEntries(labeled.reverse())
     }
 
+    // Next.js はルーターの URL を `useInsertionEffect` の中の `history.pushState` で
+    // 書き込み、それが同期的に `currententrychange` を起こす。その場で setState すると
+    // React に「useInsertionEffect must not schedule updates」で止められるので、
+    // コミットが終わってから読み直す
     const handleCurrentEntryChange = () => {
-      void refresh()
+      queueMicrotask(() => {
+        if (cancelled) return
+        void refresh()
+      })
     }
     void refresh()
     navigation.addEventListener("currententrychange", handleCurrentEntryChange)
