@@ -1,3 +1,5 @@
+import { ArrowUp, CircleCheck } from "lucide-react"
+
 import type { StepResult } from "./types"
 
 /** 実行したステップの結果表示（ステップごとに中身が異なる） */
@@ -40,15 +42,17 @@ export function StepResultView({
             <code className="mt-1 block rounded border bg-white p-2 text-xs">
               {stepResults[2].processedHTML}
             </code>
-            <p className="mt-2 text-sm text-green-700">
-              ✅ MathJax要素（mjx-container）が生成されました
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-green-700">
+              <CircleCheck className="h-4 w-4 shrink-0" />
+              MathJax要素（mjx-container）が生成されました
             </p>
           </div>
         )}
         {currentStep === 3 && stepResults[3] && (
           <div>
-            <p className="text-sm text-green-700">
-              ✅ {stepResults[3].description}
+            <p className="flex items-center gap-1.5 text-sm text-green-700">
+              <CircleCheck className="h-4 w-4 shrink-0" />
+              {stepResults[3].description}
             </p>
           </div>
         )}
@@ -73,8 +77,9 @@ export function StepResultView({
         )}
         {currentStep === 5 && stepResults[5] && (
           <div>
-            <p className="mb-2 text-sm text-green-700">
-              ✅ {stepResults[5].description}
+            <p className="mb-2 flex items-center gap-1.5 text-sm text-green-700">
+              <CircleCheck className="h-4 w-4 shrink-0" />
+              {stepResults[5].description}
             </p>
             <div className="text-sm">
               <strong>SVGサイズ:</strong> {stepResults[5].svgSize?.width} ×{" "}
@@ -84,7 +89,10 @@ export function StepResultView({
         )}
         {currentStep === 6 && stepResults[6] && (
           <div>
-            <p className="mb-3 text-sm text-green-700">✅ Canvas描画完了！</p>
+            <p className="mb-3 flex items-center gap-1.5 text-sm text-green-700">
+              <CircleCheck className="h-4 w-4 shrink-0" />
+              Canvas描画完了
+            </p>
             {stepResults[6].canvas && (
               <div>
                 <p className="mb-2 text-sm">
@@ -104,8 +112,9 @@ export function StepResultView({
                     className="border"
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-600">
-                  👆 これが実際にCanvas上に描画されるテキスト画像です
+                <p className="mt-1 flex items-center gap-1 text-xs text-gray-600">
+                  <ArrowUp className="h-3.5 w-3.5 shrink-0" />
+                  これが実際にCanvas上に描画されるテキスト画像です
                 </p>
               </div>
             )}

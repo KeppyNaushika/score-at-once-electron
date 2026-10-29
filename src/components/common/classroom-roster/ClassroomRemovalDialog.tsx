@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -306,9 +307,11 @@ export function ClassroomRemovalDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              「{entry?.name}」の対応付けを解除しますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>
+                「{entry?.name}」の対応付けを解除しますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               受験生徒の登録と採点は残ります。
             </AlertDialogDescription>
@@ -364,7 +367,9 @@ export function ClassroomRemovalDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>生徒の登録を外しますか？</AlertDialogTitle>
+            <ConfirmationTitleRow variant="destructive">
+              <AlertDialogTitle>生徒の登録を外しますか？</AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
                 「{finalConfirm.target?.name}」にだけ在籍する
@@ -381,7 +386,7 @@ export function ClassroomRemovalDialog({
                 )}
               </span>
               <span className="block font-medium">
-                この操作は取り消せません。本当に登録を外しますか？
+                この操作は元に戻すことができません。
               </span>
               {removalWarning && (
                 <CautionNotice>{removalWarning}</CautionNotice>

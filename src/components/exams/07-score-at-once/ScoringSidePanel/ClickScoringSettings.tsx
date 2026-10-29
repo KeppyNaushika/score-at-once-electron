@@ -1,5 +1,7 @@
 "use client"
 
+import { Rabbit, Turtle } from "lucide-react"
+
 import {
   Select,
   SelectContent,
@@ -80,8 +82,8 @@ export function ClickScoringSettings({
         <div className="space-y-0.5">
           <span className="text-[10px] text-gray-500">クリックの最長間隔</span>
           <div className="flex items-center gap-2 text-xs text-gray-600">
-            <span className="shrink-0 text-base" title="速い">
-              🐇
+            <span className="shrink-0" title="速い">
+              <Rabbit className="h-4 w-4" />
             </span>
             <Slider
               className="flex-1"
@@ -93,8 +95,8 @@ export function ClickScoringSettings({
                 onClickScoringDebounceMsChange(debounceMs)
               }
             />
-            <span className="shrink-0 text-base" title="遅い">
-              🐢
+            <span className="shrink-0" title="遅い">
+              <Turtle className="h-4 w-4" />
             </span>
             <span className="w-10 shrink-0 text-right text-[10px] text-gray-400">
               {clickScoringDebounceMs}ms

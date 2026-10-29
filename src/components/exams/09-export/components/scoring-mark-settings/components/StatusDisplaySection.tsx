@@ -1,5 +1,6 @@
 "use client"
 
+import { Hash, Pin } from "lucide-react"
 import Image from "next/image"
 
 import { getMarkImagePath } from "@/components/exams/09-export/components/scoring-mark-settings/utils/scoringMarkUtils"
@@ -27,7 +28,10 @@ export function StatusDisplaySection({
     <div className="grid grid-cols-2 gap-6">
       {/* 左側：採点マーク表示対象 */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">📌 採点マーク表示対象</Label>
+        <Label className="flex items-center gap-1.5 text-sm font-medium">
+          <Pin className="h-4 w-4 text-muted-foreground" />
+          採点マーク表示対象
+        </Label>
         <div className="space-y-2">
           {SCORING_STATUSES.map((status) => {
             const markImagePath = getMarkImagePath(status)
@@ -74,7 +78,10 @@ export function StatusDisplaySection({
 
       {/* 右側：点数表示対象 */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">🔢 点数表示対象</Label>
+        <Label className="flex items-center gap-1.5 text-sm font-medium">
+          <Hash className="h-4 w-4 text-muted-foreground" />
+          点数表示対象
+        </Label>
         <div className="space-y-2">
           {SCORING_STATUSES.map((status) => (
             <div

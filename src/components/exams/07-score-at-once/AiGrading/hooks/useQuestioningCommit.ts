@@ -257,7 +257,7 @@ export function useQuestioningCommit({
           (questionScore) => questionScore.userId !== currentUserId
         ),
       }),
-      title: "採点に反映しますか",
+      title: "採点に反映しますか？",
       description:
         "問いかけで決めたことを採点に反映します。採点方式や共有している項目が変わります。",
       confirmLabel: "採点に反映する",

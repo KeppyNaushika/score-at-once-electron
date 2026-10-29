@@ -366,8 +366,8 @@ export function CourseworkItemsContainer({
         open={itemDeletion.isOpen}
         onClose={itemDeletion.close}
         title="資料評価項目を削除しますか？"
-        description={`「${itemDeletion.target?.name ?? ""}」を削除します。この資料評価項目に入力した得点・資料評価記号、加減点とその理由、個人成績通知書に載せるコメント${itemDeletion.target?.inputMode === "letter" ? "、変換表" : ""}も一緒に削除され、元に戻せません。`}
-        confirmText="削除"
+        description={`「${itemDeletion.target?.name ?? ""}」を削除します。この資料評価項目に入力した得点・資料評価記号、加減点とその理由、個人成績通知書に載せるコメント${itemDeletion.target?.inputMode === "letter" ? "、変換表" : ""}も一緒に削除されます。この操作は元に戻すことができません。`}
+        confirmText="削除する"
         variant="destructive"
         icon="trash"
         warnings={

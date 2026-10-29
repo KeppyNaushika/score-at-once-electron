@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -107,20 +109,22 @@ export function AuditLogRetentionSection() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              残す期間を
-              {shorteningDays !== null &&
-                formatAuditLogRetentionDays(shorteningDays)}
-              に短くしますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="destructive">
+              <AlertDialogTitle>
+                残す期間を
+                {shorteningDays !== null &&
+                  formatAuditLogRetentionDays(shorteningDays)}
+                に短くしますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
-              次に起動したときに、それより古い操作履歴が削除されます。削除した履歴は
-              元に戻せません。同期している他のPCからも削除されます。
+              次に起動したときに、それより古い操作履歴が削除されます。同期している他のPCからも削除されます。この操作は元に戻すことができません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>やめる</AlertDialogCancel>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
               onClick={() => {
                 if (shorteningDays !== null) saveRetentionDays(shorteningDays)
               }}

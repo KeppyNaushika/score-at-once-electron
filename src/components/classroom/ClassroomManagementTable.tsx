@@ -331,8 +331,8 @@ export default function ClassroomManagementTable() {
       <ConfirmationModal
         open={classroomDeletion.isOpen}
         onClose={classroomDeletion.close}
-        title="本当にこの学級を削除しますか？"
-        confirmText="削除"
+        title="この学級を削除しますか？"
+        confirmText="削除する"
         variant="destructive"
         icon="trash"
         onConfirm={handleConfirmDeleteClassroom}

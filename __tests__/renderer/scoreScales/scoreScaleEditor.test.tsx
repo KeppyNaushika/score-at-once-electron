@@ -8,7 +8,7 @@
  *   「続けて直す」のあとは、その組について聞き直さない。記号の変更は確かめない
  * - 03 から開いたときは「この試験用に複製して直す」で、この試験の設問だけを付け替え、
  *   止めていた変更を複製の同じ位置の類型に当てる
- * - 「やめる」は書かず、打ちかけの点数を保存されている値へ戻す
+ * - 「キャンセル」は書かず、打ちかけの点数を保存されている値へ戻す
  * - 使われている類型は消せない。並べ替えは全類型を振り直して書く
  * - 共通の組を試験に戻せないとき（ほかの試験も使う）はスイッチを止めて理由を示す
  *
@@ -209,7 +209,7 @@ describe("1打鍵ごとの書き込み", () => {
     )
     // 試験の組は確かめない
     expect(
-      screen.queryByText("共通の類型表を直しますか")
+      screen.queryByText("共通の類型表を直しますか？")
     ).not.toBeInTheDocument()
   })
 
@@ -232,7 +232,7 @@ describe("共通の組の点数・類型を直す前の確認", () => {
     await userEvent.type(scoreInputs()[0], "5")
 
     expect(
-      await screen.findByText("共通の類型表を直しますか")
+      await screen.findByText("共通の類型表を直しますか？")
     ).toBeInTheDocument()
     expect(
       within(screen.getByRole("alertdialog")).getByText(
@@ -261,7 +261,7 @@ describe("共通の組の点数・類型を直す前の確認", () => {
       )
     )
     expect(
-      screen.queryByText("共通の類型表を直しますか")
+      screen.queryByText("共通の類型表を直しますか？")
     ).not.toBeInTheDocument()
   })
 
@@ -275,15 +275,15 @@ describe("共通の組の点数・類型を直す前の確認", () => {
       )
     )
     expect(
-      screen.queryByText("共通の類型表を直しますか")
+      screen.queryByText("共通の類型表を直しますか？")
     ).not.toBeInTheDocument()
   })
 
-  it("「やめる」は書かず、打ちかけの点数を戻す", async () => {
+  it("「キャンセル」は書かず、打ちかけの点数を戻す", async () => {
     renderEditor(globalScaleUsedByOneExam())
     await userEvent.type(scoreInputs()[1], "9")
-    await screen.findByText("共通の類型表を直しますか")
-    await userEvent.click(screen.getByRole("button", { name: "やめる" }))
+    await screen.findByText("共通の類型表を直しますか？")
+    await userEvent.click(screen.getByRole("button", { name: "キャンセル" }))
 
     await waitFor(() => expect(scoreInputs()[1]).toHaveValue("6"))
     expect(fakeApi.rubric.updateScoreScaleLevel).not.toHaveBeenCalled()
@@ -292,7 +292,7 @@ describe("共通の組の点数・類型を直す前の確認", () => {
   it("類型を足すのも確かめる", async () => {
     renderEditor(globalScaleUsedByOneExam())
     await userEvent.click(screen.getByRole("button", { name: "類型を追加" }))
-    await screen.findByText("共通の類型表を直しますか")
+    await screen.findByText("共通の類型表を直しますか？")
     expect(fakeApi.rubric.createScoreScaleLevel).not.toHaveBeenCalled()
 
     await userEvent.click(screen.getByRole("button", { name: "続けて直す" }))

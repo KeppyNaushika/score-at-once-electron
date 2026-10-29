@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query"
 import { Trash } from "lucide-react"
 import { useState } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   deleteScoreScaleMutation,
   type ScoreScaleRow,
@@ -72,16 +73,19 @@ export function ScoreScaleDeleteButton({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>類型表を削除しますか</AlertDialogTitle>
+            <ConfirmationTitleRow variant="destructive">
+              <AlertDialogTitle>類型表を削除しますか？</AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               「{scoreScale.name || "名前なし"}」と、その類型
-              {scoreScale.levels.length}件を削除します。
+              {scoreScale.levels.length}
+              件を削除します。この操作は元に戻すことができません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>やめる</AlertDialogCancel>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={() => void confirmDelete()}
             >
               削除する

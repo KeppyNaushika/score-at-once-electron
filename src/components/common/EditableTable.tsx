@@ -10,7 +10,7 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
-import { Plus, Trash } from "lucide-react"
+import { Lightbulb, Plus, Trash } from "lucide-react"
 import React, { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
@@ -390,9 +390,12 @@ export function EditableTable<T extends RowData>({
         </div>
       )}
 
-      <div className="text-sm text-muted-foreground">
-        💡 ヒント: Excelからデータをコピーして、テーブル上で貼り付け (
-        {getModifierKeyLabels().primary}+V) できます
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Lightbulb className="h-4 w-4 shrink-0" />
+        <span>
+          ヒント: Excelからデータをコピーして、テーブル上で貼り付け (
+          {getModifierKeyLabels().primary}+V) できます
+        </span>
       </div>
     </div>
   )

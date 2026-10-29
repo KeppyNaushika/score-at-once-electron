@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { SCORING_METHOD_LABELS } from "@/components/exams/07-score-at-once/Rubric/utils/rubricEffectLabel"
 import {
   AlertDialog,
@@ -38,7 +39,9 @@ export function ScaleSwitchConfirmDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>採点方式を変えますか</AlertDialogTitle>
+          <ConfirmationTitleRow variant="warning">
+            <AlertDialogTitle>採点方式を変えますか？</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>
             {pending
               ? `${cropRegionLabel} を「${SCORING_METHOD_LABELS[pending.nextMethod]}」にします。方式と合わない採点が ${pending.incompatibleCount}件あります。それまでは未採点として扱い、画面にも出力にも出しません。採点は消さずに残すので、方式を戻せば元の採点に戻ります。`
@@ -46,7 +49,7 @@ export function ScaleSwitchConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>やめる</AlertDialogCancel>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
           <AlertDialogAction onClick={() => void pending?.proceed()}>
             変える
           </AlertDialogAction>

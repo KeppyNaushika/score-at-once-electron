@@ -1,7 +1,6 @@
 "use client"
 
-import { TriangleAlert } from "lucide-react"
-
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,15 +51,11 @@ export function UnplacedAnswersModal({
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-amber-700">
-            <TriangleAlert className="h-5 w-5" />
-            置き場のない答案があります
-          </AlertDialogTitle>
+          <ConfirmationTitleRow variant="warning">
+            <AlertDialogTitle>置き場のない答案があります</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>
-            表の空きマスより答案が多いため、
-            {unplacedFileNames.length}件はどのマスにも配置されていません。
-            このまま実行すると、配置済みの{placedCount}
-            件だけがアップロードされ、残りは破棄されます。
+            {`表の空きマスより答案が多いため、${unplacedFileNames.length}件はどのマスにも配置されていません。このまま実行すると、配置済みの${placedCount}件だけがアップロードされ、残りは破棄されます。`}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

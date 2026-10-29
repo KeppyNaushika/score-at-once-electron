@@ -87,7 +87,8 @@ export function DeleteSubtotalGroupModal({
   const warnings = [
     {
       type: "destructive" as const,
-      message: "この操作は取り消せません。グループ内の小計項目も削除されます。",
+      message:
+        "グループ内の小計項目も削除されます。この操作は元に戻すことができません。",
     },
     {
       type: "info" as const,
@@ -106,7 +107,7 @@ export function DeleteSubtotalGroupModal({
     <ConfirmationModal
       open={open}
       onClose={onClose}
-      title="小計点グループの削除"
+      title="小計点グループを削除しますか？"
       description="以下の小計点グループを削除します。"
       confirmText="削除する"
       cancelText="キャンセル"

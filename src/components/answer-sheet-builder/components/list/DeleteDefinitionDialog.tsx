@@ -25,8 +25,8 @@ export function DeleteDefinitionDialog({
       open={open}
       onClose={onClose}
       title="解答用紙を削除しますか？"
-      description={`「${definitionName}」を削除します。この操作は取り消せません。`}
-      confirmText="削除"
+      description={`「${definitionName}」を削除します。この操作は元に戻すことができません。`}
+      confirmText="削除する"
       variant="destructive"
       icon="trash"
       onConfirm={onConfirm}

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { RosterTableView } from "@/components/common/roster-table/RosterTableView"
 import type {
   RosterRow,
@@ -242,9 +243,12 @@ export function RosterTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              選択した生徒{rowRemoval.target?.length ?? 0}名の登録を外しますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="destructive">
+              <AlertDialogTitle>
+                選択した生徒{rowRemoval.target?.length ?? 0}
+                名の登録を外しますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
                 登録を外すと、以下のデータも連動して削除されます：
@@ -259,7 +263,7 @@ export function RosterTable({
                 )}
               </span>
               <span className="block font-medium">
-                この操作は取り消すことができません。
+                この操作は元に戻すことができません。
               </span>
               {slots?.removalWarning && (
                 <CautionNotice>{slots.removalWarning}</CautionNotice>

@@ -1,9 +1,9 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Trash, TriangleAlert } from "lucide-react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -68,12 +68,11 @@ export default function StudentRemovalConfirmModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <TriangleAlert className="h-5 w-5 text-destructive" />
-            受験生徒の登録を外す確認
-          </DialogTitle>
+          <ConfirmationTitleRow variant="destructive">
+            <DialogTitle>受験生徒の登録を外しますか？</DialogTitle>
+          </ConfirmationTitleRow>
           <DialogDescription>
-            以下の生徒の、この試験への登録を外そうとしています。
+            以下の生徒の、この試験への登録を外します。
           </DialogDescription>
         </DialogHeader>
 
@@ -103,54 +102,32 @@ export default function StudentRemovalConfirmModal({
 
           {/* 採点データの警告 */}
           {deletionCounts !== null && deletionCounts.length > 0 && (
-            <div className="rounded-md border border-destructive/20 bg-destructive/10 p-4">
-              <div className="flex items-start gap-3">
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-                <div className="space-y-2">
-                  <h4 className="font-medium text-destructive">
-                    採点データが存在します
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    登録を外す生徒には
-                    <strong className="text-destructive">
-                      {deletionCounts
-                        .map(
-                          (deletionCount) =>
-                            `${deletionCount.countedName}${deletionCount.shownCount}件`
-                        )
-                        .join("、")}
-                    </strong>
-                    があります。
-                    登録を外すと、以下のデータも連動して削除されます：
-                  </p>
-                  <ul className="ml-4 space-y-1 text-sm text-muted-foreground">
-                    <li>• 答案シート情報</li>
-                    <li>• 採点結果・コメント</li>
-                    <li>• 設問別得点記録</li>
-                    <li>• 最終成績情報</li>
-                  </ul>
-                  <p className="text-sm font-medium text-destructive">
-                    ※ この操作は取り消すことができません
-                  </p>
-                </div>
-              </div>
+            <div className="space-y-2 text-sm">
+              <p>
+                {`登録を外す生徒には${deletionCounts
+                  .map(
+                    (deletionCount) =>
+                      `${deletionCount.countedName}${deletionCount.shownCount}件`
+                  )
+                  .join("、")}があります。登録を外すと、以下も削除されます：`}
+              </p>
+              <ul className="pl-4 text-muted-foreground">
+                <li>・答案シート情報</li>
+                <li>・採点結果・コメント</li>
+                <li>・設問別得点記録</li>
+                <li>・最終成績情報</li>
+              </ul>
+              <p className="font-medium">
+                この操作は元に戻すことができません。
+              </p>
             </div>
           )}
 
           {/* 採点データがない場合の確認 */}
           {deletionCounts !== null && deletionCounts.length === 0 && (
-            <div className="rounded-md border bg-muted/50 p-4">
-              <div className="flex items-start gap-3">
-                <Trash className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                <div className="space-y-1">
-                  <h4 className="font-medium">登録を外す</h4>
-                  <p className="text-sm text-muted-foreground">
-                    選択した生徒の登録を外します。採点データがないため、安全に外せます。
-                    生徒の基本情報は保持され、他の試験には影響しません。
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              採点データがないため、安全に外せます。生徒の基本情報は保持され、他の試験には影響しません。
+            </p>
           )}
         </div>
 
@@ -180,9 +157,7 @@ export default function StudentRemovalConfirmModal({
             onClick={onConfirm}
             // 試験の詳細が読めるまでは押させない（影響を見せる前に消さない）
             disabled={!canConfirm || examDetail.isPending}
-            className="gap-2"
           >
-            <Trash className="h-4 w-4" />
             登録を外す
           </Button>
         </DialogFooter>

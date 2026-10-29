@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -146,10 +147,9 @@ export default function ExportWarningModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <TriangleAlert className="h-5 w-5 text-orange-500" />
-            警告
-          </DialogTitle>
+          <ConfirmationTitleRow variant="warning">
+            <DialogTitle>警告</DialogTitle>
+          </ConfirmationTitleRow>
         </DialogHeader>
 
         <div className="space-y-4">

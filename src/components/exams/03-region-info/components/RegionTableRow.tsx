@@ -193,9 +193,14 @@ export const RegionTableRow = ({
           </div>
         </td>
         <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
+          {/* Radix の Select はマウスで押すと trigger に focus を渡さない（開いた一覧へ
+              移す）ので、onFocus だけでは選択が点かない。開いたときにも点ける */}
           <Select
             value={region.type}
             onValueChange={(value) => onRegionChange(region.id, "type", value)}
+            onOpenChange={(open) => {
+              if (open) ensureSelected()
+            }}
             disabled={disabled}
           >
             <SelectTrigger className="w-full" onFocus={ensureSelected}>

@@ -128,12 +128,12 @@ describe("書きかけを抱えた画面での戻る", () => {
     await waitFor(() => expect(isDialogOpen()).toBe(true))
   })
 
-  it("「戻る」を選んでも、履歴を動かさない（動いていないので戻すものが無い）", async () => {
+  it("「キャンセル」を選んでも、履歴を動かさない（動いていないので戻すものが無い）", async () => {
     renderGuard(true)
     dispatchNavigate()
     await waitFor(() => expect(isDialogOpen()).toBe(true))
 
-    await userEvent.click(screen.getByRole("button", { name: "戻る" }))
+    await userEvent.click(screen.getByRole("button", { name: "キャンセル" }))
 
     await waitFor(() => expect(isDialogOpen()).toBe(false))
     expect(traverseTo).not.toHaveBeenCalled()

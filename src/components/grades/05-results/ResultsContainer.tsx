@@ -11,6 +11,7 @@ import {
 import Link from "next/link"
 import { useMemo, useState } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -303,15 +304,17 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingBulkAction === "refreeze"
-                ? "すべて現在の値で固定し直しますか？"
-                : "固定をすべて解除しますか？"}
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>
+                {pendingBulkAction === "refreeze"
+                  ? "すべて現在の値で固定し直しますか？"
+                  : "固定をすべて解除しますか？"}
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               {pendingBulkAction === "refreeze"
-                ? `固定済みの ${frozenSummary.frozen} 件を含め、すべての成績値を現在のリアルタイム算出値で固定し直します。現在の固定値は復元できません。`
-                : `固定済みの ${frozenSummary.frozen} 件の固定値を破棄し、すべてリアルタイム算出値に戻します。固定した時点の値は復元できません。`}
+                ? `固定済みの ${frozenSummary.frozen} 件を含め、すべての成績値を現在のリアルタイム算出値で固定し直します。この操作は元に戻すことができません。`
+                : `固定済みの ${frozenSummary.frozen} 件の固定値を破棄し、すべてリアルタイム算出値に戻します。この操作は元に戻すことができません。`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

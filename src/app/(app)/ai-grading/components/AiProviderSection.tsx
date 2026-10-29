@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import {
   AlertDialog,
@@ -126,9 +127,11 @@ export function AiProviderSection({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {providerName} を無効にしますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="warning">
+              <AlertDialogTitle>
+                {providerName} を無効にしますか？
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               このPCに保存した {providerName} の API
               キーを削除し、以後は送信しません。再び使用するには、同意から始め直してください。

@@ -5,6 +5,7 @@ import { Trash } from "lucide-react"
 import Link from "next/link"
 import { useMemo } from "react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -166,10 +167,11 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              「{boundaryDeletion.target?.name}
-              」の成績境界を削除しますか？
-            </AlertDialogTitle>
+            <ConfirmationTitleRow variant="destructive">
+              <AlertDialogTitle>
+                {`「${boundaryDeletion.target?.name ?? ""}」の成績境界を削除しますか？`}
+              </AlertDialogTitle>
+            </ConfirmationTitleRow>
             <AlertDialogDescription>
               この成績評価項目には成績評価記号が付かなくなり、結果画面と出力の成績評価記号の欄が空になります。固定値に記録された成績評価記号はそのまま残ります。制約ルールで選べる成績評価記号からもこの成績評価項目のものが外れるため、それを使っているルールは設定し直してください。
             </AlertDialogDescription>
@@ -184,7 +186,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
                 }
               }}
             >
-              削除
+              削除する
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -60,11 +61,13 @@ export function SharedFolderConnectDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {inspection?.kind === "empty"
-              ? "この共有フォルダには、共有しているデータがありません"
-              : "この共有フォルダは、既に共有されています"}
-          </AlertDialogTitle>
+          <ConfirmationTitleRow variant="default">
+            <AlertDialogTitle>
+              {inspection?.kind === "empty"
+                ? "この共有フォルダには、共有しているデータがありません"
+                : "この共有フォルダは、既に共有されています"}
+            </AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription className="break-all whitespace-pre-line">
             {inspected?.sharedFolderPath}
             {"\n\n"}
@@ -78,7 +81,9 @@ export function SharedFolderConnectDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isConnecting}>やめる</AlertDialogCancel>
+          <AlertDialogCancel disabled={isConnecting}>
+            キャンセル
+          </AlertDialogCancel>
           {inspection?.kind === "empty" ? (
             <>
               <Button

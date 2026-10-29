@@ -109,7 +109,7 @@ export function UserDeleteModal({
     {
       type: "destructive" as const,
       message:
-        "このユーザーと、その採点結果などのデータは、同期しているすべてのPCから消えます。元に戻せません。",
+        "このユーザーと、その採点結果などのデータは、同期しているすべてのPCから消えます。この操作は元に戻すことができません。",
     },
     ...(isCountingDeletion || isCheckingOwnership
       ? [{ type: "info" as const, message: "消えるデータを数えています…" }]
@@ -160,7 +160,7 @@ export function UserDeleteModal({
     <ConfirmationModal
       open={isOpen}
       onClose={onClose}
-      title="ユーザーの削除"
+      title="ユーザーを削除しますか？"
       description="以下のユーザーを削除します。"
       confirmText="削除する"
       cancelText="キャンセル"

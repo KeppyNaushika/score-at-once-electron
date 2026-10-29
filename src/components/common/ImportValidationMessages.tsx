@@ -1,4 +1,4 @@
-import { CircleAlert, TriangleAlert } from "lucide-react"
+import { CircleAlert, CircleCheck, TriangleAlert } from "lucide-react"
 
 interface ImportValidationMessagesProps {
   validation: { valid: number; errors: string[]; warnings: string[] }
@@ -51,8 +51,9 @@ export default function ImportValidationMessages({
 
       {validation.valid > 0 && (
         <div className="rounded-md bg-green-50 p-3">
-          <div className="text-sm text-green-700">
-            ✅ {validation.valid}件の{validRowNoun}が有効です
+          <div className="flex items-center gap-2 text-sm text-green-700">
+            <CircleCheck className="h-4 w-4 shrink-0" />
+            {validation.valid}件の{validRowNoun}が有効です
           </div>
         </div>
       )}

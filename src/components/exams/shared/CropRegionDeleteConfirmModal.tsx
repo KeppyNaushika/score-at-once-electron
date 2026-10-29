@@ -1,8 +1,9 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { TriangleAlert } from "lucide-react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,20 +65,14 @@ export const CropRegionDeleteConfirmModal = ({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center space-x-2">
-            <TriangleAlert className="h-5 w-5 text-orange-500" />
-            <span>領域の削除確認</span>
-          </AlertDialogTitle>
+          <ConfirmationTitleRow variant="destructive">
+            <AlertDialogTitle>領域を削除しますか？</AlertDialogTitle>
+          </ConfirmationTitleRow>
           <AlertDialogDescription>
-            この領域を削除しますか？ ⚠️
-            注意：この領域の採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
+            この領域の採点データも一緒に削除されます。この操作は元に戻すことができません。
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {gradeWarning && (
-          <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
-            {gradeWarning}
-          </div>
-        )}
+        {gradeWarning && <CautionNotice>{gradeWarning}</CautionNotice>}
         <AlertDialogFooter>
           <AlertDialogCancel>キャンセル</AlertDialogCancel>
           <AlertDialogAction

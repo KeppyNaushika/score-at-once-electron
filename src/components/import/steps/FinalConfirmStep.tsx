@@ -189,7 +189,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         <CardContent className="flex items-start gap-3 p-4">
           <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
-            注意: 取り込み後は元に戻せません
+            取り込んだ後は、この操作を元に戻すことができません。
           </p>
         </CardContent>
       </Card>

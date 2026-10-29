@@ -1,8 +1,8 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { TriangleAlert } from "lucide-react"
 
+import { ConfirmationTitleRow } from "@/components/common/ConfirmationTitleRow"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { studentAnswerDeletionCountsQuery } from "@/queries/answerSheet"
@@ -75,63 +76,59 @@ function DeleteConfirmationBody({
   return (
     <>
       <AlertDialogHeader>
-        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-          <TriangleAlert className="h-5 w-5" />
-          答案画像の削除確認
-        </AlertDialogTitle>
+        <ConfirmationTitleRow variant="destructive">
+          <AlertDialogTitle>答案画像を削除しますか？</AlertDialogTitle>
+        </ConfirmationTitleRow>
         <AlertDialogDescription>
-          以下の答案画像を削除しようとしています。この操作は取り消せません。
+          以下の答案画像のファイルを削除します。この操作は元に戻すことができません。
         </AlertDialogDescription>
       </AlertDialogHeader>
 
-      <div className="space-y-4">
+      <div className="space-y-2 text-sm">
         {studentName && (
-          <div className="rounded bg-gray-50 p-2">
+          <div className="rounded-md border bg-gray-50 p-2">
             <p className="font-medium">生徒名: {studentName}</p>
             {pageNumber && <p>ページ: {pageNumber}</p>}
           </div>
         )}
 
-        <div className="rounded bg-red-50 p-3 text-red-800">
-          <p className="font-medium">⚠️ 警告</p>
-          <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
-            <li>この操作は取り消せません</li>
-            <li>答案画像ファイルが完全に削除されます</li>
-            {isLoadingCounts && (
-              <li className="flex items-center gap-1">
-                <Spinner className="size-3" />
-                採点データを確認しています…
-              </li>
-            )}
-            {/* 照会に失敗したら「採点データは無い」と誤解させないよう、安全側に
-                倒して削除させない。見ていない件数は添えようがない（0件と偽って
-                添えると、実際には在る採点を巻き添えに消すか、必ず中止されるかの
-                どちらかになる） */}
-            {countsError && (
-              <>
-                <li>{countsError}</li>
-                <li className="font-medium">
-                  何が消えるか数えられなかったため削除できません。開き直してください
+        {isLoadingCounts && (
+          <p className="flex items-center gap-1 text-muted-foreground">
+            <Spinner className="size-3" />
+            採点データを確認しています…
+          </p>
+        )}
+        {/* 照会に失敗したら「採点データは無い」と誤解させないよう、安全側に
+            倒して削除させない。見ていない件数は添えようがない（0件と偽って
+            添えると、実際には在る採点を巻き添えに消すか、必ず中止されるかの
+            どちらかになる） */}
+        {countsError && (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-800">
+            <p>{countsError}</p>
+            <p className="font-medium">
+              何が消えるか数えられなかったため削除できません。開き直してください
+            </p>
+          </div>
+        )}
+        {shownCounts && shownCounts.length > 0 && (
+          <div>
+            <p className="font-medium">
+              この答案の採点データも全て削除されます
+            </p>
+            <ul className="pl-4 text-muted-foreground">
+              {shownCounts.map((deletionCount) => (
+                <li key={deletionCount.countedName}>
+                  ・{deletionCount.countedName}: {deletionCount.shownCount}件
                 </li>
-              </>
-            )}
-            {shownCounts && shownCounts.length > 0 && (
-              <li className="font-medium">
-                この答案の採点データも全て削除されます
-                <ul className="mt-1 list-inside list-[circle] space-y-0.5 pl-4 font-normal">
-                  {shownCounts.map((deletionCount) => (
-                    <li key={deletionCount.countedName}>
-                      {deletionCount.countedName}: {deletionCount.shownCount}件
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            )}
-            {shownCounts && shownCounts.length === 0 && (
-              <li>この答案にはまだ採点データがありません</li>
-            )}
-          </ul>
-        </div>
+              ))}
+            </ul>
+          </div>
+        )}
+        {shownCounts && shownCounts.length === 0 && (
+          <p className="text-muted-foreground">
+            この答案にはまだ採点データがありません
+          </p>
+        )}
 
         {/* 数えた後に他の教員が書き足していれば main が中止する。閉じずに
             数え直した結果を見せ、利用者にもう一度決めてもらう */}
@@ -140,10 +137,6 @@ function DeleteConfirmationBody({
             {refusalMessage}
           </p>
         )}
-
-        <p className="text-sm text-gray-600">
-          本当に削除してもよろしいですか？
-        </p>
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel onClick={onClose} disabled={isDeleting}>
@@ -157,7 +150,7 @@ function DeleteConfirmationBody({
             void handleConfirm()
           }}
           disabled={!canConfirm}
-          className="bg-red-600 hover:bg-red-700"
+          className={buttonVariants({ variant: "destructive" })}
         >
           削除する
         </AlertDialogAction>

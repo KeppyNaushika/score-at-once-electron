@@ -114,7 +114,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         <div className="flex items-start gap-2">
           <TriangleAlert className="mt-0.5 h-5 w-5 text-amber-500" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
-            この操作は元に戻せません。取り込み前にバックアップを取ることをお勧めします。
+            この操作は元に戻すことができません。取り込み前にバックアップを取ることをお勧めします。
           </p>
         </div>
       </div>

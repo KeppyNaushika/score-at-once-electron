@@ -164,7 +164,7 @@ describe("答案の削除確認は、数え終わるまで押させない", () =
         screen.getByText("この答案の採点データも全て削除されます")
       ).toBeTruthy()
     )
-    expect(screen.getByText("採点済みの設問: 12件")).toBeTruthy()
+    expect(screen.getByText("・採点済みの設問: 12件")).toBeTruthy()
     expect(getDeletionCounts).toHaveBeenCalledTimes(2)
   })
 })

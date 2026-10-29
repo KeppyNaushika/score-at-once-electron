@@ -1,15 +1,6 @@
 "use client"
 
 import {
-  CircleQuestionMark,
-  FileX,
-  Info,
-  Trash,
-  TriangleAlert,
-  Users,
-} from "lucide-react"
-
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -21,6 +12,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
+
+import {
+  type ConfirmationIcon,
+  ConfirmationTitleRow,
+  type ConfirmationVariant,
+} from "./ConfirmationTitleRow"
 
 interface ConfirmationItem {
   id: string
@@ -44,39 +41,22 @@ interface ConfirmationModalProps {
   description?: string
   confirmText: string
   cancelText?: string
-  variant?: "destructive" | "default" | "warning"
+  variant?: ConfirmationVariant
   items?: ConfirmationItem[]
   warnings?: ConfirmationWarning[]
   onConfirm: () => void | Promise<void>
   loading?: boolean
   /** 押させない（削除できない理由を warnings で見せているときなど） */
   confirmDisabled?: boolean
-  icon?: "trash" | "alert" | "file" | "users" | "info" | "help"
+  /** 省くと variant ごとの既定（削除＝ゴミ箱・注意＝三角・問いかけ＝i） */
+  icon?: ConfirmationIcon
 }
 
-const icons = {
-  trash: Trash,
-  alert: TriangleAlert,
-  file: FileX,
-  users: Users,
-  info: Info,
-  help: CircleQuestionMark,
-}
-
-const variantStyles = {
-  destructive: {
-    icon: "text-red-600",
-    button: "destructive" as const,
-  },
-  warning: {
-    icon: "text-orange-600",
-    button: "default" as const,
-  },
-  default: {
-    icon: "text-blue-600",
-    button: "default" as const,
-  },
-}
+const confirmButtonVariants = {
+  destructive: "destructive",
+  warning: "default",
+  default: "default",
+} as const
 
 export default function ConfirmationModal({
   open,
@@ -91,11 +71,8 @@ export default function ConfirmationModal({
   onConfirm,
   loading = false,
   confirmDisabled = false,
-  icon = "alert",
+  icon,
 }: ConfirmationModalProps) {
-  const IconComponent = icons[icon]
-  const styles = variantStyles[variant]
-
   return (
     <AlertDialog
       open={open}
@@ -110,18 +87,11 @@ export default function ConfirmationModal({
         {...(description === undefined && { "aria-describedby": undefined })}
       >
         <AlertDialogHeader>
-          <div className="flex items-center space-x-3">
-            <div className={`rounded-full bg-gray-100 p-2 ${styles.icon}`}>
-              <IconComponent className="h-6 w-6" />
-            </div>
-            <div>
-              <AlertDialogTitle className="text-lg font-semibold">
-                {title}
-              </AlertDialogTitle>
-            </div>
-          </div>
+          <ConfirmationTitleRow variant={variant} icon={icon}>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+          </ConfirmationTitleRow>
           {description !== undefined && (
-            <AlertDialogDescription className="mt-3 text-gray-600">
+            <AlertDialogDescription className="whitespace-pre-line">
               {description}
             </AlertDialogDescription>
           )}
@@ -186,7 +156,9 @@ export default function ConfirmationModal({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
-            className={buttonVariants({ variant: styles.button })}
+            className={buttonVariants({
+              variant: confirmButtonVariants[variant],
+            })}
             onClick={(event) => {
               // 閉じるのは呼び出し側が処理を終えてから（処理中は「処理中...」を見せる）
               event.preventDefault()

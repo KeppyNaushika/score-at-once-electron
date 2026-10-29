@@ -480,10 +480,9 @@ describe("WorkflowTabHeader の戻るが未保存を捨てないこと", () => {
     await renderDirtyHeader()
 
     await userEvent.click(screen.getByRole("button", { name: "戻る" }))
-    // ダイアログの「戻る」はツールバーの「戻る」と同名なので、ダイアログの中で探す
     const confirmDialog = screen.getByRole("alertdialog")
     await userEvent.click(
-      within(confirmDialog).getByRole("button", { name: "戻る" })
+      within(confirmDialog).getByRole("button", { name: "キャンセル" })
     )
 
     expect(router.back).not.toHaveBeenCalled()
