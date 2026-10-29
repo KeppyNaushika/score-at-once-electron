@@ -27,6 +27,8 @@ interface CheckboxCellWithFillHandleProps {
   disableFillHandle?: boolean
   /** 追加のclassName */
   className?: string
+  /** チェックボックス本体に足すclassName（大きさの変更など） */
+  checkboxClassName?: string
 }
 
 /**
@@ -55,6 +57,7 @@ export function CheckboxCellWithFillHandle({
   isInFillRange = false,
   disableFillHandle = true, // 一時的に無効化
   className,
+  checkboxClassName,
 }: CheckboxCellWithFillHandleProps) {
   return (
     <div
@@ -74,6 +77,7 @@ export function CheckboxCellWithFillHandle({
         checked={checked}
         onCheckedChange={onChange}
         disabled={disabled}
+        className={checkboxClassName}
       />
 
       {/* フィルハンドル（選択されているセルのみ表示） */}

@@ -1,7 +1,6 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Group } from "lucide-react"
 import { useCallback, useMemo } from "react"
 
 import { CropSubtotalAssignmentTable } from "@/components/exams/04-question-group/components/CropSubtotalAssignmentTable"
@@ -112,40 +111,22 @@ export default function SubtotalGroupPage() {
 
           {/* 設問と小計項目の対応付け */}
           {activeSubtotalGroups.length > 0 && questionRegions.length > 0 && (
-            <div className="rounded-lg border p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Group className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">
-                  設問と小計項目の対応付け
-                </h2>
-              </div>
-              <CropSubtotalAssignmentTable
-                examId={examId}
-                subtotalGroups={activeSubtotalGroups}
-                assignmentType="QUESTION_ASSIGNMENT"
-                cropRegions={questionRegions}
-                onReload={reload}
-              />
-            </div>
+            <CropSubtotalAssignmentTable
+              examId={examId}
+              subtotalGroups={activeSubtotalGroups}
+              assignmentType="QUESTION_ASSIGNMENT"
+              cropRegions={questionRegions}
+            />
           )}
 
           {/* 小計の領域と小計項目の対応付け */}
           {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
-            <div className="rounded-lg border p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Group className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">
-                  小計の領域と小計項目の対応付け
-                </h2>
-              </div>
-              <CropSubtotalAssignmentTable
-                examId={examId}
-                subtotalGroups={activeSubtotalGroups}
-                assignmentType="SUBTOTAL_DEFINITION"
-                cropRegions={subtotalRegions}
-                onReload={reload}
-              />
-            </div>
+            <CropSubtotalAssignmentTable
+              examId={examId}
+              subtotalGroups={activeSubtotalGroups}
+              assignmentType="SUBTOTAL_DEFINITION"
+              cropRegions={subtotalRegions}
+            />
           )}
 
           {/* ガイダンス */}
