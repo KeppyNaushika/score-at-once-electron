@@ -176,7 +176,8 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
-    "@typescript-eslint/parser": "^8.65.0"
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
   }
 }
