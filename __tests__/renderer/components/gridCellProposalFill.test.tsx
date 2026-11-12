@@ -103,11 +103,11 @@ describe("GridCell の未確定の提案の塗り", () => {
 
 describe("GridCell の斜線の色の指定", () => {
   it("類型の色を渡せば、類型採点済みの状態の色ではなくその色で斜線を引く", () => {
-    const levelColored = renderCell("unscored", "evaluated", "rgb(30, 58, 138)")
+    const levelColored = renderCell("unscored", "evaluated", "rgb(30 58 138)")
     const statusColored = renderCell("unscored", "evaluated")
-    expect(levelColored.style.backgroundImage).toContain("rgb(30, 58, 138)")
+    expect(levelColored.style.backgroundImage).toContain("rgb(30 58 138)")
     expect(statusColored.style.backgroundImage).not.toContain(
-      "rgb(30, 58, 138)"
+      "rgb(30 58 138)"
     )
   })
 })
