@@ -52,10 +52,11 @@ export function TableHeader({
 
   return (
     // 表を下へスクロールしても、件数と操作ボタンが見えるよう上端に貼り付ける。
-    // マスの強調表示（最大 z-50）より手前に出す。スクロールする親（06 の page の
-    // p-3）の内側余白のぶん上に隙間が空くので、-top-3 で打ち消して上端に付ける。
+    // 表は AnswerTableShell で isolate してあるので、z-10 で表より手前に出る
+    // （ダイアログの z-50 は超えない）。スクロールする親（06 の page の p-3）の
+    // 内側余白のぶん上に隙間が空くので、-top-3 で打ち消して上端に付ける。
     // 背景は少し透かしてぼかし、下を流れる表がうっすら見えるようにする
-    <div className="sticky -top-3 z-60 bg-background/50 py-2 backdrop-blur-sm">
+    <div className="sticky -top-3 z-10 bg-background/50 py-2 backdrop-blur-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-4">
           <h2 className="flex shrink-0 items-center gap-2 font-semibold whitespace-nowrap">

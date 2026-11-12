@@ -335,7 +335,10 @@ export function AnswerTableShell({
             onMarkerCorrectionChange={onMarkerCorrectionChange}
           />
 
-          <div className="min-h-96">
+          {/* isolate で表の重なりをこの中に閉じ込める。マスの強調表示（最大
+              z-50）が上の sticky 見出しと競わないので、見出しの z を上げずに
+              済み、ダイアログ（z-50）より前に出ることもない */}
+          <div className="isolate min-h-96">
             {/* upload（方式A）だけ SortableContext で並べ替え文脈を張る。
                 view（方式B）は素の droppable マス＋draggable 答案で構成し、
                 sortable の reflow で周囲が動かないようにする。 */}
